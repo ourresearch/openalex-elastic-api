@@ -109,7 +109,7 @@ def too_slow(what: str) -> AnalyticsError:
 def _es_number_field(fields_dict, column_id: str) -> str:
     from core.utils import get_field
     f = get_field(fields_dict, column_id)
-    return f.es_field()
+    return f.es_field().replace("__", ".")   # raw agg bodies need the dotted path
 
 
 def _true_query(fields_dict, column_id: str):
@@ -374,7 +374,7 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
         lv.agg = {"filters": {"filters": filters}}
         return lv
     if g.bins is not None:
-        es_field = fld.es_field()
+        es_field = fld.es_field().replace("__", ".")
         is_float = not _is_integer_column(column_id)
         if "at" in g.bins:
             edges = g.bins["at"]
@@ -661,6 +661,9 @@ def guard_nested(levels: List[Level], cards: Dict[int, int], index, connection,
     first; only when that product is over the line does it count the combined keys."""
     if len(levels) < 2:
         return None
+    if any(lv.split.where is not None and lv.selector is not None
+           and _min_doc_count(lv.split.where) > 1 for lv in levels):
+        return None   # count-filtered: checked on the answer instead (truncated_levels)
     product = 1
     for lv in levels:
         if lv.kind == "terms":
@@ -687,6 +690,71 @@ def guard_nested(levels: List[Level], cards: Dict[int, int], index, connection,
     return n
 
 
+def _count_survivors(lv: Level, index, connection, base_query, deadline) -> set:
+    """The keys of a split that pass its count filter, from a terms request with no
+    sub-aggregations. Refuses when more than MAX_LEVEL_GROUPS pass."""
+    terms = {"field": lv.agg["terms"]["field"], "size": MAX_LEVEL_GROUPS + 1,
+             "min_doc_count": _min_doc_count(lv.split.where)}
+    if lv.exclude:
+        terms["exclude"] = sorted(lv.exclude)
+    body = {"size": 0, "query": base_query, "aggs": {"k": {"terms": terms}}}
+    res = _search(index, connection, body, deadline, "finding the groups that pass the count")
+    keys = {b["key"] for b in res["aggregations"]["k"]["buckets"]}
+    if len(keys) > MAX_LEVEL_GROUPS:
+        raise AnalyticsError(
+            "too_many_groups",
+            f"More than {MAX_LEVEL_GROUPS:,} {_split_noun(lv)} groups pass the count filter; "
+            f"a nested split takes up to {MAX_LEVEL_GROUPS:,} per split.",
+            "Raise the count threshold, narrow the starting set, or make it the only split.")
+    return keys
+
+
+def _cards_product(levels: List[Level], cards: Dict[int, int]) -> int:
+    p = 1
+    for lv in levels:
+        if lv.kind == "terms":
+            p *= max(cards.get(lv.index) or 1, 1)
+        elif lv.kind in ("filters", "range"):
+            p *= max(len(lv.order_keys), 1)
+        else:
+            p *= 100
+    return p
+
+
+def estimate_main_seconds(n_works: int, groups: int, base_search: bool = False) -> float:
+    """The main request's time: about (works / 1e8) x (1 + groups / 5,000) seconds,
+    fitted 2026-10-03 (2020+ topic x year, 104M works, 32K groups: 8 s; MIT year x
+    type x OA, 0.4M works, 4K groups: 0.4 s; field x year, 256M works: 0.5-1.3 s). A
+    split can't make more groups than its works times a few values each, so the
+    group count is capped at 5 per work."""
+    g = min(groups or 1, max(n_works, 1) * 5)
+    t = (n_works / EST_WORKS_PER_S) * (1 + g / EST_GROUPS_SCALE)
+    return max(t, EST_CALL_SEARCH_SET_S if base_search else 0.1)
+
+
+def check_truncated(levels: List[Level], aggs: dict):
+    """A count-filtered nested split takes up to MAX_LEVEL_GROUPS groups per parent;
+    if one came back full, more may have passed: refuse rather than cut silently."""
+    def walk(level_i, agg):
+        lv = levels[level_i]
+        buckets = agg.get("buckets")
+        if lv.kind == "terms" and isinstance(buckets, list) and lv.size \
+                and len(buckets) >= lv.size:
+            raise AnalyticsError(
+                "too_many_groups",
+                f"More than {lv.size:,} {_split_noun(lv)} groups passed the filter in one "
+                f"group; a nested split takes up to {MAX_LEVEL_GROUPS:,} per split.",
+                "Raise the count threshold, narrow the starting set, or make it the only "
+                "split.")
+        items = buckets.values() if isinstance(buckets, dict) else (buckets or [])
+        for b in items:
+            nxt = f"s{level_i + 1}"
+            if level_i + 1 < len(levels) and nxt in b:
+                walk(level_i + 1, b[nxt])
+    if len(levels) > 1 and "s0" in aggs:
+        walk(0, aggs["s0"])
+
+
 def _split_noun(lv: Level) -> str:
     from query_translation.oql_lang import _split_label
     return _split_label(lv.split)
@@ -700,7 +768,13 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
             continue
         card = cards.get(lv.index)
         terms = lv.agg["terms"]
-        if nested:
+        counted = (lv.split.where is not None and lv.selector is not None
+                   and _min_doc_count(lv.split.where) > 1)
+        if nested and counted:
+            # a count filter keeps far fewer groups than the split has; take up to the
+            # cap and say so loudly if more than that pass (checked after the request)
+            size = MAX_LEVEL_GROUPS
+        elif nested:
             if card is not None and card > MAX_LEVEL_GROUPS:
                 raise AnalyticsError(
                     "too_many_groups",
@@ -900,7 +974,7 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 lo = k
                 w = lv.split.bins["of"]
                 if lv.is_float:
-                    label = f"{_num(lo)}-{_num(round(lo + w, 10))}"
+                    label = f"{_num(round(lo, 10))}-{_num(round(lo + w, 10))}"
                 else:
                     hi = int(lo + w - 1)
                     label = _num(lo) if hi == int(lo) else f"{_num(lo)}-{hi}"
@@ -1029,8 +1103,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 lv.post_keep = set()   # filled after the main request
 
     m_aggs = _measure_aggs(agg_measures, fields_dict)
-    cards = _cardinalities(levels, index_name, connection, base_query, deadline) \
-        if (nested and any(lv.kind == "terms" for lv in levels)) else {}
+    n_works, cards = (_probe(levels, index_name, connection, base_query, deadline)
+                      if (nested and any(lv.kind == "terms" for lv in levels)) else (None, {}))
 
     sort_measure = None
     if sort and not nested:
@@ -1066,9 +1140,28 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             comp["after"] = {"k": _decode_cursor(cursor)}
         lv.agg = {"composite": comp}
         lv.composite = True
+    if nested and levels[0].kind == "terms" and levels[0].selector is not None \
+            and levels[0].split.where is not None and _min_doc_count(levels[0].split.where) > 1:
+        # A count-filtered outer split: list the groups that pass the count first (no
+        # sub-aggregations, cheap), then run the nested request on those keys only;
+        # 72 shards each sending 20,000 groups with their inner splits ran past 15 s.
+        survivors = _count_survivors(levels[0], index_name, connection, base_query, deadline)
+        lv0 = levels[0]
+        lv0.include = survivors if lv0.include is None else (lv0.include & survivors)
+        cards[0] = len(lv0.include)
     plan_levels(levels, cards, nested, per_page, page, sort_measure)
     if nested:
-        guard_nested(levels, cards, index_name, connection, base_query, deadline)
+        groups = guard_nested(levels, cards, index_name, connection, base_query, deadline)
+        if n_works is not None:
+            est = estimate_main_seconds(n_works, groups or _cards_product(levels, cards))
+            if est > QUERY_DEADLINE_S:
+                raise AnalyticsError(
+                    "query_too_slow",
+                    f"This query is estimated at {est:,.0f} seconds ({n_works:,} works "
+                    f"split {len(levels)} ways); queries get about "
+                    f"{int(TIME_BUDGET_S)}, so it wasn't run.",
+                    "Narrow the starting set (a shorter year range, a smaller institution "
+                    "or topic), split by something coarser, or drop a split.")
 
     body = build_body(levels, base_query, m_aggs)
     if (levels and not nested and levels[0].kind == "terms"
@@ -1085,6 +1178,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                   preference=pref)
     total_count = res["hits"]["total"]["value"]
     aggs = res.get("aggregations", {})
+    check_truncated(levels, aggs)
 
     total_row = {"key": "total", "key_display_name": f"all {oqo.get_rows.replace('-', ' ')}",
                  "count": total_count}
@@ -1362,8 +1456,9 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     except AnalyticsError as e:
         limits.append(e.to_dict())
     if n_works is not None:
-        est += max(0.0, (n_works / EST_WORKS_PER_S) * (1 + (groups or 1) / EST_GROUPS_SCALE)
-                   - EST_CALL_ID_SET_S)
+        if nested and groups is None:
+            groups = _cards_product(levels, cards)   # count-filtered: all groups are counted
+        est += max(0.0, estimate_main_seconds(n_works, groups or 1) - EST_CALL_ID_SET_S)
         if nested:
             est += call_s                    # the probe the run makes first
     est += EST_NAMES_S if levels else 0
