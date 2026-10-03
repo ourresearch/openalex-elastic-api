@@ -101,6 +101,19 @@ def _components_to_oxurl(entity_type: str, components: dict) -> str:
     return base + ("?" + "&".join(pairs) if pairs else "")
 
 
+def requested_style() -> Optional[str]:
+    """`?oql_style=pipeline` previews the launch's echo on one request, so the website
+    and the MCP server can test against it before the flip (oxjob #1530). None
+    otherwise (the configured CANONICAL_STYLE applies)."""
+    try:
+        from flask import has_request_context, request
+        if has_request_context() and request.args.get("oql_style") in ("pipeline", "classic"):
+            return request.args.get("oql_style")
+    except Exception:
+        pass
+    return None
+
+
 def build_x_query(
     oqo: OQO,
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
@@ -170,7 +183,7 @@ def build_x_query(
         else:
             # Executed-query path (decision 14): bare-ID canonical OQL, no resolver
             # object at all — see the docstring for why wrapping None is a bug.
-            oql_form = oql_lang.render(canonical, resolver=None)
+            oql_form = oql_lang.render(canonical, resolver=None, style=requested_style())
     except OQLError as e:
         # No honest OQL form for this query (classic fuzzy `term~N`, oxjob #865).
         # Mirror the url leg: omit rather than echo OQL that means something
