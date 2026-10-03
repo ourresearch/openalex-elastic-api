@@ -113,6 +113,11 @@ def test_bins_and_values():
      "number of works",
      "get works where year > (2020); then group those works by year; then calculate mean "
      "FWCI, count"),
+    # on author groups, `author is ...` can only mean each group's own author
+    ("get works where year > (2020); then group those works by author where author is "
+     "not in (col_abc)",
+     "get works where year > (2020); then group those works by author where that author "
+     "is not in (col_abc)"),
 ])
 def test_lenient_input_renders_canonical(typed, canonical):
     assert _flat(render(_canon(typed), style="pipeline")) == canonical
@@ -301,6 +306,15 @@ def test_min_max_date():
     assert _flat(render(oqo)) == q
     from query_translation.validator import validate_oqo
     assert validate_oqo(oqo).valid
+
+
+def test_a_field_with_no_split_says_how_to_list_instead():
+    # `get sources where ...; then calculate 2-year mean citedness` usually wants the list
+    e = _err("get authors where h-index > (50); then calculate h-index")
+    assert e.code == "OQL_BAD_MEASURE" and "drop the calculate step" in e.fixit
+    e = _err("get works where year > (2020); then group those works by year; then "
+             "calculate citation count")
+    assert "drop the calculate step" not in e.fixit
 
 
 def test_mean_of_a_date_is_an_error():

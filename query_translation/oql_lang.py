@@ -3473,11 +3473,15 @@ class _Parser:
                 spelling, fld, _n = m
                 fld = _entity_resolve_field(fld, entity)
                 if fld.kind == "num":
+                    listing = "" if splits else (
+                        f"; or, to list each of the {_plural_noun(entity)} with its "
+                        f"{spelling}, drop the calculate step (the results show every "
+                        f"field and sort by any of them)")
                     raise oql_error(
                         "OQL_BAD_MEASURE",
                         f'"{spelling}" is a field, not a calculation',
                         f"name the calculation: calculate mean {spelling} (or median, "
-                        f"sum, min, max {spelling})", t.pos)
+                        f"sum, min, max {spelling}){listing}", t.pos)
                 if fld.kind == "bool":
                     raise oql_error(
                         "OQL_BAD_MEASURE",
@@ -3598,6 +3602,16 @@ class _Parser:
                                  operator="is" if op == "isnot" else op, value=v,
                                  is_negated=(op == "isnot"))
         singular = _singular_noun(group_entity) if group_entity else None
+        if singular and w != "that":
+            # `author is not in (...)` on author groups can only mean each group's
+            # own author: read it as `that author is not in (...)`
+            words = singular.lower().split()
+            got = [self.peek(k) for k in range(len(words) + 1)]
+            if all(x is not None and x.kind == "WORD" and x.val.lower() == y
+                   for x, y in zip(got, words + ["is"])):
+                self.i += len(words)
+                return self._parse_group_set_clause(
+                    f"that {singular}", "ids.openalex", group_entity, allow_collection=True)
         if w == "that":
             self.next()
             if group_entity is None:

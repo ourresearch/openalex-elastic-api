@@ -256,6 +256,53 @@ def _min_doc_count(where) -> int:
     return best
 
 
+def _count_floor_only(where) -> bool:
+    """The group filter is only `count >` / `count >=`: terms min_doc_count applies it
+    before the split is sized, so the split's first groups by count are exact."""
+    if where is None:
+        return False
+    m_parts, k_parts = _split_where(where)
+    return bool(m_parts) and not k_parts and all(
+        isinstance(p, MeasureFilter) and p.measure == "count" and not p.is_negated
+        and p.operator in (">", ">=") for p in m_parts)
+
+
+def _filter_truncated(lv, aggs: dict) -> bool:
+    """Did a filtered single split have more groups than it checked?"""
+    if lv.kind != "terms" or lv.composite or not getattr(lv, "size", None):
+        return False
+    if "n_candidates" in aggs:
+        return len(aggs["n_candidates"]["buckets"]) > FILTERED_CANDIDATES
+    return len(aggs["s0"]["buckets"]) >= lv.size
+
+
+def _keyset_count_agg(lv, field: str) -> Optional[dict]:
+    """How many keys of a key-set filter the set holds: the kept keys, or the left-out
+    keys to subtract from the split's cardinality. None past MAX_LEVEL_GROUPS keys."""
+    if lv.include is not None:
+        keys = sorted(lv.include - (lv.exclude or set()))
+    elif lv.exclude:
+        keys = sorted(lv.exclude)
+    else:
+        return None
+    if not keys or len(keys) > MAX_LEVEL_GROUPS:
+        return None
+    return {"terms": {"field": field, "include": keys, "size": len(keys)}}
+
+
+def _groups_count(lv, aggs: dict) -> Optional[int]:
+    """A single split's number of groups after its key-set filter (None when unknown)."""
+    n = (aggs.get("n_groups") or {}).get("value")
+    present = (aggs.get("n_keyset") or {}).get("buckets")
+    if lv.include is not None:
+        if not (lv.include - (lv.exclude or set())):
+            return 0
+        return len(present) if present is not None else None
+    if lv.exclude:
+        return max(0, n - len(present)) if present is not None and n is not None else None
+    return n
+
+
 # ---------------------------------------------------------------------------
 # Splits
 # ---------------------------------------------------------------------------
@@ -280,6 +327,7 @@ class Level:
     post_keep: Optional[set] = None            # keys kept after a survivors lookup
     size: Optional[int] = None
     composite: bool = False                    # cursor paging (a single terms split)
+    paged_floor: bool = False                  # a count floor sorted and paged by ES
 
 
 def _label_bool(column_id: str, value: bool) -> str:
@@ -805,7 +853,19 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
                     "Narrow the starting set, or make it the only split (one split pages "
                     "through any number of groups).")
             size = min(int((card or MAX_LEVEL_GROUPS) * 1.1) + 10, MAX_LEVEL_GROUPS)
-        elif lv.selector is not None or lv.post_keep is not None or lv.split.where is not None:
+        elif (lv.selector is not None and lv.post_keep is None and sort_measure
+              and sort_measure != {"_count": "desc"} and _count_floor_only(lv.split.where)):
+            # a count floor is min_doc_count, applied before the split is sized, so ES
+            # sorts and pages it exactly (one extra group says whether more follow)
+            if page * per_page > MAX_PAGE_DEPTH:
+                raise AnalyticsError(
+                    "page_too_deep",
+                    f"Page {page} of {per_page} groups goes past the first "
+                    f"{MAX_PAGE_DEPTH:,} groups.",
+                    "Sort the groups so the ones you want come first.")
+            size = page * per_page + 1
+            lv.paged_floor = True
+        elif lv.selector is not None or lv.post_keep is not None:
             size = FILTERED_CANDIDATES
         else:
             size = page * per_page
@@ -814,12 +874,13 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
                     "page_too_deep",
                     f"Page {page} of {per_page} groups goes past the first "
                     f"{MAX_PAGE_DEPTH:,} groups.",
-                    "Sort the groups so the ones you want come first.")
+                    "Sort the groups so the ones you want come first, or page through "
+                    "every group with cursor=* (in key order).")
         terms["size"] = size
         terms["shard_size"] = max(size * 2, 3000)
         lv.size = size
         order = [{"_count": "desc"}, {"_key": "asc"}]
-        if sort_measure and not nested and lv.selector is None:
+        if sort_measure and not nested and (lv.selector is None or lv.paged_floor):
             order = ((sort_measure if isinstance(sort_measure, list) else [sort_measure])
                      + [{"_key": "asc"}])
         terms["order"] = order
@@ -1245,14 +1306,29 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     "or topic), split by something coarser, or drop a split.")
 
     body = build_body(levels, base_query, m_aggs)
-    if (levels and not nested and levels[0].kind == "terms"
-            and levels[0].split.where is None):
-        # how many groups a single split has in all (approximate past 3,000)
+    if levels and not nested and levels[0].kind == "terms":
         lv0 = levels[0]
         field0 = (lv0.agg["composite"]["sources"][0]["k"]["terms"]["field"] if lv0.composite
                   else lv0.agg["terms"]["field"])
-        body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
-                                                    "precision_threshold": 3000}}
+        if lv0.selector is None and lv0.post_keep is None:
+            # how many groups a single split has in all (approximate past 3,000), less
+            # what a key-set filter leaves out
+            body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
+                                                        "precision_threshold": 3000}}
+            keyset = _keyset_count_agg(lv0, field0)
+            if keyset is not None:
+                body["aggs"]["n_keyset"] = keyset
+        elif not lv0.composite and not lv0.paged_floor and not (
+                lv0.post_keep is None and _count_floor_only(lv0.split.where)):
+            # a calculation filter checks up to FILTERED_CANDIDATES groups: the same
+            # split with nothing under it says whether more were left unchecked (a count
+            # floor alone needs no check: min_doc_count applies it before the split is
+            # sized, so a full list of candidates means more pass)
+            t = lv0.agg["terms"]
+            cand = {k: t[k] for k in ("field", "include", "exclude", "min_doc_count",
+                                      "shard_size") if k in t}
+            cand["size"] = FILTERED_CANDIDATES + 1
+            body["aggs"]["n_candidates"] = {"terms": cand}
     # same shards for the same query, so approximate counts repeat exactly
     pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
     res = _search(index_name, connection, body, deadline, "calculating the groups",
@@ -1284,8 +1360,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         if total_groups is not None:
             total_row["groups"] = total_groups
         top = levels[0]
-        filtered = (top.selector is not None or top.post_keep is not None
-                    or top.split.where is not None)
+        filtered = (top.selector is not None or top.post_keep is not None) \
+            and not top.paged_floor
         if nested:
             groups_count = len(group_rows)
         elif top.composite:
@@ -1294,16 +1370,39 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             if after and (len(raw["buckets"]) >= per_page or top.selector is not None):
                 next_cursor = _encode_cursor(after["k"])
             more_groups = next_cursor is not None
-            groups_count = (aggs.get("n_groups") or {}).get("value")
+            groups_count = _groups_count(top, aggs)
         elif top.kind == "terms" and not filtered:
             # one page of groups straight from ES, in its order; a sort ES can't do
             # (percent) reorders that page
             if sort and sort_measure is None:
                 group_rows = _sort_rows(group_rows, sort)
             start = (page - 1) * per_page
+            n_rows = len(group_rows)
             group_rows = group_rows[start:start + per_page]
-            more_groups = bool(aggs["s0"].get("sum_other_doc_count"))
-            groups_count = (aggs.get("n_groups") or {}).get("value")
+            if top.paged_floor:
+                # how many groups pass the count isn't known on this path
+                more_groups = n_rows > page * per_page
+            else:
+                more_groups = bool(aggs["s0"].get("sum_other_doc_count"))
+                groups_count = _groups_count(top, aggs)
+        elif _filter_truncated(top, aggs):
+            # more groups than the filter checked: the first FILTERED_CANDIDATES by count
+            # are exact when a count floor is the whole filter and the sort is by count
+            if (top.post_keep is None and _count_floor_only(top.split.where)
+                    and sort in (None, ("count", "desc"))):
+                start = (page - 1) * per_page
+                group_rows = group_rows[start:start + per_page]
+                more_groups = True
+            else:
+                from query_translation.oql_lang import _plural_noun
+                noun = _plural_noun(oqo.get_rows)
+                raise AnalyticsError(
+                    "too_many_groups",
+                    f"More than {FILTERED_CANDIDATES:,} {_split_noun(top)} groups are left "
+                    f"to check against the group filter; a filtered split checks up to "
+                    f"{FILTERED_CANDIDATES:,}.",
+                    f"Put a count filter first (count of those {noun} > (10)) or raise it, "
+                    f"or narrow the starting set.")
         else:
             # every group is here: sort and page in Python
             if sort:
