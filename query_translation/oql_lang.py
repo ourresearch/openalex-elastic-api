@@ -3253,6 +3253,11 @@ class _Parser:
 
     def _parse_each_start_noun(self) -> str:
         """`get each institution ...`: the singular noun after a starting `each`."""
+        t = self.peek()
+        if t is not None and t.kind == "WORD" and t.val.lower() in ("work", "works"):
+            raise oql_error("OQL_EACH_WORK",
+                            "a query about works starts with `get works where ...`",
+                            "drop `each`: get works where ...", t.pos)
         return self._walk_noun(want_plural=False)
 
     def _parse_walk(self, cur: str, cur_each: bool, walks: List[Walk],
@@ -3408,7 +3413,9 @@ class _Parser:
             last = inner.walks[-1]
             fixes.append(("the works themselves",
                           render_pipeline_line(_replace(inner, walks=inner.walks[:-1]))))
-            fixes.append((f"all their works", render_pipeline_line(inner)
+            # inside parentheses a walk is a set: `get authors`, then their works
+            as_set = _replace(inner, walks=inner.walks[:-1] + [_replace(last, each=False)])
+            fixes.append(("all their works", render_pipeline_line(as_set)
                           + f"; then get all {possessive(got, False)} works"))
         err = oql_error(
             "OQL_QUERY_SET_TYPE",

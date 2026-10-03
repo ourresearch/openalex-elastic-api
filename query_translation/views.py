@@ -469,11 +469,14 @@ def _pipeline_check(oqo: OQO) -> dict:
     """The free check for a pipeline-language OQO (oxjob #1530): every limit it hits
     with its fix, the estimated time against the 10 s budget, and the price. Runs
     cheap probes only (group counts), never the query."""
-    from query_translation import analytics
+    from query_translation import analytics, walk_exec
     from query_translation.execution import _base_query_for, _resolve_entity
     from core.utils import get_data_version_connection
     try:
         connection = get_data_version_connection(request)
+        if walk_exec.needs_walk(oqo):
+            # walks and sets (oxjob #1535): one count per walk or set, never the walk
+            return walk_exec.check(oqo, connection)
         fields_dict, index_name, _sort, _schema = _resolve_entity(oqo.get_rows, connection)
         base_query = _base_query_for(oqo, fields_dict, connection)
         return analytics.check(oqo, index_name=index_name, connection=connection,
