@@ -1,4 +1,4 @@
-"""Resolve OpenAlex collection IDs into entity-ID lists by calling openalex-users-api.
+"""Resolve OpenAlex collection IDs into member-ID lists by calling openalex-users-api.
 
 Labels are user-owned named collections of one entity type each. See oxjob #228
 (collections-v1) for design notes. The `collection:` filter syntax in elastic-api
@@ -16,29 +16,35 @@ from core.exceptions import (
     APIQueryParamsError,
     CollectionNotFoundError,
     CollectionResolutionUnavailableError,
+    CollectionTooBigToFilterError,
 )
 
 
 logger = logging.getLogger(__name__)
 
-# Matches the per-collection cap in openalex-users-api (MAX_ENTITIES_PER_COLLECTION
-# = 1000), so a full at-cap collection resolves in a single round-trip. users-api
-# accepts up to 1000 since the matching deploy on 2026-05-29 (commit 03b481a).
-# If users-api silently caps lower, the loop below handles it by paginating —
-# correctness is unaffected, only latency.
-PER_PAGE = 1000
-HTTP_TIMEOUT = 5
+# How long the one users-api call may take. It returns up to 300,000 IDs (~4 MB); the
+# proxy gives the whole request 9 s.
+HTTP_TIMEOUT = 8
+
+# Live filter limits (oxjob #1527, charter plans/collections.md "Limits"). A collection
+# holds up to 1,000,000 members, but as a filter its IDs travel with every request, so:
+# author collections filter live up to 100,000 (author filters pull whole careers, so a
+# bigger roster gives wrong answers, not just slow ones: the charter's Brazil case), and
+# every other type up to 300,000, which covers every source (260,268) and institution
+# (140,266). Works collections at 1M wait for the stamp (the next stage).
+LIVE_FILTER_LIMIT = 300_000
+LIVE_FILTER_LIMITS = {"authors": 100_000}
 
 # Request-wide caps shared by EVERY path that resolves a collection (URL same-type,
 # URL cross-type, OQL/OQO leaves, re-runs for custom group_by). Anyone can now
 # reference a collection shared by link, logged in or not, and each distinct one
-# costs a users-api call plus up to 1,000 terms, so these bound one request's work
+# costs a users-api call plus its IDs, so these bound one request's work
 # (oxjob #646 security review H1; labels-v1 H2/H3 capped only the URL path).
 # Callers also cap how many collection REFERENCES a query may hold
 # (MAX_COLLECTION_REFERENCES_PER_REQUEST), since a repeated ID costs terms, not calls.
 MAX_COLLECTIONS_PER_REQUEST = 5
 MAX_COLLECTION_REFERENCES_PER_REQUEST = 5
-MAX_RESOLVED_IDS_PER_REQUEST = 10_000
+MAX_RESOLVED_IDS_PER_REQUEST = LIVE_FILTER_LIMIT
 
 # Public-facing message for any 503. Internal details (hostname, status code,
 # JSON parse errors) go to the server log only — never to the response body
@@ -46,13 +52,37 @@ MAX_RESOLVED_IDS_PER_REQUEST = 10_000
 _UNAVAILABLE_MSG = "collection resolution temporarily unavailable"
 
 
+def live_filter_limit(entity_type):
+    return LIVE_FILTER_LIMITS.get(entity_type, LIVE_FILTER_LIMIT)
+
+
+def too_big_message(entity_type, member_count):
+    """What a filter by a collection over its live limit says instead of running."""
+    limit = live_filter_limit(entity_type)
+    if entity_type == "authors":
+        return (
+            f"Too big to filter live: this collection has {member_count:,} authors, and author "
+            f"collections filter live up to {limit:,}. For a whole country or institution, use "
+            "the Country or Institution filter. It counts by affiliation and is exact."
+        )
+    return (
+        f"Too big to filter live: this collection has {member_count:,} {entity_type}, and "
+        f"collections filter live up to {limit:,} members. It still holds and exports them."
+    )
+
+
 def resolve_collection(collection_id):
     """Look up a collection by ID and return (entity_type, [entity_ids]).
+
+    One users-api call, `GET /collections/{id}/member-ids?max=...`, returns the type and
+    every member ID (oxjob #1527; it used to page 1,000 IDs at a time, 50 calls for a
+    50,000-member collection). Over the limit, users-api sends only the count.
 
     - Raises CollectionNotFoundError (404) when the caller can't read it:
       missing, deleted, or private to someone else (users-api answers 404 for all
       three; 401/403 are handled the same for safety). This replaced the old silent
       zero, which made a shared search link quietly return nothing (oxjob #646).
+    - Raises CollectionTooBigToFilterError (400) over its type's live filter limit.
     - Raises CollectionResolutionUnavailableError on users-api 5xx / timeout /
       connection failure. The Flask error handler turns that into a 503.
     - Raises APIQueryParamsError if USERS_API_URL is not configured.
@@ -73,9 +103,6 @@ def resolve_collection(collection_id):
         )
 
     base = settings.USERS_API_URL.rstrip("/")
-    entity_ids = []
-    entity_type = None
-    page = 1
 
     # Forward the current request's Authorization header so users-api can decide
     # access for THIS caller: the owner reads a private collection, anyone reads one
@@ -90,60 +117,55 @@ def resolve_collection(collection_id):
     if settings.COLLECTION_RESOLVER_KEY:
         fwd_headers["X-Collection-Resolver-Key"] = settings.COLLECTION_RESOLVER_KEY
 
-    while True:
-        url = f"{base}/collections/{collection_id}/entities"
-        try:
-            resp = requests.get(
-                url,
-                params={"page": page, "per_page": PER_PAGE},
-                headers=fwd_headers,
-                timeout=HTTP_TIMEOUT,
-            )
-        except requests.RequestException as e:
-            logger.warning(
-                "collection resolver request failed for %s: %s", collection_id, e,
-            )
-            raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
+    url = f"{base}/collections/{collection_id}/member-ids"
+    try:
+        resp = requests.get(
+            url,
+            params={"max": LIVE_FILTER_LIMIT},
+            headers=fwd_headers,
+            timeout=HTTP_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        logger.warning(
+            "collection resolver request failed for %s: %s", collection_id, e,
+        )
+        raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        # No access, missing or deleted: one loud error, same for all, so probes
-        # can't tell a private collection from a missing one.
-        if resp.status_code in (401, 403, 404):
-            raise CollectionNotFoundError(
-                f"Collection {collection_id} not found."
-            )
+    # No access, missing or deleted: one loud error, same for all, so probes
+    # can't tell a private collection from a missing one.
+    if resp.status_code in (401, 403, 404):
+        raise CollectionNotFoundError(
+            f"Collection {collection_id} not found."
+        )
 
-        # Anything other than 200 (including 5xx) is treated as users-api being
-        # unavailable; the Flask error handler turns that into a 503.
-        if resp.status_code != 200:
-            logger.warning(
-                "users-api %s resolving collection %s", resp.status_code, collection_id,
-            )
-            raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
+    # Anything other than 200 (including 5xx) is treated as users-api being
+    # unavailable; the Flask error handler turns that into a 503.
+    if resp.status_code != 200:
+        logger.warning(
+            "users-api %s resolving collection %s", resp.status_code, collection_id,
+        )
+        raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        try:
-            payload = resp.json()
-        except ValueError as e:
-            logger.warning(
-                "users-api non-JSON response for collection %s: %s", collection_id, e,
-            )
-            raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
+    try:
+        payload = resp.json()
+    except ValueError as e:
+        logger.warning(
+            "users-api non-JSON response for collection %s: %s", collection_id, e,
+        )
+        raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        collection = payload.get("collection") or {}
-        entity_type = collection.get("entity_type") or entity_type
-        entity_ids.extend(payload.get("entity_ids") or [])
-
-        meta = payload.get("meta") or {}
-        total_pages = meta.get("total_pages") or 1
-        if page >= total_pages:
-            break
-        page += 1
+    entity_type = payload.get("entity_type")
+    member_count = payload.get("member_count") or 0
+    entity_ids = payload.get("member_ids")
+    if entity_ids is None or member_count > live_filter_limit(entity_type):
+        raise CollectionTooBigToFilterError(too_big_message(entity_type, member_count))
 
     if state is not None:
         state["ids"] += len(entity_ids)
         if state["ids"] > MAX_RESOLVED_IDS_PER_REQUEST:
             raise APIQueryParamsError(
-                f"The collections in this request hold too many entities "
-                f"(max {MAX_RESOLVED_IDS_PER_REQUEST:,} in all)."
+                f"The collections in this request hold too many members to filter live "
+                f"together (at most {MAX_RESOLVED_IDS_PER_REQUEST:,} in all)."
             )
         state["resolved"][collection_id] = (entity_type, entity_ids)
     return (entity_type, entity_ids)

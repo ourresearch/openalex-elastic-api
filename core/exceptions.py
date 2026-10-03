@@ -34,6 +34,15 @@ class CollectionNotFoundError(APIError):
     error_code = "collection_not_found"
 
 
+class CollectionTooBigToFilterError(APIError):
+    """A collection with more members than a live filter takes (oxjob #1527): author
+    collections over 100,000, any other over 300,000. It still holds and exports its
+    members; only filtering by it is refused, with a message saying what to do instead."""
+    code = 400
+    description = "Collection too big to filter"
+    error_code = "collection_too_big_to_filter"
+
+
 class CollectionResolutionUnavailableError(APIError):
     code = 503
     description = "collection resolution unavailable"

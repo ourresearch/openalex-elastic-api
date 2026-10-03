@@ -10,7 +10,7 @@ functional suite once a stub users-api is running.
 """
 import pytest
 import requests
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Q, Search
 
 import settings
 from core import collection_resolver
@@ -18,6 +18,7 @@ from core.exceptions import (
     APIQueryParamsError,
     CollectionNotFoundError,
     CollectionResolutionUnavailableError,
+    CollectionTooBigToFilterError,
 )
 from core.fields import CollectionField
 from core.filter import _apply_collection_filters
@@ -38,6 +39,11 @@ class _FakeResp:
         if self._body is None:
             raise ValueError("no body")
         return self._body
+
+
+def _member_ids_body(entity_type, ids):
+    """users-api's GET /collections/{id}/member-ids answer (oxjob #1527)."""
+    return {"id": "col_x", "entity_type": entity_type, "member_count": len(ids), "member_ids": ids}
 
 
 # ---------- resolve_collection ----------
@@ -62,50 +68,55 @@ class TestResolveCollection:
         seen = {}
         def fake_get(url, params=None, headers=None, timeout=None):
             seen.update(headers or {})
-            return _FakeResp(200, {"meta": {"total_pages": 1},
-                                   "collection": {"entity_type": "works"},
-                                   "entity_ids": ["W1"]})
+            return _FakeResp(200, _member_ids_body("works", ["W1"]))
         monkeypatch.setattr(collection_resolver.requests, "get", fake_get)
         collection_resolver.resolve_collection("col_x")
         assert seen.get("X-Collection-Resolver-Key") == "k"
 
-    def test_200_single_page(self, monkeypatch):
+    def test_200_one_call(self, monkeypatch):
+        # One call returns every ID (oxjob #1527), with the live limit as `max`.
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
-        body = {
-            "meta": {"page": 1, "per_page": 200, "total_count": 3, "total_pages": 1},
-            "collection": {"entity_type": "works"},
-            "entity_ids": ["W1", "W2", "W3"],
-        }
-        monkeypatch.setattr(
-            collection_resolver.requests, "get",
-            lambda *a, **kw: _FakeResp(200, body),
-        )
+        calls = []
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            calls.append((url, params))
+            return _FakeResp(200, _member_ids_body("works", ["W1", "W2", "W3"]))
+
+        monkeypatch.setattr(collection_resolver.requests, "get", fake_get)
         etype, ids = collection_resolver.resolve_collection("col_abc")
         assert etype == "works"
         assert ids == ["W1", "W2", "W3"]
+        assert calls == [(
+            "http://users-api.test/collections/col_abc/member-ids",
+            {"max": collection_resolver.LIVE_FILTER_LIMIT},
+        )]
 
-    def test_200_multi_page(self, monkeypatch):
+    @pytest.mark.parametrize("etype, count", [("authors", 100_001), ("sources", 300_001), ("works", 1_000_000)])
+    def test_over_the_live_limit_is_too_big(self, monkeypatch, etype, count):
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
-        pages = {
-            1: {
-                "meta": {"page": 1, "per_page": 200, "total_count": 3, "total_pages": 2},
-                "collection": {"entity_type": "authors"},
-                "entity_ids": ["A1", "A2"],
-            },
-            2: {
-                "meta": {"page": 2, "per_page": 200, "total_count": 3, "total_pages": 2},
-                "collection": {"entity_type": "authors"},
-                "entity_ids": ["A3"],
-            },
-        }
+        # Over `max`, users-api sends the count and no IDs; an author collection
+        # between 100,000 and 300,000 arrives with its IDs and is refused here.
+        body = {"id": "col_big", "entity_type": etype, "member_count": count}
+        if count <= collection_resolver.LIVE_FILTER_LIMIT:
+            body["member_ids"] = [f"A{i}" for i in range(count)]
+        monkeypatch.setattr(collection_resolver.requests, "get", lambda *a, **kw: _FakeResp(200, body))
+        with pytest.raises(CollectionTooBigToFilterError) as e:
+            collection_resolver.resolve_collection("col_big")
+        assert e.value.code == 400
+        assert e.value.error_code == "collection_too_big_to_filter"
+        assert f"{count:,}" in str(e.value)
+        if etype == "authors":
+            assert "use the Country or Institution filter" in str(e.value)
 
-        def _fake_get(url, params=None, timeout=None, headers=None):
-            return _FakeResp(200, pages[params["page"]])
-
-        monkeypatch.setattr(collection_resolver.requests, "get", _fake_get)
-        etype, ids = collection_resolver.resolve_collection("col_multi")
-        assert etype == "authors"
-        assert ids == ["A1", "A2", "A3"]
+    @pytest.mark.parametrize("etype, count", [("authors", 100_000), ("sources", 300_000)])
+    def test_at_the_live_limit_filters(self, monkeypatch, etype, count):
+        monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
+        ids = [f"X{i}" for i in range(count)]
+        monkeypatch.setattr(
+            collection_resolver.requests, "get",
+            lambda *a, **kw: _FakeResp(200, _member_ids_body(etype, ids)),
+        )
+        assert collection_resolver.resolve_collection("col_edge") == (etype, ids)
 
     def test_500_raises_unavailable(self, monkeypatch):
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
@@ -537,9 +548,7 @@ class TestRequestWideCaps:
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
         def fake_get(url, params=None, headers=None, timeout=None):
             calls.append(url)
-            return _FakeResp(200, {"meta": {"total_pages": 1},
-                                   "collection": {"entity_type": "works"},
-                                   "entity_ids": [f"W{i}" for i in range(n_ids)]})
+            return _FakeResp(200, _member_ids_body("works", [f"W{i}" for i in range(n_ids)]))
         monkeypatch.setattr(collection_resolver.requests, "get", fake_get)
 
     def test_repeated_collection_resolves_once_per_request(self, monkeypatch):
@@ -562,7 +571,8 @@ class TestRequestWideCaps:
 
     def test_request_wide_id_budget(self, monkeypatch):
         calls = []
-        self._fake_users_api(monkeypatch, calls, n_ids=4000)
+        # Three collections of 120,000 each pass the 300,000 budget on the third.
+        self._fake_users_api(monkeypatch, calls, n_ids=120_000)
         with self._app().test_request_context("/works"):
             collection_resolver.resolve_collection("col_a")
             collection_resolver.resolve_collection("col_b")
@@ -573,3 +583,49 @@ class TestRequestWideCaps:
         collection_resolver.check_collection_reference_count(5)
         with pytest.raises(APIQueryParamsError):
             collection_resolver.check_collection_reference_count(6)
+
+
+# ---------- chunked terms (oxjob #1527) ----------
+
+class TestChunkedTerms:
+    """Past 60,000 IDs a collection filter ORs several `terms` clauses: one clause takes
+    at most 65,536 values (index.max_terms_count)."""
+
+    def test_any_of_terms_one_clause_when_it_fits(self):
+        from core.fields import any_of_terms
+        q = any_of_terms(lambda c: Q("terms", id=c), ["a", "b"]).to_dict()
+        assert q == {"terms": {"id": ["a", "b"]}}
+
+    def test_any_of_terms_splits_at_60000(self):
+        from core.fields import TERMS_CHUNK, any_of_terms
+        ids = [f"x{i}" for i in range(2 * TERMS_CHUNK + 1)]
+        q = any_of_terms(lambda c: Q("terms", id=c), ids).to_dict()
+        clauses = q["bool"]["should"]
+        assert q["bool"]["minimum_should_match"] == 1
+        assert [len(c["terms"]["id"]) for c in clauses] == [TERMS_CHUNK, TERMS_CHUNK, 1]
+        assert [i for c in clauses for i in c["terms"]["id"]] == ids
+
+    def test_same_type_collection_of_130000_ors_three_clauses(self, monkeypatch):
+        ids = [f"S{i}" for i in range(1, 130_001)]
+        monkeypatch.setattr(
+            collection_resolver, "resolve_collection", lambda cid: ("sources", ids),
+        )
+        field = CollectionField(entity_type="sources")
+        field.value = "col_big"
+        q = field.build_query().to_dict()
+        clauses = q["bool"]["should"]
+        assert [len(c["terms"]["id"]) for c in clauses] == [60_000, 60_000, 10_000]
+        assert clauses[0]["terms"]["id"][0] == "https://openalex.org/S1"
+        field.value = "!col_big"
+        # NOT (a OR b OR c): elasticsearch_dsl writes it as must_not [a, b, c].
+        negated = field.build_query().to_dict()
+        assert [len(c["terms"]["id"]) for c in negated["bool"]["must_not"]] == [60_000, 60_000, 10_000]
+
+
+def test_openalex_id_terms_fast_path_and_fallback():
+    # Canonical short IDs take the fast path; anything else is still normalized.
+    from core.fields import OpenAlexIDField
+    field = OpenAlexIDField(param="primary_location.source.id", entity_type="sources")
+    q = field.build_terms_query(["S11", "s22", "https://openalex.org/S333"]).to_dict()
+    (values,) = q["terms"].values()
+    assert values == ["https://openalex.org/S11", "https://openalex.org/S22", "https://openalex.org/S333"]
