@@ -803,6 +803,21 @@ class OQOValidator:
 
         if f.operator == "in" or isinstance(f.value, OQO):
             return self._validate_query_set(f, columns, location)
+        if f.column_id in GROUP_FILTER_RELATIONS:
+            # co-author / collaborator at the top level (oxjob #1535): only on the
+            # things they relate, and only to ids of that kind
+            want = GROUP_FILTER_RELATIONS[f.column_id]
+            ent = _resolve_property_entity(want)
+            if ent is None or columns is not get_entity_properties(ent):
+                return [ValidationError(
+                    type="invalid_column", location=f"{location}.column_id",
+                    message=(f"'{f.column_id}' filters {want} (get {want} where "
+                             f"{'co-author' if want == 'authors' else 'collaborator'} is ...)"))]
+            if f.operator != "is" or not isinstance(f.value, str):
+                return [ValidationError(
+                    type="invalid_value_type", location=f"{location}.value",
+                    message=f"'{f.column_id}' takes {want[:-1]} ids")]
+            return []
 
         # (shape) operator must be a known OQO operator string.
         operator_known = f.operator in VALID_OPERATORS

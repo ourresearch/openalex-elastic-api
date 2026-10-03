@@ -30,7 +30,8 @@ from elasticsearch_dsl import Q
 
 from query_translation import analytics as A
 from query_translation.oqo import (
-    OQO, BranchFilter, GroupBy, LeafFilter, Measure, has_query_value, result_entity)
+    OQO, RELATION_COLUMNS, BranchFilter, GroupBy, LeafFilter, Measure, has_query_value,
+    has_relation_leaf, result_entity)
 from query_translation.walks import entity_for_link, link_for, plural, singular
 
 INFLIGHT = 8                 # calls in flight (measured safe on production, 2026-10-03)
@@ -62,7 +63,8 @@ class IdSet:
 
 
 def needs_walk(oqo: OQO) -> bool:
-    return bool(oqo.walks) or oqo.each or any(has_query_value(f) for f in oqo.filter_rows)
+    return (bool(oqo.walks) or oqo.each
+            or any(has_query_value(f) or has_relation_leaf(f) for f in oqo.filter_rows))
 
 
 def _pmap(fn, items, inflight=INFLIGHT):
@@ -279,16 +281,35 @@ def _listed_ids(oqo: OQO) -> Optional[List[str]]:
 # ---------------------------------------------------------------------------
 # Sets defined by a whole query
 # ---------------------------------------------------------------------------
-def resolve_sets(oqo: OQO, ctx: Ctx) -> OQO:
-    """Replace every leaf whose value is a whole query by its resolved ids."""
+def resolve_sets(oqo: OQO, ctx: Ctx, walk_wheres: bool = True) -> OQO:
+    """Replace every leaf whose value is a whole query, and every co-author or
+    collaborator leaf, by its resolved ids."""
     def walk(node):
         if isinstance(node, BranchFilter):
             return replace(node, filters=[walk(f) for f in node.filters])
         if isinstance(node, LeafFilter) and isinstance(node.value, OQO):
             return _resolve_leaf(node, ctx)
+        if isinstance(node, LeafFilter) and node.column_id in RELATION_COLUMNS:
+            return _resolve_relation(node, ctx)
         return node
-    walks = [replace(w, where=walk(w.where)) if w.where is not None else w for w in oqo.walks]
+    walks = oqo.walks
+    if walk_wheres:
+        walks = [replace(w, where=walk(w.where)) if w.where is not None else w for w in walks]
     return replace(oqo, filter_rows=[walk(f) for f in oqo.filter_rows], walks=walks)
+
+
+def _resolve_relation(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
+    """`co-author is (A1)`: the authors who share a work with A1 (and A1), as ids;
+    `collaborator is (I1)`: the institutions on I1's works. Rung 1's group filters
+    resolve the same words the same way (analytics._coauthor_keys)."""
+    if leaf.column_id == "co_author":
+        field, what = "authorships.author.id", "co-author"
+    else:
+        field, what = "authorships.institutions.lineage", "collaborator"
+    keys = A._coauthor_keys(ctx.works_index, ctx.connection, [leaf.value], field, field,
+                            ctx.deadline, what)
+    return LeafFilter("ids.openalex", IdSet(sorted(keys), f"{what} of {leaf.value}"), "in",
+                      leaf.is_negated)
 
 
 def _resolve_leaf(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
@@ -421,20 +442,21 @@ def prepare(oqo: OQO, connection, deadline: A.Deadline) -> Tuple[str, object]:
     """Resolve an OQO's sets and walks. Returns ("oqo", an OQO the works path runs as
     is) or ("body", a finished response body)."""
     ctx = Ctx(connection, deadline)
+    back = next((w for w in oqo.walks if w.to is not None), None)
+    out = next((w for w in oqo.walks if w.to is None), None)
+    if back is None and not oqo.calculate and out is not None:
+        # the walk ends at the things: list them, each with its count in the set and
+        # filtered by its own fields: Rung 1's split by them (its lookups, co-author
+        # and collaborator filters included)
+        start = replace(resolve_sets(oqo, ctx, walk_wheres=False), walks=[], each=False)
+        return "oqo", replace(start, group_by=[GroupBy(column_id=out.column_id,
+                                                       where=out.where)],
+                              calculate=[Measure("count")])
     oqo = resolve_sets(oqo, ctx)
     if not oqo.walks and not oqo.each:
         return "oqo", oqo
     if not oqo.walks and oqo.each:
         return "oqo", replace(oqo, each=False)   # a list of the things themselves
-    back = next((w for w in oqo.walks if w.to is not None), None)
-    out = next((w for w in oqo.walks if w.to is None), None)
-    if back is None and not oqo.calculate and out is not None:
-        # the walk ends at the things: list them, each with its count in the set and
-        # filtered by its own fields: Rung 1's split by them (its lookups included)
-        start = replace(oqo, walks=[], each=False)
-        return "oqo", replace(start, group_by=[GroupBy(column_id=out.column_id,
-                                                       where=out.where)],
-                              calculate=[Measure("count")])
     kind, plan = plan_walk(oqo, ctx)
     if kind == "set":
         # their works as one set: a works filter, then everything works can do

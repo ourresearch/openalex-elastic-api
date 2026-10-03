@@ -2105,6 +2105,21 @@ class _Parser:
             gc = self._parse_group_clause()
             if gc is not None:
                 return gc
+        # co-occurrence at the top level (oxjob #1535): `get authors where co-author
+        # is (A1)`, `get institutions where collaborator is not (I1)`; also inside a
+        # walk's `where` on authors or institutions. Same words and meaning as the
+        # group filters (#1530).
+        t0 = self.peek()
+        w0 = t0.val.lower() if t0 is not None and t0.kind == "WORD" else ""
+        if self._group_ctx is None and not self._ctx_mode:
+            if w0 in ("co-author", "coauthor", "co-authors", "coauthors") \
+                    and self._entity == "authors":
+                self.next()
+                return self._parse_group_set_clause("co-author", "co_author", "authors")
+            if w0 in ("collaborator", "collaborators") and self._entity == "institutions":
+                self.next()
+                return self._parse_group_set_clause("collaborator", "collaborator",
+                                                    "institutions")
         # negated relations on the verb (oxjob #1535; decided 2026-10-03):
         # `it doesn't cite works in (...)`, `it isn't cited by works in (...)`
         neg = match_negated_relation(self.toks, self.i)
@@ -4863,6 +4878,12 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     return cn
 
 
+# Co-occurrence relations (oxjob #1530 group filters; top level since #1535): the word
+# for each, and the things it filters (`get authors where co-author is (A1)`)
+_RELATION_SUBJECTS = {"co_author": "co-author", "collaborator": "collaborator"}
+_RELATION_ENTITY = {"co_author": "authors", "collaborator": "institutions"}
+
+
 # A relation's set (oxjob #1535): (subject, verb) when it holds, and when it doesn't
 _RELATION_SET_RENDER = {
     "referenced_works": (("it", " cites works in "), ("it", " doesn't cite works in ")),
@@ -4931,7 +4952,7 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
             value=f.value, column_display_name=name))
 
     fld = _BY_COLUMN.get(f.column_id)
-    name = fld.oql if fld else f.column_id
+    name = fld.oql if fld else _RELATION_SUBJECTS.get(f.column_id, f.column_id)
     # date bound columns (from_*/to_*) render via the axis word + comparison op
     # (oxjob #407). The leaf carries op="is" on the bound column; we print
     # `<axis> >= <date>` / `<axis> <= <date>` (the inverse of the parse routing).
@@ -5065,7 +5086,7 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
             head = [_seg("column", subj, column_id=ecol),
                     _seg("operator", verb), _seg("text", "(")]
         else:
-            name = fld.oql if fld else ecol
+            name = fld.oql if fld else _RELATION_SUBJECTS.get(ecol, ecol)
             head = [_seg("column", name, column_id=ecol),
                     _seg("operator", " is "), _seg("text", "(")]
         segs = head + _vtree_segments(vtree) + [_seg("text", ")")]

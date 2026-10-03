@@ -364,6 +364,17 @@ def has_query_value(node) -> bool:
     return isinstance(node, LeafFilter) and isinstance(node.value, OQO)
 
 
+# Co-occurrence relations: group filters in #1530, top-level filters since #1535
+# (`get authors where co-author is (A1)`). They resolve to ids when the query runs.
+RELATION_COLUMNS = {"co_author": "authors", "collaborator": "institutions"}
+
+
+def has_relation_leaf(node) -> bool:
+    if isinstance(node, BranchFilter):
+        return any(has_relation_leaf(f) for f in node.filters)
+    return isinstance(node, LeafFilter) and node.column_id in RELATION_COLUMNS
+
+
 @dataclass
 class GroupBy:
     """One split (group-by dimension). `group_by` on the OQO is the ordered list of
@@ -576,7 +587,7 @@ class OQO:
         nested query (oxjob #1535)."""
         return (bool(self.calculate) or any(not g.is_plain for g in self.group_by)
                 or bool(self.walks) or self.each
-                or any(has_query_value(f) for f in self.filter_rows))
+                or any(has_query_value(f) or has_relation_leaf(f) for f in self.filter_rows))
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}

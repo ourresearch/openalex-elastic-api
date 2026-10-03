@@ -228,3 +228,30 @@ def test_a_walk_that_ends_at_the_things_lists_them_as_rung_1_splits():
         "column_id": "authorships.author.id",
         "where": {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}}]
     assert [m.measure for m in oqo.calculate] == ["count"] and not oqo.walks
+
+
+
+# ---------------------------------------------------------------------------
+# Co-occurrence filters at the top level (oxjob #1535)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("q", [
+    "get authors where co-author is (A5026692680) and h-index > (20)",
+    "get authors where co-author is not (A5026692680)",
+    "get institutions where collaborator is not (I63966007)",
+    "get works where title has (kelp); then get each author of those works "
+    "where co-author is not (A5026692680); then get all that author's works; "
+    "then calculate count",
+])
+def test_cooccurrence_round_trip(q):
+    assert _line(q) == q
+    assert validate_oqo(parse(q)).valid
+    assert W.needs_walk(parse(q))
+
+
+def test_cooccurrence_only_on_its_own_things():
+    # `co-author` is an authors filter; on works it isn't a field
+    with pytest.raises(OQLError):
+        parse("get works where co-author is (A5026692680)")
+    r = _v({"get_rows": "works", "filter_rows": [{"column_id": "co_author",
+                                                  "value": "A5026692680"}]})
+    assert not r.valid and r.errors[0].type == "invalid_column"
