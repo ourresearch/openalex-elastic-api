@@ -1,200 +1,200 @@
 # The OQL guide
 
-**OQL is the OpenAlex Query Language — a readable way to ask OpenAlex anything.**
-Where the classic API uses URL filter strings, OQL lets you write the query out in
-something close to plain English:
+**OQL, the OpenAlex Query Language, lets you ask OpenAlex for works and for numbers about
+them in something close to plain English.** A query is a short series of steps:
 
 ```
-works where title has ("climate change") and year >= (2020) and open access is (true)
+get works where title-abstract has ("climate change") and year >= (2020);
+then group those works by year;
+then calculate count, percent open access
 ```
 
-You can read that aloud and roughly know what it does — that's the whole point. OQL can
-also express queries the old URL syntax never could (deep nesting, OR across different
-fields, mixed exact-and-stemmed search), while compiling down to the same engine the GUI
-and classic URLs already use.
+You can read that aloud and know what it returns: climate-change papers since 2020, year by
+year, with how many there are and what share is open access. That's the point: a query you
+can paste into a paper's methods section, that a reader understands, and that anyone can run
+again for the same answer.
 
-## The three things to know
+## The four things to know
 
-1. **A query is `<entity> where <filters>`.** The entity is what you get back —
-   `works`, `authors`, `institutions`, `sources`, … With no filters, the bare entity
-   is a valid query: `works`.
-2. **Filter fields with `is` / `>=`; search text with `has` — the value always sits in
-   parentheses.** `year is (2020)`, `citation count >= (100)`, `title has (cancer)`.
-3. **Combine with `and` / `or`; group filters with parentheses.**
-   `title has (cancer) and year >= (2020)`.
+1. **Start with `get <things> where <conditions>`.** The things are what you get back:
+   `works`, `authors`, `institutions`, `sources`, ... With no conditions, `get works` is a
+   valid query.
+2. **Filter fields with `is` and comparisons; search text with `has`. The value always sits
+   in parentheses.** `year is (2020)`, `citation count >= (100)`, `title has (cancer)`.
+3. **Add steps with `; then`.** `group those works by <field>` splits the works into groups;
+   `calculate ...` computes numbers, and is always the last step.
+4. **Combine conditions with `and` / `or`; group them with parentheses.**
 
-That's enough to write most queries. Everything below is detail.
+That's enough for most questions. Everything below is detail.
 
 ## Where to run it
 
-- **On the search page:** switch to the new **OQL tab** at the top of the page and type
-  your query — valid queries run as you type, and you can flip between the
-  point-and-click builder and the OQL text. This is the easiest way to experiment.
-- **On the API:** `https://api.openalex.org/?oql=<your query>`. Note the query carries its
-  own entity (`works where …`), so it goes to the API **root**, not `/works`.
+- **On the search page:** the **OQL tab** at the top of the page. Valid queries run as you
+  type; breakdowns show as a table.
+- **On the API:** `https://api.openalex.org/?oql=<your query>`, on the API root, since the
+  query names what it gets.
+- **Check before you run:** `https://api.openalex.org/query/oql/<your query>` is free. It
+  says whether the query is valid (and if not, what to change), how long it should take, and
+  what it will cost.
+
+Queries written the older way (`works where ... group by year`) still work, and come back in
+the form above.
 
 ---
 
 ## Filtering
 
-A filter is `<field> <operator> (<value>)` — the value always sits in parentheses.
-Most filters use `is`, or a numeric comparison:
+A condition is `<field> <operator> (<value>)`:
 
 ```
-works where type is (review)
-works where year is (2020)
-works where citation count >= (100)
-works where FWCI >= (2.0)
+get works where type is (review)
+get works where year is (2020)
+get works where citation count >= (100)
+get works where FWCI >= (2.0)
 ```
 
-**Several values for one field** — put them in the same parentheses, joined with `or`:
+**Several values for one field** go in the same parentheses, joined with `or`, or as a set:
 
 ```
-works where type is (article or review)
+get works where type is (article or review)
+get works where institution is in (I63966007, I97018004)
 ```
 
-**Ranges** are just two endpoint filters joined with `and`:
+**Ranges** are two endpoint conditions: `year >= (2019) and year <= (2023)`.
+
+**Exclude on the verb:** `type is not (review)`, `country is not (FR or DE)`,
+`institution is not in (col_abc123)`.
+
+**Entities** (institutions, authors, funders, sources, topics, ...) go in by their OpenAlex
+ID. A name in square brackets after it is for reading; it's ignored on input and filled in
+when the query is shown back to you:
 
 ```
-works where year >= (2019) and year <= (2023)
+get works where institution is (I136199984 [Harvard University])
 ```
 
-**Entities** (institutions, authors, funders, sources, topics, …) are referenced by their
-OpenAlex ID. You can write a human label after it in square brackets to keep the query
-readable — it's ignored on input and auto-filled when the query is shown back to you:
-
-```
-works where institution is (I136199984 [Harvard University])
-works where institution is (I136199984) or funder is (F4320332161 [National Institutes of Health])
-```
-
-**Closed vocabularies** (countries, languages, SDGs, …) take their code or id, not their
-name: `language is (en)`, `country is (US)`, `SDG is (3)`.
+**Codes** for closed vocabularies: `language is (en)`, `country is (US)`, `SDG is (3)`.
+**Saved collections** are sets: `topic is in (col_abc123)`.
 
 ---
 
-## Searching text — the heart of OQL
+## Searching text
 
-Search a text field with **`has`**. The fields are `title`, `abstract`, `title-abstract`
-(both at once), `title-abstract-keywords` (title and abstract, or the keywords a phrase names), `full text`,
-`raw affiliation`, and `byline`. (The older spellings `title/abstract` and `title/abstract/keywords` still work
-and echo back with hyphens.)
-
-**Bare words are stemmed.** `title has (cancer)` also matches *cancers*, *cancerous* — the
-everyday default, good recall:
+Search a text field with **`has`**: `title`, `abstract`, `title-abstract` (both at once),
+`title-abstract-keywords` (title and abstract, or the keywords a phrase names), `full text`,
+`raw affiliation`. The parentheses hold a portable search string, with capital `AND`, `OR`
+and `NOT`, exactly as a systematic review would report it:
 
 ```
-works where title has (cancer)
-works where title-abstract has (machine learning)
+get works where title-abstract has ((asthma OR wheeze) NOT (child OR pediatric))
 ```
 
-(A phrase of 2+ words is matched as a stemmed phrase, ranked higher when the words are
-adjacent.)
-
-**Quotes mean exact** — stemming off:
-
-```
-works where title has ("climate change")     ← the exact phrase
-works where title has ("cat")                 ← excludes "cats"
-```
-
-**`stemmed "…"`** is the bridge: an exact-adjacent phrase that *keeps* stemming, when you
-want phrase precision without losing recall:
-
-```
-works where title has (stemmed "genome editing")
-```
-
-**Wildcards** (`*` any characters, `?` exactly one character, as in `"wom?n"` or `"wo??n"`;
-neither may start a word) must be **quoted** — they run on the exact, unstemmed text:
-
-```
-works where title has ("psoriat*")
-```
-
-**Proximity** — terms within N words of each other, in any order — is written *before* the
-terms:
-
-```
-works where title has (within 3 ("smart", "phone"))
-```
-
-**Semantic search** finds works by meaning, not keywords:
-
-```
-works where title-abstract is similar to ("ocean acidification effects on coral reefs")
-```
+**Bare words are stemmed:** `title has (cancer)` also matches *cancers* and *cancerous*.
+**Quotes mean exact:** `title has ("climate change")`, `title has ("cat")` (not *cats*).
+`stemmed "genome editing"` keeps a phrase together and still stems it. **Wildcards** go in
+quotes: `title has ("psoriat*")`, where `*` is any characters and `?` exactly one.
+**Proximity** comes before the terms: `title has (within 3 ("smart", "phone"))`.
+**Semantic search** finds works by meaning:
+`title-abstract is similar to ("ocean acidification effects on coral reefs")`.
 
 ---
 
 ## Combining and nesting
 
-Join filters with `and` / `or`, and group with parentheses. `and` binds tighter than
-`or`, so `a and b or c` means `(a and b) or c` — but the canonical form always adds the
-parentheses back so nothing is left to guess:
+Join conditions with `and` / `or` and group with parentheses. `and` binds tighter than `or`,
+and the form shown back to you always adds the parentheses so nothing is left to guess:
 
 ```
-works where title-abstract has ((vape or vaping) and (health or harm))
-
-works where (year < (2000) and title-abstract has ("global warming"))
+get works where (year < (2000) and title-abstract has ("global warming"))
   or (title-abstract has ("climate change") and year > (2020))
 ```
 
-This nesting — and OR across *different* fields
-(`institution is … or funder is …`) — is what the classic URL syntax can't express.
+---
+
+## Splitting into groups
+
+`group those works by <field>` splits the works you have into groups; everything after it is
+computed within each group. Split again with `group those works again by` (up to three
+splits).
+
+```
+get works where institution is (I63966007); then group those works by year
+get works where institution is (I63966007); then group those works by year; then group those works again by type
+```
+
+Besides a field, you can split by:
+
+- **listed values only:** `group those works by institution in (I63966007, I97018004, I136199984)`, one group each, in that order (up to 100);
+- **searches:** `group those works by title-abstract search in (("edge AI"), ("neuromorphic computing"))`, one group per search (up to 100, at most 5 AND/OR/NOT each);
+- **conditions,** to compare sets or periods: `group those works into ((institution is (I99464096)), (country is (BE)))`, or `into ((year <= (2019)), (year >= (2021)))`;
+- **bins** of a number: `group those works into citation count bins at (1, 10, 100)` gives `0`, `1-9`, `10-99`, `100+`; `bins of (10)` gives equal widths. Decimals (FWCI) always need bins.
+
+A yes/no field splits in two: `open access` and `not open access`.
+
+**Every grouped result also has a total row** for the whole starting set, with the same
+numbers and the same later splits. That's your baseline: start from the widest set you want
+to compare against (the world since 2016, a country), and read the shares against the total.
+
+**Filter the groups** by adding `where` to the split. A calculation tests each group's works;
+any other field belongs to the group itself; `that <thing>` tests the group directly:
+
+```
+get works where title-abstract has (kelp);
+then group those works by author where count of those works > (10) and h-index > (20)
+
+get works where topic is in (col_abc123);
+then group those works by institution where collaborator is not (I63966007)
+```
+
+Filtering on a group's own fields (h-index, last known institution) looks the groups up, so
+put a count filter first; without one, a big set can take too long and the check will say so.
 
 ---
 
-## Excluding — `not`
+## Calculating
 
-Put `not` inside the parentheses, directly before the value to exclude:
-
-```
-works where country is (not FR)
-works where title has (covid) and abstract has (not pediatric)
-works where title has (not mouse and cancer)
-```
-
-There's just one way to negate — `not` before a value. To exclude a whole group, write
-`(not (a or b))`.
-
-## Yes / no flags
-
-Boolean flags read as `is (true)` / `is (false)`:
+`calculate` is always the last step:
 
 ```
-works where open access is (true)
-works where has DOI is (true)
-works where retracted is (true)
+get works where country is (KE) and year >= (2015);
+then group those works by year;
+then calculate count, percent open access
 ```
 
-## Grouping and sampling
+- `count`
+- `mean`, `median`, `sum`, `min`, `max` of a number field: `mean FWCI`, `median citation count`, `sum APC paid`, `max date`
+- `percent` of a yes/no field: `percent open access`, `percent retracted`
+- `percent of those works`: each group's share of the set it came from
+- after a split by authors, institutions or sources, their own fields: `calculate count, h-index`
 
-`group by` aggregates results into buckets; `sample` returns a random subset:
+With splits you get one row per group plus the total row; without any, one row.
 
-```
-works where year >= (2020) group by topic
-works where year >= (2020) group by topic, year
-works where year is (2020) sample 500
-```
-
-Sorting results and choosing which columns to show are **not** part of OQL — they're
-controls in the results view (`?sort=` / `?select=` on the API). OQL says *which* works
-you want, not how to display them.
+Sorting is **not** part of OQL: sort the table on the page, or with `?sort=` on the API (any
+calculated column, `sort=mean_fwci:desc`). OQL says which works and which numbers, not how to
+display them.
 
 ---
+
+## Limits, time and price
+
+Up to three splits; up to 100 items in a list; at most 5 AND/OR/NOT in each listed search; a
+nested split up to 10,000 groups per split (a single split pages through any number); about
+ten seconds a query. Anything over a limit is refused before it runs, with the limit and how
+to fix it. A query is priced from what it does: the starting set costs what a list (1 credit)
+or a search (10) costs, each listed search 10, each lookup 1. The check tells you the price
+for free.
 
 ## OQL never guesses
 
-A query that can't do what it appears to do is always a **clear error with a fix-it** —
-never a silent wrong answer. If you mistype a field, mix up syntax, or use an old keyword,
-OQL tells you exactly what to change:
+A query that can't do what it appears to do is always a **clear error with a fix**, never a
+silent wrong answer:
 
 ```
-title contains (cancer)     →  "contains" was renamed; use: title has (cancer)
-title has (bar*)            →  wildcards need quotes: title has ("bar*")
-pub_year is (2020)          →  unknown field "pub_year"; check the field name (it's "year")
-type is (article review)    →  two values need a connective: type is (article or review)
+... then group those works by FWCI       →  FWCI is a decimal: group those works into FWCI bins at (0.5, 1, 2)
+... then calculate authors count         →  name the calculation: calculate mean authors count
+... then group those authors by year     →  this query holds works: group those works by year
+title has (bar*)                         →  wildcards need quotes: title has ("bar*")
+type is (article review)                 →  two values need a connective: type is (article or review)
 ```
 
 ---
@@ -203,12 +203,10 @@ type is (article review)    →  two values need a connective: type is (article 
 
 All of these live under **`/query`**:
 
-- **Cheat sheet** — the one-page summary of everything above.
-- **Cases** — a browsable library of worked examples, each with its OQL and the underlying
-  query object.
-- **Spec** — the formal, normative specification (every rule and edge case).
-- **Grammar** — the formal grammar and a railroad diagram, for the syntax-curious.
-- **OQO schema** — the canonical query object OQL compiles to, for building tools on top.
+- **Cheat sheet**: everything above on one page.
+- **Cases**: worked examples, each with its OQL and the query object behind it.
+- **Spec**: the formal, normative specification.
+- **Grammar**: the formal grammar and a railroad diagram.
+- **OQO schema**: the query object OQL compiles to, for building tools on top.
 
-OQL is in active development and we'd love your feedback — tell us what's confusing, what's
-missing, and what you wish you could express.
+Tell us what's confusing, what's missing, and what you wish you could ask.
