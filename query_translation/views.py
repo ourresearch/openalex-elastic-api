@@ -260,7 +260,10 @@ def _translate_response(oqo, parse_error, sort_operands: bool = True):
         return jsonify({
             "oxurl": None, "oql": None, "oqo": oqo.to_dict(), "validation": validation_result.to_dict(), }), 400
 
-    return jsonify(render_all_formats(oqo, validation_result, sort_operands=sort_operands)), 200
+    out = render_all_formats(oqo, validation_result, sort_operands=sort_operands)
+    # a pipeline query the check refuses (a limit, the time budget) is invalid: 400,
+    # like a validation error, with every reason and its fix (oxjob #1530)
+    return jsonify(out), (200 if out["validation"]["valid"] else 400)
 
 
 @blueprint.route("/query/oxurl/<path:value>", methods=["GET"])

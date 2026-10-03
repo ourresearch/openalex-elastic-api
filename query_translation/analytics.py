@@ -1483,6 +1483,8 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
         calls += 1
     estimate = {"seconds": round(est, 1), "es_calls": calls,
                 "budget_seconds": TIME_BUDGET_S, "within_budget": est <= TIME_BUDGET_S}
+    if any(x["error"] in ("query_too_slow", "too_many_groups") for x in limits):
+        estimate["within_budget"] = False
     if est > TIME_BUDGET_S and not any(x["error"] == "query_too_slow" for x in limits):
         limits.append({
             "error": "query_too_slow",
