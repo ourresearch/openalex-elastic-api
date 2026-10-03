@@ -813,6 +813,7 @@ def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -
     """The one request: nested split aggs with measures at every level, plus the same
     measures at the root (the total row)."""
     inner: Dict[str, dict] = {}
+    chains: Dict[int, Dict[str, dict]] = {}
     for lv in reversed(levels):
         sub = dict(measure_aggs)
         sub.update(inner)
@@ -823,8 +824,13 @@ def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -
         if sub:
             body["aggs"] = sub
         inner = {f"s{lv.index}": body}
+        chains[lv.index] = inner
     aggs = dict(measure_aggs)
     aggs.update(inner)
+    # The total row carries the inner splits too (#1512 measured "17 SDG rows per
+    # group and in the total"): the world by SDG beside each group's SDGs.
+    if len(levels) > 1:
+        aggs.update(chains[1])
     return {"size": 0, "track_total_hits": True, "query": base_query, "aggs": aggs}
 
 
@@ -934,6 +940,8 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 collect(level_i + 1, b[nxt])
 
     collect(0, agg_root["s0"])
+    if len(levels) > 1 and "s1" in agg_root:
+        collect(1, agg_root["s1"])          # the total row's inner splits
     names = {lv.index: _display_names(lv, sorted(raw_by_level[lv.index], key=str), connection)
              for lv in levels if raw_by_level[lv.index]}
 
@@ -989,11 +997,14 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
             out.append(row)
         return out
 
-    return rows(0, agg_root["s0"], total_count)
+    out = rows(0, agg_root["s0"], total_count)
+    total_groups = (rows(1, agg_root["s1"], total_count)
+                    if len(levels) > 1 and "s1" in agg_root else None)
+    return out, total_groups
 
 
 def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measure],
-                    deadline: Deadline):
+                    deadline: Deadline, start_level: int = 0):
     """`value` measures (a split's own field: each author's h-index): one lookup per
     level, by the groups' ids, in the group entity's own index."""
     from core.join_resolver import entity_index
@@ -1009,7 +1020,7 @@ def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measur
         for r in rs:
             if r.get("groups") and level_i + 1 < len(levels):
                 walk(r["groups"], level_i + 1)
-    walk(rows, 0)
+    walk(rows, start_level)
     for lv in levels:
         level_rows = by_level.get(lv.index, [])
         if not level_rows or not lv.group_entity:
@@ -1198,7 +1209,10 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             keys = sorted(_keys_at(levels, aggs, idx))
             lv.post_keep = survivors_lookup(lv, parts, keys, deadline)
         deadline.mark("naming the groups")
-        group_rows = format_levels(levels, measures, aggs, total_count, index_name, connection)
+        group_rows, total_groups = format_levels(levels, measures, aggs, total_count,
+                                                 index_name, connection)
+        if total_groups is not None:
+            total_row["groups"] = total_groups
         top = levels[0]
         filtered = (top.selector is not None or top.post_keep is not None
                     or top.split.where is not None)
@@ -1232,6 +1246,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
 
     if group_rows:
         fill_own_values(levels, group_rows, measures, deadline)   # the page only
+        if total_row.get("groups"):
+            fill_own_values(levels, total_row["groups"], measures, deadline, start_level=1)
     for m in measures:
         if m.measure == "value":
             total_row.pop(m.key, None)   # a group's own field has no total
