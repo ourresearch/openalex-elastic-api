@@ -1749,6 +1749,7 @@ class _Parser:
                     continue
                 if self.word_is("get"):
                     # a walk (oxjob #1535): the current things change
+                    self._walk_start = (entity, corpus, filters) if not walks else None
                     w = self._parse_walk(cur, cur_each, walks, group_by)
                     walks.append(w)
                     if w.to is not None:
@@ -3268,6 +3269,21 @@ class _Parser:
         from query_translation.walks import NOUNS, noun_entity
         t = self.peek()
         got = noun_entity(t.val) if t is not None and t.kind == "WORD" else None
+        start = getattr(self, "_walk_start", None)
+        if got is None and t is not None and t.kind == "WORD" \
+                and t.val.lower() in ("work", "works") and start is not None:
+            # works aren't walked to: the works these works cite (or that cite them)
+            # are a set, written with the relation (oxjob #1535)
+            from query_translation.oql_pipeline import render_pipeline_line
+            ent, corpus, filters = start
+            s = render_pipeline_line(OQO(get_rows=ent, corpus=corpus, filter_rows=filters))
+            raise oql_error(
+                "OQL_BAD_WALK_NOUN",
+                "works aren't walked to; the works these works cite, or the works citing "
+                "them, are a set",
+                f"for the works they cite: get works where it's cited by works in ({s}) | "
+                f"for the works citing them: get works where it cites works in ({s})",
+                t.pos)
         if got is None:
             said = t.val if t is not None else "nothing"
             raise oql_error(
@@ -3443,7 +3459,12 @@ class _Parser:
         if want is None or got == want:
             return
         fixes = []   # (reading, the inner query that would fit)
-        if got == "works" and want in WALK_LINKS:
+        if inner.get_rows == want and inner.walks:
+            # it starts from the right things and walks away from them: stop at them
+            fixes.append((f"the {plural(want)} themselves",
+                          render_pipeline_line(_replace(inner, walks=[], each=False))))
+        elif got == "works" and want in WALK_LINKS and not any(
+                w.to is None for w in inner.walks):
             # the usual slip: the works, not their authors
             fixes.append((f"the {plural(want)} of those works", render_pipeline_line(inner)
                           + f"; then get {plural(want)} of those works"))
