@@ -484,7 +484,8 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         # when it doesn't fit (rerank counted when asked; it's charged only if it runs)
         refused = _credit_refusal(
             analytics_mod.plain_price(
-                oqo, reranked=_rerank_asked() and index_name.lower().startswith("works")),
+                oqo, reranked=_rerank_asked() and index_name.lower().startswith("works"),
+                grandfathered=_grandfathered()),
             "use a filter instead of a search")
         if refused is not None:
             return refused
@@ -712,6 +713,12 @@ def _credit_refusal(cost: dict, narrow: str):
         return None
 
 
+def _grandfathered() -> bool:
+    """The proxy marks requests from grandfathered keys (a URL search costs them 1);
+    it sets the header itself on every forwarded request (#1533)."""
+    return request.headers.get("X-Credits-Grandfathered") == "1"
+
+
 def _rerank_asked() -> bool:
     from flask import g
     value = getattr(g, "rerank_param", None)
@@ -767,7 +774,8 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
     if analytics_mod.PRICE_ALL_OQL and not oqo.uses_pipeline:
         # priced like the same query as a URL; the proxy settles against this header
         cost = analytics_mod.plain_price(
-            oqo, reranked=serialized["meta"].get("reranked") is True)
+            oqo, reranked=serialized["meta"].get("reranked") is True,
+            grandfathered=_grandfathered())
         serialized["meta"]["cost"] = cost
         serialized["meta"]["cost_usd"] = cost["usd"]
         response = jsonify(serialized)

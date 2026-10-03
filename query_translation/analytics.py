@@ -1513,14 +1513,15 @@ def _tree_has_search(node) -> bool:
     return False
 
 
-def plain_price(oqo: OQO, reranked: bool = False) -> dict:
+def plain_price(oqo: OQO, reranked: bool = False, grandfathered: bool = False) -> dict:
     """A query with no pipeline features costs what the same query costs as a URL
     (the proxy's endpointClassifier): any group by 1, a search 10 (semantic
-    included), anything else 1. A rerank that ran adds 10."""
+    included; 1 for a grandfathered key, as on the URL), anything else 1. A rerank
+    that ran adds 10."""
     if oqo.group_by:
         credits, what = 1, "a group by"
     elif any(_tree_has_search(f) for f in oqo.filter_rows):
-        credits, what = 10, "a search"
+        credits, what = (1, "a search (grandfathered key)") if grandfathered else (10, "a search")
     else:
         credits, what = 1, "a list"
     steps = [{"credits": credits, "what": what}]

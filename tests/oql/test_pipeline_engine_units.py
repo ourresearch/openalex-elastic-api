@@ -128,6 +128,12 @@ def test_a_plain_query_costs_what_its_url_costs(q, reranked, credits):
     assert A.plain_price(_oqo(q), reranked=reranked)["credits"] == credits
 
 
+def test_a_grandfathered_key_pays_1_for_a_search_as_on_the_url():
+    kelp = _oqo("works where title-abstract has (kelp)")
+    assert A.plain_price(kelp, grandfathered=True)["credits"] == 1
+    assert A.plain_price(kelp, reranked=True, grandfathered=True)["credits"] == 11
+
+
 def test_count_floor_only():
     def where(q):
         return A._nnf_group_filters(_oqo(q)).group_by[0].where
