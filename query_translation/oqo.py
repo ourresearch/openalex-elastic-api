@@ -336,8 +336,11 @@ class GroupBy:
 
 # Calculations (oxjob #1530). `percent_of_those` is the group's share of the set it
 # came from (`percent of those works`); `percent` takes a yes/no column; the rest a
-# numeric column; `count` none.
-MEASURES = ("count", "mean", "median", "sum", "min", "max", "percent", "percent_of_those")
+# numeric column (min / max also a date); `count` none. `value` is a split's own
+# field shown beside each group (`calculate count, h-index` after a split by author):
+# not computed from the works but read from the group's own record.
+MEASURES = ("count", "mean", "median", "sum", "min", "max", "percent", "percent_of_those",
+            "value")
 NUMERIC_MEASURES = ("mean", "median", "sum", "min", "max")
 
 
@@ -355,6 +358,8 @@ class Measure:
         convention of the #389 metric sort (`mean_cited_by_count`)."""
         if self.column_id is None:
             return self.measure
+        if self.measure == "value":
+            return self.column_id.replace('.', '_')
         return f"{self.measure}_{self.column_id.replace('.', '_')}"
 
     def to_dict(self) -> Dict[str, Any]:

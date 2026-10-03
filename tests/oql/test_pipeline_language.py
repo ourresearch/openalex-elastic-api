@@ -238,6 +238,44 @@ def test_more_loud_errors(q, code):
     assert _err(q).code == code
 
 
+def test_a_groups_own_field_in_calculate():
+    # the same reading a group filter gives a non-calculation field: the group's own value
+    q = ("get works where source is (S137773608); then group those works by author; then "
+         "calculate count, h-index, works count")
+    oqo = _canon(q)
+    assert oqo.calculate[1] == Measure("value", "summary_stats.h_index")
+    assert oqo.calculate[1].key == "summary_stats_h_index"
+    assert _flat(render(oqo)) == q
+    from query_translation.validator import validate_oqo
+    assert validate_oqo(oqo).valid
+
+
+def test_a_field_of_both_needs_a_calculation():
+    # works and authors both have a citation count: ambiguous, so it needs mean / sum
+    e = _err("get works where year > (2020); then group those works by author; then "
+             "calculate citation count")
+    assert e.code == "OQL_BAD_MEASURE" and "mean citation count" in e.fixit
+
+
+def test_own_field_without_a_split_of_those_things():
+    e = _err("get works where year > (2020); then calculate count, h-index")
+    assert e.code == "OQL_BAD_MEASURE" and "group those works by author" in e.fixit
+
+
+def test_min_max_date():
+    q = ("get works where year > (2020); then group those works by publisher; then "
+         "calculate count, max date, min date")
+    oqo = _canon(q)
+    assert [m.measure for m in oqo.calculate] == ["count", "max", "min"]
+    assert _flat(render(oqo)) == q
+    from query_translation.validator import validate_oqo
+    assert validate_oqo(oqo).valid
+
+
+def test_mean_of_a_date_is_an_error():
+    assert _err("get works where year > (2020); then calculate mean date").code == "OQL_BAD_MEASURE"
+
+
 def test_wrong_type_id_is_a_validation_error():
     from query_translation.validator import validate_oqo
     r = validate_oqo(_canon("get works where year > (2020); then group those works by "

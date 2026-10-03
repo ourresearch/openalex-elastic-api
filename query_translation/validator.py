@@ -382,7 +382,7 @@ class OQOValidator:
 
         for i, m in enumerate(oqo.calculate):
             errors.extend(self._validate_measure(m, f"calculate[{i}]", columns,
-                                                 bool(oqo.group_by)))
+                                                 bool(oqo.group_by), oqo))
 
         # --- logistics layer (#318) ------------------------------------------
 
@@ -707,12 +707,27 @@ class OQOValidator:
                 location=loc)]
         return self._validate_filter(f, g_columns, loc)
 
-    def _validate_measure(self, m, loc, columns, has_split) -> List[ValidationError]:
+    def _validate_measure(self, m, loc, columns, has_split, oqo=None) -> List[ValidationError]:
         if m.measure not in MEASURES:
             return [ValidationError(
                 type="invalid_measure",
                 message=f"'{m.measure}' isn't a calculation; use one of {', '.join(MEASURES)}.",
                 location=f"{loc}.measure")]
+        if m.measure == "value":
+            # a split's own field, shown beside each group: some split must be by
+            # things that have it
+            from query_translation.oql_lang import _group_entity
+            for g in (oqo.group_by if oqo is not None else []):
+                ge = _group_entity(g, oqo.get_rows)
+                ge_key = _resolve_property_entity(ge) if ge else None
+                props = get_entity_properties(ge_key) if ge_key else None
+                if props and m.column_id in props and props[m.column_id].type == "number":
+                    return []
+            return [ValidationError(
+                type="invalid_measure",
+                message=(f"'{m.column_id}' isn't a number field of any split's groups; a "
+                         f"group's own field needs a split by things that have it."),
+                location=f"{loc}.column_id")]
         if m.measure in ("count", "percent_of_those"):
             if m.column_id is not None:
                 return [ValidationError(
@@ -727,6 +742,9 @@ class OQOValidator:
             return []
         entry = columns.get(m.column_id) if m.column_id else None
         want = "boolean" if m.measure == "percent" else "number"
+        if (entry is not None and m.measure in ("min", "max")
+                and entry.type in ("date", "datetime")):
+            return []   # the earliest / latest date
         if entry is None or entry.type != want:
             kind = "a yes/no" if want == "boolean" else "a number"
             return [ValidationError(

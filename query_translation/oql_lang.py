@@ -1673,7 +1673,7 @@ class _Parser:
                                     "a calculation must be the last step",
                                     "move `calculate ...` to the end of the query",
                                     nt.pos if nt else t.pos)
-                kind, val = self._parse_step(entity, len(group_by))
+                kind, val = self._parse_step(entity, len(group_by), group_by)
                 if kind == "split":
                     group_by.append(val)
                     if len(group_by) > MAX_SPLITS:
@@ -3094,7 +3094,7 @@ class _Parser:
     # then calculate ...`. Splits become GroupBy entries (outermost first), the
     # calculation the OQO's `calculate`. Spec: #1512 SYNTAX.md "The language now".
 
-    def _parse_step(self, entity: str, n_splits: int):
+    def _parse_step(self, entity: str, n_splits: int, splits=None):
         """One step after `then`: ("split", GroupBy) | ("calculate", [Measure]) |
         ("sample", (n, seed))."""
         self._skip_annot()
@@ -3108,7 +3108,7 @@ class _Parser:
             return "split", self._parse_split(entity, n_splits)
         if w == "calculate":
             self.next()
-            return "calculate", self._parse_measures(entity)
+            return "calculate", self._parse_measures(entity, splits or [])
         if w == "sample":
             self.next()
             return "sample", self._parse_sample_step(entity)
@@ -3393,11 +3393,11 @@ class _Parser:
         raise oql_error("OQL_BAD_BINS", 'expected "bins at (...)" or "bins of (...)"',
                         f"e.g. {example}, or bins of (10)", t.pos if t else bt.pos)
 
-    def _parse_measures(self, entity: str) -> List[Measure]:
+    def _parse_measures(self, entity: str, splits=()) -> List[Measure]:
         """`calculate count, mean FWCI, percent open access`."""
         measures: List[Measure] = []
         while True:
-            m = self._parse_measure(entity)
+            m = self._parse_measure(entity, splits)
             if m not in measures:
                 measures.append(m)
             self._skip_annot()
@@ -3409,7 +3409,7 @@ class _Parser:
             break
         return measures
 
-    def _parse_measure(self, entity: str) -> Measure:
+    def _parse_measure(self, entity: str, splits=()) -> Measure:
         """One measure. Its field is a field of the measured things (`entity`), even
         inside a group filter, where `self._entity` is the group's entity."""
         noun = _plural_noun(entity)
@@ -3444,13 +3444,22 @@ class _Parser:
                     f"{fld.oql}, split by it: group those {noun} by {fld.oql}; then "
                     f"calculate percent of those {noun}",
                     t.pos)
-            if name != "percent" and fld.kind != "num":
+            # min / max of a date: the earliest / latest (`calculate max date`)
+            if name != "percent" and fld.kind != "num" and not (
+                    fld.kind == "date" and name in ("min", "max")):
                 raise oql_error(
                     "OQL_BAD_MEASURE",
                     f'{name} takes a number field; "{fld.oql}" isn\'t one',
                     f"e.g. calculate {name} citation count, or {name} FWCI", t.pos)
             self._parse_of_those(entity)
             return Measure(name, fld.column)
+        # A field of a split's own things (`calculate count, h-index` after `group
+        # those works by author`): each group's own value, the same reading a group
+        # filter gives a non-calculation field (#1512: other fields belong to the
+        # thing itself).
+        own = self._group_own_field(entity, splits) if t is not None else None
+        if own is not None:
+            return own
         # A field where a measure belongs (`calculate authors count`, `calculate
         # h-index`): say which measure to write, or that it isn't calculated at all.
         if t is not None and t.kind == "WORD":
@@ -3488,6 +3497,31 @@ class _Parser:
             "calculations: count; mean, median, sum, min, max of a number field; "
             f"percent of a yes/no field; percent of those {noun}",
             t.pos if t is not None else None)
+
+    def _group_own_field(self, entity: str, splits) -> Optional[Measure]:
+        """A bare field in `calculate` that belongs to a split's own things (an
+        author's h-index) and not to the measured things: Measure("value", column).
+        Consumes it; None (nothing consumed) when it isn't one."""
+        if self.peek() is None or self.peek().kind != "WORD":
+            return None
+        m = match_field(self.toks, self.i)
+        for g in splits:
+            ge = _group_entity(g, entity)
+            if ge is None:
+                continue
+            gm = match_entity_fallback(self.toks, self.i, ge)
+            cand = gm if (gm is not None and (m is None or gm[2] >= m[2])) else m
+            if cand is None:
+                continue
+            spelling, fld, n = cand
+            col = _entity_resolve_field(fld, ge).column
+            # a number of the group's own, and not also a field of the measured
+            # things (`citation count` is both: it needs `mean` / `sum`)
+            if (fld.kind == "num" and _is_column_of(col, ge)
+                    and not _is_column_of(_entity_resolve_field(fld, entity).column, entity)):
+                self.i += n
+                return Measure("value", col)
+        return None
 
     def _parse_those_noun_optional(self, entity: str):
         """`number of works` (no `those`): accept the plural noun."""

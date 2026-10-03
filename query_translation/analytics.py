@@ -122,10 +122,11 @@ def _true_query(fields_dict, column_id: str):
 
 
 def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
+    from core.utils import get_field
     aggs = {}
     for m in measures:
         name = f"m_{m.key}"
-        if m.measure in ("count", "percent_of_those"):
+        if m.measure in ("count", "percent_of_those", "value"):
             continue
         if m.measure == "percent":
             aggs[name] = {"filter": _true_query(fields_dict, m.column_id).to_dict()}
@@ -136,6 +137,8 @@ def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
         else:
             agg = {"mean": "avg", "sum": "sum", "min": "min", "max": "max"}[m.measure]
             aggs[name] = {agg: {"field": es_field}}
+            if "Date" in type(get_field(fields_dict, m.column_id)).__name__:
+                aggs[name][agg]["format"] = "yyyy-MM-dd"   # the earliest / latest date
     return aggs
 
 
@@ -162,6 +165,8 @@ def _measure_value(m: Measure, bucket: dict, count: int, parent_count: Optional[
         return _round((agg.get("values") or {}).get("50.0"))
     if m.measure == "sum" and count == 0:
         return 0
+    if "value_as_string" in agg and m.measure in ("min", "max"):
+        return agg["value_as_string"] if agg.get("value") is not None else None
     return _round(agg.get("value"))
 
 
@@ -913,6 +918,58 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
     return rows(0, agg_root["s0"], total_count)
 
 
+def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measure],
+                    deadline: Deadline):
+    """`value` measures (a split's own field: each author's h-index): one lookup per
+    level, by the groups' ids, in the group entity's own index."""
+    from core.join_resolver import entity_index
+    from core.utils import get_field
+    from elasticsearch_dsl.connections import get_connection
+    wanted = [m for m in measures if m.measure == "value"]
+    if not wanted:
+        return
+    by_level: Dict[int, List[dict]] = {}
+
+    def walk(rs, level_i):
+        by_level.setdefault(level_i, []).extend(rs)
+        for r in rs:
+            if r.get("groups") and level_i + 1 < len(levels):
+                walk(r["groups"], level_i + 1)
+    walk(rows, 0)
+    for lv in levels:
+        level_rows = by_level.get(lv.index, [])
+        if not level_rows or not lv.group_entity:
+            continue
+        try:
+            g_fields, g_index = entity_index(lv.group_entity)
+        except ValueError:
+            continue
+        # the record's own path: the column id (`summary_stats.h_index`), which is how
+        # the document stores it (the filter field can be a flattened copy,
+        # `summary_stats__h_index`)
+        paths = {m.key: m.column_id for m in wanted if m.column_id in g_fields}
+        if not paths:
+            continue
+        keys = [r["key"] for r in level_rows if isinstance(r.get("key"), str)
+                and r["key"].startswith(ID_PREFIX)]
+        found: Dict[str, dict] = {}
+        for start in range(0, len(keys), 1000):
+            chunk = keys[start:start + 1000]
+            res = get_connection().search(
+                index=g_index, body={"size": len(chunk), "_source": ["id"] + list(paths.values()),
+                                     "query": {"terms": {"id": chunk}}},
+                request_timeout=deadline.timeout("reading the groups' own fields"))
+            for h in res["hits"]["hits"]:
+                found[h["_source"]["id"]] = h["_source"]
+        for r in level_rows:
+            src = found.get(r.get("key"))
+            for key, path in paths.items():
+                v = src
+                for part in path.split("."):
+                    v = v.get(part) if isinstance(v, dict) else None
+                r[key] = v
+
+
 def _sort_rows(rows: List[dict], sort: Optional[Tuple[str, str]]):
     if not sort:
         return rows
@@ -1079,6 +1136,11 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 group_rows = group_rows[start:start + per_page]
                 more_groups = start + per_page < groups_count
 
+    if group_rows:
+        fill_own_values(levels, group_rows, measures, deadline)   # the page only
+    for m in measures:
+        if m.measure == "value":
+            total_row.pop(m.key, None)   # a group's own field has no total
     meta = {
         "count": total_count,
         "db_response_time_ms": res.get("took"),
@@ -1185,6 +1247,8 @@ def price(oqo: OQO) -> dict:
                 steps.append({"what": f"split {i + 1}: {len(lookups)} lookup"
                                       f"{'s' if len(lookups) > 1 else ''} ({', '.join(lookups)})",
                               "credits": len(lookups) * LOOKUP_CREDITS})
+    if any(m.measure == "value" for m in oqo.calculate):
+        steps.append({"what": "the groups' own fields (a lookup)", "credits": LOOKUP_CREDITS})
     credits = sum(s["credits"] for s in steps)
     return {"credits": credits, "usd": round(credits * CREDIT_USD, 6), "steps": steps}
 
@@ -1303,6 +1367,9 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
         if nested:
             est += call_s                    # the probe the run makes first
     est += EST_NAMES_S if levels else 0
+    if any(m.measure == "value" for m in oqo.calculate):
+        est += EST_LOOKUP_S
+        calls += 1
     estimate = {"seconds": round(est, 1), "es_calls": calls,
                 "budget_seconds": TIME_BUDGET_S, "within_budget": est <= TIME_BUDGET_S}
     if est > TIME_BUDGET_S and not any(x["error"] == "query_too_slow" for x in limits):

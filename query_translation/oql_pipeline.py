@@ -213,6 +213,8 @@ def measure_text(m: Measure, noun: str) -> str:
         return "count"
     if m.measure == "percent_of_those":
         return f"percent of those {noun}"
+    if m.measure == "value":          # a group's own field, e.g. an author's h-index
+        return L._oql_field(m.column_id)[0]
     return f"{_MEASURE_SURFACE[m.measure]} {L._oql_field(m.column_id)[0]}"
 
 
