@@ -99,6 +99,9 @@ def _parser_recognized_words():
     # lowercased-word helper: `w0 == "x"`, `w(<k>) == "x"`, `w0 in ("a", "b")`.
     for m in re.finditer(r'\bw(?:0|\([^)]*\))\s*==\s*[\'"]([^\'"]+)[\'"]', src):
         words.add(m.group(1).lower())
+    # ... including double-quoted contractions (`w(1) == "isn't"`, oxjob #1535)
+    for m in re.finditer(r'\bw(?:0|\([^)]*\))\s*==\s*"([^"]+)"', src):
+        words.add(m.group(1).lower())
     for m in re.finditer(r"\bw0\s*in\s*[\(\{]([^\)\}]*)[\)\}]", src):
         for q in re.findall(r'"([^"]+)"|\'([^\']+)\'', m.group(1)):
             w = (q[0] or q[1]).strip().lower()
@@ -123,6 +126,14 @@ def _parser_recognized_words():
             w = (q[0] or q[1]).strip().lower()
             if w:
                 words.add(w)
+    # The row-subject relations (#557; documented in the grammar since oxjob #1535):
+    # the pronouns and verb phrases live in the `_ROW_SUBJECT_*` tables.
+    for name in ("_ROW_SUBJECT_PRONOUNS", "_ROW_SUBJECT_VERBS"):
+        m = re.search(name + r"\s*=\s*\((.*?)\n\)", src, re.S) or re.search(
+            name + r"\s*=\s*\(([^\n]*)\)", src)
+        if m:
+            for q in re.findall(r'"([^"]+)"', m.group(1)):
+                words.add(q.lower())
     return words
 
 

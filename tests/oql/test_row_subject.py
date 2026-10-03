@@ -98,10 +98,19 @@ def test_value_level_not_roundtrips():
     assert _render(out) == out
 
 
+@pytest.mark.parametrize("q,col", [
+    ("works where it doesn't cite (W123)", "referenced_works"),
+    ("works where it does not cite (W123)", "referenced_works"),
+    ("works where it isn't cited by (W123)", "cited_by"),
+])
+def test_verb_level_negation_accepted(q, col):
+    # Negation on the verb is accepted on input since 2026-10-03 (Jason: filters
+    # negate on the verb; oxjob #1535); it folds to the value-level leaf.
+    oqo = parse(q).to_dict()
+    assert oqo["filter_rows"] == [{"column_id": col, "value": "W123", "is_negated": True}]
+
+
 @pytest.mark.parametrize("bad", [
-    "works where it doesn't cite (W123)",
-    "works where it does not cite (W123)",
-    "works where it isn't cited by (W123)",
     "works where it is (W123)",           # copula with no verb phrase
     "works where it's cites (W123)",      # contraction + copula-less verb
     "works where it cited by (W123)",     # missing copula

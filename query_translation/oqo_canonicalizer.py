@@ -23,6 +23,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 """
 
 import json
+from dataclasses import replace
 from typing import List, Union, Any
 from query_translation.oqo import (OQO, LeafFilter, BranchFilter, FilterType, SortBy, GroupBy,
                                    MeasureFilter, canonicalize_oqo_column_ids)
@@ -111,6 +112,11 @@ def canonicalize_oqo(oqo: OQO, sort_operands: bool = True) -> OQO:
         # filter_rows, but their LIST order is the group order -> preserved.
         group_by=[_canonicalize_split(g, sort_operands) for g in oqo.group_by],
         calculate=list(oqo.calculate),
+        # walks (oxjob #1535): their order is the query's order; a walk's `where`
+        # canonicalizes like filter_rows
+        walks=[replace(w, where=_canonicalize_tree(w.where, sort_operands))
+               if w.where is not None else w for w in oqo.walks],
+        each=oqo.each,
         # Logistics layer (#318) passes through unchanged: `select` order is
         # meaningful (display order), and pagination/seed defaults are applied
         # only at execution — canonical form leaves them absent when unset so
@@ -279,6 +285,10 @@ def canonicalize_leaf_filter(f: LeafFilter, sort_operands: bool = True) -> Union
       same canonical form, so the OQL render never sees the one-leaf shape it
       can't render faithfully (its `not` bound only the first token).
     """
+    if isinstance(f.value, OQO):
+        # a set defined by a whole query (oxjob #1535): canonical inside too
+        return LeafFilter(column_id=f.column_id, value=canonicalize_oqo(f.value, sort_operands),
+                          operator="in", is_negated=bool(f.is_negated))
     value = canonicalize_value(f.value, f.column_id)
     operator = f.operator or "is"
 

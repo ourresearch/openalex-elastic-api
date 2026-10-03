@@ -280,6 +280,8 @@ class OQOValidator:
     """Validates OQO objects against the live entity-property catalog."""
 
     def validate(self, oqo: OQO) -> ValidationResult:
+        if oqo.walks or oqo.each:
+            return self._validate_walked(oqo)
         errors: List[ValidationError] = []
         warnings: List[ValidationError] = []
 
@@ -450,6 +452,38 @@ class OQOValidator:
             errors=errors,
             warnings=warnings,
         )
+
+    def _validate_walked(self, oqo: OQO) -> ValidationResult:
+        """A query with walks (oxjob #1535) in three parts: the start on its own
+        entity, the walks, and the splits, calculation and view on what the walks
+        reached."""
+        from dataclasses import replace
+        from query_translation.oqo import result_entity
+        start = self.validate(replace(oqo, walks=[], each=False, group_by=[], calculate=[],
+                                      sort_by=[], select=[], per_page=None, page=None,
+                                      cursor=None))
+        errors = list(start.errors) + self._validate_walks(oqo)
+        end = result_entity(oqo)
+        if end != "works" and (oqo.group_by or any(m.measure != "count"
+                                                   for m in oqo.calculate)):
+            errors.append(ValidationError(
+                type="invalid_walk", location="calculate" if not oqo.group_by else "group_by",
+                message=(f"after walking to {end}, a query can count them (calculate count); "
+                         f"walk back to their works to split or measure")))
+        if end != "works" and oqo.calculate and oqo.walks and oqo.walks[-1].each:
+            errors.append(ValidationError(
+                type="invalid_walk", location="calculate",
+                message=(f"each row is one of the {end}, so there is nothing to count per "
+                         f"row; count the set (get {end} of those works; then calculate "
+                         f"count) or walk back to their works")))
+        tail = OQO(get_rows=end, corpus="core", group_by=oqo.group_by,
+                   calculate=[m for m in oqo.calculate] if end == "works" else [],
+                   sort_by=oqo.sort_by, select=oqo.select, per_page=oqo.per_page,
+                   page=oqo.page, cursor=oqo.cursor)
+        rest = self.validate(tail)
+        errors.extend(rest.errors)
+        return ValidationResult(valid=not errors, errors=errors,
+                                warnings=list(start.warnings) + list(rest.warnings))
 
     def _validate_sort_key(
         self,
@@ -767,6 +801,9 @@ class OQOValidator:
     ) -> List[ValidationError]:
         errors: List[ValidationError] = []
 
+        if f.operator == "in" or isinstance(f.value, OQO):
+            return self._validate_query_set(f, columns, location)
+
         # (shape) operator must be a known OQO operator string.
         operator_known = f.operator in VALID_OPERATORS
         if not operator_known:
@@ -840,6 +877,87 @@ class OQOValidator:
         elif f.operator == "is" and f.value is not None:
             errors.extend(self._validate_value_domain(f, entry, location))
 
+        return errors
+
+    def _validate_query_set(
+        self, f: LeafFilter, columns: Dict[str, Property], location: str
+    ) -> List[ValidationError]:
+        """`author is in (<a whole query>)`, `it cites works in (<a whole query>)`
+        (oxjob #1535): operator `in`, a nested OQO that returns the column's kind of
+        thing, one level deep, ending at the things (no splits or calculations)."""
+        from query_translation.oqo import has_query_value, result_entity
+        from query_translation.oql_lang import entity_type_for_column
+        def err(kind, msg, where=".value"):
+            return [ValidationError(type=kind, message=msg, location=location + where)]
+        if f.operator != "in" or not isinstance(f.value, OQO):
+            return err("invalid_query_set",
+                       "a whole query as a value takes the operator 'in' (and 'in' takes a query)",
+                       ".operator")
+        if f.column_id not in columns and f.column_id not in ("referenced_works", "cited_by",
+                                                               "related_to"):
+            return err("invalid_column", f"'{f.column_id}' is not a valid column.", ".column_id")
+        inner = f.value
+        if inner.calculate or inner.group_by:
+            return err("invalid_query_set",
+                       "a query in parentheses must return things, not numbers or groups")
+        if any(has_query_value(x) for x in inner.filter_rows) or any(
+                w.where is not None and has_query_value(w.where) for w in inner.walks):
+            return err("invalid_query_set", "a query in parentheses can't hold another one")
+        want = ("works" if f.column_id in ("referenced_works", "cited_by", "related_to")
+                else entity_type_for_column(f.column_id, "works"))
+        got = result_entity(inner)
+        if want is not None and got != want:
+            return err("invalid_query_set",
+                       f"'{f.column_id}' takes {want}; the query returns {got}")
+        sub = OQOValidator().validate(inner)
+        return [ValidationError(type=e.type, message=e.message,
+                                location=f"{location}.value.{e.location}")
+                for e in sub.errors]
+
+    def _validate_walks(self, oqo: OQO) -> List[ValidationError]:
+        """The walks (oxjob #1535): each link is a walkable works column, a walk's
+        `where` uses the walked things' own fields, one walk out and one back, and
+        `each` on a start only for things that aren't works."""
+        from query_translation.walks import (LINK_ENTITY, WHERE_ENTITIES, link_for)
+        errors: List[ValidationError] = []
+        cur = oqo.get_rows
+        if oqo.each and cur == "works":
+            errors.append(ValidationError(type="invalid_walk", location="each",
+                          message="'each' starts from things that aren't works"))
+        outs = backs = 0
+        for i, w in enumerate(oqo.walks):
+            loc = f"walks[{i}]"
+            if w.to is not None:
+                backs += 1
+                if w.to != "works":
+                    errors.append(ValidationError(type="invalid_walk", location=f"{loc}.to",
+                                  message="a walk back goes to works"))
+                elif cur == "works" or link_for(cur) is None:
+                    errors.append(ValidationError(type="invalid_walk", location=loc,
+                                  message=f"there are no {cur} to walk back from"))
+                cur = "works"
+            else:
+                outs += 1
+                walked = LINK_ENTITY.get(w.column_id)
+                if walked is None:
+                    errors.append(ValidationError(type="invalid_walk", location=f"{loc}.column_id",
+                                  message=f"'{w.column_id}' isn't a walkable link"))
+                    return errors
+                if cur != "works":
+                    errors.append(ValidationError(type="invalid_walk", location=loc,
+                                  message="a walk out starts from works"))
+                if w.where is not None and walked not in WHERE_ENTITIES:
+                    errors.append(ValidationError(type="invalid_walk", location=f"{loc}.where",
+                                  message=f"{walked} have no fields of their own to filter on"))
+                    w = None
+                cur = walked
+            if w is not None and w.where is not None:
+                ent = _resolve_property_entity(cur)
+                cols = get_entity_properties(ent) if ent else {}
+                errors.extend(self._validate_filter(w.where, cols, f"{loc}.where"))
+        if outs > 1 or backs > 1:
+            errors.append(ValidationError(type="invalid_walk", location="walks",
+                          message="a query walks out once and back once (for now)"))
         return errors
 
     def _validate_value_domain(

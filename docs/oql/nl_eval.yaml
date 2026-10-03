@@ -815,3 +815,57 @@ cases:
     - {text: "number of works per year after 2020", difficulty: easy}
     - {text: "count works by publication year for years later than 2020", difficulty: easy}
     - {text: "how many papers came out each year since 2021", difficulty: hard}
+
+- ref: 230  # each MIT author's mean FWCI on all their papers (oxjob #1535)
+  nl:
+    - {text: "for each author of an MIT paper, the mean FWCI of all their papers, not just the MIT ones", difficulty: easy}
+    - {text: "mean FWCI of the whole career of every author who has published with MIT (I63966007)", difficulty: easy}
+    - {text: "how impactful is everyone who ever wrote an MIT paper, across everything they've published", difficulty: hard}
+
+- ref: 231  # distinct authors on CRISPR (oxjob #1535)
+  nl:
+    - {text: "how many distinct authors have published on CRISPR", difficulty: easy}
+    - {text: "count the unique authors of works whose primary topic is T10878", difficulty: easy}
+    - {text: "how many people work on CRISPR", difficulty: hard}
+
+- ref: 232  # kelp authors with h-index over 20 and their total papers (oxjob #1535)
+  nl:
+    - {text: "authors of kelp papers who have an h-index above 20, with how many papers each has in total", difficulty: easy}
+    - {text: "for every author with an h-index over 20 who has written about kelp, count all of their works", difficulty: easy}
+    - {text: "senior kelp researchers and how prolific they are overall", difficulty: hard}
+
+- ref: 233  # recent work by this month's neuromorphic authors (oxjob #1535)
+  nl:
+    - {text: "all works since August 1, 2026 by the authors of papers with neuromorphic in the title published since September 14, 2026, as one list", difficulty: easy}
+    - {text: "what else have the authors of this month's neuromorphic papers published since the start of August 2026", difficulty: easy}
+    - {text: "keep me posted on new work from the people behind recent neuromorphic papers", difficulty: hard}
+
+- ref: 234  # countries citing KU's papers (oxjob #1535)
+  nl:
+    - {text: "which countries cite the University of Kansas's papers, and how many citing works each", difficulty: easy}
+    - {text: "works that cite any work by institution I146416000, counted by country", difficulty: easy}
+    - {text: "where in the world is Kansas research being cited", difficulty: hard}
+
+- ref: 235  # Stanford's journals since 2020 and OA share of all their papers (oxjob #1535)
+  nl:
+    - {text: "for each journal Stanford published in since 2020, the percent of all that journal's papers that are open access", difficulty: easy}
+    - {text: "open access share of every source with a Stanford paper from 2020 on, counting all papers in each source", difficulty: easy}
+    - {text: "how open are the venues Stanford publishes in", difficulty: hard}
+
+- ref: 236  # MIT and Stanford, all their works by year, count and mean FWCI (oxjob #1535)
+  nl:
+    - {text: "for MIT and for Stanford, all their works by year with count and mean FWCI", difficulty: easy}
+    - {text: "yearly paper counts and average FWCI for institutions I63966007 and I97018004, one series each", difficulty: easy}
+    - {text: "MIT vs Stanford output and impact over time", difficulty: hard}
+
+- ref: 237  # works since 2025 that cite nothing from KU (oxjob #1535)
+  nl:
+    - {text: "works since 2025 that don't cite any University of Kansas paper", difficulty: easy}
+    - {text: "papers from 2025 onward whose references include no work by institution I146416000", difficulty: easy}
+    - {text: "recent research that ignores everything Kansas has published", difficulty: hard}
+
+- ref: 238  # works since 2025 by people who wrote kelp papers since 2022 (oxjob #1535)
+  nl:
+    - {text: "works since 2025 by any author of a kelp paper published since 2022", difficulty: easy}
+    - {text: "papers from 2025 on whose author list includes someone who wrote about kelp in title or abstract since 2022", difficulty: easy}
+    - {text: "what the kelp research community has published lately, on any subject", difficulty: hard}
