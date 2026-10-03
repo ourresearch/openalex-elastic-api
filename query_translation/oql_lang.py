@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Tuple
 from query_translation.oqo import (  # noqa: E402
     OQO, LeafFilter, BranchFilter, FilterType, GroupBy, CURLY_DQUOTE_MAP,
     canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE,
-    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES)
+    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES, Walk)
 
 
 # ---------------------------------------------------------------------------
@@ -1626,10 +1626,18 @@ class _Parser:
         self._skip_annot()
         # The pipeline language starts with a verb (oxjob #1530): `get works where
         # ...`. The bare-entity start stays accepted forever.
+        start_each = False
         if self.word_is("get"):
             self.next()
             self._skip_annot()
-        entity = self._parse_entity()
+            # `get each institution in (...)`: one result per thing (oxjob #1535)
+            if self.word_is("each") and not self._ctx_mode:
+                self.next()
+                start_each = True
+        if start_each:
+            entity = self._parse_each_start_noun()
+        else:
+            entity = self._parse_entity()
         self._entity = entity
         # Optional corpus selector parenthetical right after the entity (#481),
         # e.g. `works (all corpora) where ...`. Default "core" when absent.
@@ -1637,9 +1645,16 @@ class _Parser:
         filters: List[FilterType] = []
         group_by: List[GroupBy] = []
         calculate: List[Measure] = []
+        walks: List[Walk] = []
         sample = None
         seed = None
         self._skip_annot()
+        if start_each and self.word_is("in") and self.peek(1) is not None \
+                and self.peek(1).kind == "LP":
+            # `get each institution in (MIT, Stanford)`: the start's own ids
+            self.next()
+            filters.append(self._parse_in_set("openalex id", _BY_COLUMN["ids.openalex"], False))
+            self._skip_annot()
         # After a complete entity with nothing typed yet, the cursor sits in the
         # "where / sort by / group by / sample / end" slot.
         self._want(CTX_DIRECTIVE)
@@ -1650,9 +1665,15 @@ class _Parser:
             # transitively (the canonicalizer does not merge AND-branches that
             # sit as top-level filter_rows elements, so we produce the flat form).
             if isinstance(cond, BranchFilter) and cond.join == "and" and not cond.is_negated:
-                filters = _flatten_and(cond)
+                filters = filters + _flatten_and(cond)
             else:
-                filters = [cond]
+                filters = filters + [cond]
+        if start_each and entity == "works":
+            raise oql_error("OQL_EACH_WORK",
+                            "a query about works starts with `get works where ...`",
+                            "drop `each`: get works where ...", None)
+        # what the query holds as its steps run (oxjob #1535): walks change it
+        cur, cur_each = entity, start_each
         # directives (classic) and steps (the pipeline language, oxjob #1530)
         while True:
             self._skip_annot()
@@ -1672,7 +1693,26 @@ class _Parser:
                                     "a calculation must be the last step",
                                     "move `calculate ...` to the end of the query",
                                     nt.pos if nt else t.pos)
-                kind, val = self._parse_step(entity, len(group_by), group_by)
+                if self.word_is("get"):
+                    # a walk (oxjob #1535): the current things change
+                    w = self._parse_walk(cur, cur_each, walks, group_by)
+                    walks.append(w)
+                    if w.to is not None:
+                        cur = w.to
+                    else:
+                        from query_translation.walks import entity_for_link
+                        cur, cur_each = entity_for_link(w.column_id), w.each
+                    self._entity = cur
+                    continue
+                if cur != "works" and self.word_is("group"):
+                    from query_translation.walks import plural, possessive
+                    raise oql_error(
+                        "OQL_SPLIT_NEEDS_WORKS",
+                        f"this query holds {plural(cur)} now, and splits divide works",
+                        f"walk back to their works first: then get all "
+                        f"{possessive(cur, cur_each)} works; then group those works by ...",
+                        t.pos)
+                kind, val = self._parse_step(cur, len(group_by), group_by)
                 if kind == "split":
                     group_by.append(val)
                     if len(group_by) > MAX_SPLITS:
@@ -1685,6 +1725,11 @@ class _Parser:
                 elif kind == "calculate":
                     calculate = val
                 else:  # sample
+                    if walks:
+                        raise oql_error("OQL_SAMPLE_AFTER_WALK",
+                                        "sample the starting works, before any walk",
+                                        "move `sample (...)` to right after the first step",
+                                        t.pos)
                     sample, seed = val
                 continue
             if calculate:
@@ -1719,7 +1764,8 @@ class _Parser:
         # column_id. Idempotent; downstream sees one spelling.
         return canonicalize_oqo_column_ids(
             OQO(get_rows=entity, corpus=corpus, filter_rows=filters,
-                group_by=group_by, sample=sample, seed=seed, calculate=calculate))
+                group_by=group_by, sample=sample, seed=seed, calculate=calculate,
+                walks=walks, each=start_each))
 
     # -- editor-context entry (dual mode; oxjob #363, decision 15) --
     def parse_for_context(self) -> dict:
@@ -3111,16 +3157,139 @@ class _Parser:
         if w == "sample":
             self.next()
             return "sample", self._parse_sample_step(entity)
-        if w == "get":
-            noun = _plural_noun(entity)
-            raise oql_error(
-                "OQL_WALK_NOT_YET",
-                "walking to related things (`get each author of those works`, "
-                "`get all that author's works`) isn't available yet",
-                f"to count or measure {noun} per author within this set, split them: "
-                f"group those {noun} by author; then calculate ...", t.pos)
         raise oql_error("OQL_UNKNOWN_STEP", f'"{t.val}" doesn\'t start a step', None,
                         t.pos)
+
+    # -- walks (oxjob #1535) ----------------------------------------------------------
+    # `get each <noun> of those works [where ...]` and `get <nouns> of those works`
+    # walk out; `get all that <noun>'s works` / `get all those <nouns>' works` walk
+    # back. Spec: #1512 work/oql_draft.md "Walk out"; OQO shape: oqo.Walk.
+
+    def _walk_noun(self, want_plural: Optional[bool]):
+        """The thing a walk goes to: (entity, plural?) from the next word."""
+        from query_translation.walks import NOUNS, noun_entity
+        t = self.peek()
+        got = noun_entity(t.val) if t is not None and t.kind == "WORD" else None
+        if got is None:
+            said = t.val if t is not None else "nothing"
+            raise oql_error(
+                "OQL_BAD_WALK_NOUN",
+                f'a walk goes to related things; "{said}" isn\'t one',
+                "walk to one of: " + ", ".join(p for _s, p in NOUNS.values()),
+                t.pos if t is not None else None)
+        self.next()
+        ent, is_plural = got
+        if want_plural is not None and is_plural != want_plural:
+            from query_translation.walks import plural, singular
+            fix = (f"get each {singular(ent)} of those works" if not want_plural
+                   else f"get {plural(ent)} of those works")
+            raise oql_error(
+                "OQL_BAD_WALK_NOUN",
+                ("`get each` takes one thing at a time: write the singular"
+                 if not want_plural else
+                 "`get <things> of those works` names the set: write the plural"),
+                fix, t.pos)
+        return ent
+
+    def _parse_each_start_noun(self) -> str:
+        """`get each institution ...`: the singular noun after a starting `each`."""
+        return self._walk_noun(want_plural=False)
+
+    def _parse_walk(self, cur: str, cur_each: bool, walks: List[Walk],
+                    splits: List[GroupBy]) -> Walk:
+        from query_translation.walks import (WALK_LINKS, WHERE_ENTITIES, plural,
+                                             possessive, singular)
+        t = self.next()   # `get`
+        self._skip_annot()
+        if splits:
+            raise oql_error("OQL_WALK_AFTER_SPLIT",
+                            "walk before splitting: a walk follows the whole set of works",
+                            "move `get ... of those works` before `group those works by ...`",
+                            t.pos)
+        if self.word_is("all"):
+            # walk back: `get all that author's works` / `get all those authors' works`
+            self.next()
+            if cur == "works":
+                raise oql_error(
+                    "OQL_NOTHING_TO_WALK_BACK",
+                    "this query holds works; `get all ...'s works` walks back from "
+                    "authors, sources or other things",
+                    "walk out first: get each author of those works; then get all that "
+                    "author's works", t.pos)
+            if any(w.to is not None for w in walks):
+                raise oql_error("OQL_ONE_WALK_BACK", "a query walks back once",
+                                "start a new query from these works", t.pos)
+            marker = self.peek()
+            m = marker.val.lower() if marker is not None and marker.kind == "WORD" else ""
+            if m not in ("that", "those"):
+                raise oql_error("OQL_BAD_WALK_BACK", 'expected "that" or "those" after "get all"',
+                                f"get all {possessive(cur, cur_each)} works",
+                                marker.pos if marker is not None else t.pos)
+            self.next()
+            owner = self.peek()
+            word = owner.val.lower().replace("’", "'") if owner is not None else ""
+            want = possessive(cur, cur_each).split(" ", 1)[1].lower()
+            if m != ("that" if cur_each else "those") or word != want:
+                raise oql_error(
+                    "OQL_WRONG_SET",
+                    f"this query holds {'each' if cur_each else 'the set of'} "
+                    f"{plural(cur) if not cur_each else singular(cur)}"
+                    f"{'' if cur_each else ''}; the walk back names them",
+                    f"get all {possessive(cur, cur_each)} works",
+                    owner.pos if owner is not None else t.pos)
+            self.next()
+            if not self.word_is("works"):
+                nt = self.peek()
+                raise oql_error("OQL_BAD_WALK_BACK", "a walk back goes to works",
+                                f"get all {possessive(cur, cur_each)} works",
+                                nt.pos if nt is not None else t.pos)
+            self.next()
+            where = self._parse_walk_where("works")
+            return Walk(to="works", where=where)
+        # walk out
+        if cur != "works":
+            raise oql_error(
+                "OQL_WALK_FROM_THINGS",
+                f"this query holds {plural(cur)}; a walk out starts from works",
+                f"walk back to their works first: get all {possessive(cur, cur_each)} works",
+                t.pos)
+        if any(w.to is None for w in walks):
+            raise oql_error("OQL_ONE_WALK_OUT",
+                            "a query walks out once (for now)",
+                            "save the first walk's result as a collection and start a new "
+                            "query from it", t.pos)
+        each = False
+        if self.word_is("each"):
+            self.next()
+            each = True
+        ent = self._walk_noun(want_plural=not each)
+        self._skip_annot()
+        if self.word_is("of"):
+            self.next()
+            self._parse_those(cur, required=True)
+        where = None
+        self._skip_annot()
+        if self.word_is("where"):
+            if ent not in WHERE_ENTITIES:
+                nt = self.peek()
+                raise oql_error("OQL_WALK_WHERE_NOT_AVAILABLE",
+                                f"{plural(ent)} have no fields of their own to filter on here",
+                                "filter the works instead, before the walk", nt.pos)
+            where = self._parse_walk_where(ent)
+        return Walk(column_id=WALK_LINKS[ent], each=each, where=where)
+
+    def _parse_walk_where(self, entity: str) -> Optional[FilterType]:
+        """`where ...` after a walk: the walked things' own fields."""
+        self._skip_annot()
+        if not self.word_is("where"):
+            return None
+        self.next()
+        saved = self._entity
+        self._entity = entity
+        try:
+            return self._parse_expr(top=True)
+        finally:
+            self._entity = saved
 
     def _parse_those(self, entity: str, required: bool = False):
         """`those <plural noun>` naming the current things; optional on input, and

@@ -354,17 +354,77 @@ def build_pipeline_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
         L._RENDER_ENTITY.reset(tok)
 
 
+def _start_ids(f) -> Optional[List]:
+    """The ids of a `get each <noun> in (...)` start: an `ids.openalex` leaf or OR
+    of leaves, or a collection; None for anything else."""
+    leaves = [f] if isinstance(f, LeafFilter) else (
+        f.filters if isinstance(f, BranchFilter) and f.join == "or" and not f.is_negated
+        else [])
+    if not leaves or not all(isinstance(x, LeafFilter) and x.column_id == "ids.openalex"
+                             and not x.is_negated and x.operator == "is"
+                             and not isinstance(x.value, OQO) for x in leaves):
+        if isinstance(f, LeafFilter) and f.operator == "in collection" and not f.is_negated:
+            return [f.value]
+        return None
+    return [x.value for x in leaves]
+
+
+def _expr_text_in(entity: str, tree, resolver=None) -> str:
+    """A filter tree's text in another entity's namespace (a walk's `where`)."""
+    tok = L._RENDER_ENTITY.set(entity)
+    try:
+        return _expr_text(tree, resolver)
+    finally:
+        L._RENDER_ENTITY.reset(tok)
+
+
+def _walk_steps(oqo: OQO, resolver=None) -> Tuple[List[StepDirective], str]:
+    """The walk steps (oxjob #1535) and the plural noun of what the query holds after
+    them: `get each author of those works where h-index > (20)`, `get all that
+    author's works`."""
+    from query_translation.walks import entity_for_link, plural, possessive, singular
+    cur, each = oqo.get_rows, bool(oqo.each)
+    steps: List[StepDirective] = []
+    for i, w in enumerate(oqo.walks):
+        here = L._plural_noun(cur)
+        if w.to is None:
+            ent = entity_for_link(w.column_id) or "works"
+            text = (f"get each {singular(ent)} of those {here}" if w.each
+                    else f"get {plural(ent)} of those {here}")
+            if w.where is not None:
+                text += " where " + _expr_text_in(ent, w.where, resolver)
+            cur, each = ent, w.each
+        else:
+            text = f"get all {possessive(cur, each)} works"
+            if w.where is not None:
+                text += " where " + _expr_text_in(w.to, w.where, resolver)
+            cur = w.to
+        steps.append(StepDirective(prefix="", segments=[_text(text)],
+                                   meta=StepMeta("walk", index=i, data=w.to_dict())))
+    return steps, L._plural_noun(cur)
+
+
 def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
+    from query_translation.walks import singular
     entity = oqo.get_rows
     noun = L._plural_noun(entity)
-    head = EntityHead(id=entity, text=f"get {entity.lower()}")
+    head_text = f"get {entity.lower()}"
+    filters = list(oqo.filter_rows)
+    if oqo.each:
+        # `get each institution in (I1, I2)` (oxjob #1535)
+        head_text = f"get each {singular(entity)}"
+        ids = _start_ids(filters[0]) if filters else None
+        if ids is not None:
+            head_text += " in (" + ", ".join(str(v) for v in ids) + ")"
+            filters = filters[1:]
+    head = EntityHead(id=entity, text=head_text)
     corpus_phrase = ""
     if getattr(oqo, "corpus", "core") and oqo.corpus != "core":
         corpus_phrase = f" ({L.CORPUS_CANONICAL_PHRASE.get(oqo.corpus, oqo.corpus)})"
     where_keyword, where = "", None
-    if oqo.filter_rows:
+    if filters:
         where_keyword = " where "
-        where = where_node(oqo.filter_rows, resolver, top=True)
+        where = where_node(filters, resolver, top=True)
 
     steps: List[StepDirective] = []
     if oqo.sample:
@@ -374,6 +434,26 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
             segs.append(_text(f" with seed ({oqo.seed})"))
         steps.append(StepDirective(prefix="sample ", segments=segs,
                                    meta=StepMeta("sample", data={"n": oqo.sample})))
+    tok = None
+    if oqo.walks:
+        from query_translation.oqo import result_entity
+        walk_steps, noun = _walk_steps(oqo, resolver)
+        steps.extend(walk_steps)
+        entity = result_entity(oqo)
+        # splits and calculations name the fields of what the walks reached
+        tok = L._RENDER_ENTITY.set(entity)
+    try:
+        _later_steps(oqo, steps, entity, noun, resolver)
+    finally:
+        if tok is not None:
+            L._RENDER_ENTITY.reset(tok)
+    return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
+                         where=where, directives=steps, corpus_phrase=corpus_phrase)
+
+
+def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
+                 resolver=None):
+    """The splits and the calculation."""
     for i, g in enumerate(oqo.group_by):
         prefix, segs = _split_segments(g, noun, again=i > 0, resolver=resolver)
         if g.where is not None:
@@ -390,8 +470,6 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
             prefix="calculate ", segments=[_text(text)],
             meta=StepMeta("calculate", data={
                 "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
-    return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
-                         where=where, directives=steps, corpus_phrase=corpus_phrase)
 
 
 def stringify_pipeline(tree: OQLRenderTree) -> str:
