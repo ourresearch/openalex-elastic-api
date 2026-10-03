@@ -1935,6 +1935,14 @@ class JoinField(Field):
     def es_field(self) -> str:
         return self.local_field
 
+    def build_terms_query(self, values):
+        """ORed values in one lookup: the cross-type collection filter calls this with a
+        collection's members (`primary_location.source.country_code:col_x` with a countries
+        collection), as it does on TermField."""
+        from core.join_resolver import resolve_ids, terms_query
+
+        return terms_query(self.local_field, resolve_ids(self.target_entity, self.target_param, list(values), self.param))
+
     def build_query(self):
         from core.join_resolver import resolve_ids, terms_query
 

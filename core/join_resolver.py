@@ -55,8 +55,13 @@ def _cache_key(entity, param, value):
 def resolve_ids(entity, param, value, label):
     """Full OpenAlex ids of the `entity` rows whose `param` filter matches `value`.
 
-    `label` is the user-facing filter name, for error messages. Raises APIQueryParamsError when
-    the value matches more rows than settings.MAX_JOIN_IDS."""
+    `value` is one filter value, or a list of values ORed (a collection's members, e.g. the
+    countries in a "Latin America" countries collection). `label` is the user-facing filter
+    name, for error messages. Raises APIQueryParamsError when the value matches more rows than
+    settings.MAX_JOIN_IDS."""
+    values = list(value) if isinstance(value, (list, tuple)) else None
+    if values is not None:
+        value = "|".join(sorted(str(v) for v in values))
     key = _cache_key(entity, param, value)
     try:
         cached = _cache().get(key)
@@ -67,14 +72,17 @@ def resolve_ids(entity, param, value, label):
 
     fields_dict, index = _entity_fields_and_index(entity)
     target = copy.copy(fields_dict[param])  # Field instances are stateful; never mutate the shared one
-    target.value = value
-    inner = target.build_query()
+    if values is not None:
+        inner = target.build_terms_query(values)
+    else:
+        target.value = value
+        inner = target.build_query()
 
     base = Search(index=index).filter(inner)
     total = base.extra(size=0, track_total_hits=True).execute().hits.total.value
     if total > settings.MAX_JOIN_IDS:
         raise APIQueryParamsError(
-            f"{label}:{value} matches {total:,} {entity}, more than the {settings.MAX_JOIN_IDS:,} this filter "
+            f"{label}:{value[:80]} matches {total:,} {entity}, more than the {settings.MAX_JOIN_IDS:,} this filter "
             f"can look up at once. Narrow the value, or filter by the {entity} ids directly."
         )
 

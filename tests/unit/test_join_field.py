@@ -19,6 +19,8 @@ def fake_resolver(monkeypatch):
 
     def fake(entity, param, value, label):
         CALLS.append((entity, param, value))
+        if isinstance(value, list):
+            return [f"https://openalex.org/S{v}" for v in value]
         return {"CA": ["https://openalex.org/S1", "https://openalex.org/S2"], "true": ["https://openalex.org/S9"],
                 "big": [f"https://openalex.org/S{i}" for i in range(130000)]}.get(value, [])
 
@@ -72,3 +74,11 @@ def test_publishes_the_related_fields_type_and_is_filter_only():
     assert f.field_type == RangeField.field_type and f.operators == list(RangeField.operators)
     assert f.sortable is False
     assert "Group by primary_location.source.id" in group_by_rejection(f)
+
+
+def test_a_collection_of_values_resolves_in_one_lookup():
+    f = _field()
+    q = f.build_terms_query(["https://openalex.org/countries/BR", "https://openalex.org/countries/MX"]).to_dict()
+    assert CALLS == [("sources", "country_code", ["https://openalex.org/countries/BR", "https://openalex.org/countries/MX"])]
+    assert q == {"terms": {"primary_location.source.id": ["https://openalex.org/Shttps://openalex.org/countries/BR",
+                                                          "https://openalex.org/Shttps://openalex.org/countries/MX"]}}
