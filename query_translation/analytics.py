@@ -22,6 +22,7 @@ that runs out is abandoned (closing the connection cancels the search in ES) and
 query answers with a message saying how to narrow it.
 """
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -37,7 +38,9 @@ from query_translation.oqo import (
     OQO, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 
 # Limits (Jason, 2026-10-03; #1512 measured the costs).
-QUERY_DEADLINE_S = 15.0        # the engine cancels anything still running
+# The engine cancels anything still running at 15 s (Heroku cuts at 30 s). The env
+# var exists for tests that need a short deadline.
+QUERY_DEADLINE_S = float(os.environ.get("OQL_QUERY_DEADLINE_S", "15"))
 MAX_LEVEL_GROUPS = 10_000      # a nested split returns at most this many groups per split
 MAX_RESPONSE_BUCKETS = 65_536  # ES search.max_buckets
 FILTERED_CANDIDATES = 20_000   # a single split with a group filter checks this many groups
@@ -259,6 +262,7 @@ class Level:
     exclude: Optional[set] = None
     post_keep: Optional[set] = None            # keys kept after a survivors lookup
     size: Optional[int] = None
+    composite: bool = False                    # cursor paging (a single terms split)
 
 
 def _label_bool(column_id: str, value: bool) -> str:
@@ -612,7 +616,7 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
                 page: int, sort_measure: Optional[str]):
     """Sizes and order for the terms splits; refuses what the group guard can't take."""
     for lv in levels:
-        if lv.kind != "terms":
+        if lv.kind != "terms" or lv.composite:
             continue
         card = cards.get(lv.index)
         terms = lv.agg["terms"]
@@ -679,6 +683,10 @@ def _display_names(lv: Level, raw_keys: List, connection) -> Dict:
     keys = [k for k in raw_keys if k not in (None, "unknown")]
     if not keys:
         return {}
+    if requires_display_name_conversion(col) and _plain_id_column(col):
+        fast = _id_names(keys, connection)
+        if fast is not None:
+            return fast
     if requires_display_name_conversion(col):
         names = {}
         for start in range(0, len(keys), 500):
@@ -698,11 +706,52 @@ def _display_names(lv: Level, raw_keys: List, connection) -> Dict:
     return out
 
 
+_SPECIAL_NAME_COLUMNS = ("host_organization", "host_organization_lineage", "domain.id",
+                         "subfield.id", "subfields.id", "field.id", "fields.id",
+                         "keywords.id", "sustainable_development_goals.id", "x_sdgs.id",
+                         "study_designs.id", "license", "license_id")
+
+
+def _plain_id_column(col: str) -> bool:
+    """Columns the legacy namer looks up by OpenAlex id (not a special table)."""
+    return not any(col.endswith(s) for s in _SPECIAL_NAME_COLUMNS)
+
+
+def _id_names(keys: List, connection) -> Optional[Dict]:
+    """Display names for OpenAlex-id keys with one `terms` query per index (the legacy
+    namer's 200-clause `should` took 1.2 s for 200 authors). None when a key isn't an
+    OpenAlex id this can route (the caller falls back to the legacy namer)."""
+    from core.utils import get_index_name_by_id
+    from elasticsearch_dsl.connections import get_connection
+    by_index: Dict[str, List] = {}
+    for k in keys:
+        try:
+            idx = get_index_name_by_id(str(k), connection)
+        except Exception:
+            return None
+        if idx is None:
+            return None
+        by_index.setdefault(idx, []).append(k)
+    es = get_connection(connection)
+    names: Dict = {}
+    for idx, ks in by_index.items():
+        for start in range(0, len(ks), 1000):
+            chunk = ks[start:start + 1000]
+            res = es.search(index=idx, body={
+                "size": len(chunk), "_source": ["id", "display_name"],
+                "query": {"terms": {"id": chunk}}}, request_timeout=10)
+            for h in res["hits"]["hits"]:
+                names[h["_source"]["id"]] = h["_source"].get("display_name")
+    return names
+
+
 def _bucket_rows(lv: Level, agg: dict) -> List[Tuple[str, dict]]:
     """(bucket key, bucket) in display order for one level's aggregation result."""
     buckets = agg["buckets"]
     if isinstance(buckets, dict):          # filters
         return [(k, buckets[k]) for k in lv.order_keys]
+    if lv.composite:
+        return [(b["key"]["k"], b) for b in buckets]
     if lv.kind == "range":
         return [(b["key"], b) for b in buckets]
     if lv.kind == "histogram":
@@ -742,6 +791,9 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
             if lv.kind == "terms":
                 if lv.post_keep is not None and k not in lv.post_keep:
                     continue
+                if lv.composite and ((lv.include is not None and k not in lv.include)
+                                     or (lv.exclude and k in lv.exclude)):
+                    continue   # composite has no include/exclude
                 if lv.column_id in ("authorships.author.id",) and not names.get(lv.index, {}).get(k):
                     continue  # merged/deleted author ids (the legacy group-by drops them too)
                 key = format_key(k, lv.column_id, index_name) if isinstance(k, str) else str(k)
@@ -861,13 +913,37 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         elif key == "key":
             sort_measure = {"_key": direction}
         # percent and percent_of_those sort after the fact (one page of groups)
+    cursor = oqo.cursor
+    if cursor is not None:
+        # one split pages through any number of groups, in key order (composite)
+        if not levels or nested or levels[0].kind != "terms":
+            raise AnalyticsError(
+                "cursor_not_available",
+                "Cursor paging works on a single split by a column.",
+                "Nested splits, listed values, bins and conditions return all their "
+                "groups at once; drop the cursor.")
+        if sort:
+            raise AnalyticsError(
+                "cursor_not_available",
+                "Cursor paging goes through the groups in key order, so it can't sort.",
+                "Drop the sort, or use page= to read the first groups in sorted order.")
+        lv = levels[0]
+        comp = {"size": per_page,
+                "sources": [{"k": {"terms": {"field": lv.agg["terms"]["field"]}}}]}
+        if cursor != "*":
+            comp["after"] = {"k": _decode_cursor(cursor)}
+        lv.agg = {"composite": comp}
+        lv.composite = True
     plan_levels(levels, cards, nested, per_page, page, sort_measure)
 
     body = build_body(levels, base_query, m_aggs)
     if (levels and not nested and levels[0].kind == "terms"
             and levels[0].split.where is None):
         # how many groups a single split has in all (approximate past 3,000)
-        body["aggs"]["n_groups"] = {"cardinality": {"field": levels[0].agg["terms"]["field"],
+        lv0 = levels[0]
+        field0 = (lv0.agg["composite"]["sources"][0]["k"]["terms"]["field"] if lv0.composite
+                  else lv0.agg["terms"]["field"])
+        body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
                                                     "precision_threshold": 3000}}
     # same shards for the same query, so approximate counts repeat exactly
     pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
@@ -886,6 +962,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     group_rows: List[dict] = []
     groups_count = None
     more_groups = False
+    next_cursor = None
     if levels:
         # survivors lookups (own fields checked only for groups that passed the rest)
         for idx, parts in deferred.items():
@@ -899,6 +976,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     or top.split.where is not None)
         if nested:
             groups_count = len(group_rows)
+        elif top.composite:
+            raw = aggs["s0"]
+            after = raw.get("after_key")
+            if after and (len(raw["buckets"]) >= per_page or top.selector is not None):
+                next_cursor = _encode_cursor(after["k"])
+            more_groups = next_cursor is not None
+            groups_count = (aggs.get("n_groups") or {}).get("value")
         elif top.kind == "terms" and not filtered:
             # one page of groups straight from ES, in its order; a sort ES can't do
             # (percent) reorders that page
@@ -925,6 +1009,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "per_page": per_page if levels else None,
         "groups_count": groups_count,
         "more_groups": more_groups,
+        "next_cursor": next_cursor,
         "measures": [_measure_meta(m, oqo.get_rows) for m in measures],
         "es_calls": deadline.calls,
         "elapsed_ms": deadline.elapsed_ms(),
@@ -932,6 +1017,23 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "cost": price(oqo),
     }
     return {"meta": meta, "total": total_row, "group_by": group_rows, "results": []}
+
+
+def _encode_cursor(key) -> str:
+    import base64
+    return "g1." + base64.urlsafe_b64encode(json.dumps(key).encode()).decode().rstrip("=")
+
+
+def _decode_cursor(cursor: str):
+    import base64
+    try:
+        if not cursor.startswith("g1."):
+            raise ValueError
+        raw = cursor[3:]
+        return json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+    except Exception:
+        raise AnalyticsError("invalid_cursor", "That cursor isn't one this query gave out.",
+                             "Start again with cursor=*, then pass each next_cursor.")
 
 
 def _keys_at(levels: List[Level], aggs: dict, idx: int) -> set:
