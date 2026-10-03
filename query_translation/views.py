@@ -404,7 +404,9 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
                                     entity=canonical_oqo.get_rows)
 
     from query_translation import oql_lang as _oql_lang
-    if canonical_oqo.uses_pipeline or _oql_lang.CANONICAL_STYLE == "pipeline":
+    from query_translation.x_query import requested_style
+    style = requested_style() or _oql_lang.CANONICAL_STYLE
+    if canonical_oqo.uses_pipeline or style == "pipeline":
         # The pipeline language (oxjob #1530): its own renderer; the builder tree
         # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
         # the text. Plus the free check: limits, time estimate, price.
