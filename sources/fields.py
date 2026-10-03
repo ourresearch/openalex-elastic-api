@@ -9,6 +9,7 @@ from core.fields import (
     SearchField,
     TermField,
     annotate_entity_types,
+    JoinField,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -180,6 +181,10 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("source.type", None),
     ),
     CollectionField(entity_type="sources"),
+    # oxjob #1526: the publisher's country, looked up in the publishers index (filter only).
+    JoinField(param="host_organization.country_code", target_entity="publishers", target_param="country_codes",
+              local_field="host_organization_lineage", like=TermField, entity_type="countries",
+              docstring="The country of the source's publisher (including parent publishers)"),
 ]
 
 # Cross-type collection filter (#266): annotate fields with unambiguous entity-ID

@@ -603,6 +603,36 @@ for _ent, _ov in _THREAD_B_OVERRIDES.items():
     DISPLAY_NAME_OVERRIDES.setdefault(_ent, {}).update(_ov)
 
 
+# oxjob #1526: query-time join filters (core/join_resolver.py). The label is the OQL word and GUI label.
+_JOIN_OVERRIDES: Dict[str, Dict[str, dict]] = {
+    'works': {
+        'primary_location.source.country_code': {"display_name": 'source country'},
+        'primary_location.source.is_global_south': {"display_name": 'source global south'},
+        'primary_location.source.is_ojs': {"display_name": 'source OJS'},
+        'primary_location.source.is_high_oa_rate': {"display_name": 'source high OA rate'},
+        'primary_location.source.is_preprint_repository': {"display_name": 'source preprint repository'},
+        'primary_location.source.summary_stats.h_index': {"display_name": 'source h-index'},
+        'primary_location.source.summary_stats.2yr_mean_citedness': {"display_name": 'source 2-year mean citedness'},
+        'primary_location.source.host_organization.country_code': {"display_name": 'publisher country'},
+        'funders.country_code': {"display_name": 'funder country'},
+        'authorships.institutions.geo.region': {"display_name": 'institution region'},
+        'authorships.institutions.geo.city': {"display_name": 'institution city'},
+    },
+    'sources': {
+        'host_organization.country_code': {"display_name": 'publisher country'},
+    },
+    'authors': {
+        'last_known_institutions.geo.region': {"display_name": 'institution region'},
+        'last_known_institutions.geo.city': {"display_name": 'institution city'},
+    },
+    'awards': {
+        'funder.country_code': {"display_name": 'funder country'},
+    },
+}
+for _ent, _ov in _JOIN_OVERRIDES.items():
+    DISPLAY_NAME_OVERRIDES.setdefault(_ent, {}).update(_ov)
+
+
 # Global, entity-agnostic overrides keyed by ``param`` only. For properties whose
 # canonical label is the SAME across every entity that carries them, this avoids
 # repeating the same entry under 20+ entity keys. A per-entity override in

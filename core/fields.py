@@ -1902,6 +1902,62 @@ class CollectionField(Field):
         return q
 
 
+
+class JoinField(Field):
+    """A filter on an attribute of a RELATED entity, resolved at query time (oxjob #1526).
+
+    `works?filter=primary_location.source.country_code:CA` has no source country in the works
+    document; it looks up the ids of the sources whose `country_code` is CA in the sources index
+    (`core.join_resolver`), then filters works by `primary_location.source.id`. The value means
+    exactly what it means on the related entity's own filter (`target_entity`/`target_param`).
+
+    Filter only: no sort and no group_by (a work's source country isn't a stored value), so
+    `group_by_rejection` and `_derive_actions` both exclude it. `like` is the related field's
+    Field class, whose value type and operators this filter publishes.
+
+    Boolean `false` resolves the (usually smaller) `true` set and negates it among documents that
+    have the relation at all: on a two-valued attribute the two are the same set.
+    # shortcut: ids ride in the request body (60K per terms clause); past settings.MAX_JOIN_IDS
+    # the filter 400s instead of building a huge query.
+    """
+
+    sortable = False
+
+    def __init__(self, param, target_entity, target_param, local_field, like, **kwargs):
+        super().__init__(param=param, **kwargs)
+        self.target_entity = target_entity
+        self.target_param = target_param
+        self.local_field = local_field
+        self.like = like
+        self.field_type = like.field_type
+        self.operators = list(like.operators)
+
+    def es_field(self) -> str:
+        return self.local_field
+
+    def build_query(self):
+        from core.join_resolver import resolve_ids, terms_query
+
+        raw = str(self.value if self.value is not None else "").strip()
+        negated = raw.startswith("!")
+        value = raw[1:] if negated else raw
+        if not value or value.lower() in ("null", "unknown"):
+            raise APIQueryParamsError(
+                f"{self.param} doesn't take '{raw}'. It filters by the {self.target_entity}' "
+                f"{self.target_param}; to find documents with no related {self.target_entity[:-1]}, "
+                f"filter on {self.local_field}:null."
+            )
+        if self.like is BooleanField and value.lower() == "false":
+            ids = resolve_ids(self.target_entity, self.target_param, "true", self.param)
+            q = Q("exists", field=self.local_field) & ~Q("bool", must=terms_query(self.local_field, ids))
+        else:
+            ids = resolve_ids(self.target_entity, self.target_param, value, self.param)
+            q = terms_query(self.local_field, ids)
+        if negated:
+            q = ~Q("bool", must=q)
+        return q
+
+
 # Path-segmented entities index `id` WITH their API path segment
 # (`https://openalex.org/sdgs/1`, `https://openalex.org/countries/US`), while
 # native letter-prefixed types (works `W123`, awards `G123`, …) index

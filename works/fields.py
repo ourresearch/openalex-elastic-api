@@ -9,6 +9,7 @@ from core.fields import (
     TermField,
     annotate_entity_types,
     OrcidField,
+    JoinField,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -1050,6 +1051,42 @@ fields = [
         alternate_of="locations.version",
     ),
     CollectionField(entity_type="works"),
+    # oxjob #1526: filters on the related source, publisher, funder and institution, looked up at
+    # query time in their own index (core/join_resolver.py). Filter only: no sort, no group_by.
+    JoinField(param="primary_location.source.country_code", target_entity="sources", target_param="country_code",
+              local_field="primary_location.source.id", like=TermField, entity_type="countries",
+              docstring="The country of the work's primary source (journal), looked up in the sources index"),
+    JoinField(param="primary_location.source.is_global_south", target_entity="sources", target_param="is_global_south",
+              local_field="primary_location.source.id", like=BooleanField,
+              docstring="Whether the work's primary source is based in the Global South"),
+    JoinField(param="primary_location.source.is_ojs", target_entity="sources", target_param="is_ojs",
+              local_field="primary_location.source.id", like=BooleanField,
+              docstring="Whether the work's primary source is published on Open Journal Systems"),
+    JoinField(param="primary_location.source.is_high_oa_rate", target_entity="sources", target_param="is_high_oa_rate",
+              local_field="primary_location.source.id", like=BooleanField,
+              docstring="Whether the work's primary source has a high open-access rate"),
+    JoinField(param="primary_location.source.is_preprint_repository", target_entity="sources",
+              target_param="is_preprint_repository", local_field="primary_location.source.id", like=BooleanField,
+              docstring="Whether the work's primary source is a preprint repository"),
+    JoinField(param="primary_location.source.summary_stats.h_index", target_entity="sources",
+              target_param="summary_stats.h_index", local_field="primary_location.source.id", like=RangeField,
+              docstring="The h-index of the work's primary source, as of today"),
+    JoinField(param="primary_location.source.summary_stats.2yr_mean_citedness", target_entity="sources",
+              target_param="summary_stats.2yr_mean_citedness", local_field="primary_location.source.id", like=RangeField,
+              docstring="The 2-year mean citedness of the work's primary source, as of today"),
+    JoinField(param="primary_location.source.host_organization.country_code", target_entity="publishers",
+              target_param="country_codes", local_field="primary_location.source.host_organization_lineage",
+              like=TermField, entity_type="countries",
+              docstring="The country of the publisher of the work's primary source (including parent publishers)"),
+    JoinField(param="funders.country_code", target_entity="funders", target_param="country_code",
+              local_field="funders.id", like=TermField, entity_type="countries",
+              docstring="The country of a funder of the work"),
+    JoinField(param="authorships.institutions.geo.region", target_entity="institutions", target_param="geo.region",
+              local_field="authorships_full.institutions.id", like=TermField,
+              docstring="The region (state, province) of an institution an author is affiliated with on the work"),
+    JoinField(param="authorships.institutions.geo.city", target_entity="institutions", target_param="geo.city",
+              local_field="authorships_full.institutions.id", like=TermField,
+              docstring="The city of an institution an author is affiliated with on the work"),
 ]
 
 # Cross-type collection filter (#266): annotate Field.entity_type for fields

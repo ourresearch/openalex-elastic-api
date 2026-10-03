@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "7ff97801760e925f9765c4aed5e517b53cc660d2a0b9a96697ecdd85373c3651",
-    "property_count": 885,
-    "version": "14.7.0"
+    "fingerprint": "c7517c287ce05a5827949c8f19db69e403a0874790909f6eec1d99a18832702e",
+    "property_count": 900,
+    "version": "14.8.0"
   },
   "properties": {
     "authors": {
@@ -498,6 +498,52 @@
         "display_name": "institution country",
         "entity_type": "countries",
         "name": "last_known_institutions.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "last_known_institutions.geo.city": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "institution city",
+        "entity_type": null,
+        "name": "last_known_institutions.geo.city",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "last_known_institutions.geo.region": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "institution region",
+        "entity_type": null,
+        "name": "last_known_institutions.geo.region",
         "operators": [
           "eq",
           "not",
@@ -1536,6 +1582,29 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "funder.country_code": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "funder country",
+        "entity_type": "countries",
+        "name": "funder.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
       },
       "funder.doi": {
         "actions": [
@@ -11240,6 +11309,29 @@
         ],
         "type": "openalex_id"
       },
+      "host_organization.country_code": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "publisher country",
+        "entity_type": "countries",
+        "name": "host_organization.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "host_organization.id": {
         "actions": [
           "filter",
@@ -14367,6 +14459,52 @@
         ],
         "type": "string"
       },
+      "authorships.institutions.geo.city": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "institution city",
+        "entity_type": null,
+        "name": "authorships.institutions.geo.city",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "authorships.institutions.geo.region": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "institution region",
+        "entity_type": null,
+        "name": "authorships.institutions.geo.region",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "authorships.institutions.id": {
         "actions": [
           "filter",
@@ -15975,6 +16113,29 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "funders.country_code": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "funder country",
+        "entity_type": "countries",
+        "name": "funders.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
       },
       "funders.id": {
         "actions": [
@@ -17637,6 +17798,29 @@
         "supported_by": [],
         "type": "string"
       },
+      "primary_location.source.country_code": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "source country",
+        "entity_type": "countries",
+        "name": "primary_location.source.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "primary_location.source.has_issn": {
         "actions": [
           "filter",
@@ -17685,6 +17869,29 @@
           "oxurl"
         ],
         "type": "openalex_id"
+      },
+      "primary_location.source.host_organization.country_code": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "publisher country",
+        "entity_type": "countries",
+        "name": "primary_location.source.host_organization.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
       },
       "primary_location.source.host_organization_lineage": {
         "actions": [
@@ -17765,6 +17972,48 @@
         ],
         "type": "boolean"
       },
+      "primary_location.source.is_global_south": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "source global south",
+        "entity_type": null,
+        "name": "primary_location.source.is_global_south",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "boolean"
+      },
+      "primary_location.source.is_high_oa_rate": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "source high OA rate",
+        "entity_type": null,
+        "name": "primary_location.source.is_high_oa_rate",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "boolean"
+      },
       "primary_location.source.is_in_doaj": {
         "actions": [
           "filter",
@@ -17802,6 +18051,48 @@
         "display_name": "OA source",
         "entity_type": null,
         "name": "primary_location.source.is_oa",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "boolean"
+      },
+      "primary_location.source.is_ojs": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "source OJS",
+        "entity_type": null,
+        "name": "primary_location.source.is_ojs",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "boolean"
+      },
+      "primary_location.source.is_preprint_repository": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "source preprint repository",
+        "entity_type": null,
+        "name": "primary_location.source.is_preprint_repository",
         "operators": [
           "eq",
           "null"
@@ -17862,6 +18153,54 @@
           "oxurl"
         ],
         "type": "string"
+      },
+      "primary_location.source.summary_stats.2yr_mean_citedness": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "source 2-year mean citedness",
+        "entity_type": null,
+        "name": "primary_location.source.summary_stats.2yr_mean_citedness",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "number"
+      },
+      "primary_location.source.summary_stats.h_index": {
+        "actions": [
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "source h-index",
+        "entity_type": null,
+        "name": "primary_location.source.summary_stats.h_index",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "number"
       },
       "primary_location.source.type": {
         "actions": [

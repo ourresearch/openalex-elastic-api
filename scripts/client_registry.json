@@ -743,6 +743,20 @@
       "isId": false,
       "hasExport": true
     },
+    "funders.country_code": {
+      "key": "funders.country_code",
+      "entityToFilter": "works",
+      "entityToSelect": "countries",
+      "displayName": "funder country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "fwci": {
       "key": "fwci",
       "entityToFilter": "works",
@@ -940,6 +954,34 @@
       ],
       "isId": false,
       "hasExport": true
+    },
+    "authorships.institutions.geo.city": {
+      "key": "authorships.institutions.geo.city",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "institution city",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "authorships.institutions.geo.region": {
+      "key": "authorships.institutions.geo.region",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "institution region",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "authorships.institutions.type": {
       "key": "authorships.institutions.type",
@@ -1364,6 +1406,20 @@
       "isId": false,
       "hasExport": false
     },
+    "primary_location.source.host_organization.country_code": {
+      "key": "primary_location.source.host_organization.country_code",
+      "entityToFilter": "works",
+      "entityToSelect": "countries",
+      "displayName": "publisher country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "has_pmid": {
       "key": "has_pmid",
       "entityToFilter": "works",
@@ -1487,6 +1543,76 @@
       "isId": false,
       "hasExport": false
     },
+    "primary_location.source.summary_stats.2yr_mean_citedness": {
+      "key": "primary_location.source.summary_stats.2yr_mean_citedness",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source 2-year mean citedness",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.country_code": {
+      "key": "primary_location.source.country_code",
+      "entityToFilter": "works",
+      "entityToSelect": "countries",
+      "displayName": "source country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.is_global_south": {
+      "key": "primary_location.source.is_global_south",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source global south",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.summary_stats.h_index": {
+      "key": "primary_location.source.summary_stats.h_index",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source h-index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.is_high_oa_rate": {
+      "key": "primary_location.source.is_high_oa_rate",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source high OA rate",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "primary_location.source.listed_in": {
       "key": "primary_location.source.listed_in",
       "entityToFilter": "works",
@@ -1497,6 +1623,34 @@
       "actions": [
         "filter",
         "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.is_ojs": {
+      "key": "primary_location.source.is_ojs",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source OJS",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.is_preprint_repository": {
+      "key": "primary_location.source.is_preprint_repository",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source preprint repository",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
       ],
       "actionsPopular": null,
       "isId": false,
@@ -1988,6 +2142,20 @@
       "isId": false,
       "hasExport": false
     },
+    "funder.country_code": {
+      "key": "funder.country_code",
+      "entityToFilter": "awards",
+      "entityToSelect": "countries",
+      "displayName": "funder country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "funder.doi": {
       "key": "funder.doi",
       "entityToFilter": "awards",
@@ -2389,6 +2557,20 @@
       "isId": false,
       "hasExport": false
     },
+    "last_known_institutions.geo.city": {
+      "key": "last_known_institutions.geo.city",
+      "entityToFilter": "authors",
+      "entityToSelect": null,
+      "displayName": "institution city",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "last_known_institutions.country_code": {
       "key": "last_known_institutions.country_code",
       "entityToFilter": "authors",
@@ -2406,6 +2588,20 @@
       ],
       "isId": false,
       "hasExport": true
+    },
+    "last_known_institutions.geo.region": {
+      "key": "last_known_institutions.geo.region",
+      "entityToFilter": "authors",
+      "entityToSelect": null,
+      "displayName": "institution region",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "last_known_institutions.type": {
       "key": "last_known_institutions.type",
@@ -2982,6 +3178,20 @@
       "actionsPopular": [],
       "isId": false,
       "hasExport": true
+    },
+    "host_organization.country_code": {
+      "key": "host_organization.country_code",
+      "entityToFilter": "sources",
+      "entityToSelect": "countries",
+      "displayName": "publisher country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "type": {
       "key": "type",

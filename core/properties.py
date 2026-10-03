@@ -344,7 +344,15 @@ CAP_COLUMN = "column"
 # institutions `topics.subfield.id`, `topics.field.id`, `topics.domain.id`, `geo.region`, `geo.city`
 # (OQL "subfield", "field", "domain", "region", "city"; GUI facets in openalex-gui). Purely additive:
 # classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.7.0"
+# 14.8.0 (oxjob #1526, 2026-10-03; Jason's "Yes, build it!" 2026-10-03 09:30 CT): query-time join
+# filters (core/join_resolver.py; class JoinField, filter only: no sort, no group_by). Works:
+# `primary_location.source.country_code`, `.is_global_south`, `.is_ojs`, `.is_high_oa_rate`,
+# `.is_preprint_repository`, `.summary_stats.h_index`, `.summary_stats.2yr_mean_citedness`,
+# `primary_location.source.host_organization.country_code`, `funders.country_code`,
+# `authorships.institutions.geo.region`, `.geo.city`; sources `host_organization.country_code`;
+# authors `last_known_institutions.geo.region`, `.geo.city`; awards `funder.country_code`.
+# GUI facets in openalex-gui. Purely additive: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.8.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -487,7 +495,8 @@ def _derive_actions(field):
     `Field` at all."""
     actions = list(field.actions)
     if CAP_FILTER in actions:
-        actions.append(CAP_SORT)
+        if getattr(field, "sortable", True):  # JoinField (#1526): filter only
+            actions.append(CAP_SORT)
         if group_by_rejection(field) is None:
             actions.append(CAP_GROUP_BY)
     return actions

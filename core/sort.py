@@ -54,6 +54,10 @@ def get_sort_fields(fields_dict, group_by, sort_params):
 
         # all others
         field = get_field(fields_dict, key)
+        if not getattr(field, "sortable", True):
+            raise APIQueryParamsError(
+                f"Cannot sort by {key}: it is a filter on a related entity, looked up at query time."
+            )
         if value == "asc":
             sort_fields.append(field.es_sort_field())
         elif value == "desc":

@@ -5,6 +5,7 @@ from core.fields import (
     RangeField,
     SearchField,
     TermField,
+    JoinField,
 )
 
 fields = [
@@ -208,6 +209,10 @@ fields = [
     RangeField(param="sub_awards_count", custom_es_field="sub_awards_count",
                docstring="The number of awards that are part of, or re-granted from, this award"),
     CollectionField(entity_type="awards"),
+    # oxjob #1526: the funder's country, looked up in the funders index (filter only).
+    JoinField(param="funder.country_code", target_entity="funders", target_param="country_code",
+              local_field="funder.id", like=TermField, entity_type="countries",
+              docstring="The country of the award's funder"),
 ]
 
 fields_dict = {f.param: f for f in fields}

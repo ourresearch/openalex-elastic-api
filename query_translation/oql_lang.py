@@ -452,6 +452,12 @@ _f("any location CWTS core", "locations.source.is_core", "bool")
 _f("any location source listed in", "locations.source.listed_in", "enum")
 _f("any location DOAJ", "locations.source.is_in_doaj", "bool")
 _f("submitted version OA", "has_oa_submitted_version", "bool")
+# oxjob #1526: query-time join booleans on the work's primary source (looked up in the sources
+# index; filter only). Words == registry display_names.
+_f("source global south", "primary_location.source.is_global_south", "bool")
+_f("source OJS", "primary_location.source.is_ojs", "bool")
+_f("source high OA rate", "primary_location.source.is_high_oa_rate", "bool")
+_f("source preprint repository", "primary_location.source.is_preprint_repository", "bool")
 
 # --- oxjob #402 Tier-2 location/source mirror STRING / ENUM / ID cols ---
 # The mirror set's non-boolean half. These had raw auto-humanized display_names, so this is a

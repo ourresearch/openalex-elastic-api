@@ -9,6 +9,7 @@ from core.fields import (
     SearchField,
     TermField,
     annotate_entity_types,
+    JoinField,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -186,6 +187,13 @@ fields = [
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     CollectionField(entity_type="authors"),
+    # oxjob #1526: region and city of the current institution, looked up in the institutions index (filter only).
+    JoinField(param="last_known_institutions.geo.region", target_entity="institutions", target_param="geo.region",
+              local_field="last_known_institutions.id", like=TermField,
+              docstring="The region (state, province) of the author's last known institution"),
+    JoinField(param="last_known_institutions.geo.city", target_entity="institutions", target_param="geo.city",
+              local_field="last_known_institutions.id", like=TermField,
+              docstring="The city of the author's last known institution"),
 ]
 
 # Cross-type collection filter (#266): annotate fields with unambiguous entity-ID

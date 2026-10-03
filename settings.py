@@ -148,3 +148,8 @@ SNAPSHOTS_CREDENTIALS_ENABLED = (
 SNAPSHOTS_SESSION_DURATION_SECONDS = int(
     os.environ.get("SNAPSHOTS_SESSION_DURATION_SECONDS", "43200")
 )
+
+# Query-time join filters (oxjob #1526, core/join_resolver.py): the most related-entity ids one
+# filter value may resolve to (all 260K sources fit), and how long a resolved id list is cached.
+MAX_JOIN_IDS = 300000
+JOIN_CACHE_SECONDS = 6 * 3600
