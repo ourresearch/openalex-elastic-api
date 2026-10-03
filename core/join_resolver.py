@@ -8,7 +8,8 @@ work it is never stale. The value semantics are the related entity's own: the lo
 entity's filter field (`sources` `country_code`) on the value, so `CA`, `ca`, `!CA` and `>50`
 mean exactly what they mean on `/sources`.
 
-Resolved id lists are cached (flask-caching, Redis in production) by entity, field and value.
+Resolved id lists of up to JOIN_CACHE_MAX_IDS are cached (flask-caching, Redis in production) by entity,
+field and value.
 """
 
 import copy
@@ -81,22 +82,21 @@ def resolve_ids(entity, param, value, label):
     after = None
     while True:
         s = base.extra(size=0)
-        agg = A("composite", size=COMPOSITE_PAGE, sources=[{"id": {"terms": {"field": "id"}}}])
-        if after:
-            agg = A("composite", size=COMPOSITE_PAGE, sources=[{"id": {"terms": {"field": "id"}}}], after=after)
-        s.aggs.bucket("ids", agg)
+        params = {"after": after} if after else {}
+        s.aggs.bucket("ids", A("composite", size=COMPOSITE_PAGE, sources=[{"id": {"terms": {"field": "id"}}}], **params))
         res = s.execute().aggregations.ids
-        buckets = res.buckets
-        short_ids.extend(b.key.id.replace(ID_PREFIX, "", 1) for b in buckets)
-        after = getattr(res, "after_key", None)
-        if not buckets or after is None or len(buckets) < COMPOSITE_PAGE:
+        short_ids.extend(b.key.id.replace(ID_PREFIX, "", 1) for b in res.buckets)
+        if len(res.buckets) < COMPOSITE_PAGE or "after_key" not in res:
             break
-        after = after.to_dict() if hasattr(after, "to_dict") else after
+        after = res.after_key.to_dict()
 
-    try:
-        _cache().set(key, short_ids, timeout=settings.JOIN_CACHE_SECONDS)
-    except Exception:
-        pass
+    # Big lists (e.g. an h-index range over most sources) aren't cached: arbitrary range values
+    # could otherwise fill Redis with multi-MB entries.
+    if len(short_ids) <= settings.JOIN_CACHE_MAX_IDS:
+        try:
+            _cache().set(key, short_ids, timeout=settings.JOIN_CACHE_SECONDS)
+        except Exception:
+            pass
     return [ID_PREFIX + i for i in short_ids]
 
 
