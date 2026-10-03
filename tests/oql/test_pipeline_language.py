@@ -118,6 +118,17 @@ def test_lenient_input_renders_canonical(typed, canonical):
     assert _flat(render(_canon(typed), style="pipeline")) == canonical
 
 
+def test_the_launch_switch_renders_every_query_as_a_pipeline(monkeypatch):
+    # the launch sets OQL_CANONICAL_STYLE=pipeline (read into CANONICAL_STYLE)
+    from query_translation import oql_lang
+    monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
+    assert render(_canon("works where year >= 2020 group by year, type")) == (
+        "get works where year >= (2020); then group those works by year; then group "
+        "those works again by type")
+    assert render(_canon("works where type is not (review)")) == (
+        "get works where type is not (review)")
+
+
 def test_classic_queries_render_classic():
     assert render(_canon("works where year >= 2020 group by year, type")) == (
         "works where year >= (2020) group by year, type")

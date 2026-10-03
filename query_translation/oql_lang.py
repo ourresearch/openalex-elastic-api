@@ -5038,8 +5038,11 @@ def format_oql(tree: OQLRenderTree, width: int = FORMAT_WIDTH) -> str:
 # The canonical text style (oxjob #1530). "classic" = today's `works where ...
 # group by ...`; "pipeline" = `get works where ...; then group those works by ...`.
 # An OQO only the pipeline language can say always renders as pipeline. The launch
-# flips this to "pipeline" for every query (Jason, 2026-10-03; his yes before the flip).
-CANONICAL_STYLE = "classic"
+# switches every query to "pipeline" (Jason, 2026-10-03; his yes before the flip) by
+# setting the Heroku config var OQL_CANONICAL_STYLE=pipeline: a config change, no
+# deploy, reversible in seconds. Unset (tests, local), it stays "classic".
+import os as _os
+CANONICAL_STYLE = _os.environ.get("OQL_CANONICAL_STYLE", "classic")
 
 
 def _pipeline_style(oqo: OQO, style: Optional[str]) -> bool:
