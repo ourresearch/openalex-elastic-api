@@ -670,8 +670,15 @@ def check(oqo: OQO, connection) -> dict:
                 visit(f)
         elif isinstance(node, LeafFilter) and isinstance(node.value, OQO):
             add_set(node.value, node.column_id)
+        elif isinstance(node, LeafFilter) and node.column_id in RELATION_COLUMNS:
+            nonlocal est, calls
+            calls += 1                     # one group-by lists the co-authors
+            est += A.EST_COAUTHOR_S
     for f in oqo.filter_rows:
         visit(f)
+    for w in oqo.walks:
+        if w.where is not None:
+            visit(w.where)
     out = next((w for w in oqo.walks if w.to is None), None)
     back = next((w for w in oqo.walks if w.to is not None), None)
     if out is not None and (back is not None or oqo.calculate or out.where is not None):

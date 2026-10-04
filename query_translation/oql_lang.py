@@ -3456,7 +3456,7 @@ class _Parser:
         if want is None or got == want:
             return
         fixes = []   # (reading, the inner query that would fit)
-        if inner.get_rows == want and inner.walks:
+        if inner.get_rows == want and want != "works" and inner.walks:
             # it starts from the right things and walks away from them: stop at them
             fixes.append((f"the {plural(want)} themselves",
                           render_pipeline_line(_replace(inner, walks=[], each=False))))
