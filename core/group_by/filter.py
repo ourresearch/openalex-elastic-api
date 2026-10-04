@@ -44,7 +44,6 @@ def filter_group_by(field, group_by, q, s):
         or group_by == "repository"
         or group_by == "language"
         or group_by == "sustainable_development_goals.id"
-        or group_by == "x_sdgs.id"
         or group_by == "study_designs.id"
     ):
         return s

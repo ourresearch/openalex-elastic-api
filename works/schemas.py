@@ -379,8 +379,13 @@ class WorksSchema(Schema):
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
     sustainable_development_goals = fields.Nested(SDGSchema, many=True)
-    # oxjob #1300: shadow field; [] until the x_sdgs backfill sync has reached the doc
-    x_sdgs = fields.Nested(SDGSchema, many=True, dump_default=[])
+    # oxjob #1300: DEPRECATED. Aurora SDG-BERT tags as of October 2026, frozen when the
+    # Jev-trained classifier took over sustainable_development_goals; removed in
+    # November 2026. Output only (select-able like any result field): no filter, no
+    # group_by, no OQL. ES/Lakebase docs carry it in _source (works-v36 on), and
+    # set_source() excludes only abstract/embeddings/fulltext, so declaring it here is
+    # what serializes it. [] when the work had no Aurora tag.
+    sustainable_development_goals_aurora = fields.Nested(SDGSchema, many=True, dump_default=[])
     # oxjob #1312: [] when the work has no study design (and until the walden fill
     # reaches the doc)
     study_designs = fields.Nested(StudyDesignSchema, many=True, dump_default=[])

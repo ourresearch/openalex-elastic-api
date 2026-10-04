@@ -429,12 +429,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'raw_author_name.search': {"display_name": 'byline', "aliases": ['raw author name']},
         'related_to': {"display_name": 'related to'},
         'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},
-        # oxjob #1300: shadow Jev-head SDG field. No parentheses in the label: the OQL render
-        # word must equal it and "(" is grouping syntax in OQL.
         # oxjob #1312: how the research was done (RCT, systematic review, ...); `type` says
         # what kind of document it is.
         'study_designs.id': {"display_name": 'study design', "aliases": ['study designs', 'study_designs', 'study_designs.id']},
-        'x_sdgs.id': {"display_name": 'experimental SDGs', "aliases": ['x sdgs', 'x_sdgs', 'experimental SDG', 'shadow SDG']},
         'title.search': {"display_name": 'title'},
         'title_and_abstract.search': {"display_name": 'title-abstract', "aliases": ['title/abstract', 'title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         # oxjob #1521: title + abstract text OR the keywords a query phrase names.
@@ -528,6 +525,9 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'citation_normalized_percentile.is_in_top_10_percent': {"display_name": 'top 10% cited'},
         'cited_by_percentile_year.max': {"display_name": 'citation percentile (max)'},
         'sustainable_development_goals.score': {"display_name": 'SDG score'},
+        # oxjob #1300: deprecated output-only column (Aurora's frozen tags; removed Nov 2026).
+        # Paren-free like its neighbours: labels double as OQL parse words.
+        'sustainable_development_goals_aurora': {"display_name": 'deprecated Aurora SDGs'},
         'concepts.wikidata': {"display_name": 'concept Wikidata ID'},
         'topics.domain.id': {"display_name": 'domain'},
         'topics.field.id': {"display_name": 'field'},

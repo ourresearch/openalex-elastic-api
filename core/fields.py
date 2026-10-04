@@ -71,7 +71,6 @@ ENTITY_ID_PARAM_TYPES = {
     "funders.id": "funders",
     # SDGs
     "sustainable_development_goals.id": "sdgs",
-    "x_sdgs.id": "sdgs",  # oxjob #1300 shadow field, same entity
     # keywords
     "keywords.id": "keywords",
     # --- #394: every registry entity is collectible (minus `locations`) ---
@@ -1127,7 +1126,7 @@ class TermField(Field):
         neg = ""
         if value.startswith("!"):
             neg, value = "!", value[1:]
-        if self.param in ("sustainable_development_goals.id", "x_sdgs.id"):
+        if self.param == "sustainable_development_goals.id":
             value = self._normalize_sdg_value(value)
         elif self.param == "study_designs.id":
             value = self._normalize_study_design_value(value)
@@ -1197,7 +1196,7 @@ class TermField(Field):
         # Apply the same transformations as in build_query. Each strips a LEADING
         # https://openalex.org/ + entity prefix (via _strip_openalex_prefix) so the
         # canonical id copied off an entity page round-trips as a filter value (#275).
-        if self.param in ("sustainable_development_goals.id", "x_sdgs.id"):
+        if self.param == "sustainable_development_goals.id":
             return self._normalize_sdg_value(self.value)
         elif self.param == "study_designs.id":
             return self._normalize_study_design_value(self.value)

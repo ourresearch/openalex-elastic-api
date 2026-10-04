@@ -358,7 +358,17 @@ CAP_COLUMN = "column"
 # (slashes separate namespaces and ids in OpenAlex ids: fields/27, doi:10.1038/...). The
 # slash forms become aliases, so every query valid yesterday still parses; param names unchanged.
 # Display-name tweak + alias additions = MINOR.
-PROPERTIES_VERSION = "14.9.0"
+# 15.0.0 (oxjob #1300, prepared 2026-10-02 on branch oxjob1300-sdg-replace; ships with the
+# works-v36 index swap; changes approved by Jason 2026-10-02 05:02 CT, Decision 9; 15.0.0 approved in advance
+# 2026-10-03 13:23 CT, Decision 10; shipped 2026-10-04 after the 2026-10-03 works-v36 swap): works loses
+# `x_sdgs.id` (filter/group_by, OQL "experimental SDGs") and the `x_sdgs` column, the shadow
+# added in 12.2.0. No shadow: the Jev-trained classifier now fills
+# `sustainable_development_goals` itself (same shape, same ids). Works gains the column
+# `sustainable_development_goals_aurora` (output/select only, label "deprecated Aurora SDGs"):
+# Aurora's tags frozen in October 2026, removed in November 2026. The removal dominates:
+# classify_properties_diff.py says MAJOR. If another bump lands on master first, rebase and
+# take the next MAJOR.
+PROPERTIES_VERSION = "15.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
