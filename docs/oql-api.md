@@ -205,12 +205,14 @@ usually ends with a concrete `Fix:`.
 ### Auth and cost
 
 No API key is required. These endpoints follow the same rules as the rest of the API: a
-free-account key raises your daily credit budget. A query with a `calculate` step, a split by
-a list, bins or conditions, or a filter on its groups is priced from what it does: the
-starting set costs what a list (1 credit) or a search (10) costs, each listed search 10, each
-lookup 1 (see [Example costs](/access/example-costs/#what-an-oql-calculation-costs)). Every
-other query costs 1 credit, a search included. The response's `meta.cost` shows what a priced
-query cost, and `/query` is free and shows the price before you run it (`check.cost`).
+free-account key raises your daily credit budget. A query costs what the same query costs as
+a URL: 1 credit for a list, 10 for a search, grouped or not, so an OQL search costs what
+`/works?search=` costs. A query with a `calculate` step, a split by a list, bins or
+conditions, or a filter on its groups is priced from what it does: the starting set costs
+what a list (1 credit) or a search (10) costs, each listed search 10, each lookup 1 (see
+[Example costs](/access/example-costs/#what-an-oql-calculation-costs)). The response's
+`meta.cost` shows what each call cost. `/query` is free and shows a calculation's price
+before you run it (`check.cost`).
 Authenticate with either form:
 
 ```
