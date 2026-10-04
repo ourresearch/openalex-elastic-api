@@ -117,6 +117,33 @@ def test_say_seconds(s, said):
     assert A.say_seconds(s) == said
 
 
+@pytest.mark.parametrize("q,reranked,credits", [
+    ("works where year is 2020", False, 1),
+    ("works where title-abstract has (kelp)", False, 10),
+    ("works where title-abstract has (kelp) group by year", False, 10),  # costs the search
+    ("works where year is 2020 group by type", False, 1),
+    ("works where title-abstract has (kelp)", True, 20),
+    ("works where year is 2020", True, 11),
+])
+def test_a_plain_query_costs_what_its_url_costs(q, reranked, credits):
+    assert A.plain_price(_oqo(q), reranked=reranked)["credits"] == credits
+
+
+def test_a_grandfathered_key_pays_1_for_a_search_as_on_the_url():
+    kelp = _oqo("works where title-abstract has (kelp)")
+    assert A.plain_price(kelp, grandfathered=True)["credits"] == 1
+    assert A.plain_price(kelp, reranked=True, grandfathered=True)["credits"] == 11
+
+
+def test_the_websites_facets_stay_at_1():
+    facet = _oqo("works where title-abstract has (kelp) group by year")
+    assert A.plain_price(facet, website=True)["credits"] == 1
+    assert A.plain_price(facet)["credits"] == 10
+    # the website's results call is a search like any other
+    assert A.plain_price(_oqo("works where title-abstract has (kelp)"),
+                         website=True)["credits"] == 10
+
+
 def test_count_floor_only():
     def where(q):
         return A._nnf_group_filters(_oqo(q)).group_by[0].where

@@ -34,6 +34,7 @@ from elasticsearch_dsl import Q, Search
 import settings
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
+from query_translation.analytics_csv import split_meta
 from query_translation.oqo import (
     OQO, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 
@@ -1436,6 +1437,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "more_groups": more_groups,
         "next_cursor": next_cursor,
         "measures": [_measure_meta(m, oqo.get_rows) for m in measures],
+        "splits": [split_meta(g, oqo.get_rows) for g in oqo.group_by],
         "es_calls": deadline.calls,
         "elapsed_ms": deadline.elapsed_ms(),
         "steps": deadline.log,
@@ -1480,6 +1482,10 @@ def _keys_at(levels: List[Level], aggs: dict, idx: int) -> set:
 # Price and the free check (`/query`): validity, limits, time, cost
 # ---------------------------------------------------------------------------
 CREDIT_USD = 0.0001       # 10,000 credits = $1 (the proxy's creditsToUsd)
+RERANK_CREDITS = 10       # the proxy's RERANK_CREDITS
+# Every OQL query priced like the API (Jason, 2026-10-03). Off until the proxy
+# discounts the website's facet calls (#1533), then OQL_PRICE_ALL=true on both apps.
+PRICE_ALL_OQL = os.environ.get("OQL_PRICE_ALL", "false").lower() == "true"
 SEARCH_CREDITS = 10       # what one search costs on its own (the proxy's search price)
 LOOKUP_CREDITS = 1        # one extra call to look up groups
 TIME_BUDGET_S = 10.0      # the check refuses plans estimated over this (Jason, 2026-10-03)
@@ -1507,6 +1513,29 @@ def _tree_has_search(node) -> bool:
     if isinstance(node, BranchFilter):
         return any(_tree_has_search(c) for c in node.filters)
     return False
+
+
+def plain_price(oqo: OQO, reranked: bool = False, grandfathered: bool = False,
+                website: bool = False) -> dict:
+    """A query with no pipeline features costs what the same query costs as a URL
+    (Jason, 2026-10-03: OQL priced like the API): a search 10 (semantic included; 1
+    for a grandfathered key), grouped or not; anything else 1. The website's facets
+    (a group by the proxy marks as the website's) stay at 1. A rerank that ran
+    adds 10."""
+    search = any(_tree_has_search(f) for f in oqo.filter_rows)
+    if oqo.group_by and website:
+        credits, what = 1, "a website facet"
+    elif search and grandfathered:
+        credits, what = 1, "a search (grandfathered key)"
+    elif search:
+        credits, what = 10, "a search"
+    else:
+        credits, what = 1, "a group by" if oqo.group_by else "a list"
+    steps = [{"credits": credits, "what": what}]
+    if reranked:
+        credits += RERANK_CREDITS
+        steps.append({"credits": RERANK_CREDITS, "what": "rerank"})
+    return {"credits": credits, "usd": round(credits * CREDIT_USD, 6), "steps": steps}
 
 
 def price(oqo: OQO) -> dict:
