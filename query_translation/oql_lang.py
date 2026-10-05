@@ -3787,7 +3787,8 @@ class _Parser:
                         f"e.g. {example}, or bins of (10)", t.pos if t else bt.pos)
 
     def _parse_measures(self, entity: str, splits=()) -> List[Measure]:
-        """`calculate count, mean FWCI, percent open access`."""
+        """`summarize using count, mean FWCI, and percent open access` (commas, `and`,
+        or both: the Oxford comma)."""
         measures: List[Measure] = []
         while True:
             m = self._parse_measure(entity, splits)
@@ -3796,8 +3797,11 @@ class _Parser:
             self._skip_annot()
             if self.peek() is not None and (self.peek().kind == "COMMA"
                                             or self.word_is("and")):
-                self.next()
+                comma = self.next().kind == "COMMA"
                 self._skip_annot()
+                if comma and self.word_is("and"):
+                    self.next()
+                    self._skip_annot()
                 continue
             break
         return measures

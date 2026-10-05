@@ -74,6 +74,13 @@ _MEASURE_SURFACE = {"mean": "mean", "median": "median", "sum": "sum",
 SUMMARIZE = "summarize using "
 
 
+def english_list(items: List[str]) -> str:
+    """`a`, `a and b`, `a, b, and c` (the Oxford comma; Jason 2026-10-05)."""
+    if len(items) <= 2:
+        return " and ".join(items)
+    return ", ".join(items[:-1]) + ", and " + items[-1]
+
+
 def transitions(n: int) -> List[str]:
     """The word that opens each of n steps after the start (oxjob #1555, Jason
     2026-10-05): one step `then`; two `then`, `finally`; three or more `first`,
@@ -490,7 +497,7 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
         steps.append(StepDirective(prefix=prefix, segments=segs,
                                    meta=StepMeta("split", index=i, data=g.to_dict())))
     if oqo.calculate:
-        text = ", ".join(measure_text(m, noun) for m in oqo.calculate)
+        text = english_list([measure_text(m, noun) for m in oqo.calculate])
         steps.append(StepDirective(
             prefix=SUMMARIZE, segments=[_text(text)],
             meta=StepMeta("calculate", data={

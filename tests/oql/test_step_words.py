@@ -36,7 +36,7 @@ def test_transitions():
     "get works where year > (2020); then, group those works by year; "
     "finally, summarize using count",
     "get works where year > (2020); first, group those works by year; "
-    "then, group those works again by type; finally, summarize using count, mean FWCI",
+    "then, group those works again by type; finally, summarize using count and mean FWCI",
     "get works where year >= (2020); first, get each funder of those works; "
     "then, get all that funder's works; then, group those works by year; "
     "finally, summarize using mean citation count",
@@ -62,7 +62,7 @@ def test_multi_line_echo_carries_the_step_words():
     q = ("get works where institution is (I63966007) and year >= (2015); "
          "first, group those works by author where count of those works > (10); "
          "then, group those works again by year; "
-         "finally, summarize using count, mean FWCI, percent open access")
+         "finally, summarize using count, mean FWCI, and percent open access")
     lines = render(_canon(q), style="pipeline").split("\n")
     assert [ln.split(",")[0] for ln in lines[1:]] == ["first", "then", "finally"]
     assert all(ln.endswith(";") for ln in lines[:-1])

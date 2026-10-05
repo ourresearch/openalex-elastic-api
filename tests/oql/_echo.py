@@ -6,7 +6,9 @@ launch form (`; then group ...; then calculate ...`).
 Both split only at top-level `; ` (outside parentheses and quotes), so nested
 queries keep their own steps.
 """
-from query_translation.oql_pipeline import SUMMARIZE, transitions
+import re
+
+from query_translation.oql_pipeline import SUMMARIZE, english_list, transitions
 
 _OPENERS = ("then, ", "first, ", "finally, ", "next, ", "lastly, ", "then ")
 
@@ -62,14 +64,14 @@ def _inner(text, fn):
 def modern(text):
     head, *steps = _top_level_parts(_inner(text, modern))
     steps = [_bare(s) for s in steps]
-    steps = [SUMMARIZE + s[len("calculate "):] if s.startswith("calculate ") else s
-             for s in steps]
+    steps = [SUMMARIZE + english_list(s[len("calculate "):].split(", "))
+             if s.startswith("calculate ") else s for s in steps]
     return "; ".join([head] + [f"{w}, {s}" for w, s in zip(transitions(len(steps)), steps)])
 
 
 def launch_form(text):
     head, *steps = _top_level_parts(_inner(text, launch_form))
     steps = [_bare(s) for s in steps]
-    steps = ["calculate " + s[len(SUMMARIZE):] if s.startswith(SUMMARIZE) else s
-             for s in steps]
+    steps = ["calculate " + ", ".join(re.split(r",? and |, ", s[len(SUMMARIZE):]))
+             if s.startswith(SUMMARIZE) else s for s in steps]
     return "; ".join([head] + [f"then {s}" for s in steps])

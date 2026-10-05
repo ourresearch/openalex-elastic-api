@@ -4213,7 +4213,7 @@ rows:
   oql: |-
     get works where institution is (I63966007 [MIT]);
     then, group those works by open access status;
-    finally, summarize using count, mean FWCI
+    finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "open_access.oa_status"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
 - id: 209
   tags: [pipeline, calculate, group-by]
@@ -4267,7 +4267,7 @@ rows:
   oql: |-
     get works where topic is (T10878 [CRISPR and Genetic Engineering]);
     then, group those works by institution in (I63966007 [MIT], I97018004 [Stanford], I136199984 [Harvard]);
-    finally, summarize using count, mean FWCI, percent open access
+    finally, summarize using count, mean FWCI, and percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "group_by": [{"column_id": "authorships.institutions.lineage", "values": ["I63966007", "I97018004", "I136199984"]}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}]}
 - id: 213
   tags: [pipeline, calculate]
@@ -4280,7 +4280,7 @@ rows:
   oql: |-
     get works where country is (KE [Kenya]) and year >= (2015);
     then, group those works by funder;
-    finally, summarize using count, mean citation count
+    finally, summarize using count and mean citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.countries", "value": "KE"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "funders.id"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "cited_by_count"}]}
 - id: 214
   tags: [pipeline, group-filter, collection]
@@ -4307,7 +4307,7 @@ rows:
     get works where year >= (2016);
     first, group those works into ((institution is (I99464096 [KU Leuven])), (country is (BE [Belgium])));
     then, group those works again by SDG;
-    finally, summarize using count, percent of those works
+    finally, summarize using count and percent of those works
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
 - id: 216
   tags: [pipeline, condition-groups]
@@ -4334,7 +4334,7 @@ rows:
   oql: |-
     get works where institution is (I63966007 [MIT]) and year >= (2015);
     then, group those works into citation count bins at (1, 10, 100);
-    finally, summarize using count, mean FWCI
+    finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "cited_by_count", "bins": {"at": [1, 10, 100]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
 - id: 218
   tags: [pipeline, bins]
@@ -4363,7 +4363,7 @@ rows:
     then, group those works by author
       where count of those works > (10)
       and h-index > (20);
-    finally, summarize using count, mean FWCI
+    finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">", "value": 10}, {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
 - id: 220
   tags: [pipeline, group-filter, collection]
@@ -4390,7 +4390,7 @@ rows:
   status: ok
   oql: |-
     get works where topic is (T10878 [CRISPR and Genetic Engineering]);
-    then, summarize using count, mean FWCI, percent open access, median citation count
+    then, summarize using count, mean FWCI, percent open access, and median citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}, {"measure": "median", "column_id": "cited_by_count"}]}
 - id: 222
   tags: [pipeline, group-by]
@@ -4556,7 +4556,7 @@ rows:
     get each institution in (I63966007, I97018004);
     first, get all that institution's works;
     then, group those works by year;
-    finally, summarize using count, mean FWCI
+    finally, summarize using count and mean FWCI
   oqo: {"get_rows": "institutions", "each": true, "filter_rows": [{"join": "or", "filters": [{"column_id": "ids.openalex", "value": "I63966007"}, {"column_id": "ids.openalex", "value": "I97018004"}]}], "walks": [{"to": "works"}], "group_by": [{"column_id": "publication_year"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
 - id: 237
   tags: [pipeline, query-set, negation]
