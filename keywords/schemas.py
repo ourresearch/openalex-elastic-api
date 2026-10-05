@@ -24,8 +24,9 @@ class KeywordsSchema(Schema):
     description = fields.Str()
     display_name_alternatives = fields.List(fields.Str())
     ids = fields.Nested(IDsSchema)
-    # oxjob #1307: score = share of the keyword's works in the topic; topics holds every link with score >= 0.07,
-    # best first; primary_topic is the top link when its score >= 0.2, else null (a broad keyword)
+    # oxjob #1307: related topics, weighted and many-to-many (not a parent): score = share of the keyword's works in
+    # the topic; topics holds every topic with score >= 0.07, best first; primary_topic is the top one when its
+    # score >= 0.2, else null (a broad keyword)
     primary_topic = fields.Nested(TopicSchema, allow_none=True, dump_default=None)
     topics = fields.Nested(TopicSchema, many=True)
     relevance_score = fields.Method("get_relevance_score")

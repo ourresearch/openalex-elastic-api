@@ -4482,7 +4482,7 @@
       "key": "primary_topic.id",
       "entityToFilter": "keywords",
       "entityToSelect": "topics",
-      "displayName": "topic",
+      "displayName": "primary topic",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
@@ -4500,7 +4500,7 @@
       "key": "topics.id",
       "entityToFilter": "keywords",
       "entityToSelect": "topics",
-      "displayName": "topics",
+      "displayName": "related topics",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
@@ -4543,6 +4543,20 @@
     }
   },
   "topics": {
+    "keywords": {
+      "key": "keywords",
+      "entityToFilter": "topics",
+      "entityToSelect": null,
+      "displayName": "characteristic keywords",
+      "displayNameVerbatim": false,
+      "type": "text",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "topics",
@@ -4603,20 +4617,6 @@
         "group_by"
       ],
       "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "keywords": {
-      "key": "keywords",
-      "entityToFilter": "topics",
-      "entityToSelect": null,
-      "displayName": "keywords",
-      "displayNameVerbatim": false,
-      "type": "text",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },

@@ -212,9 +212,11 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
     'keywords': {
         'display_name': {"display_name": 'name'},
         'display_name_alternatives': {"display_name": 'alternate names'},
-        # oxjob #1307: as on works
-        'primary_topic.id': {"display_name": 'topic'},
-        'topics.id': {"display_name": 'topics'},
+        # oxjob #1307 (Jason 2026-10-05): keywords sit beside the topic hierarchy, weighted and many-to-many, so
+        # "related topics" (each with the share of the keyword's works) and "primary topic", never "parent"
+        'primary_topic.id': {"display_name": 'primary topic', "aliases": ['topic']},
+        'topics.id': {"display_name": 'related topics', "aliases": ['topics']},
+        'topics': {"display_name": 'related topics'},
     },
     'languages': {
         'display_name': {"display_name": 'name'},
@@ -323,7 +325,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'domain.id': {"display_name": 'domain'},
         'field.id': {"display_name": 'field'},
         'ids.openalex': {"display_name": 'OpenAlex ID'},
-        'keywords': {"display_name": 'keywords'},
+        # oxjob #1307: the topic's characteristic keywords (>= 20% of each keyword's works in this topic)
+        'keywords': {"display_name": 'characteristic keywords', "aliases": ['keywords']},
         'siblings': {"display_name": 'sibling topics'},
         'subfield.id': {"display_name": 'parent subfield', "aliases": ['subfield']},
     },

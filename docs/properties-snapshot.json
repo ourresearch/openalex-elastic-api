@@ -1,7 +1,7 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "847107c140586167be068640e4d455d0d6db48df1c4708ccec81bc0c2c385d36",
+    "fingerprint": "7880ee5f602333054eaa087959b9f7de0e228c610f19b6eee7d28ad87b65d864",
     "property_count": 904,
     "version": "15.0.0"
   },
@@ -7579,12 +7579,14 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "topic"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topic",
+        "display_name": "primary topic",
         "entity_type": null,
         "name": "primary_topic.id",
         "operators": [
@@ -7649,7 +7651,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics",
+        "display_name": "related topics",
         "entity_type": null,
         "name": "topics",
         "operators": [],
@@ -7662,12 +7664,14 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "topics"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics",
+        "display_name": "related topics",
         "entity_type": null,
         "name": "topics.id",
         "operators": [
@@ -13552,12 +13556,14 @@
         "actions": [
           "column"
         ],
-        "aliases": [],
+        "aliases": [
+          "keywords"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
         "category": "other",
-        "display_name": "keywords",
+        "display_name": "characteristic keywords",
         "entity_type": null,
         "name": "keywords",
         "operators": [],

@@ -31,8 +31,9 @@ class TopicsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
-    # oxjob #1307: the topic's top 25 keywords by how many of its works carry them; score = the keyword's share
-    # of works in this topic. The full list: /keywords?filter=topics.id:T...
+    # oxjob #1307: the topic's characteristic keywords: those with >= 20% of their works in this topic (score = that
+    # share), the 25 carried by the most of the topic's works. Every keyword linked to the topic (>= 7%):
+    # /keywords?filter=topics.id:T...
     keywords = fields.Nested(TopicKeywordSchema, many=True)
     # the 10 keyword strings topics shipped with (CWTS), one "; "-delimited string
     legacy_keywords = fields.Str()
