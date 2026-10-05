@@ -3,6 +3,7 @@ from core.fields import (
     DateTimeField,
     ExternalIDField,
     CollectionField,
+    OpenAlexIDField,
     RangeField,
     SearchField,
     TermField,
@@ -31,6 +32,9 @@ fields = [
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
+    # oxjob #1307: keywords by their topics (the keyword's primary topic, or any linked topic)
+    OpenAlexIDField(param="primary_topic.id"),
+    OpenAlexIDField(param="topics.id"),
     CollectionField(entity_type="keywords"),
 ]
 

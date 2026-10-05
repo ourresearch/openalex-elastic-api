@@ -212,6 +212,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
     'keywords': {
         'display_name': {"display_name": 'name'},
         'display_name_alternatives': {"display_name": 'alternate names'},
+        # oxjob #1307: as on works
+        'primary_topic.id': {"display_name": 'topic'},
+        'topics.id': {"display_name": 'topics'},
     },
     'languages': {
         'display_name': {"display_name": 'name'},

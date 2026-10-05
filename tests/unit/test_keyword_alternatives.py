@@ -376,5 +376,6 @@ class TestKeywordSearch:
         assert _match_fields(query) == {"display_name", "display_name_alternatives"}
 
     def test_topics_search_unchanged(self):
-        query = full_search_query("topics-v4", "antibacterial resistance").to_dict()
-        assert _match_fields(query) == {"display_name", "description", "keywords"}
+        # oxjob #1307: topics-v5 keywords are objects; search their names
+        query = full_search_query("topics-v5", "antibacterial resistance").to_dict()
+        assert _match_fields(query) == {"display_name", "description", "keywords.display_name"}

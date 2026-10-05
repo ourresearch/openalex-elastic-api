@@ -18,11 +18,24 @@ class IDsSchema(Schema):
         ordered = True
 
 
+class TopicKeywordSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    score = fields.Float()
+
+    class Meta:
+        ordered = True
+
+
 class TopicsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
-    keywords = fields.List(fields.Str())
+    # oxjob #1307: the topic's top 25 keywords by how many of its works carry them; score = the keyword's share
+    # of works in this topic. The full list: /keywords?filter=topics.id:T...
+    keywords = fields.Nested(TopicKeywordSchema, many=True)
+    # the 10 keyword strings topics shipped with (CWTS), one "; "-delimited string
+    legacy_keywords = fields.Str()
     ids = fields.Nested(IDsSchema)
     subfield = fields.Nested(TopicHierarchySchema)
     field = fields.Nested(TopicHierarchySchema)

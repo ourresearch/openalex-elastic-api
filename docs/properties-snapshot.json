@@ -1,8 +1,8 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "a6abb9461a0d6438b8c5ae369490b37b6aada2d3a5bf46bd531110e671544939",
-    "property_count": 899,
+    "fingerprint": "847107c140586167be068640e4d455d0d6db48df1c4708ccec81bc0c2c385d36",
+    "property_count": 904,
     "version": "15.0.0"
   },
   "properties": {
@@ -7557,6 +7557,47 @@
         "supported_by": [],
         "type": null
       },
+      "primary_topic": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "primary topic",
+        "entity_type": null,
+        "name": "primary_topic",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "primary_topic.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "topic",
+        "entity_type": null,
+        "name": "primary_topic.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
+      },
       "relevance_score": {
         "actions": [
           "column"
@@ -7598,6 +7639,47 @@
         ],
         "supported_by": [],
         "type": "search"
+      },
+      "topics": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "topics",
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "topics.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "topics",
+        "entity_type": null,
+        "name": "topics.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
       },
       "updated_date": {
         "actions": [
@@ -13500,6 +13582,22 @@
         "supported_by": [],
         "type": "search"
       },
+      "legacy_keywords": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "legacy keywords",
+        "entity_type": null,
+        "name": "legacy_keywords",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "relevance_score": {
         "actions": [
           "column"
@@ -14529,6 +14627,7 @@
           "or"
         ],
         "supported_by": [
+          "gui",
           "oxurl"
         ],
         "type": "openalex_id"
