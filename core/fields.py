@@ -904,6 +904,9 @@ class SearchField(Field):
             or self.param == "abstract.search"
             or self.param == "abstract.search.exact"
             or self.param == "keyword.search"
+            # topics `keywords.search` (oxjob #1307): search the field it names; it used to fall
+            # through to the default branch and search topic names instead
+            or self.param == "keywords.search"
             or self.param == "description.search"
             or self.param == "title.search"
             or self.param == "title.search.exact"
