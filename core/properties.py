@@ -368,7 +368,12 @@ CAP_COLUMN = "column"
 # Aurora's tags frozen in October 2026, removed in November 2026. The removal dominates:
 # classify_properties_diff.py says MAJOR. If another bump lands on master first, rebase and
 # take the next MAJOR.
-PROPERTIES_VERSION = "15.0.0"
+# 15.1.0 (oxjob #1307, 2026-10-05; Jason's "Yes" 15:46 CT to "That releases API version 15.1.0"): keywords gain
+# `primary_topic` and `topics` (related topics, a work's topic object shape; score = share of the keyword's works in
+# the topic) with filters `primary_topic.id` ("primary topic") and `topics.id` ("related topics"); topics gain
+# `legacy_keywords` (the old CWTS strings) while `keywords` becomes characteristic keyword objects, label
+# "characteristic keywords" (old words stay aliases). Additive: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "15.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
