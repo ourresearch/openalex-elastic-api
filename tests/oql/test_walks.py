@@ -12,6 +12,7 @@ from query_translation.oqo import OQO, LeafFilter, result_entity
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.validator import validate_oqo
 from query_translation.walks import possessive, walk_state
+from tests.oql._echo import modern
 
 
 def _line(q):
@@ -44,8 +45,8 @@ def _err(q):
     "then get institutions of those works)",
 ])
 def test_round_trip(q):
-    assert _line(q) == q
-    assert _line(_line(q)) == q
+    assert _line(q) == modern(q)
+    assert _line(_line(q)) == modern(q)
 
 
 def test_walk_oqo_shape():
@@ -71,7 +72,7 @@ def test_noun_links_follow_the_filter_words():
 
 def test_optional_of_those_works_on_input():
     assert _line("get works where year > (2020); then get each author") == \
-        "get works where year > (2020); then get each author of those works"
+        modern("get works where year > (2020); then get each author of those works")
 
 
 def test_possessives():
@@ -243,7 +244,7 @@ def test_a_walk_that_ends_at_the_things_lists_them_as_rung_1_splits():
     "then calculate count",
 ])
 def test_cooccurrence_round_trip(q):
-    assert _line(q) == q
+    assert _line(q) == modern(q)
     assert validate_oqo(parse(q)).valid
     assert W.needs_walk(parse(q))
 

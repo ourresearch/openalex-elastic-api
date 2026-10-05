@@ -68,6 +68,24 @@ class StepDirective:
 _MEASURE_SURFACE = {"mean": "mean", "median": "median", "sum": "sum",
                     "min": "min", "max": "max", "percent": "percent"}
 
+# The last step's verb (oxjob #1555, Jason 2026-10-05: "summarize" reads better than
+# "calculate"; "using" over "with", which `with seed` already uses). The parser also
+# takes `calculate`, `summarize with` and `summarize by`.
+SUMMARIZE = "summarize using "
+
+
+def transitions(n: int) -> List[str]:
+    """The word that opens each of n steps after the start (oxjob #1555, Jason
+    2026-10-05): one step `then`; two `then`, `finally`; three or more `first`,
+    `then` ..., `finally`. Input takes any of them anywhere (they're sugar)."""
+    if n <= 0:
+        return []
+    if n == 1:
+        return ["then"]
+    if n == 2:
+        return ["then", "finally"]
+    return ["first"] + ["then"] * (n - 2) + ["finally"]
+
 
 def _text(s: str) -> Segment:
     return L._seg("text", s)
@@ -452,6 +470,8 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
     finally:
         if tok is not None:
             L._RENDER_ENTITY.reset(tok)
+    for d, word in zip(steps, transitions(len(steps))):
+        d.joiner = f"; {word}, "
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
                          where=where, directives=steps, corpus_phrase=corpus_phrase)
 
@@ -472,7 +492,7 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
     if oqo.calculate:
         text = ", ".join(measure_text(m, noun) for m in oqo.calculate)
         steps.append(StepDirective(
-            prefix="calculate ", segments=[_text(text)],
+            prefix=SUMMARIZE, segments=[_text(text)],
             meta=StepMeta("calculate", data={
                 "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
 
@@ -499,7 +519,8 @@ def format_pipeline(tree: OQLRenderTree, width: int = None) -> str:
     lines = [head]
     for d in tree.directives:
         lines[-1] += ";"
-        lines.extend(_wrap_step(f"then {d.prefix}{_segs_text(d.segments)}", width))
+        lines.extend(_wrap_step(f"{d.joiner[2:]}{d.prefix}{_segs_text(d.segments)}",
+                                width))
     return "\n".join(lines)
 
 

@@ -16,6 +16,8 @@ from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 CORPUS = os.path.join(os.path.dirname(__file__), "..", "..", "docs", "oql", "corpus.yaml")
 
+from tests.oql._echo import modern
+
 
 def _canon(q):
     return canonicalize_oqo(parse(q))
@@ -23,7 +25,7 @@ def _canon(q):
 
 def _flat(text):
     """The one-line form of a (possibly multi-line) canonical render."""
-    return " ".join(text.replace(";\nthen ", "; then ").split())
+    return " ".join(text.replace(";\n", "; ").split())
 
 
 # The #1512 examples that don't walk (work/oql_draft.md 1-3, 6, 9, 10, 13-17; ids
@@ -59,7 +61,7 @@ EXAMPLES = [
 def test_example_echoes_itself(q):
     oqo = _canon(q)
     assert oqo.uses_pipeline
-    assert _flat(render(oqo)) == q
+    assert _flat(render(oqo)) == modern(q)
 
 
 @pytest.mark.parametrize("q", EXAMPLES)
@@ -96,7 +98,7 @@ def test_bins_and_values():
                  "FWCI bins of (0.5)")
     assert oqo.group_by[0] == GroupBy(column_id="cited_by_count", bins={"at": [1, 10, 100]})
     assert oqo.group_by[1] == GroupBy(column_id="fwci", bins={"of": 0.5})
-    assert _flat(render(oqo)) == (
+    assert _flat(render(oqo)) == modern(
         "get works where institution is (I1); then group those works into citation count "
         "bins at (1, 10, 100); then group those works again into FWCI bins of (0.5)")
 
@@ -120,14 +122,14 @@ def test_bins_and_values():
      "is not in (col_abc)"),
 ])
 def test_lenient_input_renders_canonical(typed, canonical):
-    assert _flat(render(_canon(typed), style="pipeline")) == canonical
+    assert _flat(render(_canon(typed), style="pipeline")) == modern(canonical)
 
 
 def test_the_launch_switch_renders_every_query_as_a_pipeline(monkeypatch):
     # the launch sets OQL_CANONICAL_STYLE=pipeline (read into CANONICAL_STYLE)
     from query_translation import oql_lang
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
-    assert _flat(render(_canon("works where year >= 2020 group by year, type"))) == (
+    assert _flat(render(_canon("works where year >= 2020 group by year, type"))) == modern(
         "get works where year >= (2020); then group those works by year; then group "
         "those works again by type")
     assert render(_canon("works where type is not (review)")) == (
@@ -146,7 +148,7 @@ def test_a_plain_query_in_the_pipeline_style_keeps_its_url_and_builder_tree(monk
     with Flask(__name__).test_request_context("/"):
         out = render_all_formats(oqo, ValidationResult(valid=True, errors=[], warnings=[]),
                                  sort_operands=False)
-    assert out["oql_oneline"] == (
+    assert out["oql_oneline"] == modern(
         "get works where year >= (1976); then group those works by topic; then group "
         "those works again by year")
     assert out["oql_render_v2"]["lines"]
@@ -172,7 +174,7 @@ def test_classic_queries_render_classic():
 ])
 def test_pipeline_style(typed, pipeline):
     oqo = _canon(typed)
-    assert _flat(render(oqo, style="pipeline")) == pipeline
+    assert _flat(render(oqo, style="pipeline")) == modern(pipeline)
     assert _canon(pipeline).to_dict() == oqo.to_dict()
 
 
@@ -283,7 +285,7 @@ def test_a_groups_own_field_in_calculate():
     oqo = _canon(q)
     assert oqo.calculate[1] == Measure("value", "summary_stats.h_index")
     assert oqo.calculate[1].key == "summary_stats_h_index"
-    assert _flat(render(oqo)) == q
+    assert _flat(render(oqo)) == modern(q)
     from query_translation.validator import validate_oqo
     assert validate_oqo(oqo).valid
 
@@ -305,7 +307,7 @@ def test_min_max_date():
          "calculate count, max date, min date")
     oqo = _canon(q)
     assert [m.measure for m in oqo.calculate] == ["count", "max", "min"]
-    assert _flat(render(oqo)) == q
+    assert _flat(render(oqo)) == modern(q)
     from query_translation.validator import validate_oqo
     assert validate_oqo(oqo).valid
 

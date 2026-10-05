@@ -572,6 +572,9 @@ _CONNECTIVES = {"and", "or", "&"}
 _SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
                                        "sample"}
 
+# Words that open a pipeline step after a `;`, besides `then` (oxjob #1555).
+_STEP_OPENERS = {"first", "next", "finally", "lastly"}
+
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
 # ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
 # result-preserving), and left in place it would break a re-parse — `?`/`*` read
@@ -1652,6 +1655,13 @@ class _Parser:
         t = self.peek(k)
         return bool(t and t.kind == "WORD" and t.val.lower() in {w.lower() for w in words})
 
+    def _after_semi(self) -> bool:
+        """The last non-annotation token before the cursor is a `;`."""
+        j = self.i - 1
+        while j >= 0 and self.toks[j].kind == "ANNOT":
+            j -= 1
+        return j >= 0 and self.toks[j].kind == "SEMI"
+
     # -- entry --
     def parse(self) -> OQO:
         self._skip_annot()
@@ -1714,9 +1724,15 @@ class _Parser:
             if t.kind == "SEMI":
                 self.next()
                 continue
-            if t.kind == "WORD" and t.val.lower() == "then":
-                # `; then <step>` (the `;` is optional on input)
+            if t.kind == "WORD" and (t.val.lower() == "then" or (
+                    t.val.lower() in _STEP_OPENERS and self._after_semi())):
+                # `; then <step>` (the `;` is optional on input before `then`);
+                # `first`, `next`, `finally`, `lastly` open a step after a `;`, and
+                # a comma after the opener is optional (oxjob #1555: the echo reads
+                # `; first, ...; then, ...; finally, ...`)
                 self.next()
+                if self.peek() is not None and self.peek().kind == "COMMA":
+                    self.next()
                 self._skip_annot()
                 if calculate:
                     nt = self.peek()
@@ -3249,6 +3265,13 @@ class _Parser:
             return "split", self._parse_split(entity, n_splits)
         if w == "calculate":
             self.next()
+            return "calculate", self._parse_measures(entity, splits or [])
+        if w == "summarize":
+            # `summarize using count, mean FWCI` (oxjob #1555); `with`, `by` and
+            # nothing are accepted too
+            self.next()
+            if self.word_is("using") or self.word_is("with") or self.word_is("by"):
+                self.next()
             return "calculate", self._parse_measures(entity, splits or [])
         if w == "sample":
             self.next()
