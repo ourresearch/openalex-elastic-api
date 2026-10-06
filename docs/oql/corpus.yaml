@@ -4198,7 +4198,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where country is (KE [Kenya]) and year >= (2015);
+    get works where country is Kenya [KE] and year >= 2015;
     then, group those works by year;
     finally, summarize using percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.countries", "value": "KE"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "publication_year"}], "calculate": [{"measure": "percent", "column_id": "open_access.is_oa"}]}
@@ -4211,7 +4211,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [MIT]);
+    get works where institution is MIT [I63966007];
     then, group those works by open access status;
     finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "open_access.oa_status"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
@@ -4224,7 +4224,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [MIT]);
+    get works where institution is MIT [I63966007];
     then, group those works by author;
     finally, summarize using mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "authorships.author.id"}], "calculate": [{"measure": "mean", "column_id": "fwci"}]}
@@ -4239,8 +4239,8 @@ rows:
   oql: |-
     get works where title-abstract has (kelp);
     then, group those works by author
-      where count of those works > (10)
-      and co-author is not (A5023888391)
+      where count of those works > 10
+      and co-author is not A5023888391
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">", "value": 10}, {"column_id": "co_author", "value": "A5023888391", "is_negated": true}]}}]}
 - id: 211
   tags: [pipeline, listed-values, search-semantics]
@@ -4251,7 +4251,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where year >= (2010);
+    get works where year >= 2010;
     first, group those works by title-abstract search in (("inference latency"), ("neuromorphic computing"), ("edge AI"));
     then, group those works again by year;
     finally, summarize using count
@@ -4265,8 +4265,8 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is (T10878 [CRISPR and Genetic Engineering]);
-    then, group those works by institution in (I63966007 [MIT], I97018004 [Stanford], I136199984 [Harvard]);
+    get works where topic is CRISPR and Genetic Engineering [T10878];
+    then, group those works by institution in (MIT [I63966007], Stanford [I97018004], Harvard [I136199984]);
     finally, summarize using count, mean FWCI, and percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "group_by": [{"column_id": "authorships.institutions.lineage", "values": ["I63966007", "I97018004", "I136199984"]}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}]}
 - id: 213
@@ -4278,7 +4278,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where country is (KE [Kenya]) and year >= (2015);
+    get works where country is Kenya [KE] and year >= 2015;
     then, group those works by funder;
     finally, summarize using count and mean citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.countries", "value": "KE"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "funders.id"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "cited_by_count"}]}
@@ -4292,7 +4292,7 @@ rows:
   status: ok
   oql: |-
     get works where topic is in (col_abc123);
-    then, group those works by institution where collaborator is not (I63966007);
+    then, group those works by institution where collaborator is not I63966007;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"column_id": "authorships.institutions.lineage", "where": {"column_id": "collaborator", "value": "I63966007", "is_negated": true}}], "calculate": [{"measure": "count"}]}
 - id: 215
@@ -4304,8 +4304,8 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where year >= (2016);
-    first, group those works into ((institution is (I99464096 [KU Leuven])), (country is (BE [Belgium])));
+    get works where year >= 2016;
+    first, group those works into ((institution is KU Leuven [I99464096]), (country is Belgium [BE]));
     then, group those works again by SDG;
     finally, summarize using count and percent of those works
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
@@ -4319,7 +4319,7 @@ rows:
   status: ok
   oql: |-
     get works where institution is in (col_abc123);
-    first, group those works into ((year >= (2016) and year <= (2019)), (year >= (2021)));
+    first, group those works into ((year >= 2016 and year <= 2019), (year >= 2021));
     then, group those works again by topic;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"conditions": [{"join": "and", "filters": [{"column_id": "publication_year", "value": 2016, "operator": ">="}, {"column_id": "publication_year", "value": 2019, "operator": "<="}]}, {"column_id": "publication_year", "value": 2021, "operator": ">="}]}, {"column_id": "primary_topic.id"}], "calculate": [{"measure": "count"}]}
@@ -4332,7 +4332,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [MIT]) and year >= (2015);
+    get works where institution is MIT [I63966007] and year >= 2015;
     then, group those works into citation count bins at (1, 10, 100);
     finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "cited_by_count", "bins": {"at": [1, 10, 100]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
@@ -4345,9 +4345,9 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [MIT]) and year >= (2020);
+    get works where institution is MIT [I63966007] and year >= 2020;
     first, group those works by year;
-    then, group those works again into FWCI bins of (0.5);
+    then, group those works again into FWCI bins of 0.5;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}, {"column_id": "publication_year", "value": 2020, "operator": ">="}], "group_by": [{"column_id": "publication_year"}, {"column_id": "fwci", "bins": {"of": 0.5}}], "calculate": [{"measure": "count"}]}
 - id: 219
@@ -4361,8 +4361,8 @@ rows:
   oql: |-
     get works where title-abstract has (kelp);
     then, group those works by author
-      where count of those works > (10)
-      and h-index > (20);
+      where count of those works > 10
+      and h-index > 20;
     finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">", "value": 10}, {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
 - id: 220
@@ -4374,9 +4374,9 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I146416000 [University of Kansas]);
+    get works where institution is University of Kansas [I146416000];
     then, group those works by author
-      where count of those works >= (5)
+      where count of those works >= 5
       and that author is not in (col_abc123);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">=", "value": 5}, {"column_id": "collection", "value": "col_abc123", "operator": "in collection", "is_negated": true}]}}], "calculate": [{"measure": "count"}]}
@@ -4389,7 +4389,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is (T10878 [CRISPR and Genetic Engineering]);
+    get works where topic is CRISPR and Genetic Engineering [T10878];
     then, summarize using count, mean FWCI, percent open access, and median citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}, {"measure": "median", "column_id": "cited_by_count"}]}
 - id: 222
@@ -4401,7 +4401,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where year > (2020);
+    get works where year > 2020;
     then, group those works by year;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2020, "operator": ">"}], "group_by": [{"column_id": "publication_year"}], "calculate": [{"measure": "count"}]}
@@ -4470,7 +4470,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [MIT]);
+    get works where institution is MIT [I63966007];
     first, get each author of those works;
     then, get all that author's works;
     finally, summarize using mean FWCI
@@ -4484,7 +4484,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is (T10878 [CRISPR and Genetic Engineering]);
+    get works where topic is CRISPR and Genetic Engineering [T10878];
     then, get authors of those works;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "walks": [{"column_id": "authorships.author.id", "each": false}], "calculate": [{"measure": "count"}]}
@@ -4498,7 +4498,7 @@ rows:
   status: ok
   oql: |-
     get works where title-abstract has (kelp);
-    first, get each author of those works where h-index > (20);
+    first, get each author of those works where h-index > 20;
     then, get all that author's works;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "walks": [{"column_id": "authorships.author.id", "each": true, "where": {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}}, {"to": "works"}], "calculate": [{"measure": "count"}]}
@@ -4511,9 +4511,9 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where title has (neuromorphic) and date >= (2026-09-14);
+    get works where title has (neuromorphic) and date >= 2026-09-14;
     then, get authors of those works;
-    finally, get all those authors' works where date >= (2026-08-01)
+    finally, get all those authors' works where date >= 2026-08-01
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "display_name.search", "value": "neuromorphic", "operator": "has"}, {"column_id": "from_publication_date", "value": "2026-09-14"}], "walks": [{"column_id": "authorships.author.id", "each": false}, {"to": "works", "where": {"column_id": "from_publication_date", "value": "2026-08-01"}}]}
 - id: 234
   tags: [pipeline, query-set, group-by, calculate]
@@ -4525,7 +4525,7 @@ rows:
   status: ok
   oql: |-
     get works where it cites works in (
-        get works where institution is (I146416000)
+        get works where institution is I146416000
       );
     then, group those works by country;
     finally, summarize using count
@@ -4539,7 +4539,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I97018004 [Stanford]) and year >= (2020);
+    get works where institution is Stanford [I97018004] and year >= 2020;
     first, get each source of those works;
     then, get all that source's works;
     finally, summarize using percent open access
@@ -4567,9 +4567,9 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where year >= (2025)
+    get works where year >= 2025
       and it doesn't cite works in (
-        get works where institution is (I146416000)
+        get works where institution is I146416000
       )
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "referenced_works", "operator": "in", "is_negated": true, "value": {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}]}}, {"column_id": "publication_year", "value": 2025, "operator": ">="}]}
 - id: 238
@@ -4582,10 +4582,10 @@ rows:
   status: ok
   oql: |-
     get works where author is in (
-        get works where year >= (2022) and title-abstract has (kelp);
+        get works where year >= 2022 and title-abstract has (kelp);
         then, get authors of those works
       )
-      and year >= (2025)
+      and year >= 2025
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.author.id", "operator": "in", "value": {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}, {"column_id": "publication_year", "value": 2022, "operator": ">="}], "walks": [{"column_id": "authorships.author.id", "each": false}]}}, {"column_id": "publication_year", "value": 2025, "operator": ">="}]}
 - id: 239
   tags: [pipeline, query-set]

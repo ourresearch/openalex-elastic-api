@@ -84,7 +84,7 @@ def test_possessives():
 
 def test_verb_negation_of_relations_folds():
     assert _line("get works where it does not cite works in (get works where year is (2020))") \
-        == "get works where it doesn't cite works in (get works where year is (2020))"
+        == "get works where it doesn't cite works in (get works where year is 2020)"
 
 
 # ---------------------------------------------------------------------------

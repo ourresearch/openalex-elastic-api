@@ -44,7 +44,6 @@ def _leaves(oql):
 @pytest.mark.parametrize("oql", [
     "works where year is 2019-2023",   # closed
     "works where year is 2019-",       # open lower
-    "works where year is -2023",       # open upper
     "works where FWCI is 1.5-3.0",     # float closed
     "works where citation count is 1-100",
 ])
@@ -58,6 +57,13 @@ def test_range_reject_fixit_echoes_the_endpoints():
     with pytest.raises(OQLError) as e:
         parse("works where FWCI is 1.5-3.0")
     assert "FWCI >= 1.5 and FWCI <= 3.0" in e.value.fixit
+
+
+def test_a_leading_minus_is_a_negative_number():
+    # oxjob #1555 (Jason 2026-10-06): negative numbers go bare; the open-upper range
+    # form `-2023` was removed (decision 24), so the reading is free
+    assert parse("works where year is -2023").filter_rows[0].value == -2023
+    assert parse("works where FWCI > -1").filter_rows[0].value == -1
 
 
 def test_non_numeric_dash_term_is_still_bad_number_not_a_range():

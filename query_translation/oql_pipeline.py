@@ -149,6 +149,11 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
             inner = _search_vtree_text(vt)
         elif leaf is not None:
             term = L._render_term(leaf.value, leaf.column_id)
+            if (term == f'"{leaf.value}"' and not leaf.column_id.endswith(".exact")
+                    and str(leaf.value).lower() in _BARE_RESERVED_SEARCH):
+                # a one-word stemmed search for a reserved word reads bare inside
+                # the parentheses; quoted it would come back an EXACT search (#1555)
+                term = str(leaf.value)
             inner = f"NOT {term}" if leaf.is_negated else term
         else:
             return cn
@@ -199,6 +204,110 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
                       meta=_meta_without_vtree(meta))
 
 
+# Reserved words that a one-word search reads back as a stemmed search when bare
+# inside `has (...)` (probed 2026-10-06). `not` and `within` can't stand alone there;
+# a stemmed search for them stays quoted (exact), which nobody needs.
+_BARE_RESERVED_SEARCH = {"group", "sample", "stemmed", "and", "or", "&"}
+
+
+def _label_text(name: str, column_id: str) -> str:
+    """A display name as the label before its `[ID]` (oxjob #1555). The parser never
+    reads a label, so the renderer may tidy it: brackets become parentheses and
+    double quotes single ones; a name the parser could mistake for structure (a `;`,
+    a leading `(` or `not`, a connective followed by a field and an operator) is
+    quoted. Measured 2026-10-06: 1 of 107M names needs the last."""
+    s = " ".join(name.split()).replace("[", "(").replace("]", ")").replace('"', "'")
+    first = s.split(" ", 1)[0].lower()
+    if (";" in s or s.startswith("(") or first in ("not", "unknown", "null", "it", "it's")
+            or _reads_as_a_clause(s)):
+        return f'"{s}"'
+    return s
+
+
+def _starts_a_condition(s: str) -> bool:
+    """`s` opens with something that reads as a condition (a few words and an
+    operator, or a `(`), for line breaks. A break inside a name is only cosmetic:
+    the parser reads names up to their `[ID]` whatever the whitespace."""
+    try:
+        return L._Parser(L.lex(s))._clause_lookahead(0, False)
+    except Exception:  # noqa: BLE001 (unlexable: don't break the line here)
+        return False
+
+
+def _reads_as_a_clause(s: str) -> bool:
+    """Some `and`/`or` in `s` is followed by a known field word and an operator."""
+    low = f" {s.lower()} "
+    if " and " not in low and " or " not in low:
+        return False
+    try:
+        p = L._Parser(L.lex(s))
+    except Exception:  # noqa: BLE001 (an unlexable name gets quoted)
+        return True
+    for j, t in enumerate(p.toks):
+        if t.kind == "WORD" and t.val.lower() in ("and", "or") and \
+                p._clause_lookahead(j + 1, True):
+            return True
+    return False
+
+
+def _name_first(segs: List[Segment]) -> List[Segment]:
+    """`I63966007 [MIT]` segments become `MIT [I63966007]` (oxjob #1555); a value whose
+    name wasn't found stays a bare ID."""
+    segs = list(segs)
+    out: List[Segment] = []
+    i = 0
+    while i < len(segs):
+        s = segs[i]
+        nxt = segs[i + 2] if i + 2 < len(segs) else None
+        if (s.kind == "value" and nxt is not None and nxt.kind == "id"
+                and segs[i + 1].kind == "text" and segs[i + 1].text == " "):
+            if nxt.text == L._NO_ENTITY_ANNOTATION:
+                out.append(s)
+            else:
+                meta = nxt.meta
+                name = (meta.full_name or meta.entity_display_name) if meta else None
+                name = name or nxt.text.strip("[]")
+                col = s.meta.column_id if s.meta else ""
+                out.extend([L._seg("id", _label_text(name, col),
+                                   entity_display_name=name),
+                            _text(" "),
+                            Segment(kind="value", text=f"[{s.text}]", meta=s.meta)])
+            i += 3
+            continue
+        out.append(s)
+        i += 1
+    return out
+
+
+def _bare_values(cn: ClauseNode) -> ClauseNode:
+    """Today's value forms (oxjob #1555, Jason 2026-10-06): an entity value reads
+    `<display name> [<ID>]` (a bare ID when no name is known), and a single value
+    loses its parentheses: `year >= 2020`, `type is not review`, `institution is
+    Massachusetts Institute of Technology [I63966007]`. Lists of two or more keep
+    one pair; searches, sets (`in (...)`) and row-subject relations (`it cites
+    (...)`) keep theirs."""
+    out = _name_first(cn.segments)
+    meta = cn.meta
+    if len(out) != len(cn.segments) or any(x is not y for x, y in zip(out, cn.segments)):
+        # the multi-line formatter lays value lists out from the vtree's ID-first
+        # segments: keep a rewritten clause whole instead
+        meta = _meta_without_vtree(meta)
+    col = next((x for x in out if x.kind == "column"), None)
+    op_i = next((k for k, x in enumerate(out) if x.kind == "operator"), None)
+    keeps = (cn.clause_kind == "text" or col is None or col.text.startswith("it")
+             or (cn.meta.operator or "") in ("in collection", "in", "has")
+             or op_i is None or op_i + 1 >= len(out))
+    if not keeps and out[op_i + 1].kind == "text" and out[op_i + 1].text == "(" \
+            and out[-1].kind == "text" and out[-1].text == ")":
+        inner = out[op_i + 2:-1]
+        single = (sum(1 for x in inner if x.kind == "value") == 1
+                  and not any(x.kind in ("negation",) or (x.kind == "text" and x.text.strip())
+                              for x in inner))
+        if single:
+            out = out[:op_i + 1] + inner
+    return ClauseNode(segments=out, clause_kind=cn.clause_kind, meta=meta)
+
+
 def _meta_without_vtree(meta: ClauseMeta) -> ClauseMeta:
     from dataclasses import replace
     return replace(meta, vtree=None)
@@ -206,7 +315,7 @@ def _meta_without_vtree(meta: ClauseMeta) -> ClauseMeta:
 
 def _pipeline_expr(node):
     if isinstance(node, ClauseNode):
-        return _pipeline_clause(node)
+        return _bare_values(_pipeline_clause(node))
     if isinstance(node, GroupNode):
         node.children = [_pipeline_expr(c) for c in node.children]
     return node
@@ -261,7 +370,7 @@ def _group_where_text(node, ctx: dict, resolver=None, top=True) -> str:
         what = "count" if node.measure == "count" else measure_text(
             Measure(node.measure, node.column_id), noun)
         op = "is not" if node.is_negated and node.operator == "is" else node.operator
-        return f"{what} of those {noun} {op} ({_number(node.value)})"
+        return f"{what} of those {noun} {op} {_number(node.value)}"
     if isinstance(node, BranchFilter):
         # A same-subject set clause (`co-author is not (A or B)`, `that author is
         # (A1 or A2)`) renders whole; otherwise join the parts.
@@ -333,7 +442,9 @@ def _set_clause_text(node, ctx, resolver=None) -> Optional[str]:
         if node.join != ("and" if negated else "or"):
             return None
     vals = " or ".join(str(x.value) for x in leaves)
-    return f"{subject} {'is not' if negated else 'is'} ({vals})"
+    if len(leaves) > 1:
+        vals = f"({vals})"
+    return f"{subject} {'is not' if negated else 'is'} {vals}"
 
 
 def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[str, List[Segment]]:
@@ -347,7 +458,7 @@ def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[
         if "at" in g.bins:
             tail = "bins at (" + ", ".join(_number(e) for e in g.bins["at"]) + ")"
         else:
-            tail = f"bins of ({_number(g.bins['of'])})"
+            tail = f"bins of {_number(g.bins['of'])}"
         return lead + "into ", [col, _text(f" {tail}")]
     if g.values is not None:
         if g.column_id.endswith(".search"):
@@ -359,7 +470,7 @@ def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[
                 vals.append(_text(", "))
             vsegs, _ent = L._value_segments(L._BY_COLUMN.get(g.column_id), v,
                                             g.column_id, resolver)
-            vals.extend(vsegs)
+            vals.extend(_name_first(vsegs))
         return lead + "by ", [col, _text(" in (")] + vals + [_text(")")]
     return lead + "by ", [col]
 
@@ -458,10 +569,10 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
 
     steps: List[StepDirective] = []
     if oqo.sample:
-        segs = [L._seg("value", f"({oqo.sample})", value=oqo.sample),
+        segs = [L._seg("value", f"{oqo.sample}", value=oqo.sample),
                 _text(f" of those {noun}")]
         if oqo.seed is not None:
-            segs.append(_text(f" with seed ({oqo.seed})"))
+            segs.append(_text(f" with seed {oqo.seed}"))
         steps.append(StepDirective(prefix="sample ", segments=segs,
                                    meta=StepMeta("sample", data={"n": oqo.sample})))
     tok = None
@@ -552,7 +663,9 @@ def _wrap_step(line: str, width: int) -> List[str]:
             depth -= 1
         elif not quoted and depth == 0:
             for conn in (" and ", " or "):
-                if rest.startswith(conn, j):
+                if rest.startswith(conn, j) and _starts_a_condition(rest[j + len(conn):]):
+                    # (an `and` inside a name, `Marine and coastal ecosystems [T10032]`,
+                    # isn't followed by a field and an operator: no break there)
                     parts.append(rest[start:j])
                     conns.append(conn.strip())
                     j += len(conn)

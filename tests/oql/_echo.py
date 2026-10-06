@@ -61,7 +61,21 @@ def _inner(text, fn):
     return "".join(out)
 
 
+_ANNOTATED = re.compile(r"(?P<id>\b[A-Za-z]?\d+|\b[A-Z]{2}) \[(?P<name>[^\]]+)\]")
+_SINGLE = re.compile(r'(?P<op> is| is not| >=| <=| >| <| =|\bsample|\bseed|\bbins of) '
+                     r'\((?P<v>-?[^()\s"]+|"[^"]*")\)')
+
+
+def bare_values(text):
+    """Today's value forms (oxjob #1555): `I1 [Name]` -> `Name [I1]` (a bare ID for
+    `[no entity found]`), and one value loses its parentheses."""
+    text = _ANNOTATED.sub(lambda m: m["id"] if m["name"] == "no entity found"
+                          else f'{m["name"]} [{m["id"]}]', text)
+    return _SINGLE.sub(lambda m: f'{m["op"]} {m["v"]}', text)
+
+
 def modern(text):
+    text = bare_values(text)
     head, *steps = _top_level_parts(_inner(text, modern))
     steps = [_bare(s) for s in steps]
     steps = [SUMMARIZE + english_list(s[len("calculate "):].split(", "))

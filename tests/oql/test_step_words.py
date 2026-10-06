@@ -32,12 +32,12 @@ def test_transitions():
 
 
 @pytest.mark.parametrize("q", [
-    "get works where year > (2020); then, sample (100) of those works",
-    "get works where year > (2020); then, group those works by year; "
+    "get works where year > 2020; then, sample 100 of those works",
+    "get works where year > 2020; then, group those works by year; "
     "finally, summarize using count",
-    "get works where year > (2020); first, group those works by year; "
+    "get works where year > 2020; first, group those works by year; "
     "then, group those works again by type; finally, summarize using count and mean FWCI",
-    "get works where year >= (2020); first, get each funder of those works; "
+    "get works where year >= 2020; first, get each funder of those works; "
     "then, get all that funder's works; then, group those works by year; "
     "finally, summarize using mean citation count",
 ])
@@ -46,21 +46,21 @@ def test_echo_is_its_own_canonical_form(q):
 
 
 @pytest.mark.parametrize("typed", [
-    "get works where year > (2020); then group those works by year; then calculate count",
-    "get works where year > (2020); then group by year; finally summarize count",
-    "get works where year > (2020); first group by year; next, summarize with count",
-    "get works where year > (2020); then, group by year; lastly, summarize by count",
-    "get works where year > (2020) then group by year then calculate count",
-    "get works where year > (2020); finally, group by year; first, calculate count",
+    "get works where year > 2020; then group those works by year; then calculate count",
+    "get works where year > 2020; then group by year; finally summarize count",
+    "get works where year > 2020; first group by year; next, summarize with count",
+    "get works where year > 2020; then, group by year; lastly, summarize by count",
+    "get works where year > 2020 then group by year then calculate count",
+    "get works where year > 2020; finally, group by year; first, calculate count",
 ])
 def test_any_opener_any_order(typed):
-    assert _line(typed) == ("get works where year > (2020); then, group those works by "
+    assert _line(typed) == ("get works where year > 2020; then, group those works by "
                             "year; finally, summarize using count")
 
 
 def test_multi_line_echo_carries_the_step_words():
-    q = ("get works where institution is (I63966007) and year >= (2015); "
-         "first, group those works by author where count of those works > (10); "
+    q = ("get works where institution is I63966007 and year >= 2015; "
+         "first, group those works by author where count of those works > 10; "
          "then, group those works again by year; "
          "finally, summarize using count, mean FWCI, and percent open access")
     lines = render(_canon(q), style="pipeline").split("\n")

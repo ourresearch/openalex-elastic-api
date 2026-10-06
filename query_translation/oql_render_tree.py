@@ -50,6 +50,9 @@ class SegmentMeta:
     entity_short_id: Optional[str] = None
     entity_display_name: Optional[str] = None  # Human-readable name, e.g., "Harvard University"
     entity_display_id: Optional[str] = None    # Bracketed ID for display, e.g., "[i19820366]"
+    # The untruncated display name, for the pipeline echo's `Name [ID]` (oxjob #1555);
+    # not serialized.
+    full_name: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result = {}

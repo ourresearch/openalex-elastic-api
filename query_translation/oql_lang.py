@@ -575,6 +575,34 @@ _SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
 # Words that open a pipeline step after a `;`, besides `then` (oxjob #1555).
 _STEP_OPENERS = {"first", "next", "finally", "lastly"}
 
+# The shape of an ID in each annotation namespace (oxjob #1555). A value is written
+# `<display name> [<ID>]`: the parser reads the name as a label (never parses it) up to
+# the first bracket holding an ID of the column's shape. An unknown namespace takes a
+# letter-and-digits or all-digits ID.
+_ID_SHAPES = {
+    "authors": r"[Aa]\d+", "institutions": r"[Ii]\d+", "sources": r"[Ss]\d+",
+    "publishers": r"[Pp]\d+", "funders": r"[Ff]\d+", "topics": r"[Tt]\d+",
+    "concepts": r"[Cc]\d+", "works": r"[Ww]\d+", "awards": r"[Gg]\d+",
+    "keywords": r"[a-z0-9]+(?:-[a-z0-9]+)*", "subfields": r"\d+", "fields": r"\d+",
+    "domains": r"\d+", "sdgs": r"\d+", "continents": r"[Qq]\d+",
+    "countries": r"[A-Za-z]{2}", "languages": r"[A-Za-z]{2,3}",
+}
+_ID_PREFIX_RE = re.compile(r"^(?:https?://openalex\.org/)?(?:[a-z-]+/)?", re.I)
+
+# One real ID per namespace, for the "needs its ID" fix.
+_ID_EXAMPLE = {
+    "authors": "Stephen Hawking [A5066175077]", "institutions": "Harvard University [I136199984]",
+    "sources": "Nature [S137773608]", "publishers": "Elsevier BV [P4310320990]",
+    "funders": "National Institutes of Health [F4320332161]",
+    "topics": "Marine and coastal ecosystems [T10032]",
+}
+
+
+def _is_entity_id(namespace: str, text: str) -> bool:
+    """`text` (a bracket's content or a bare word) is an ID in `namespace`."""
+    shape = _ID_SHAPES.get(namespace, r"[A-Za-z]?\d+")
+    return re.fullmatch(shape, _ID_PREFIX_RE.sub("", text.strip(), count=1)) is not None
+
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
 # ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
 # result-preserving), and left in place it would break a re-parse — `?`/`*` read
@@ -726,6 +754,8 @@ def _range_endpoints(val: str):
     m = _RANGE_RE.match(val)
     if not m or (m.group("lo") is None and m.group("hi") is None):
         return None
+    if m.group("lo") is None:
+        return None     # `-2023` is a negative number (oxjob #1555), not `<= 2023`
     return m.group("lo"), m.group("hi")
 
 
@@ -1598,6 +1628,8 @@ class _Parser:
                                       # errors so they name what the user wrote
         self._in_list = False     # are we inside a parenthesized value list?
         self._directive = None    # "group" when inside a directive
+        self._labels = []         # (column, ID, name as typed) for `Name [ID]` values
+                                  # (oxjob #1555): advice only, never meaning
         # --- editor sectioned-menu bookkeeping (oxjob #357, ctx-mode only) ---
         # Spans of the most-recent TOP-LEVEL operand, recorded as token indices so the
         # post-connective FIELD context can describe the "sibling" clause (the one the
@@ -2641,29 +2673,36 @@ class _Parser:
     def _parse_scalar(self, fld: Field):
         # an empty value slot at the cursor (scalar or list element)
         self._want(CTX_VALUE, fld=fld, in_list=self._in_list)
-        # An entity ref with only a [display name] annotation and no ID is the
-        # classic v1.1 footgun — the ID is authoritative, so require it.
-        if fld.kind == "id":
-            t0 = self.peek()
-            if t0 is not None and t0.kind == "ANNOT":
-                raise oql_error("OQL_MISSING_ENTITY_ID",
-                               f'"{fld.oql}" needs an ID, not just a [display name]',
-                               'put the OpenAlex ID first, e.g. institution is (I136199984 [Harvard])',
-                               t0.pos)
-        self._skip_annot()
-        t = self.peek()
-        if t is None:
-            raise oql_error("OQL_MISSING_VALUE", f'expected a value for "{fld.oql}"', "")
-        if t.kind == "STRING":
-            self.next()
-            val = t.val
-        elif t.kind == "WORD":
-            self.next()
-            val = t.val
+        ns = (namespace_for_column(fld.column, self._entity)
+              if fld.kind in ("id", "enum") else None)
+        labeled = self._labeled_value(fld, ns) if ns is not None else None
+        if labeled is not None:
+            t, val = labeled
         else:
-            raise oql_error("OQL_MISSING_VALUE",
-                           f'expected a value for "{fld.oql}", got "{t.val}"', "", t.pos)
-        self._skip_annot()  # drop a trailing [display name] annotation
+            # An entity ref with only a [display name] annotation and no ID is the
+            # classic v1.1 footgun — the ID is authoritative, so require it.
+            if fld.kind == "id":
+                t0 = self.peek()
+                if t0 is not None and t0.kind == "ANNOT":
+                    raise oql_error("OQL_MISSING_ENTITY_ID",
+                                   f'"{fld.oql}" needs an ID, not just a [display name]',
+                                   'put the OpenAlex ID in brackets after the name, e.g. '
+                                   'institution is Harvard University [I136199984]',
+                                   t0.pos)
+            self._skip_annot()
+            t = self.peek()
+            if t is None:
+                raise oql_error("OQL_MISSING_VALUE", f'expected a value for "{fld.oql}"', "")
+            if t.kind == "STRING":
+                self.next()
+                val = t.val
+            elif t.kind == "WORD":
+                self.next()
+                val = t.val
+            else:
+                raise oql_error("OQL_MISSING_VALUE",
+                               f'expected a value for "{fld.oql}", got "{t.val}"', "", t.pos)
+            self._skip_annot()  # drop a trailing [display name] annotation
         # type coercion per kind
         if fld.kind == "date":
             return _coerce_date(val, fld, t.pos)
@@ -2676,6 +2715,77 @@ class _Parser:
             if low in ("false", "no"):
                 return False
         return _canon_value_case(val, fld)
+
+    def _labeled_value(self, fld: Field, ns: str):
+        """`<display name> [<ID>]` or `[<ID>]` (oxjob #1555): returns (token, ID), or
+        None for the ID-first form (`I63966007 [Harvard]`, `KE`), which the caller
+        reads as before. The name is a label: every token up to the first bracket
+        holding an ID of the column's shape belongs to it, whatever it says (`and`,
+        commas, parentheses), and is never parsed. A name with no ID fails where the
+        next condition starts, so it can't swallow the rest of the query."""
+        t0 = self.peek()
+        if t0 is None:
+            return None
+        if t0.kind == "ANNOT":
+            if not _is_entity_id(ns, t0.val):
+                return None     # `[Harvard]` alone: the caller's missing-ID error
+            self.next()
+            self._skip_annot()
+            return t0, t0.val
+        t1 = self.peek(1)
+        if (t0.kind in ("WORD", "STRING") and t1 is not None and t1.kind == "ANNOT"
+                and _is_entity_id(ns, t1.val)):
+            # a one-token name: `Kenya [KE]`, `Nature [S137773608]`
+            self.i += 2
+            self._labels.append((fld.column, t1.val, t0.val))
+            return t1, t1.val
+        if t0.kind in ("WORD", "STRING") and _is_entity_id(ns, t0.val):
+            return None         # the ID first
+        if t0.kind not in ("WORD", "STRING", "LP"):
+            return None
+        depth, j = 0, self.i
+        while True:
+            t = self.toks[j] if j < len(self.toks) else None
+            if t is not None and t.kind == "ANNOT" and depth == 0 and _is_entity_id(ns, t.val):
+                break
+            if (t is not None and t.kind == "ANNOT" and depth == 0 and ns in _ID_EXAMPLE
+                    and re.fullmatch(r"[A-Za-z]\d+", t.val)):
+                # an ID of another kind: `Harvard [A5066175077]`
+                want = _ID_SHAPES[ns][1]
+                raise oql_error("OQL_WRONG_ENTITY_ID",
+                                f'"{t.val}" isn\'t an ID of {_plural_noun(ns)}; '
+                                f'{fld.oql} IDs start with {want}',
+                                f'e.g. {fld.oql} is {_ID_EXAMPLE[ns]}', t.pos)
+            ends = (t is None or t.kind == "SEMI"
+                    or (t.kind == "RP" and depth == 0)
+                    or (depth == 0 and t.kind == "WORD"
+                        and t.val.lower() in ("and", "or", "&")
+                        and self._clause_lookahead(j + 1 - self.i, True)))
+            if ends:
+                words = " ".join(x.val for x in self.toks[self.i:j] if x.kind != "ANNOT")
+                if self._ctx_mode and t is None:
+                    return None     # still typing the name: the editor's value slot
+                span = self.toks[self.i:j]
+                if (len(span) <= 1 or any(x.kind == "COMMA" for x in span)
+                        or ns not in _ID_EXAMPLE):
+                    # one bare value (a code, `col_…`, `W5`, `MIT`: the validator
+                    # names what's wrong), a comma list, or a closed vocabulary:
+                    # read as before
+                    return None
+                example = _ID_EXAMPLE.get(ns, "its display name [its ID]")
+                raise oql_error("OQL_MISSING_ENTITY_ID",
+                                f'"{words}" needs its OpenAlex ID',
+                                f'put the ID in brackets after the name, e.g. '
+                                f'{fld.oql} is {example}', t0.pos)
+            if t.kind == "LP":
+                depth += 1
+            elif t.kind == "RP":
+                depth -= 1
+            j += 1
+        label = " ".join(x.val for x in self.toks[self.i:j] if x.kind != "ANNOT")
+        self.i = j + 1
+        self._labels.append((fld.column, t.val, label))
+        return t, t.val
 
     # -- search sub-grammar --
     def _parse_semantic(self, fld: Field) -> LeafFilter:
@@ -4923,7 +5033,7 @@ def _value_segments(fld, value, column_id, resolver):
             shown = _truncate_name(name)
             segs.append(_seg("text", " "))
             segs.append(_seg("id", f"[{shown}]", entity_display_name=shown,
-                             entity_display_id=f"[{shown}]"))
+                             entity_display_id=f"[{shown}]", full_name=name))
             entity = EntityValue(id=value, short_id=value, display_name=name)
         else:
             # Resolver consulted, no match → a shape-valid ID that doesn't exist

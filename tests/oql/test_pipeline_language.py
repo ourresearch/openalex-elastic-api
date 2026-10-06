@@ -77,7 +77,7 @@ def test_example_15_plain_authors_query_stays_classic_until_launch():
     assert not oqo.uses_pipeline
     assert render(oqo) == ("authors where last known institution is (I136199984) "
                            "and h-index > (50)")
-    assert render(oqo, style="pipeline") == q
+    assert render(oqo, style="pipeline") == modern(q)
 
 
 def test_oqo_shape():
@@ -132,7 +132,7 @@ def test_the_launch_switch_renders_every_query_as_a_pipeline(monkeypatch):
     assert _flat(render(_canon("works where year >= 2020 group by year, type"))) == modern(
         "get works where year >= (2020); then group those works by year; then group "
         "those works again by type")
-    assert render(_canon("works where type is not (review)")) == (
+    assert render(_canon("works where type is not (review)")) == modern(
         "get works where type is not (review)")
 
 
