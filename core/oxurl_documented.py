@@ -51,5 +51,5 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'primary_location.source.issn', 'primary_location.version', 'publication_date',
     'referenced_works', 'to_created_date', 'to_publication_date', 'to_updated_date',
     'topics.domain.id', 'topics.field.id', 'topics.id', 'topics.subfield.id',
-    'type_crossref', 'updated_date',
+    'type_crossref', 'updated_date', 'volume.id',
 })

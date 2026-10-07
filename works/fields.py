@@ -1020,6 +1020,13 @@ fields = [
         docstring="How the research reported in the work was done (e.g. randomized controlled trial, systematic review), from PubMed's publication types where a MEDLINE-indexed record has them, otherwise assigned automatically; empty when the work reports no study",
         documentation_link="https://help.openalex.org/data/study-designs/",
     ),
+    OpenAlexIDField(
+        # oxjob #1554: the work this work is part of (a chapter's book), a work id. ES holds
+        # the full id on keyword + `.lower` like primary_location.source.id, so W123 expands.
+        param="volume.id",
+        docstring="The work this work is part of, such as a chapter's book; the filter lists the chapters of a book",
+        documentation_link="https://help.openalex.org/data/works/attributes/",
+    ),
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topics.field.id", custom_es_field="topics.field.id"),
     TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),

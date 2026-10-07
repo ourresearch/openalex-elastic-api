@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "7880ee5f602333054eaa087959b9f7de0e228c610f19b6eee7d28ad87b65d864",
-    "property_count": 904,
-    "version": "15.1.0"
+    "fingerprint": "f1ebd36db7fdf434f52f027ac74a9bca8c50f92c857875ef383835976d79bbe4",
+    "property_count": 906,
+    "version": "15.2.0"
   },
   "properties": {
     "authors": {
@@ -15431,7 +15431,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "volume",
+        "display_name": "volume number",
         "entity_type": null,
         "name": "biblio.volume",
         "operators": [
@@ -19332,6 +19332,48 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "volume": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "volume",
+        "entity_type": null,
+        "name": "volume",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "volume.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "source",
+        "display_name": "volume",
+        "entity_type": null,
+        "name": "volume.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "openalex_id"
       }
     }
   }

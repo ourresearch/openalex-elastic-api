@@ -344,8 +344,10 @@ _f("corresponding institution", "corresponding_institution_ids", "id")
 
 # Bibliographic coordinates (kind string — volumes/issues/pages are free-text
 # labels, e.g. "42", "S1", "iv"). PROPERTIES_VERSION 1.9.0 curated the registry
-# display_names from the raw "biblio volume"/… humanized ids.
-_f("volume", "biblio.volume", "string")
+# display_names from the raw "biblio volume"/… humanized ids. oxjob #1554: "volume" is the
+# volume itself (volume.id, a work id, e.g. a chapter's book); its number is "volume number".
+_f("volume number", "biblio.volume", "string")
+_f("volume", "volume.id", "id")
 _f("issue", "biblio.issue", "string")
 _f("first page", "biblio.first_page", "string")
 _f("last page", "biblio.last_page", "string")
@@ -1314,6 +1316,8 @@ _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     "cites": "works",
     "referenced_works": "works",
     "related_to": "works",
+    # oxjob #1554: a work's volume (a chapter's book) is a work id, typed like the edges.
+    "volume.id": "works",
 }
 
 # A row's OWN id never name-annotates: a resolver miss there means "no name

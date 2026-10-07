@@ -373,7 +373,11 @@ CAP_COLUMN = "column"
 # the topic) with filters `primary_topic.id` ("primary topic") and `topics.id` ("related topics"); topics gain
 # `legacy_keywords` (the old CWTS strings) while `keywords` becomes characteristic keyword objects, label
 # "characteristic keywords" (old words stay aliases). Additive: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "15.1.0"
+# 15.2.0 (oxjob #1554, 2026-10-07; Jason-approved 2026-10-07 01:34 CT, #1554, "ship everything"): works gain `volume`
+# {id, display_name}, the work this work is part of (a chapter's book), with the filter/group_by `volume.id`
+# (OQL "volume", a work id). `biblio.volume` (a journal's volume number) is relabeled "volume" -> "volume number"
+# so the concept keeps one word. Additive + a display-name change: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "15.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
