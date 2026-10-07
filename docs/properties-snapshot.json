@@ -1,8 +1,8 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "8bf4687ab1921255582e092befb5d8d368ea9694ddded0c67608e2f153e49193",
-    "property_count": 904,
+    "fingerprint": "a2aa32d93693d7a88e19439442474a931ad7f1abd221871716131894593a280a",
+    "property_count": 905,
     "version": "16.0.0"
   },
   "properties": {
@@ -15438,32 +15438,6 @@
         ],
         "type": "string"
       },
-      "biblio.volume": {
-        "actions": [
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "volume",
-        "entity_type": null,
-        "name": "biblio.volume",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [
-          "gui",
-          "oxurl"
-        ],
-        "type": "string"
-      },
       "citation_normalized_percentile": {
         "actions": [
           "column"
@@ -19352,6 +19326,48 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "volume": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "volume",
+        "entity_type": null,
+        "name": "volume",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "volume.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "source",
+        "display_name": "volume",
+        "entity_type": null,
+        "name": "volume.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "openalex_id"
       }
     }
   }

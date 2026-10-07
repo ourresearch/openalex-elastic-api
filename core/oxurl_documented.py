@@ -27,7 +27,7 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'best_oa_location.source.host_organization', 'best_oa_location.source.id',
     'best_oa_location.source.is_in_doaj', 'best_oa_location.source.issn',
     'best_oa_location.source.type', 'best_oa_location.version', 'best_open_version',
-    'biblio.first_page', 'biblio.issue', 'biblio.last_page', 'biblio.volume',
+    'biblio.first_page', 'biblio.issue', 'biblio.last_page',
     'cited_by', 'cites', 'concept.id', 'concepts.id', 'concepts.wikidata',
     'concepts_count', 'created_date', 'default.search', 'display_name', 'doi',
     'from_publication_date', 'fulltext_origin', 'has_content.grobid_xml',
@@ -51,5 +51,5 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'primary_location.source.issn', 'primary_location.version', 'publication_date',
     'referenced_works', 'to_created_date', 'to_publication_date', 'to_updated_date',
     'topics.domain.id', 'topics.field.id', 'topics.id', 'topics.subfield.id',
-    'type_crossref', 'updated_date',
+    'type_crossref', 'updated_date', 'volume.id',
 })

@@ -1880,17 +1880,18 @@
       "isId": false,
       "hasExport": false
     },
-    "biblio.volume": {
-      "key": "biblio.volume",
+    "volume.id": {
+      "key": "volume.id",
       "entityToFilter": "works",
-      "entityToSelect": null,
+      "entityToSelect": "works",
       "displayName": "volume",
       "displayNameVerbatim": false,
-      "type": "search",
+      "type": "selectEntity",
       "actions": [
-        "filter"
+        "filter",
+        "group_by"
       ],
-      "actionsPopular": [],
+      "actionsPopular": null,
       "isId": false,
       "hasExport": false
     },

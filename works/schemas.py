@@ -315,6 +315,14 @@ class StudyDesignSchema(Schema):
     display_name = fields.String()
 
 
+class VolumeSchema(Schema):
+    id = fields.String()
+    display_name = fields.String()
+
+    class Meta:
+        ordered = True
+
+
 class CitedByPercentileYearSchema(Schema):
     min = fields.Integer()
     max = fields.Integer()
@@ -346,6 +354,8 @@ class WorksSchema(Schema):
     ids = fields.Nested(IDsSchema)
     language = fields.Str()
     primary_location = fields.Nested(LocationSchema)
+    # oxjob #1554: the work this work is part of (a chapter's book); null when none.
+    volume = fields.Nested(VolumeSchema, dump_default=None)
     sources = fields.Nested(SourcesSchema, many=True)
     type = fields.Str()
     type_crossref = fields.Str()
