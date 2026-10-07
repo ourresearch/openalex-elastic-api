@@ -360,7 +360,6 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'biblio.first_page': {"display_name": 'first page'},
         'biblio.issue': {"display_name": 'issue'},
         'biblio.last_page': {"display_name": 'last page'},
-        'biblio.volume': {"display_name": 'volume'},
         'citation_normalized_percentile.value': {"display_name": 'citation percentile by subfield'},
         'cited_by': {"display_name": 'cited by'},
         'cited_by_count_sum': {"display_name": 'citations sum'},
@@ -441,6 +440,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # what kind of document it is.
         'study_designs.id': {"display_name": 'study design', "aliases": ['study designs', 'study_designs', 'study_designs.id']},
         'title.search': {"display_name": 'title'},
+        # oxjob #1554: the work this work is part of (a chapter's book)
+        'volume.id': {"display_name": 'volume'},
         'title_and_abstract.search': {"display_name": 'title-abstract', "aliases": ['title/abstract', 'title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         # oxjob #1521: title + abstract text OR the keywords a query phrase names.
         # Hyphenated labels since 2026-10-03 (#1512): slashes belong to ids; the slash forms stay aliases.

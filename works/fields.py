@@ -863,7 +863,13 @@ fields = [
     TermField(param="biblio.first_page"),
     TermField(param="biblio.issue"),
     TermField(param="biblio.last_page"),
-    TermField(param="biblio.volume"),
+    # oxjob #1554 (Jason, 2026-10-10): "volume" now means the volume itself (`volume.id`, a
+    # chapter's book), and filtering on the citation's volume NUMBER is no longer supported:
+    # no OQL word, no GUI facet, not in the `/properties` catalog or the docs. `unlisted`
+    # (soft-deprecation, #498, like `is_xpac`) keeps `filter=biblio.volume:` executing for the
+    # REST callers that still send it (~8K calls/day in Oct 2026, citation lookups) instead of
+    # 400ing them. The value itself stays in the work record (`biblio.volume`).
+    TermField(param="biblio.volume", unlisted=True),
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(
@@ -1019,6 +1025,13 @@ fields = [
         param="study_designs.id",
         docstring="How the research reported in the work was done (e.g. randomized controlled trial, systematic review), from PubMed's publication types where a MEDLINE-indexed record has them, otherwise assigned automatically; empty when the work reports no study",
         documentation_link="https://help.openalex.org/data/study-designs/",
+    ),
+    OpenAlexIDField(
+        # oxjob #1554: the work this work is part of (a chapter's book), a work id. ES holds
+        # the full id on keyword + `.lower` like primary_location.source.id, so W123 expands.
+        param="volume.id",
+        docstring="The work this work is part of, such as a chapter's book; the filter lists the chapters of a book",
+        documentation_link="https://help.openalex.org/data/works/attributes/",
     ),
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topics.field.id", custom_es_field="topics.field.id"),

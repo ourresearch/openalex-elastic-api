@@ -343,10 +343,13 @@ _f("DOI prefix", "doi_starts_with", "string")
 _f("corresponding author", "corresponding_author_ids", "id")
 _f("corresponding institution", "corresponding_institution_ids", "id")
 
-# Bibliographic coordinates (kind string — volumes/issues/pages are free-text
-# labels, e.g. "42", "S1", "iv"). PROPERTIES_VERSION 1.9.0 curated the registry
-# display_names from the raw "biblio volume"/… humanized ids.
-_f("volume", "biblio.volume", "string")
+# Bibliographic coordinates (kind string — issues/pages are free-text labels, e.g. "S1",
+# "iv"). PROPERTIES_VERSION 1.9.0 curated the registry display_names from the raw
+# "biblio issue"/… humanized ids. oxjob #1554 (Jason, 2026-10-10): "volume" is the volume
+# itself (volume.id, a work id, e.g. a chapter's book); the citation's volume NUMBER
+# (biblio.volume) has no OQL word at all, not even its raw id (it is unlisted, see
+# works/fields.py).
+_f("volume", "volume.id", "id")
 _f("issue", "biblio.issue", "string")
 _f("first page", "biblio.first_page", "string")
 _f("last page", "biblio.last_page", "string")
@@ -994,7 +997,7 @@ def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
 # OQL's curated `_FIELDS` give every common filter a friendly name; the raw
 # oxurl column_id of a *curated* field already parses (it's listed as an alias).
 # The gap was the long tail of columns with NO curated surface (e.g.
-# `apc_paid.value_usd`, `biblio.volume`, `ids.pmid`): submitting their raw key —
+# `apc_paid.value_usd`, `ids.pmid`): submitting their raw key —
 # which an oxurl-fluent user, or a round-tripped render of an unsurfaced column,
 # naturally does — 400'd "unknown field". So accept those raw column_ids as input
 # aliases, synthesizing a Field from the registry's operator metadata. The render
@@ -1537,6 +1540,8 @@ _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     # values are links with names (oxjob #1555) and autocomplete as those entities
     "co_author": "authors",
     "collaborator": "institutions",
+    # oxjob #1554: a work's volume (a chapter's book) is a work id, typed like the edges.
+    "volume.id": "works",
 }
 
 # A row's OWN id never name-annotates: a resolver miss there means "no name

@@ -389,6 +389,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "best_oa_location.is_published": "open access",
         "apc_paid.value_usd": "other",
         "primary_location.source.id": "source",
+        "volume.id": "source",  # oxjob #1554, a chapter's book
         "locations.source.id": "source",
         "primary_location.source.issn": "ids",
         "primary_location.source.type": "source",

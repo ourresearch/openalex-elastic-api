@@ -144,13 +144,31 @@ _needs_registry = pytest.mark.skipif(
 @pytest.mark.parametrize("oql,expect", [
     ("works where ids.pmid is 12345678",
      [{"column_id": "ids.pmid", "value": "12345678"}]),
-    ("works where biblio.volume is 42",
-     [{"column_id": "biblio.volume", "value": "42"}]),
+    ("works where biblio.issue is 42",
+     [{"column_id": "biblio.issue", "value": "42"}]),
     ("works where authorships.institutions.country_code is us",
      [{"column_id": "authorships.institutions.country_code", "value": "US"}]),
 ])
 def test_case3_3_raw_string_columns_accepted(oql, expect):
     assert _leaves(oql) == expect
+
+
+# oxjob #1554 (Jason, 2026-10-10): "volume" is the volume itself (volume.id, a chapter's
+# book). The citation's volume NUMBER (biblio.volume) has no OQL surface at all: no
+# "volume number" word and no raw column id (it is unlisted, a legacy REST filter only).
+def test_volume_word_is_the_volume_work():
+    assert _leaves("works where volume is W3109397498") == [
+        {"column_id": "volume.id", "value": "W3109397498"}]
+
+
+@_needs_registry
+@pytest.mark.parametrize("oql", [
+    "works where biblio.volume is 42",
+    "works where volume number is 42",
+])
+def test_volume_number_is_not_queryable(oql):
+    with pytest.raises(OQLError):
+        parse(oql)
 
 
 @_needs_registry

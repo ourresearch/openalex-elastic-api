@@ -387,7 +387,13 @@ CAP_COLUMN = "column"
 # added in 15.3.0 about 20 minutes earlier (no outside use). Last known institution is our guess from the
 # publication record and isn't foregrounded; "Brazilian researchers" read from the record
 # (`get authors in [Brazil](BR) who published works where ...`). `last known institution country` stays.
-PROPERTIES_VERSION = "16.0.0"
+# 17.0.0 (oxjob #1554, 2026-10-10; Jason's "Go" 07:24 CT to "This makes it API version 17.0.0, a major version"):
+# works gain `volume` {id, display_name}, the work this work is part of (a chapter's book), with the filter/group_by/
+# sort `volume.id` (OQL "volume", a work id). The citation's volume number `biblio.volume` leaves the catalog
+# (Jason, 07:05 CT: "volume number just drops support completely"): no OQL word, no GUI facet, not documented; it
+# stays in the work record and the REST filter is unlisted (#498), still executing for legacy callers. A property
+# removed = MAJOR per classify_properties_diff.py.
+PROPERTIES_VERSION = "17.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
