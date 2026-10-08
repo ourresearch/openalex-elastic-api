@@ -582,6 +582,9 @@ _BARE_STEP_VERBS = {"summarize", "compare"}
 # Inside a `compare` step (oxjob #1555): `versus` separates the things compared,
 # `by` opens a breakdown, `on` the measures. They end an item's conditions.
 _VERSUS = {"versus", "vs", "vs."}
+# Fewest things a comparison lists. One thing against the whole set (the summary row)
+# is the open question (2026-10-08); the write test reads it both ways.
+MIN_COMPARE_ITEMS = 2
 _COMPARE_STOPS = _VERSUS | {"by", "on"}
 
 # The shape of an ID of each entity type (oxjob #1555): what `[ID]` and the permissive
@@ -3931,7 +3934,7 @@ class _Parser:
                         self.next()
                         continue
                     break
-                if len(items) < 2:
+                if len(items) < MIN_COMPARE_ITEMS:
                     raise oql_error(
                         "OQL_COMPARE_NEEDS_TWO",
                         "a comparison needs two or more things, separated by versus",
