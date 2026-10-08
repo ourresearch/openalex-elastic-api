@@ -676,6 +676,8 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     if refused is not None:
         return refused
     csv_export = _format_asked() == "csv"
+    if csv_export and _table_refusal() is not None:
+        return _table_refusal()
     if csv_export:
         # the download holds every group (a single split up to MAX_PAGE_DEPTH), not a page
         from dataclasses import replace
@@ -748,18 +750,25 @@ def _table_asked() -> str:
     return str(value).lower() if value is not None else "groups"
 
 
+def _table_refusal():
+    """A 400 for an unknown `table=`, checked before the query runs (and is paid for);
+    else None."""
+    from query_translation import analytics_csv
+    if _table_asked() in analytics_csv.TABLES:
+        return None
+    return jsonify({"error": "invalid_table",
+                    "message": f"table must be one of: {', '.join(analytics_csv.TABLES)}.",
+                    "fix": "Drop table for the groups, or ask for table=summary."}), 400
+
+
 def _csv_response(oqo, body: dict, cost: dict):
-    """A pipeline result as one flat CSV: the groups table, or with table=summary the
-    summary table (oxjob #1550)."""
+    """A pipeline result as a download (oxjob #1550): the groups as one flat CSV, or
+    with table=summary the summary, one CSV or (with several tables) a zip of them."""
     from flask import Response
     from query_translation import analytics, analytics_csv
     from query_translation.oql_pipeline import render_pipeline
     table = _table_asked()
-    if table not in analytics_csv.TABLES:
-        return jsonify({"error": "invalid_table",
-                        "message": f"table must be one of: {', '.join(analytics_csv.TABLES)}.",
-                        "fix": "Drop table for the groups table, or ask for table=summary."}), 400
-    text, name = analytics_csv.build_csv(body, oqo.get_rows, render_pipeline(oqo), table)
+    data, name, mimetype = analytics_csv.build_download(body, oqo, render_pipeline(oqo), table)
     headers = {"Content-Disposition": f'attachment; filename="{name}"',
                "X-Credits-Cost": str(cost["credits"])}
     meta = body["meta"]
@@ -768,7 +777,13 @@ def _csv_response(oqo, body: dict, cost: dict):
             f"the first {analytics.MAX_PAGE_DEPTH:,} groups only"
             + (f" of about {meta['groups_count']:,}" if meta.get("groups_count") else "")
             + "; narrow the query, or page the JSON with cursor=* for the rest")
-    return Response(text, mimetype="text/csv", headers=headers), 200
+    capped = [s.get("oql") for s, part in zip(meta.get("splits") or [],
+                                               (body.get("summary") or {}).get("splits") or [])
+              if (part or {}).get("more_groups")]
+    if table == "summary" and capped:
+        headers["X-Groups-Note"] = (f"the biggest groups only for {' and '.join(capped)}; "
+                                    f"narrow the query for the rest")
+    return Response(data, mimetype=mimetype, headers=headers), 200
 
 
 def _website() -> bool:
