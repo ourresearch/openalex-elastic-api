@@ -2421,10 +2421,11 @@ class _Parser:
                 if tk is None or tk.kind != "WORD":
                     break
                 words.append(tk.val)
-            bp = _bool_phrase(words)
+            bp = _bool_phrase(words, self._entity)
             if bp is not None and bp[0] in _BY_COLUMN:
                 self.i += bp[2]
-                return LeafFilter(bp[0], bp[1], "is")
+                fld = _entity_resolve_field(_BY_COLUMN[bp[0]], self._entity)
+                return LeafFilter(fld.column, bp[1], "is")
         if self._compare_mode and self._compare_prev is not None \
                 and self._compare_value_start(0):
             # `compare institution [MIT] versus [Stanford]`: a bare value takes the

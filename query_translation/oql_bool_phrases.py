@@ -10,7 +10,8 @@ from typing import List, Optional, Tuple
 # column: (true phrase, false phrase), the June 2026 table (oxjob #363, before 4f1bdf0)
 BOOL_PHRASES = {
     'open_access.is_oa': ("it's open access", "it's not open access"),
-    'institutions.is_global_south': ("it's from the global south", "it's not from the global south"),
+    'authorships.institutions.is_global_south': ("it's from the global south", "it's not from the global south"),
+    'is_global_south': ("it's from the global south", "it's not from the global south"),   # institutions, sources
     'is_retracted': ("it's retracted", "it's not retracted"),
     'has_doi': ('it has a DOI', "it doesn't have a DOI"),
     'has_orcid': ('it has an ORCID', "it doesn't have an ORCID"),
@@ -86,14 +87,26 @@ _PATTERNS = sorted(
     key=lambda x: -len(x[0]))
 
 
-def match(words: List[str]) -> Optional[Tuple[str, bool, int]]:
+def match(words: List[str], entity: Optional[str] = None) -> Optional[Tuple[str, bool, int]]:
     """(column, value, input words used) for the longest flag sentence that `words`
-    starts with, or None. `words` are the input's next tokens, lowercased or not."""
+    starts with, or None. When one sentence names several columns (`it's from the
+    global south`: works' authors' institutions, an institution itself), the one the
+    entity has wins."""
     if not words or words[0].lower() not in ("it", "it's", "it’s", "its"):
         return None
     norm = _norm(words)
     seq = [w for w, _i in norm]
-    for pat, col, val in _PATTERNS:
-        if seq[:len(pat)] == pat:
-            return col, val, norm[len(pat) - 1][1] + 1
-    return None
+    hits = [(col, val, len(pat)) for pat, col, val in _PATTERNS if seq[:len(pat)] == pat]
+    if not hits:
+        return None
+    longest = max(n for _c, _v, n in hits)
+    hits = [h for h in hits if h[2] == longest]
+    if entity and len(hits) > 1:
+        try:
+            from core.properties import get_entity_properties
+            props = get_entity_properties(entity) or {}
+            hits = [h for h in hits if h[0] in props] or hits
+        except Exception:  # noqa: BLE001 (registry unavailable: the first match)
+            pass
+    col, val, n = hits[0]
+    return col, val, norm[n - 1][1] + 1
