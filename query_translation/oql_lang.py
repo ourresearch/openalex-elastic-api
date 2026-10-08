@@ -837,6 +837,13 @@ def lex(s: str) -> List[Tok]:
             toks.append(Tok("ANNOT", s[i + 1:j], i))
             i = j + 1
             continue
+        if c == ']':
+            # a `]` with no `[` before it (e.g. an unfilled `[[placeholder]]`): every
+            # other character either starts a token or a WORD, and a bare `]` would
+            # otherwise make an empty WORD forever (oxjob #1555 found the hang)
+            raise oql_error("OQL_UNMATCHED_BRACKET",
+                           f'a "]" at position {i} has no "[" before it',
+                           'remove it, or put text with brackets inside double quotes', i)
         if c == '(':
             toks.append(Tok("LP", c, i)); i += 1; continue
         if c == ')':
@@ -859,6 +866,9 @@ def lex(s: str) -> List[Tok]:
         j = i
         while j < n and s[j] not in _WORD_BREAK:
             j += 1
+        if j == i:   # never loop on a character no branch above takes
+            raise oql_error("OQL_UNEXPECTED_CHARACTER",
+                           f'unexpected "{c}" at position {i}', None, i)
         toks.append(Tok("WORD", s[i:j], i))
         i = j
     return toks
