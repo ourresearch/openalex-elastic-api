@@ -1970,7 +1970,7 @@ class _Parser:
                         cur, cur_each = entity_for_link(w.column_id), w.each
                     self._entity = cur
                     continue
-                if cur != "works" and self.word_is("group"):
+                if cur != "works" and self.word_is("group", "compare"):
                     from query_translation.walks import plural, possessive
                     raise oql_error(
                         "OQL_SPLIT_NEEDS_WORKS",
@@ -3948,8 +3948,14 @@ class _Parser:
                 if nt is not None and (nt.kind == "COMMA" or self.word_is("and")) \
                         and self.word_is("by", k=1):
                     self.next()
-                if self.word_is("by"):
-                    self.next()
+                more = (len(splits) > 1 and nt is not None
+                        and (nt.kind == "COMMA" or self.word_is("and"))
+                        and not self.word_is("by", k=1) and self._at_known_field(self.i + 1))
+                if more:
+                    self.next()   # `by year and type`: `by` once for both (#1555)
+                if more or self.word_is("by"):
+                    if not more:
+                        self.next()
                     g = self._parse_split_by(entity)
                     self._skip_annot()
                     if self.word_is("where"):

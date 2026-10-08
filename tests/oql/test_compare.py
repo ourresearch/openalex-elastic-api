@@ -111,6 +111,12 @@ SAME = [
      "summarize using count and mean FWCI",
      "get works where year > 2020; then compare type article versus review by year; then "
      "summarize using count, mean FWCI"),
+    # `by` once for several breakdowns, or `and by`
+    ("get works where year > 2020; then compare type article versus review by year and by "
+     "country",
+     "get works where year > 2020; then compare type article versus review by year and "
+     "country",
+     "get works where year > 2020; then compare type article versus review by year, by country"),
     # after a search, parentheses hold the next search
     ('get works where year > 2020; then compare title-abstract has "machine learning" '
      'versus ("edge AI" NOT cloud)',
@@ -146,6 +152,11 @@ ERRORS = [
      "count", "OQL_BAD_COMPARE"),
     ("get works where year > 2020; then compare type article versus review by year by "
      "country by funder", "OQL_TOO_MANY_SPLITS"),
+    # splits divide works: no comparing authors (start or walk)
+    ("get authors where h-index > 20; then compare last known institution I1 versus I2",
+     "OQL_SPLIT_NEEDS_WORKS"),
+    ("get works where year > 2020; then get authors of those works; then compare h-index > "
+     "20 versus h-index <= 20", "OQL_SPLIT_NEEDS_WORKS"),
 ]
 
 
