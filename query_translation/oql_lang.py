@@ -2408,6 +2408,23 @@ class _Parser:
             gc = self._parse_group_clause()
             if gc is not None:
                 return gc
+        t_it = self.peek()
+        if t_it is not None and t_it.kind == "WORD" \
+                and t_it.val.lower() in ("it", "it's", "it\u2019s", "its"):
+            # a yes/no flag as a sentence, the June 2026 phrasing (`it's open access`,
+            # `it doesn't have a DOI`, `it has DOI`): accepted input (oxjob #1555, Jason
+            # 2026-10-08: "accept either"); canonical stays `<flag> is true|false`
+            from query_translation.oql_bool_phrases import match as _bool_phrase
+            words = []
+            for k in range(14):
+                tk = self.peek(k)
+                if tk is None or tk.kind != "WORD":
+                    break
+                words.append(tk.val)
+            bp = _bool_phrase(words)
+            if bp is not None and bp[0] in _BY_COLUMN:
+                self.i += bp[2]
+                return LeafFilter(bp[0], bp[1], "is")
         if self._compare_mode and self._compare_prev is not None \
                 and self._compare_value_start(0):
             # `compare institution [MIT] versus [Stanford]`: a bare value takes the

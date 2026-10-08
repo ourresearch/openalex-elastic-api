@@ -305,7 +305,12 @@ def _bare_values(cn: ClauseNode, resolver=None) -> ClauseNode:
     of Technology](I63966007)`. Lists of two or more keep one pair; searches, sets
     (`in (...)`) and row-subject relations (`it cites (...)`) keep theirs."""
     n_values = sum(1 for x in cn.segments if x.kind == "value")
-    out = _links(cn.segments, in_list=n_values > 1, resolver=resolver)
+    col0 = next((x for x in cn.segments if x.kind == "column"), None)
+    # a relation keeps its own parentheses (`it cites (W1)`), so a nameless link
+    # inside them is the bare id, not `((W1))`
+    relation = (col0 is not None and col0.text.startswith("it")
+                and (cn.meta.operator or "") != "in collection")
+    out = _links(cn.segments, in_list=n_values > 1 or relation, resolver=resolver)
     meta = cn.meta
     if len(out) != len(cn.segments) or any(x is not y for x, y in zip(out, cn.segments)):
         # the multi-line formatter lays value lists out from the vtree's own

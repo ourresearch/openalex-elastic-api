@@ -105,3 +105,30 @@ def test_cow_path_round_2(cow, road):
 def test_a_parenthesis_after_a_plain_word_is_still_a_group():
     assert _canon("get works where title has (sleep (REM) cycles)") == _canon(
         "get works where title has (sleep AND REM AND cycles)")
+
+
+# Yes/no flags as sentences, the June 2026 phrasing, accepted again (Jason 2026-10-08:
+# "accept either"); canonical stays `<flag> is true|false`.
+SENTENCES = [
+    ("get works where it's open access and it doesn't have a DOI",
+     "get works where open access is true and has DOI is false"),
+    ("get works where it has DOI", "get works where has DOI is true"),
+    ("get works where it is not retracted", "get works where retracted is false"),
+    ("get works where it isn't retracted", "get works where retracted is false"),
+    ("get works where it has no abstract", "get works where has abstract is false"),
+    ("get works where it's in the top 10% by citations", "get works where top 10% cited is true"),
+    ("get works where year > 2020; then compare it's open access versus it isn't open access",
+     "get works where year > 2020; then compare open access versus not open access"),
+]
+
+
+@pytest.mark.parametrize("sentence,road", SENTENCES)
+def test_a_flag_as_a_sentence(sentence, road):
+    assert _canon(sentence) == _canon(road)
+
+
+def test_a_relation_still_reads_as_a_relation():
+    # `it's cited by` is the relation, not a flag sentence
+    assert _canon("get works where it's cited by (W2741809807)") != _canon("get works where has DOI is true")
+    echo = render_pipeline_line(canonicalize_oqo(parse("get works where it cites (W2741809807)")))
+    assert echo == "get works where it cites (W2741809807)"   # not ((W2741809807))
