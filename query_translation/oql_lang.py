@@ -575,6 +575,15 @@ _SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
 # Words that open a pipeline step after a `;`, besides `then` (oxjob #1555).
 _STEP_OPENERS = {"first", "next", "finally", "lastly"}
 
+# Step verbs that need no opener after a `;` (oxjob #1555, Jason 2026-10-08: no
+# `then` or `finally` between a comparison and its summary).
+_BARE_STEP_VERBS = {"summarize", "compare"}
+
+# Inside a `compare` step (oxjob #1555): `versus` separates the things compared,
+# `by` opens a breakdown, `on` the measures. They end an item's conditions.
+_VERSUS = {"versus", "vs", "vs."}
+_COMPARE_STOPS = _VERSUS | {"by", "on"}
+
 # The shape of an ID of each entity type (oxjob #1555): what `[ID]` and the permissive
 # URL forms must reduce to. An unknown type takes a letter-and-digits or all-digits ID.
 _ID_SHAPES = {
@@ -694,6 +703,43 @@ def _set_phrase_query(toks: List[Tok], pos: int) -> List[Tok]:
                             f"{plural(prev)} to {plural(ent)}",
                             "e.g. in the set (authors of works where ...)", pos)
     return out
+
+
+def _search_base(tree) -> Optional[str]:
+    """The search field every leaf of a search tree runs on (`title_and_abstract`),
+    or None when the tree isn't one search (oxjob #1555)."""
+    if isinstance(tree, LeafFilter):
+        col = tree.column_id or ""
+        for suf in (".search.exact", ".search"):
+            if col.endswith(suf):
+                return col[: -len(suf)]
+        return None
+    if isinstance(tree, BranchFilter):
+        bases = {_search_base(f) for f in tree.filters}
+        return bases.pop() if len(bases) == 1 and None not in bases else None
+    return None
+
+
+def _compare_split(items: List) -> GroupBy:
+    """The things a `compare` step lists -> one split (oxjob #1555): the values of
+    one field when every item is `<field> is <one value>` on that field; the
+    searches of one search field when every item searches it; else one condition
+    per item (what `group those works into (...)` made)."""
+    items = [LeafFilter(i.column_id, not i.value, "is")
+             if isinstance(i, LeafFilter) and isinstance(i.value, bool) and i.is_negated
+             else i for i in items]
+    if all(isinstance(i, LeafFilter) and i.operator == "is" and not i.is_negated
+           and not isinstance(i.value, (list, bool)) for i in items):
+        cols = {i.column_id for i in items}
+        if len(cols) == 1 and _search_base(items[0]) is None:
+            col = cols.pop()
+            fld = _BY_COLUMN.get(col)
+            if fld is not None and fld.kind not in ("search", "collection", "bool"):
+                return GroupBy(column_id=col, values=[i.value for i in items])
+    bases = {_search_base(i) for i in items}
+    if len(bases) == 1 and None not in bases:
+        return GroupBy(column_id=bases.pop() + ".search", values=list(items))
+    return GroupBy(conditions=list(items))
 
 
 def _is_link_text(toks, i: int) -> bool:
@@ -1740,6 +1786,8 @@ class _Parser:
         self._in_list = False     # are we inside a parenthesized value list?
         self._directive = None    # "group" when inside a directive
         self._in_condition_list = False   # a comma ends a condition (`into (A, B)`)
+        self._compare_mode = False        # inside `compare A versus B` (oxjob #1555)
+        self._compare_prev = None         # (field, Field, op) a bare value reuses
         self._labels = []         # (column, ID, name as typed) for `Name [ID]` values
                                   # (oxjob #1555): advice only, never meaning
         # --- editor sectioned-menu bookkeeping (oxjob #357, ctx-mode only) ---
@@ -1870,13 +1918,17 @@ class _Parser:
             if t.kind == "SEMI":
                 self.next()
                 continue
-            if t.kind == "WORD" and (t.val.lower() == "then" or (
+            bare_verb = (t.kind == "WORD" and t.val.lower() in _BARE_STEP_VERBS
+                         and self._after_semi())
+            if bare_verb or t.kind == "WORD" and (t.val.lower() == "then" or (
                     t.val.lower() in _STEP_OPENERS and self._after_semi())):
                 # `; then <step>` (the `;` is optional on input before `then`);
                 # `first`, `next`, `finally`, `lastly` open a step after a `;`, and
                 # a comma after the opener is optional (oxjob #1555: the echo reads
-                # `; first, ...; then, ...; finally, ...`)
-                self.next()
+                # `; first, ...; then, ...; finally, ...`); `summarize` and `compare`
+                # need no opener after a `;`
+                if not bare_verb:
+                    self.next()
                 if self.peek() is not None and self.peek().kind == "COMMA":
                     self.next()
                 self._skip_annot()
@@ -1927,6 +1979,25 @@ class _Parser:
                         f"{possessive(cur, cur_each)} works; then group those works by ...",
                         t.pos)
                 kind, val = self._parse_step(cur, len(group_by), group_by)
+                if kind == "compare":
+                    gbs, measures = val
+                    if group_by:
+                        raise oql_error(
+                            "OQL_COMPARE_AFTER_SPLIT",
+                            "a comparison comes before any other split",
+                            "put the comparison first and add the split as a "
+                            "breakdown: compare A versus B by year", t.pos)
+                    group_by = group_by + gbs
+                    if len(group_by) > MAX_SPLITS:
+                        raise oql_error(
+                            "OQL_TOO_MANY_SPLITS",
+                            f"a query can split its {_plural_noun(entity)} at most "
+                            f"{MAX_SPLITS} times; this comparison and its breakdowns "
+                            f"make {len(group_by)}",
+                            "drop a breakdown", t.pos)
+                    if measures:
+                        calculate = measures
+                    continue
                 if kind == "split":
                     group_by.append(val)
                     if len(group_by) > MAX_SPLITS:
@@ -2182,6 +2253,10 @@ class _Parser:
             t = self.peek()
             if t is None or t.kind in ("RP", "SEMI"):
                 break
+            if self._compare_mode and t.kind == "WORD" and (
+                    t.val.lower() in _COMPARE_STOPS
+                    or (t.val.lower() in _CONNECTIVES and self.word_is("by", k=1))):
+                break   # `versus`, `by`, `on`, `and by` end a compared item
             if t.kind == "WORD" and t.val.lower() == "not":
                 # NOT at a connective position means "a NOT b" with no AND/OR.
                 if self._recover_mode:
@@ -2336,6 +2411,17 @@ class _Parser:
         # same-type membership names the queried entity: `location is in collection
         # (col_x)` on locations (oxjob #1524). `work is in collection` stays accepted
         # on every entity (what earlier renders said).
+        if self._compare_mode and self._compare_prev is not None \
+                and self._compare_value_start(0):
+            # `compare institution [MIT] versus [Stanford]`: a bare value takes the
+            # field and verb of the condition before it (oxjob #1555)
+            field, fld, op = self._compare_prev
+            self._cur_fld = fld
+            self._cur_search_word = field if fld.kind == "search" else None
+            if fld.kind == "search":
+                tree = self._parse_search_value(fld.column)
+                return _negate(tree) if op == "nhas" else tree
+            return self._parse_value_clause(field, fld, op)
         n = _collection_subject_len(self.toks, self.i, self._entity)
         if n:
             field = " ".join(t.val for t in self.toks[self.i:self.i + n])
@@ -2347,7 +2433,19 @@ class _Parser:
         self._cur_search_word = field if fld.kind == "search" else None
         # a complete field with the cursor right after it -> operator slot
         self._want(CTX_OPERATOR, fld=fld)
-        op = self._parse_operator()
+        if self._compare_mode and match_operator(self.toks, self.i) is None \
+                and not self.word_is("is", "does", "doesn't", "doesnt", "contains"):
+            # in a comparison `is` goes unsaid: `institution [MIT]`; a yes/no
+            # field alone is true: `open access` (oxjob #1555)
+            op = "is"
+            if fld.kind == "bool" and not self.word_is("true", "false") and \
+                    (self.peek() is None or self.peek().kind != "LP"):
+                self._compare_prev = None
+                return LeafFilter(fld.column, True, "is")
+        else:
+            op = self._parse_operator()
+        if self._compare_mode:
+            self._compare_prev = (field, fld, op)
         if fld.kind == "search":
             if op == "similar":
                 return self._parse_semantic(fld)
@@ -2773,6 +2871,14 @@ class _Parser:
         if t is None or t.kind in ("RP", "SEMI", "COMMA"):
             return False
         if t.kind == "WORD" and t.val.lower() in ("group", "sample", "then"):
+            return False
+        if self._compare_mode and t.kind == "WORD" and t.val.lower() in _COMPARE_STOPS:
+            return False
+        if self._compare_mode and t.kind == "WORD" and t.val.lower() in _CONNECTIVES \
+                and (self._compare_value_start(1) or self._at_known_field(self.i + 1)
+                     or self.word_is("not", k=1)):
+            # `country [US] and [CN]`: the next value reuses the field; `... and open
+            # access`, `... or institution [MIT]`: a new condition (no `is` to see)
             return False
         if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
             # Editor context: a connective with NOTHING after it (cursor sits right
@@ -3470,6 +3576,9 @@ class _Parser:
         if w == "sample":
             self.next()
             return "sample", self._parse_sample_step(entity)
+        if w == "compare":
+            self.next()
+            return "compare", self._parse_compare(entity)
         raise oql_error("OQL_UNKNOWN_STEP", f'"{t.val}" doesn\'t start a step', None,
                         t.pos)
 
@@ -3764,6 +3873,117 @@ class _Parser:
         if self.word_is("of") and self.word_is("those", k=1):
             self.next()
             self._parse_those(entity, required=True)
+
+    # -- comparisons (oxjob #1555, Jason 2026-10-08) -------------------------------
+    # `compare institution [MIT] versus [Stanford] by year on count and mean FWCI`:
+    # the things compared (one group each; the summary row is the whole set), then
+    # breakdowns (`by <field>`, joined `and by`) and optional measures (`on ...`).
+    # Underneath it's a split: listed values of one field, listed searches of one
+    # search field, or a list of conditions; a collection's members with `each`.
+
+    def _compare_value_start(self, k: int) -> bool:
+        """Does a bare value (not a field) start at offset k? A link, a quoted
+        string, a number, or a word that isn't a field name."""
+        t = self.peek(k)
+        if t is None:
+            return False
+        if _is_link_text(self.toks, self.i + k):
+            return True
+        if t.kind in ("STRING", "NUMBER"):
+            return True
+        if t.kind == "LP" and self._compare_prev is not None \
+                and self._compare_prev[1].kind == "search":
+            return True
+        if t.kind == "WORD" and t.val.lower() not in _COMPARE_STOPS \
+                and t.val.lower() not in _CONNECTIVES and t.val.lower() != "not" \
+                and self._compare_prev is not None:
+            return not self._at_known_field(self.i + k)
+        return False
+
+    def _parse_compare(self, entity: str):
+        """-> ([GroupBy, ...breakdowns], [Measure] or None)."""
+        start = self.peek()
+        was = (self._compare_mode, self._compare_prev)
+        self._compare_mode, self._compare_prev = True, None
+        try:
+            if self.word_is("each"):
+                self.next()
+                first = self._parse_compare_each(entity)
+            else:
+                items = []
+                while True:
+                    self._skip_annot()
+                    items.append(self._parse_expr())
+                    self._skip_annot()
+                    if self.peek() is not None and self.peek().kind == "WORD" \
+                            and self.peek().val.lower() in _VERSUS:
+                        self.next()
+                        continue
+                    break
+                if len(items) < 2:
+                    raise oql_error(
+                        "OQL_COMPARE_NEEDS_TWO",
+                        "a comparison needs two or more things, separated by versus",
+                        "e.g. compare institution [MIT](I63966007) versus "
+                        "[Stanford University](I97018004)",
+                        start.pos if start else None)
+                if len(items) > MAX_LIST_ITEMS:
+                    raise oql_error(
+                        "OQL_LIST_TOO_LONG",
+                        f"a comparison holds more than {MAX_LIST_ITEMS} things",
+                        "save them as a collection: compare each institution in the "
+                        "collection [name](col_x)", start.pos if start else None)
+                first = _compare_split(items)
+            splits, measures = [first], None
+            self._compare_prev = None
+            while True:
+                self._skip_annot()
+                nt = self.peek()
+                if nt is not None and (nt.kind == "COMMA" or self.word_is("and")) \
+                        and self.word_is("by", k=1):
+                    self.next()
+                if self.word_is("by"):
+                    self.next()
+                    g = self._parse_split_by(entity)
+                    self._skip_annot()
+                    if self.word_is("where"):
+                        self.next()
+                        g = replace(g, where=self._parse_group_where(entity, g))
+                    splits.append(g)
+                    continue
+                if self.word_is("on"):
+                    if measures is not None:
+                        raise oql_error("OQL_BAD_COMPARE", "the measures are given once",
+                                        None, self.peek().pos)
+                    self.next()
+                    measures = self._parse_measures(entity, splits)
+                    continue
+                break
+            return splits, measures
+        finally:
+            self._compare_mode, self._compare_prev = was
+
+    def _parse_compare_each(self, entity: str) -> GroupBy:
+        """`compare each institution in the collection [Our peers](col_x)`: one group
+        per member of a saved collection (Jason 2026-10-08: long lists)."""
+        example = "compare each institution in the collection [Our peers](col_abc123)"
+        start = self.peek()
+        field, fld = self._parse_field()
+        self._skip_annot()
+        if self.word_is("in"):
+            self.next()
+        if self.word_is("the"):
+            self.next()
+        if self.word_is("collection", "set"):
+            self.next()
+        values = self._parse_value_list(fld)
+        if len(values) != 1 or not str(values[0]).startswith("col_"):
+            raise oql_error("OQL_BAD_COMPARE",
+                            "`compare each` takes the members of one saved collection",
+                            f"e.g. {example}; to compare a few, list them: "
+                            f"compare {fld.oql} A versus B",
+                            start.pos if start else None)
+        return GroupBy(column_id=fld.column, values=values)
 
     def _parse_split(self, entity: str, n_splits: int) -> GroupBy:
         self._skip_annot()

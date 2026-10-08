@@ -418,6 +418,17 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_BAD_LIST", ERROR, PARSE,
               "a listed set is malformed",
               "write the items in parentheses, separated by commas: in (A, B, C)"),
+        _spec("OQL_COMPARE_NEEDS_TWO", ERROR, PARSE,
+              "a comparison needs two or more things, separated by versus",
+              "compare institution A versus B"),
+        _spec("OQL_COMPARE_AFTER_SPLIT", ERROR, PARSE,
+              "a comparison comes before any other split",
+              "put the comparison first and add the split as a breakdown: compare A "
+              "versus B by year"),
+        _spec("OQL_BAD_COMPARE", ERROR, PARSE,
+              "this comparison is malformed",
+              "compare <field> A versus B [by <field>] [on <measures>], or compare each "
+              "<thing> in the collection [name](col_x)"),
         _spec("OQL_LIST_TOO_LONG", ERROR, PARSE,
               "a list holds more than 100 items",
               "keep each list to 100 items; use a collection or several queries "

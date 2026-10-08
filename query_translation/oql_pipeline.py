@@ -20,6 +20,7 @@ the head reads `get works`, and each step is a `StepDirective` joined by `; then
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -54,6 +55,7 @@ class StepDirective:
     segments: List[Segment]
     meta: StepMeta
     joiner: str = "; then "
+    bare: bool = False   # joined by `; ` alone (a comparison's summary, oxjob #1555)
 
     @property
     def type(self) -> str:
@@ -494,6 +496,100 @@ def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[
     return lead + "by ", [col]
 
 
+# ---------------------------------------------------------------------------
+# Comparisons (oxjob #1555, Jason 2026-10-08)
+# ---------------------------------------------------------------------------
+_LINK_OR_QUOTE = re.compile(r'\[[^\]]*\]\([^)]*\)|"[^"]*"')
+
+
+def is_compare_split(g: GroupBy) -> bool:
+    """A split that lists what it compares: values, searches or conditions."""
+    return g.conditions is not None or (g.values is not None and g.bins is None)
+
+
+def _drop_is(text: str) -> str:
+    """`institution is [MIT](I1)` -> `institution [MIT](I1)`: in a comparison `is`
+    goes unsaid (`is not` stays). Names and quoted strings are left alone."""
+    out, last = [], 0
+    for m in _LINK_OR_QUOTE.finditer(text):
+        out.append(re.sub(r" is (?!not\b)", " ", text[last:m.start()]))
+        out.append(m.group(0))
+        last = m.end()
+    out.append(re.sub(r" is (?!not\b)", " ", text[last:]))
+    return "".join(out)
+
+
+def _compare_item(tree, resolver=None) -> Tuple[Optional[str], str]:
+    """One compared condition as (field it can share with its neighbour, rest)."""
+    if isinstance(tree, LeafFilter) and isinstance(tree.value, bool) \
+            and tree.operator == "is" and not tree.is_negated:
+        name = L._oql_field(tree.column_id)[0]
+        return None, name if tree.value else f"not {name}"
+    text = _expr_text(tree, resolver)
+    if isinstance(tree, LeafFilter) and tree.operator == "is" and not tree.is_negated:
+        name = L._oql_field(tree.column_id)[0]
+        if text.startswith(name + " is "):
+            return name, text[len(name) + 4:]
+    text = _drop_is(text)
+    if isinstance(tree, BranchFilter):
+        leaves = tree.filters
+        if all(isinstance(x, LeafFilter) for x in leaves) \
+                and len({x.column_id for x in leaves}) == 1:
+            name = L._oql_field(leaves[0].column_id)[0]
+            if text.startswith(name + " (") and text.endswith(")"):
+                # `country ([China](CN) and [US](US))` -> `(country [China](CN) and ...)`
+                return None, f"({name} {text[len(name) + 2:-1]})"
+        return None, f"({text})"
+    return None, text
+
+
+def _search_compare_text(tree) -> str:
+    """One compared search: a phrase or word bare, anything else in parentheses."""
+    t = _search_item_text(tree)
+    single = (t.startswith('"') and t.endswith('"') and t.count('"') == 2) or " " not in t
+    return t if single else f"({t})"
+
+
+def compare_text(splits: List[GroupBy], entity: str, noun: str, resolver=None) -> str:
+    """`institution [MIT](I63966007) versus [Stanford University](I97018004) by year`."""
+    g = splits[0]
+    if g.conditions is not None:
+        parts, prev = [], None
+        for c in g.conditions:
+            f, rest = _compare_item(c, resolver)
+            parts.append(rest if f is not None and f == prev
+                         else (f"{f} {rest}" if f else rest))
+            prev = f
+        text = " versus ".join(parts)
+    else:
+        name = L._oql_field(g.column_id)[0]
+        if g.column_id.endswith(".search"):
+            items = [_search_compare_text(v) for v in g.values]
+            text = f"{name} has " + " versus ".join(items)
+        elif len(g.values) == 1 and str(g.values[0]).startswith("col_"):
+            text = (f"each {name} in the collection "
+                    f"{link_text(g.values[0], 'collections', resolver)}")
+        else:
+            items = []
+            for v in g.values:
+                vsegs, _ent = L._value_segments(L._BY_COLUMN.get(g.column_id), v,
+                                                g.column_id, resolver)
+                items.append(_segs_text(_links(vsegs, in_list=False)))
+            text = f"{name} " + " versus ".join(items)
+    bys = []
+    for b in splits[1:]:
+        _prefix, segs = _split_segments(b, noun, again=False, resolver=resolver)
+        t = "by " + _segs_text(segs)
+        if b.where is not None:
+            from query_translation.oql_lang import _group_entity, _singular_noun
+            ge = _group_entity(b, entity)
+            ctx = {"noun": noun, "group_entity": ge,
+                   "singular": _singular_noun(ge) if ge else None}
+            t += " where " + _group_where_text(b.where, ctx, resolver)
+        bys.append(t)
+    return text + "".join((" " if i == 0 else " and ") + t for i, t in enumerate(bys))
+
+
 def _search_item_text(tree) -> str:
     """One listed search as its portable string (no outer parentheses)."""
     node = L._filter_node(tree, top=True)
@@ -610,8 +706,12 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
     finally:
         if tok is not None:
             L._RENDER_ENTITY.reset(tok)
-    for d, word in zip(steps, transitions(len(steps))):
+    worded = [d for d in steps if not d.bare]
+    for d, word in zip(worded, transitions(len(worded))):
         d.joiner = f"; {word}, "
+    for d in steps:
+        if d.bare:
+            d.joiner = "; "
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
                          where=where, directives=steps, corpus_phrase=corpus_phrase)
 
@@ -619,6 +719,21 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
 def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
                  resolver=None):
     """The splits and the calculation."""
+    if oqo.group_by and is_compare_split(oqo.group_by[0]):
+        # `compare institution [MIT] versus [Stanford] by year; summarize using count`
+        # (oxjob #1555, Jason 2026-10-08): no step word before the summary
+        steps.append(StepDirective(
+            prefix="compare ", segments=[_text(compare_text(oqo.group_by, entity, noun,
+                                                            resolver))],
+            meta=StepMeta("compare", index=0,
+                          data={"splits": [g.to_dict() for g in oqo.group_by]})))
+        if oqo.calculate:
+            text = english_list([measure_text(m, noun) for m in oqo.calculate])
+            steps.append(StepDirective(
+                prefix=SUMMARIZE, segments=[_text(text)], bare=True,
+                meta=StepMeta("calculate", data={
+                    "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
+        return
     for i, g in enumerate(oqo.group_by):
         prefix, segs = _split_segments(g, noun, again=i > 0, resolver=resolver)
         if g.where is not None:

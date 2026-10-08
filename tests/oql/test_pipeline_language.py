@@ -29,7 +29,8 @@ def _flat(text):
 
 
 # The #1512 examples that don't walk (work/oql_draft.md 1-3, 6, 9, 10, 13-17; ids
-# for names). Each is already canonical, so it must echo itself.
+# for names). Each is already canonical, so it must echo itself. The ones that list
+# values, searches or conditions now echo as `compare` (tests/oql/test_compare.py).
 EXAMPLES = [
     "get works where country is (KE) and year >= (2015); then group those works by year; "
     "then calculate percent open access",
@@ -39,21 +40,10 @@ EXAMPLES = [
     "calculate mean FWCI",
     "get works where title-abstract has (kelp); then group those works by author where "
     "count of those works > (10) and co-author is not (A5023888391)",
-    'get works where year >= (2010); then group those works by title-abstract search in '
-    '(("inference latency"), ("neuromorphic computing"), ("edge AI")); then group those '
-    'works again by year; then calculate count',
-    "get works where topic is (T10878); then group those works by institution in "
-    "(I63966007, I97018004, I136199984); then calculate count, mean FWCI, percent open access",
     "get works where country is (KE) and year >= (2015); then group those works by funder; "
     "then calculate count, mean citation count",
     "get works where topic is in (col_abc123); then group those works by institution where "
     "collaborator is not (I63966007); then calculate count",
-    "get works where year >= (2016); then group those works into ((institution is "
-    "(I99464096)), (country is (BE))); then group those works again by SDG; then calculate "
-    "count, percent of those works",
-    "get works where institution is in (col_abc123); then group those works into ((year >= "
-    "(2016) and year <= (2019)), (year >= (2021))); then group those works again by topic; "
-    "then calculate count",
 ]
 
 

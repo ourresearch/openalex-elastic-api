@@ -28,7 +28,20 @@ sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
    again by ...; then calculate ...`. A calculation is always the last step; up to
    three splits; `those <entity>` must name what the query holds; `again` is
    optional on input and always rendered on every split after the first. */
-step         ::= ';'? 'then' ( split | calculation | sampleStep | walk )
+step         ::= ';'? 'then' ( split | calculation | sampleStep | walk | compare )
+               | ';' ( 'summarize' 'using' measures | compare )   /* no step word needed */
+/* Comparisons (oxjob #1555, Jason 2026-10-08): the things compared, one group each
+   (the summary row is the whole set), breakdowns, and optional measures. Replaces
+   split lists and named sets (still accepted; they echo as `compare`). Inside an
+   item `is` may go unsaid, a bare value takes the field before it, and a yes/no
+   field alone is true: `compare institution [MIT](I63966007) versus [Stanford
+   University](I97018004) by year; summarize using count`. */
+compare      ::= 'compare' ( 'each' field 'in' 'the'? 'collection' '(' WORD ')'
+                           | conditions ( versus conditions )+ )
+                 ( ( 'and' | ',' )? 'by' splitBy ( 'where' conditions )? )*
+                 ( 'on' measures )?
+versus       ::= 'versus' | 'vs' | 'vs.'
+measures     ::= measure ( ( ',' | 'and' ) measure )*
 
 /* Walks (oxjob #1535): out from works to related things (`each`: one result per
    thing; the plural: one combined set), then back to everything they did. One
