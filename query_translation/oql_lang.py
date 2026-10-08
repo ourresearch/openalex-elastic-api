@@ -2018,6 +2018,8 @@ class _Parser:
                     continue
                 if kind == "split":
                     group_by.append(val)
+                    group_by.extend(getattr(self, "_more_splits", []))
+                    self._more_splits = []
                     if len(group_by) > MAX_SPLITS:
                         raise oql_error(
                             "OQL_TOO_MANY_SPLITS",
@@ -2271,10 +2273,10 @@ class _Parser:
             t = self.peek()
             if t is None or t.kind in ("RP", "SEMI"):
                 break
-            if self._compare_mode and t.kind == "WORD" and (
-                    t.val.lower() in _COMPARE_STOPS
-                    or (t.val.lower() in _CONNECTIVES and self.word_is("by", k=1))):
-                break   # `versus`, `by`, `on`, `and by` end a compared item
+            if self._compare_mode and t.kind == "WORD" and t.val.lower() in _COMPARE_STOPS:
+                break   # `versus`, `by`, `on` end a compared item
+            if t.kind == "WORD" and t.val.lower() in _CONNECTIVES and self.word_is("by", k=1):
+                break   # `... and by year`: the next split, not a condition
             if t.kind == "WORD" and t.val.lower() == "not":
                 # NOT at a connective position means "a NOT b" with no AND/OR.
                 if self._recover_mode:
@@ -4038,6 +4040,24 @@ class _Parser:
         if self.word_is("where"):
             self.next()
             g = replace(g, where=self._parse_group_where(entity, g))
+        # `group those works by author and by year` (also `, by` and `then by`): more
+        # splits in the same step, as a comparison's breakdowns read (oxjob #1555;
+        # accepted input, the echo still writes `then, group those works again by`)
+        self._more_splits = []
+        while True:
+            self._skip_annot()
+            nt = self.peek()
+            if nt is not None and (nt.kind == "COMMA" or self.word_is("and", "then")) \
+                    and self.word_is("by", k=1):
+                self.i += 2
+                m = self._parse_split_by(entity)
+                self._skip_annot()
+                if self.word_is("where"):
+                    self.next()
+                    m = replace(m, where=self._parse_group_where(entity, m))
+                self._more_splits.append(m)
+                continue
+            break
         return g
 
     def _parse_split_by(self, entity: str) -> GroupBy:
