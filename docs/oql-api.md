@@ -97,7 +97,7 @@ The paging parameters work alongside `oql`:
 | `sort` | yes | classic `sort=column:direction` (comma-separated for tiebreakers), e.g. `sort=cited_by_count:desc` |
 | `select` | yes | classic `select=field,field` to project a subset of fields |
 | `rerank` | yes | `rerank=true` reorders the top 100 of a relevance-sorted works search by relevance; result 101 onward is unchanged. Adds 10 credits. See [Rerank](/api/searching/#rerank) |
-| `format` | yes | `format=csv` on a query with calculations returns its groups table as one flat CSV: one row per group, a column per split, a column per calculation (a single split: up to 10,000 groups). Costs what the query costs |
+| `format` | yes | `format=csv` on a query with calculations returns its groups as one flat CSV: one row per group, a column per split, a column per calculation. A single split by a field pages: add `cursor=*` and follow the `X-Next-Cursor` header (10,000 groups a page); without a cursor it holds the first 10,000. Costs the query's price for every 100 rows |
 | `table` | yes | with `format=csv`: `table=summary` returns the summary instead: `all-works.csv` (the whole set, one row), and with two or more splits a zip of it plus `by-<split>.csv` for each split's groups on their own. Default `groups` |
 | `api_key` | yes | or send `Authorization: Bearer <key>` (see Auth below) |
 
