@@ -111,6 +111,16 @@ SAME = [
      "summarize using count and mean FWCI",
      "get works where year > 2020; then compare type article versus review by year; then "
      "summarize using count, mean FWCI"),
+    # after a search, parentheses hold the next search
+    ('get works where year > 2020; then compare title-abstract has "machine learning" '
+     'versus ("edge AI" NOT cloud)',
+     'get works where year > 2020; then group those works by title-abstract search in '
+     '(("machine learning"), ("edge AI" NOT cloud))'),
+    # ... unless a field opens them: then they hold a compound item
+    ("get works where year > 2020; then compare title-abstract has kelp versus "
+     "(title-abstract has seaweed and type is review)",
+     "get works where year > 2020; then group those works into ((title-abstract has kelp), "
+     "(title-abstract has seaweed and type is review))"),
     # a compound item with or without its parentheses (versus bounds it)
     ("get works where year > 2015; then compare (country US and CN) versus country GB",
      "get works where year > 2015; then compare country US and CN versus country GB",

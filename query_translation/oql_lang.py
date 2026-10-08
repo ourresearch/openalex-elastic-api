@@ -2332,6 +2332,12 @@ class _Parser:
             inner = self._parse_operand()     # negate the next operand (clause/group)
             self._last_operand_simple = False  # negated -> not a plain clause (#357)
             return _negate(inner)
+        if t.kind == "LP" and self._compare_mode and self._compare_prev is not None \
+                and self._compare_prev[1].kind == "search" \
+                and not self._at_known_field(self.i + 1):
+            # `compare title-abstract has "a" versus ("b" NOT c)`: after a search,
+            # parentheses hold the next search unless a field opens them (#1555)
+            return self._parse_clause()
         if t.kind == "LP":
             self.next()
             e = self._parse_expr()
