@@ -275,7 +275,7 @@ _f("field", "primary_topic.field.id", "id")
 # Was missing while its siblings field/domain/topic were registered (oxjob #363 discovery run #2);
 # render word = registry display_name "subfield"; name-resolved via the native subfields namespace.
 _f("subfield", "primary_topic.subfield.id", "id")
-_f("openalex id", "ids.openalex", "id")
+_f("openalex id", "ids.openalex", "id", aliases=["id"])   # `ID is (W1 or W2)` (#1555)
 # Citation relationships to a specific work (W-id; resolves the work's title).
 # cited_by:W = works in W's reference list; referenced_works:W (input alias
 # cites:W) = works citing W. Since #557 the FILTER leaves render as row-subject
@@ -496,7 +496,8 @@ _f("awards", "awards.id", "id")
 # continent of an affiliated institution. GUI facet "Continent" (entityToSelect continents);
 # values are `continents/Q15`-style ids that resolve to a name (Africa, Europe, …) via the
 # continents namespace — id kind, like `domain`. (#402 batch 7, Jason-approved 2026-06-09)
-_f("continent", "authorships.institutions.continent", "id")
+_f("continent", "authorships.institutions.continent", "id",
+   aliases=["institution continent"])   # Haiku's cow path (#1555), as `institution country`
 # keyword: the curated-keyword ENTITY filter (GUI facet "keyword", entityToSelect keywords),
 # name-resolved via the keywords namespace — like topic/domain. This claims the word "keyword"
 # (OQL no longer registers keyword.search; see the search section). Registry display_name for

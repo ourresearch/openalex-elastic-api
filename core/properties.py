@@ -368,7 +368,12 @@ CAP_COLUMN = "column"
 # Aurora's tags frozen in October 2026, removed in November 2026. The removal dominates:
 # classify_properties_diff.py says MAJOR. If another bump lands on master first, rebase and
 # take the next MAJOR.
-PROPERTIES_VERSION = "15.0.0"
+# 15.1.0 on this branch (oxjob #1555, 2026-10-08; Jason's yes 2026-10-08 10:58 CT: "Do it and
+# bump the register. Approved."): OQL input aliases from Haiku's cow paths, `id` for
+# `ids.openalex` on every entity and `institution continent` for works
+# `authorships.institutions.continent`. Alias additions = MINOR. Master reached 15.1.0 first
+# (another change): on rebase take the next MINOR, 15.2.0.
+PROPERTIES_VERSION = "15.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

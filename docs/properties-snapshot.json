@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "a6abb9461a0d6438b8c5ae369490b37b6aada2d3a5bf46bd531110e671544939",
+    "fingerprint": "ee4d0079e628f5c58bc67492a91d3bb192e4fae47f6a9e08062538f5982f5f9a",
     "property_count": 899,
-    "version": "15.0.0"
+    "version": "15.1.0"
   },
   "properties": {
     "authors": {
@@ -424,7 +424,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "id",
           "openalex",
@@ -2994,7 +2996,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "openalex",
           "openalex_id"
@@ -5266,7 +5270,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "openalex",
           "openalex_id"
@@ -6592,7 +6598,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "id",
           "openalex",
@@ -9453,7 +9461,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "openalex",
           "openalex_id"
@@ -11457,7 +11467,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "openalex",
           "openalex_id"
@@ -13446,7 +13458,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "id",
           "openalex"
@@ -14411,7 +14425,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "institution continent"
+        ],
         "alternate_keys": [
           "institutions.continent"
         ],
@@ -16613,7 +16629,9 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "id"
+        ],
         "alternate_keys": [
           "openalex",
           "openalex_id"

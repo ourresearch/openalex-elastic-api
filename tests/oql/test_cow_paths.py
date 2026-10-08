@@ -86,6 +86,11 @@ SAME_R2 = [
     # a bare one-word wildcard is exact text, as if quoted
     ("get works where title-abstract has (adolescen* OR teen*)",
      'get works where title-abstract has ("adolescen*" OR "teen*")'),
+    # `institution continent`, as `institution country`; `ID` for the OpenAlex id
+    # (registry aliases, PROPERTIES_VERSION 15.1.0 on the branch, Jason's yes 2026-10-08)
+    ("get works where institution continent is Q15", "get works where continent is Q15"),
+    ("get works where ID is (W2741809807 or W2100837269)",
+     "get works where openalex id is (W2741809807 or W2100837269)"),
     # a DOI keeps its parentheses
     ("get works where DOI is (10.1016/S0140-6736(20)30183-5 or 10.1056/NEJMoa2034577)",
      'get works where DOI is ("10.1016/S0140-6736(20)30183-5" or "10.1056/NEJMoa2034577")'),
