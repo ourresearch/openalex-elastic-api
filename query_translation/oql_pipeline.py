@@ -35,7 +35,7 @@ from query_translation.oql_render_tree import (
 @dataclass
 class StepMeta:
     """What a step does, for consumers of the tree (the website)."""
-    step: str                      # "split" | "calculate" | "sample"
+    step: str                      # "split" | "compare" | "calculate" | "sample" | ...
     index: Optional[int] = None    # split index (0 = outermost)
     data: Dict[str, Any] = field(default_factory=dict)
 
@@ -55,7 +55,6 @@ class StepDirective:
     segments: List[Segment]
     meta: StepMeta
     joiner: str = "; then "
-    bare: bool = False   # joined by `; ` alone (a comparison's summary, oxjob #1555)
 
     @property
     def type(self) -> str:
@@ -575,8 +574,10 @@ def _search_compare_text(tree) -> str:
     return t if single else f"({t})"
 
 
-def compare_text(splits: List[GroupBy], entity: str, noun: str, resolver=None) -> str:
-    """`institution [MIT](I63966007) versus [Stanford University](I97018004) by year`."""
+def compare_text(splits: List[GroupBy], entity: str, noun: str, resolver=None,
+                 measures: Optional[str] = None) -> str:
+    """`institution [MIT](I63966007) versus [Stanford University](I97018004) using count
+    by year`: the measures right after the things compared, the breakdowns last."""
     g = splits[0]
     if g.conditions is not None:
         parts, prev = [], None
@@ -612,7 +613,7 @@ def compare_text(splits: List[GroupBy], entity: str, noun: str, resolver=None) -
                    "singular": _singular_noun(ge) if ge else None}
             t += " where " + _group_where_text(b.where, ctx, resolver)
         bys.append(t)
-    out = text
+    out = text if measures is None else f"{text} using {measures}"
     for i, t in enumerate(bys):
         if i == 0:
             out += " " + t
@@ -751,12 +752,8 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
     finally:
         if tok is not None:
             L._RENDER_ENTITY.reset(tok)
-    worded = [d for d in steps if not d.bare]
-    for d, word in zip(worded, transitions(len(worded))):
+    for d, word in zip(steps, transitions(len(steps))):
         d.joiner = f"; {word}, "
-    for d in steps:
-        if d.bare:
-            d.joiner = "; "
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
                          where=where, directives=steps, corpus_phrase=corpus_phrase)
 
@@ -765,19 +762,17 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
                  resolver=None):
     """The splits and the calculation."""
     if oqo.group_by and is_compare_split(oqo.group_by[0]):
-        # `compare institution [MIT] versus [Stanford] by year; summarize using count`
-        # (oxjob #1555, Jason 2026-10-08): no step word before the summary
+        # `compare institution [MIT] versus [Stanford] using count by year` (oxjob
+        # #1555, Jason 2026-10-08): the measures inside the step, as in `summarize using`
+        measures = (english_list([measure_text(m, noun) for m in oqo.calculate])
+                    if oqo.calculate else None)
+        data = {"splits": [g.to_dict() for g in oqo.group_by]}
+        if oqo.calculate:
+            data["measures"] = [dict(m.to_dict(), key=m.key) for m in oqo.calculate]
         steps.append(StepDirective(
             prefix="compare ", segments=[_text(compare_text(oqo.group_by, entity, noun,
-                                                            resolver))],
-            meta=StepMeta("compare", index=0,
-                          data={"splits": [g.to_dict() for g in oqo.group_by]})))
-        if oqo.calculate:
-            text = english_list([measure_text(m, noun) for m in oqo.calculate])
-            steps.append(StepDirective(
-                prefix=SUMMARIZE, segments=[_text(text)], bare=True,
-                meta=StepMeta("calculate", data={
-                    "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
+                                                            resolver, measures))],
+            meta=StepMeta("compare", index=0, data=data)))
         return
     # `group those works by author and year` (Jason 2026-10-08): every split in one
     # step, joined `and`; `and by` after a group filter, so the next split can't read
@@ -842,9 +837,44 @@ def format_pipeline(tree: OQLRenderTree, width: int = None) -> str:
     lines = [head]
     for d in tree.directives:
         lines[-1] += ";"
-        lines.extend(_wrap_step(f"{d.joiner[2:]}{d.prefix}{_segs_text(d.segments)}",
-                                width))
+        line = f"{d.joiner[2:]}{d.prefix}{_segs_text(d.segments)}"
+        wrap = _wrap_compare if d.meta.step == "compare" else _wrap_step
+        lines.extend(wrap(line, width))
     return "\n".join(lines)
+
+
+def _top_level(text: str, needles) -> List[int]:
+    """Where each needle starts outside quotes, parentheses and a link's brackets."""
+    out, depth, quoted, j = [], 0, False, 0
+    while j < len(text):
+        c = text[j]
+        if c == '"':
+            quoted = not quoted
+        elif not quoted and c in "([":
+            depth += 1
+        elif not quoted and c in ")]":
+            depth -= 1
+        elif not quoted and depth == 0 and any(text.startswith(n, j) for n in needles):
+            out.append(j)
+        j += 1
+    return out
+
+
+def _wrap_compare(line: str, width: int) -> List[str]:
+    """A comparison over the width: `  using ...` and `  by ...` on their own lines;
+    the things compared one per line (`  versus ...`) when they still don't fit."""
+    if len(line) <= width:
+        return [line]
+    cuts = _top_level(line, (" using ",))[:1] + _top_level(line, (" by ",))[:1]
+    cuts = sorted(cuts)
+    pieces = [line[i:j] for i, j in zip([0] + cuts, cuts + [len(line)])]
+    items, rest = pieces[0], [p.strip() for p in pieces[1:]]
+    out = [items]
+    if len(items) > width:
+        vs = _top_level(items, (" versus ",))
+        out = [items[i:j].strip() for i, j in zip([0] + vs, vs + [len(items)])]
+        out = [out[0]] + [f"  {p}" for p in out[1:]]
+    return out + [f"  {p}" for p in rest]
 
 
 def _wrap_step(line: str, width: int) -> List[str]:

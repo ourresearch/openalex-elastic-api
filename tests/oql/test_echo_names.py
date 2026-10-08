@@ -47,7 +47,7 @@ R = make_engine_resolver(_lookup)
     ("get works where year >= 2016; then group those works into ((institution is "
      "(I99464096)), (country is (BE))); then summarize using count",
      "get works where year >= 2016; then, compare institution [KU Leuven](I99464096) "
-     "versus country [Belgium](BE); summarize using count"),
+     "versus country [Belgium](BE) using count"),
 ])
 def test_names_and_round_trip(q, echo):
     o = canonicalize_oqo(parse(q))

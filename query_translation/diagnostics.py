@@ -433,7 +433,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "versus B by year"),
         _spec("OQL_BAD_COMPARE", ERROR, PARSE,
               "this comparison is malformed",
-              "compare <field> A versus B [by <field>] [on <measures>], or compare each "
+              "compare <field> A versus B [using <measures>] [by <field>], or compare each "
               "<thing> in the collection [name](col_x)"),
         _spec("OQL_LIST_TOO_LONG", ERROR, PARSE,
               "a list holds more than 100 items",

@@ -586,7 +586,7 @@ _VERSUS = {"versus", "vs", "vs."}
 # Fewest things a comparison lists. One thing against the whole set (the summary row)
 # is the open question (2026-10-08); the write test reads it both ways.
 MIN_COMPARE_ITEMS = 2
-_COMPARE_STOPS = _VERSUS | {"by", "on"}
+_COMPARE_STOPS = _VERSUS | {"by", "on", "using"}
 
 # The shape of an ID of each entity type (oxjob #1555): what `[ID]` and the permissive
 # URL forms must reduce to. An unknown type takes a letter-and-digits or all-digits ID.
@@ -1908,6 +1908,7 @@ class _Parser:
         filters: List[FilterType] = []
         group_by: List[GroupBy] = []
         calculate: List[Measure] = []
+        compare_measures = False   # the measures came with the comparison's `using`
         walks: List[Walk] = []
         sample = None
         seed = None
@@ -1964,6 +1965,8 @@ class _Parser:
                 self._skip_annot()
                 if calculate:
                     nt = self.peek()
+                    if compare_measures:
+                        raise self._after_compare_measures(nt or t)
                     raise oql_error("OQL_STEP_AFTER_SUMMARY",
                                     "the summary must be the last step",
                                     "move `summarize using ...` to the end of the query",
@@ -2026,7 +2029,7 @@ class _Parser:
                             f"make {len(group_by)}",
                             "drop a breakdown", t.pos)
                     if measures:
-                        calculate = measures
+                        calculate, compare_measures = measures, True
                     continue
                 if kind == "split":
                     group_by.append(val)
@@ -2050,6 +2053,8 @@ class _Parser:
                     sample, seed = val
                 continue
             if calculate:
+                if compare_measures:
+                    raise self._after_compare_measures(t)
                 raise oql_error("OQL_STEP_AFTER_SUMMARY",
                                 "the summary must be the last step",
                                 "move `summarize using ...` to the end of the query", t.pos)
@@ -2286,7 +2291,7 @@ class _Parser:
             if t is None or t.kind in ("RP", "SEMI"):
                 break
             if self._compare_mode and t.kind == "WORD" and t.val.lower() in _COMPARE_STOPS:
-                break   # `versus`, `by`, `on` end a compared item
+                break   # `versus`, `by`, `on`, `using` end a compared item
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES and self.word_is("by", k=1):
                 break   # `... and by year`: the next split, not a condition
             if t.kind == "WORD" and t.val.lower() == "not":
@@ -3974,9 +3979,10 @@ class _Parser:
             self._parse_those(entity, required=True)
 
     # -- comparisons (oxjob #1555, Jason 2026-10-08) -------------------------------
-    # `compare institution [MIT] versus [Stanford] by year on count and mean FWCI`:
+    # `compare institution [MIT] versus [Stanford] using count and mean FWCI by year`:
     # the things compared (one group each; the summary row is the whole set), then
-    # breakdowns (`by <field>`, joined `and by`) and optional measures (`on ...`).
+    # optional measures (`using ...`, Jason 2026-10-08; `on ...` too, before or after
+    # the breakdowns) and breakdowns (`by <field>`, joined `and`).
     # Underneath it's a split: listed values of one field, listed searches of one
     # search field, or a list of conditions; a collection's members with `each`.
 
@@ -4064,7 +4070,7 @@ class _Parser:
                         g = replace(g, where=self._parse_group_where(entity, g))
                     splits.append(g)
                     continue
-                if self.word_is("on"):
+                if self.word_is("on", "using"):
                     if measures is not None:
                         raise oql_error("OQL_BAD_COMPARE", "the measures are given once",
                                         None, self.peek().pos)
@@ -4075,6 +4081,15 @@ class _Parser:
             return splits, measures
         finally:
             self._compare_mode, self._compare_prev = was
+
+    @staticmethod
+    def _after_compare_measures(t):
+        """A step after `compare ... using <measures>`: the measures end the query."""
+        return oql_error("OQL_BAD_COMPARE",
+                         "a comparison with `using` ends the query",
+                         "put every measure after `using` and every breakdown after "
+                         "`by`: compare A versus B using count and mean FWCI by year",
+                         t.pos)
 
     def _parse_compare_each(self, entity: str) -> GroupBy:
         """`compare each institution in the collection [Our peers](col_x)`: one group

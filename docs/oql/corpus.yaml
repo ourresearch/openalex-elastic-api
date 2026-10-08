@@ -4253,8 +4253,11 @@ rows:
   status: ok
   oql: |-
     get works where year >= 2010;
-    then, compare title-abstract has "inference latency" versus "neuromorphic computing" versus "edge AI" by year;
-    summarize using count
+    then, compare title-abstract has "inference latency"
+      versus "neuromorphic computing"
+      versus "edge AI"
+      using count
+      by year
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2010, "operator": ">="}], "group_by": [{"column_id": "title_and_abstract.search", "values": [{"column_id": "title_and_abstract.search.exact", "value": "\"inference latency\"", "operator": "has"}, {"column_id": "title_and_abstract.search.exact", "value": "\"neuromorphic computing\"", "operator": "has"}, {"column_id": "title_and_abstract.search.exact", "value": "\"edge AI\"", "operator": "has"}]}, {"column_id": "publication_year"}], "calculate": [{"measure": "count"}]}
 - id: 212
   tags: [pipeline, listed-values, calculate]
@@ -4266,8 +4269,10 @@ rows:
   status: ok
   oql: |-
     get works where topic is [CRISPR and Genetic Engineering](T10878);
-    then, compare institution [MIT](I63966007) versus [Stanford](I97018004) versus [Harvard](I136199984);
-    summarize using count, mean FWCI, and percent open access
+    then, compare institution [MIT](I63966007)
+      versus [Stanford](I97018004)
+      versus [Harvard](I136199984)
+      using count, mean FWCI, and percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "group_by": [{"column_id": "authorships.institutions.lineage", "values": ["I63966007", "I97018004", "I136199984"]}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}]}
 - id: 213
   tags: [pipeline, calculate]
@@ -4306,8 +4311,9 @@ rows:
   status: ok
   oql: |-
     get works where year >= 2016;
-    then, compare institution [KU Leuven](I99464096) versus country [Belgium](BE) by SDG;
-    summarize using count and percent of those works
+    then, compare institution [KU Leuven](I99464096) versus country [Belgium](BE)
+      using count and percent of those works
+      by SDG
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
 - id: 216
   tags: [pipeline, condition-groups]
@@ -4319,8 +4325,9 @@ rows:
   status: ok
   oql: |-
     get works where institution is in the collection (col_abc123);
-    then, compare (year >= 2016 and year <= 2019) versus year >= 2021 by topic;
-    summarize using count
+    then, compare (year >= 2016 and year <= 2019) versus year >= 2021
+      using count
+      by topic
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"conditions": [{"join": "and", "filters": [{"column_id": "publication_year", "value": 2016, "operator": ">="}, {"column_id": "publication_year", "value": 2019, "operator": "<="}]}, {"column_id": "publication_year", "value": 2021, "operator": ">="}]}, {"column_id": "primary_topic.id"}], "calculate": [{"measure": "count"}]}
 - id: 217
   tags: [pipeline, bins]

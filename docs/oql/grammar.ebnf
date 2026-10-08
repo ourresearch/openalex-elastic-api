@@ -33,15 +33,18 @@ step         ::= ';'? opener? ( split | summary | sampleStep | walk | compare )
                | ';' ( summary | compare )   /* no step word needed */
 opener       ::= ( 'then' | 'first' | 'next' | 'finally' | 'lastly' ) ','?
 /* Comparisons (oxjob #1555, Jason 2026-10-08): the things compared, one group each
-   (the summary row is the whole set), breakdowns, and optional measures. Replaces
+   (the summary row is the whole set), optional measures, and breakdowns. The measures
+   are given once: `using` (also `on`) before or after the breakdowns, or a separate
+   `; summarize using ...` after the step; the echo writes `using` first. Replaces
    split lists and named sets (still accepted; they echo as `compare`). Inside an
    item `is` may go unsaid, a bare value takes the field before it, and a yes/no
    field alone is true: `compare institution [MIT](I63966007) versus [Stanford
-   University](I97018004) by year; summarize using count`. */
+   University](I97018004) using count and mean FWCI by year`. */
 compare      ::= 'compare' ( 'each' field 'in' 'the'? 'collection' '(' WORD ')'
                            | conditions ( versus conditions )+ )
+                 ( ( 'using' | 'on' ) measures )?
                  ( ( 'and' | ',' )? 'by' splitBy ( 'where' conditions )? )*
-                 ( 'on' measures )?
+                 ( ( 'using' | 'on' ) measures )?
 versus       ::= 'versus' | 'vs' | 'vs.'
 measures     ::= measure ( ( ',' | 'and' ) measure )*
 
