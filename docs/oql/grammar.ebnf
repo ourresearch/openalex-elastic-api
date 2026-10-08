@@ -8,8 +8,12 @@ query        ::= 'get'? ( entity | 'each' word setIn? ) ( 'where' conditions )? 
 
 /* Sets (oxjob #1535): `in (...)` holds a collection, a list of one kind, or a
    whole query in parentheses that returns that kind of thing (type-checked:
-   `author is in (...)` takes a query ending `; then get authors of those works`). */
-setIn        ::= 'in' '(' ( query | scalar ( ',' scalar )* ) ')'
+   `author is in (...)` takes a query ending `; then get authors of those works`).
+   Canonical since oxjob #1555: `in the set (...)`, the query written as a set
+   phrase with no `get`: `works where ...`, `authors of works where ...`. */
+setIn        ::= 'in' ( 'the'? 'set' )? '(' ( query | setPhrase | scalar ( ',' scalar )* ) ')'
+
+setPhrase    ::= 'the'? word ( 'of' 'the'? word )* ( 'where' conditions )?
 
 entity       ::= word
 
@@ -81,7 +85,7 @@ relationClause ::= ( 'it' ( 'cites' | "doesn't" 'cite' | 'does' 'not' 'cite'
                           | 'is' 'not'? ( 'cited' 'by' | 'related' 'to' )
                           | "isn't" ( 'cited' 'by' | 'related' 'to' ) )
                    | ( "it's" | 'its' ) 'not'? ( 'cited' 'by' | 'related' 'to' ) )
-                   ( value | 'works' setIn )
+                   ( value | ( 'a' | 'any' )? ( 'work' | 'works' ) setIn )
 
 /* An optional leading determiner 'the' is ignorable input sugar before a
    field name (`the title is foo`), so a clause can read like a sentence. It is
@@ -96,7 +100,7 @@ valueClause  ::= field operator value
 field        ::= word+
 
 operator     ::= 'is' 'not'? 'in' 'collection'
-               | 'is' 'not'? 'in'      /* a set: `is in (col_x)`, `is not in (A, B)` */
+               | 'is' 'not'? setIn     /* a set: `is in the set (col_x)`, `is in (A, B)` */
                | 'is' 'not'?
                | 'is' 'similar' 'to'
                | 'has'

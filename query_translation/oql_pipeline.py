@@ -162,7 +162,7 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
                           meta=_meta_without_vtree(meta))
     if meta.operator == "in collection" and leaf is not None:
         val = L._render_value(L._BY_COLUMN.get(leaf.column_id), leaf.value)
-        verb = " is not in " if leaf.is_negated else " is in "
+        verb = " is not in the set " if leaf.is_negated else " is in the set "
         rel = L._RELATION_SET_RENDER.get(leaf.column_id)
         if rel is not None:
             # a collection of works on a relation (oxjob #1535): `it cites works in (col_x)`
@@ -413,7 +413,7 @@ def _set_clause_text(node, ctx, resolver=None) -> Optional[str]:
     col = cols.pop()
     if col == "collection" and isinstance(node, LeafFilter):
         subject = f"that {ctx['singular']}"
-        verb = "is not in" if node.is_negated else "is in"
+        verb = "is not in the set" if node.is_negated else "is in the set"
         return f"{subject} {verb} ({node.value})"
     if col == "ids.openalex" and ctx.get("singular"):
         subject = f"that {ctx['singular']}"
@@ -677,6 +677,34 @@ def render_pipeline_tree(oqo: OQO, resolver=None):
 
 def render_pipeline(oqo: OQO, resolver=None) -> str:
     return render_pipeline_tree(oqo, resolver)[0]
+
+
+def set_phrase(oqo: OQO, resolver=None) -> Optional[str]:
+    """A query in a set's parentheses as a phrase (oxjob #1555, Jason 2026-10-08: no
+    `get`, no article): `works where X`, `authors of works where X`, `works of authors
+    where X`. None when the query is more than a filter and plain walks (a walk with
+    its own `where`, `each`, a sample): it's written out whole then."""
+    from dataclasses import replace
+    from query_translation.walks import entity_for_link, plural
+    if oqo.sample or oqo.group_by or oqo.calculate or oqo.each:
+        return None
+    head = render_pipeline_line(replace(oqo, walks=[]), resolver)
+    if not head.startswith("get ") or "; " in head:
+        return None
+    phrase = head[len("get "):]
+    for w in oqo.walks:
+        if w.where is not None or w.each:
+            return None
+        if w.to is None:
+            ent = entity_for_link(w.column_id)
+            if ent is None:
+                return None
+            phrase = f"{plural(ent)} of {phrase}"
+        elif w.to == "works":
+            phrase = f"works of {phrase}"
+        else:
+            return None
+    return phrase
 
 
 def render_pipeline_line(oqo: OQO, resolver=None) -> str:

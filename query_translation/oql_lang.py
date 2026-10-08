@@ -623,6 +623,79 @@ _ID_EXAMPLE = {
 }
 
 
+def _phrase_noun(word: str) -> Optional[str]:
+    """`works` -> works; a walk noun in the plural -> its entity; else None."""
+    from query_translation.walks import noun_entity
+    w = word.lower()
+    if w in ("works", "work"):
+        return "works"
+    hit = noun_entity(w)
+    return hit[0] if hit is not None and hit[1] else None
+
+
+def _starts_set_phrase(toks, i: int) -> bool:
+    """`(works where ...`, `(the authors of works ...`: a set phrase (oxjob #1555)."""
+    t = toks[i] if i < len(toks) else None
+    if t is not None and t.kind == "WORD" and t.val.lower() == "the":
+        i += 1
+        t = toks[i] if i < len(toks) else None
+    if t is None or t.kind != "WORD":
+        return False
+    nxt = toks[i + 1] if i + 1 < len(toks) else None
+    # a known noun, or any word followed by `of` / `where` (a misnamed set gets
+    # the set phrase's own error, not a list's)
+    return _phrase_noun(t.val) is not None or (
+        nxt is not None and nxt.kind == "WORD" and nxt.val.lower() in ("of", "where"))
+
+
+def _set_phrase_query(toks: List[Tok], pos: int) -> List[Tok]:
+    """A set phrase as the tokens of the query it names (oxjob #1555, Jason
+    2026-10-08: no `get`, no article): `authors of works where X` is `get works where
+    X; then get authors of those works`; `works of authors where X` is `get authors
+    where X; then get all those authors' works`. A leading `the` is accepted."""
+    from query_translation.walks import plural, possessive
+    chain, i = [], 0
+    while True:
+        if i < len(toks) and toks[i].kind == "WORD" and toks[i].val.lower() == "the":
+            i += 1
+        t = toks[i] if i < len(toks) else None
+        ent = _phrase_noun(t.val) if t is not None and t.kind == "WORD" else None
+        if ent is None:
+            raise oql_error("OQL_BAD_SET_PHRASE",
+                            "a set names its things: works, or authors (institutions, "
+                            "sources ...) of works",
+                            "e.g. in the set (works where year >= 2020), or in the set "
+                            "(authors of works where title has (kelp))",
+                            t.pos if t is not None else pos)
+        chain.append(ent)
+        i += 1
+        if i < len(toks) and toks[i].kind == "WORD" and toks[i].val.lower() == "of":
+            i += 1
+            continue
+        break
+    rest = toks[i:]
+    if rest and not (rest[0].kind == "WORD" and rest[0].val.lower() == "where"):
+        raise oql_error("OQL_BAD_SET_PHRASE", f'unexpected "{rest[0].val}" in the set',
+                        "e.g. in the set (works where year >= 2020)", rest[0].pos)
+
+    def words(text):
+        return [Tok("WORD", w, pos) for w in text.split()]
+    out = words(f"get {plural(chain[-1]) if chain[-1] != 'works' else 'works'}") + list(rest)
+    for k in range(len(chain) - 2, -1, -1):
+        ent, prev = chain[k], chain[k + 1]
+        out += [Tok("SEMI", ";", pos)] + words("then")
+        if prev == "works" and ent != "works":
+            out += words(f"get {plural(ent)} of those works")
+        elif ent == "works" and prev != "works":
+            out += words(f"get all {possessive(prev, False)} works")
+        else:
+            raise oql_error("OQL_BAD_SET_PHRASE",
+                            f"a set walks between works and other things, not "
+                            f"{plural(prev)} to {plural(ent)}",
+                            "e.g. in the set (authors of works where ...)", pos)
+    return out
+
+
 def _is_link_text(toks, i: int) -> bool:
     """`toks[i]` is a `[name]` with a `(` right after it, no space: a Markdown link's
     text (oxjob #1555), not a trivia `[name]` annotation."""
@@ -2573,11 +2646,13 @@ class _Parser:
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
-        # a set (oxjob #1530): `is [not] in (col_x)` or `is [not] in (A, B)`
-        if (self.word_is("in") and self.peek(1) is not None
-                and self.peek(1).kind == "LP" and fld.kind != "bool"):
-            self.next()
-            return self._parse_in_set(field, fld, negated)
+        # a set (oxjob #1530): `is [not] in (col_x)` or `is [not] in (A, B)`;
+        # `is [not] in the set (...)` (oxjob #1555)
+        if self.word_is("in") and fld.kind != "bool":
+            k = self._set_words(1)
+            if k is not None:
+                self.i += k
+                return self._parse_in_set(field, fld, negated)
         # boolean flag: `<name> is true|false` (oxjob #363)
         if fld.kind == "bool":
             return self._parse_bool_value(fld, negated)
@@ -2623,8 +2698,10 @@ class _Parser:
         or an inline list of values (read as `is (A or B)`)."""
         example = f"{field} is in (A, B)"
         nxt = self.peek(1)
-        if nxt is not None and nxt.kind == "WORD" and nxt.val.lower() == "get":
-            # a whole query in parentheses (oxjob #1535)
+        if nxt is not None and nxt.kind == "WORD" and (
+                nxt.val.lower() == "get" or _starts_set_phrase(self.toks, self.i + 1)):
+            # a whole query in parentheses (oxjob #1535), or a set phrase for one
+            # (`works where ...`, oxjob #1555)
             pos = self.peek().pos
             inner = self._parse_subquery()
             self._check_query_type(fld.column, inner, pos)
@@ -3555,7 +3632,10 @@ class _Parser:
         if depth:
             raise oql_error("OQL_UNCLOSED_QUERY", "the query in parentheses isn't closed",
                             "add the closing )", open_tok.pos)
-        inner = _Parser(self.toks[self.i:j]).parse()
+        body = self.toks[self.i:j]
+        if body and not (body[0].kind == "WORD" and body[0].val.lower() == "get"):
+            body = _set_phrase_query(body, open_tok.pos)
+        inner = _Parser(body).parse()
         # where the inner query sits in the text, for a fix-it that rewrites it
         self._subquery_span = (open_tok.pos + 1, self.toks[j].pos)
         self.i = j + 1
@@ -3613,12 +3693,29 @@ class _Parser:
         err.inner_span = getattr(self, "_subquery_span", None)
         raise err
 
+    def _set_words(self, k: int) -> Optional[int]:
+        """At `in` (offset k-1 is `in`): the tokens up to the set's `(`, counted from
+        the cursor (`in (` 1, `in set (` 2, `in the set (` 3), or None."""
+        j = k
+        if self.word_is("the", k=j) and self.word_is("set", k=j + 1):
+            j += 2
+        elif self.word_is("set", k=j):
+            j += 1
+        t = self.peek(j)
+        return j if t is not None and t.kind == "LP" else None
+
     def _parse_relation_query(self, column: str, negated: bool) -> FilterType:
-        """`it cites works in (get works where ...)`: the relation's set of works."""
-        if not (self.word_is("works") and self.word_is("in", k=1)
-                and self.peek(2) is not None and self.peek(2).kind == "LP"):
+        """`it cites a work in the set (works where ...)` (oxjob #1555), `it cites works
+        in (get works where ...)`: the relation's set of works."""
+        k = 0
+        if self.word_is("a", "any"):
+            k = 1
+        if not (self.word_is("work", "works", k=k) and self.word_is("in", k=k + 1)):
             return None
-        self.i += 2
+        n = self._set_words(k + 2)
+        if n is None:
+            return None
+        self.i += n
         # a query, a collection of works, or listed works (`_parse_in_set` takes all)
         fld = _entity_resolve_field(_BY_COLUMN[column], self._entity)
         return self._parse_in_set(_ROW_SUBJECT_RENDER[column][2], fld, negated)
@@ -4174,7 +4271,7 @@ class _Parser:
         fld = Field(column=column, kind="id", oql=subject)
         self._skip_annot()
         if self.word_is("in"):
-            self.next()
+            self.i += self._set_words(1) or 1    # `in the set (` (oxjob #1555)
             example = f"{subject} is in (A, B)"
             open_tok = self._list_open("set", example)
             values: List = []
@@ -5060,20 +5157,24 @@ _RELATION_ENTITY = {"co_author": "authors", "collaborator": "institutions"}
 
 
 # A relation's set (oxjob #1535): (subject, verb) when it holds, and when it doesn't
+# oxjob #1555 (Jason 2026-10-08): `in the set`; `works in (...)` stays accepted
 _RELATION_SET_RENDER = {
-    "referenced_works": (("it", " cites works in "), ("it", " doesn't cite works in ")),
-    "cited_by": (("it's", " cited by works in "), ("it", " isn't cited by works in ")),
-    "related_to": (("it's", " related to works in "), ("it", " isn't related to works in ")),
+    "referenced_works": (("it", " cites a work in the set "),
+                         ("it", " doesn't cite any work in the set ")),
+    "cited_by": (("it's", " cited by a work in the set "),
+                 ("it", " isn't cited by any work in the set ")),
+    "related_to": (("it's", " related to a work in the set "),
+                   ("it", " isn't related to any work in the set ")),
 }
 
 
 def _query_leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     """`author is in (get works where ...; then get authors of those works)`, `it
     cites works in (get works where ...)`: a set defined by a whole query."""
-    from query_translation.oql_pipeline import render_pipeline_line
+    from query_translation.oql_pipeline import render_pipeline_line, set_phrase
     column = f.column_id
     if isinstance(f.value, OQO):
-        inner = render_pipeline_line(f.value, resolver)
+        inner = set_phrase(f.value, resolver) or render_pipeline_line(f.value, resolver)
     else:
         # a set already resolved while running (walk_exec.IdSet): the query it came
         # from, so a group's label reads as written
@@ -5086,7 +5187,7 @@ def _query_leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     else:
         fld = _BY_COLUMN.get(column)
         subj = name = fld.oql if fld else column
-        verb = " is not in " if f.is_negated else " is in "
+        verb = " is not in the set " if f.is_negated else " is in the set "
     segs = [_seg("column", subj, column_id=f.column_id), _seg("operator", verb),
             _seg("text", "("), _seg("value", inner, value=None), _seg("text", ")")]
     return ClauseNode(segments=segs, clause_kind="other", meta=ClauseMeta(

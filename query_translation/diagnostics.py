@@ -160,6 +160,9 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "an entity value has a display name but no authoritative ID",
               "write it as a link, the ID in parentheses after the name: "
               "institution is [Harvard University](I136199984)"),
+        _spec("OQL_BAD_SET_PHRASE", ERROR, PARSE,
+              "a set in parentheses doesn't name works or things of works",
+              "e.g. in the set (authors of works where title has (kelp))"),
         _spec("OQL_BAD_ENTITY_LINK", ERROR, PARSE,
               "an entity link's parentheses don't hold exactly one ID",
               "e.g. institution is [Harvard University](I136199984)"),

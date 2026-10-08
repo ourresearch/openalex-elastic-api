@@ -4291,7 +4291,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is in (col_abc123);
+    get works where topic is in the set (col_abc123);
     then, group those works by institution where collaborator is not (I63966007);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"column_id": "authorships.institutions.lineage", "where": {"column_id": "collaborator", "value": "I63966007", "is_negated": true}}], "calculate": [{"measure": "count"}]}
@@ -4318,7 +4318,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is in (col_abc123);
+    get works where institution is in the set (col_abc123);
     then, group those works into ((year >= 2016 and year <= 2019), (year >= 2021));
     then, group those works again by topic;
     finally, summarize using count
@@ -4377,7 +4377,7 @@ rows:
     get works where institution is [University of Kansas](I146416000);
     then, group those works by author
       where count of those works >= 5
-      and that author is not in (col_abc123);
+      and that author is not in the set (col_abc123);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">=", "value": 5}, {"column_id": "collection", "value": "col_abc123", "operator": "in collection", "is_negated": true}]}}], "calculate": [{"measure": "count"}]}
 - id: 221
@@ -4524,7 +4524,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where it cites works in (
+    get works where it cites a work in the set (
         get works where institution is (I146416000)
       );
     then, group those works by country;
@@ -4568,7 +4568,7 @@ rows:
   status: ok
   oql: |-
     get works where year >= 2025
-      and it doesn't cite works in (
+      and it doesn't cite any work in the set (
         get works where institution is (I146416000)
       )
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "referenced_works", "operator": "in", "is_negated": true, "value": {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}]}}, {"column_id": "publication_year", "value": 2025, "operator": ">="}]}
@@ -4581,7 +4581,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where author is in (
+    get works where author is in the set (
         get works where year >= 2022 and title-abstract has (kelp);
         then, get authors of those works
       )

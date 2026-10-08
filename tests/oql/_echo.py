@@ -106,9 +106,44 @@ def bare_values(text):
     return _FIELD_VALUE.sub(entity, text)
 
 
+_SET_VERBS = [
+    (" doesn't cite works in (", " doesn't cite any work in the set ("),
+    (" cites works in (", " cites a work in the set ("),
+    (" isn't cited by works in (", " isn't cited by any work in the set ("),
+    (" cited by works in (", " cited by a work in the set ("),
+    (" isn't related to works in (", " isn't related to any work in the set ("),
+    (" related to works in (", " related to a work in the set ("),
+    (" is not in (", " is not in the set ("),
+    (" is in (", " is in the set ("),
+]
+_PHRASE = re.compile(r"^get (?P<base>\w+)(?P<where> where .*?)?"
+                     r"(?:; (?:then|finally), get (?P<to>\w+) of those (?P=base))?$")
+
+
+def set_words(text):
+    """Sets (oxjob #1555): `in the set (...)`, `it cites a work in the set (...)`."""
+    for old, new in _SET_VERBS:
+        text = text.replace(old, new)
+    return text
+
+
+def set_phrase(inner):
+    """A plain query in a set's parentheses as a set phrase: `works where X`,
+    `authors of works where X`."""
+    m = _PHRASE.match(inner)
+    if m is None:
+        return inner
+    phrase = m["base"] + (m["where"] or "")
+    return f'{m["to"]} of {phrase}' if m["to"] else phrase
+
+
+def _modern_inner(text):
+    return set_phrase(modern(text))
+
+
 def modern(text):
-    text = bare_values(text)
-    head, *steps = _top_level_parts(_inner(text, modern))
+    text = set_words(bare_values(text))
+    head, *steps = _top_level_parts(_inner(text, _modern_inner))
     steps = [_bare(s) for s in steps]
     steps = [SUMMARIZE + english_list(s[len("calculate "):].split(", "))
              if s.startswith("calculate ") else s for s in steps]
