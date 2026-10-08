@@ -84,6 +84,23 @@ def test_collection_name_lookup(monkeypatch, status, body, want):
     assert C.collection_display_name("col_x") == want
 
 
+def test_a_resolved_collection_needs_no_second_call(monkeypatch):
+    from flask import Flask
+    from core import collection_resolver as C
+    calls = []
+
+    def get(url, **k):
+        calls.append(url)
+        return _Resp(200, {"id": "col_x", "entity_type": "authors", "member_count": 1,
+                           "member_ids": ["A1"], "display_name": "Our lab"})
+    monkeypatch.setattr(C.settings, "USERS_API_URL", "https://users.example")
+    monkeypatch.setattr(C.requests, "get", get)
+    with Flask(__name__).test_request_context("/"):
+        C.resolve_collection("col_x")
+        assert C.collection_display_name("col_x") == "Our lab"
+    assert calls == ["https://users.example/collections/col_x/member-ids"]
+
+
 def test_collection_name_lookup_never_raises(monkeypatch):
     from core import collection_resolver as C
 

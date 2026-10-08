@@ -157,6 +157,10 @@ def resolve_collection(collection_id):
     entity_type = payload.get("entity_type")
     member_count = payload.get("member_count") or 0
     entity_ids = payload.get("member_ids")
+    if state is not None:
+        # its name rides on the same reply (users-api 810b69b, oxjob #1587), so the
+        # echo's link costs no second call (collection_display_name reads it)
+        state.setdefault("names", {})[collection_id] = payload.get("display_name") or None
     if entity_ids is None or member_count > live_filter_limit(entity_type):
         raise CollectionTooBigToFilterError(too_big_message(entity_type, member_count))
 
@@ -210,7 +214,8 @@ def collection_display_name(collection_id):
     None. `GET /collections/{id}` with the caller's own Authorization: users-api
     answers only callers who can read the collection (the owner, or anyone for one
     shared by link), the same gate the filter itself passes, so the echo never shows
-    a name its reader couldn't see. One call per collection per request."""
+    a name its reader couldn't see. A query that ran already has the name from
+    `resolve_collection`'s reply; only a check that doesn't run (`/query`) calls."""
     if not settings.USERS_API_URL or not collection_id.startswith("col_"):
         return None
     state = _request_state()
