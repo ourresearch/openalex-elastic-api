@@ -88,10 +88,10 @@ def test_unquoted_wildcard_hint_now_actually_works_when_followed():
     L.parse('works where raw affiliation has (within 50 ("process*", "material*"))')
 
 
-def test_unquoted_bare_wildcard_hint_works_when_followed():
-    msg = _err("works where raw affiliation has process*")
-    assert "quote it" in msg
-    L.parse('works where raw affiliation has "process*"')
+def test_unquoted_bare_wildcard_reads_as_quoted():
+    # oxjob #1555 (Haiku's cow path): the old fix-it ("quote it") is now what happens
+    assert L.parse("works where raw affiliation has process*") == L.parse(
+        'works where raw affiliation has "process*"')
 
 
 @pytest.mark.parametrize("quoted, unquoted", [

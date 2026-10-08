@@ -74,3 +74,29 @@ def test_splits_read_as_one_step(q, echo):
     o = canonicalize_oqo(parse(q))
     assert render_pipeline_line(o) == echo
     assert _canon(echo) == o.to_dict()
+
+
+# Round 2 (Haiku 5.5, 300 fresh questions, guide in today's echo)
+SAME_R2 = [
+    # the echo's own set form after another condition (was a parse error: a bug)
+    ("get works where source type is [journal](journal) and it cites a work in the set (works where year > 2020)",
+     "get works where source type is journal and it cites works in (get works where year > 2020)"),
+    ("get works where institution is I63966007 and it doesn't cite any work in the set (works where year > 2020)",
+     "get works where institution is I63966007 and it doesn't cite works in (get works where year > 2020)"),
+    # a bare one-word wildcard is exact text, as if quoted
+    ("get works where title-abstract has (adolescen* OR teen*)",
+     'get works where title-abstract has ("adolescen*" OR "teen*")'),
+    # a DOI keeps its parentheses
+    ("get works where DOI is (10.1016/S0140-6736(20)30183-5 or 10.1056/NEJMoa2034577)",
+     'get works where DOI is ("10.1016/S0140-6736(20)30183-5" or "10.1056/NEJMoa2034577")'),
+]
+
+
+@pytest.mark.parametrize("cow,road", SAME_R2)
+def test_cow_path_round_2(cow, road):
+    assert _canon(cow) == _canon(road)
+
+
+def test_a_parenthesis_after_a_plain_word_is_still_a_group():
+    assert _canon("get works where title has (sleep (REM) cycles)") == _canon(
+        "get works where title has (sleep AND REM AND cycles)")

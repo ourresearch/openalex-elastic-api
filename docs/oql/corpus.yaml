@@ -353,10 +353,12 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  status: error
-  oql: 'works where title has bar*'
-  diagnostic: OQL_WILDCARD_NEEDS_EXACT
-  note: 'Bare prefix wildcard is stemmed → silently wrong (oxjob #364): stemming removes the literal prefix at index time. Fix-it: quote it → "bar*" (runs on the no-stem column).'
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:bar*'
+  status: ok
+  oql: 'works where title has ("bar*")'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'bar*', operator: has}]}
+  note: 'A bare one-word wildcard runs on exact (no-stem) text, as if quoted (oxjob #1555, Haiku''s cow path; was OQL_WILDCARD_NEEDS_EXACT since #364, whose fix-it said to quote it). Stemming would remove the literal prefix, so the word is read as exact; a multi-word bare run with a wildcard still errors.'
 
 # ---------------------------------------------------------------------------
 # D. Proximity / wildcard edge matrix  (EXPLORE §2.5, §3)
@@ -3968,11 +3970,13 @@ rows:
   tags: [negation, wildcard]
   provenance:
     type: "spec design"
-    label: "Negated bare wildcard — rejected"
-  status: error
-  oql: 'works where title has (not(climat*))'
-  diagnostic: OQL_WILDCARD_NEEDS_EXACT
-  note: 'A negated bare wildcard is rejected for the same reason as a positive one — wildcards run on exact (no-stem) text. Fix: quote it, `not("climat*")`. Negation does not change the wildcard rule.'
+    label: "Negated bare wildcard — read as exact (was rejected)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:!climat*'
+  status: ok
+  oql: 'works where title has (not "climat*")'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'climat*', operator: has, is_negated: true}]}
+  note: 'A negated bare one-word wildcard reads as exact text like a positive one (oxjob #1555; was OQL_WILDCARD_NEEDS_EXACT).'
 - id: 180
   tags: [filter]
   provenance:

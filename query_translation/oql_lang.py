@@ -794,6 +794,7 @@ class Tok:
 
 
 _WORD_BREAK = set(' \t\n"[](),;!')
+_DOI_START = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/)?10\.\d{4,9}/\S")
 
 
 def lex(s: str) -> List[Tok]:
@@ -866,6 +867,14 @@ def lex(s: str) -> List[Tok]:
         j = i
         while j < n and s[j] not in _WORD_BREAK:
             j += 1
+        # a DOI keeps its parentheses (`10.1016/S0140-6736(20)30183-5`, the Lancet's
+        # shape): a `(` right after a DOI's characters opens part of the DOI when its
+        # `)` comes before any space (#1555, Haiku's cow path)
+        while (j < n and s[j] == "(" and _DOI_START.match(s[i:j])
+               and ")" in s[j:] and " " not in s[j:s.index(")", j)]):
+            j = s.index(")", j) + 1
+            while j < n and s[j] not in _WORD_BREAK:
+                j += 1
         if j == i:   # never loop on a character no branch above takes
             raise oql_error("OQL_UNEXPECTED_CHARACTER",
                            f'unexpected "{c}" at position {i}', None, i)
@@ -3224,6 +3233,12 @@ class _Parser:
                 after = self.peek(mrs[1])
                 if after is not None and after.kind == "LP":
                     return True
+                # `it cites a work in the set (...)`, `it cites works in (...)` (#1555)
+                j = mrs[1] + (1 if self.word_is("a", "any", k=mrs[1]) else 0)
+                if self.word_is("work", "works", k=j) and self.word_is("in", k=j + 1):
+                    return True
+            if match_negated_relation(self.toks, self.i) is not None:
+                return True   # `it doesn't cite any work in the set (...)`
             # a (known, when required) field word-run followed by an operator
             parts = []
             for j in range(0, _MAX_ALIAS_WORDS):
@@ -3481,6 +3496,9 @@ class _Parser:
         # quoted => exact (.exact column) unless `stemmed` keeps it stemmed —
         # degraded to the stemmed column on entities with no exact sibling
         # (#611 follow-up; see _effective_search_col).
+        if not phrase and not stemmed_phrase and " " not in text \
+                and ("*" in text or "?" in text):
+            phrase = True   # `adolescen*`: read as `"adolescen*"` (Haiku's cow path, #1555)
         stemmed = (not phrase) or stemmed_phrase
         col, degraded = self._effective_search_col(base, exact=not stemmed)
         if degraded:
