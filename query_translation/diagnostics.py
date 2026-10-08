@@ -158,12 +158,11 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "supply a value for the field"),
         _spec("OQL_MISSING_ENTITY_ID", ERROR, PARSE,
               "an entity value has a display name but no authoritative ID",
-              "put the OpenAlex ID in brackets after the name, e.g. institution is "
-              "Harvard University [I136199984]"),
-        _spec("OQL_WRONG_ENTITY_ID", ERROR, PARSE,
-              "an entity value's bracketed ID is another kind of entity's",
-              "use an ID of the column's kind, e.g. institution is Harvard University "
-              "[I136199984]"),
+              "write it as a link, the ID in parentheses after the name: "
+              "institution is [Harvard University](I136199984)"),
+        _spec("OQL_BAD_ENTITY_LINK", ERROR, PARSE,
+              "an entity link's parentheses don't hold exactly one ID",
+              "e.g. institution is [Harvard University](I136199984)"),
         _spec("OQL_BAD_NUMBER", ERROR, PARSE,
               "a numeric field was given a non-numeric value",
               "use a whole number, e.g. year is (2020)"),

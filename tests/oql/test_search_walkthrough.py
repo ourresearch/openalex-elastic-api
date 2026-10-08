@@ -49,7 +49,7 @@ def test_case1_entity_head_joins_where_line():
     # keeps `works where` on the same line as the first clause — not a bare
     # "works".
     assert len(lines) > 1
-    assert lines[0] == "works where institution is (i1295562517)"
+    assert lines[0] == "works where institution is (I1295562517)"  # short IDs upper-case (#1555)
     assert lines[1].lstrip().startswith("and source is")
 
 
@@ -147,7 +147,7 @@ _needs_registry = pytest.mark.skipif(
     ("works where biblio.volume is 42",
      [{"column_id": "biblio.volume", "value": "42"}]),
     ("works where authorships.institutions.country_code is us",
-     [{"column_id": "authorships.institutions.country_code", "value": "us"}]),
+     [{"column_id": "authorships.institutions.country_code", "value": "US"}]),
 ])
 def test_case3_3_raw_string_columns_accepted(oql, expect):
     assert _leaves(oql) == expect

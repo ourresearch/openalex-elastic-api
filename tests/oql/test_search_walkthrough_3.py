@@ -117,8 +117,8 @@ def test_case6_negated_renders_is_false():
 def test_case7_cited_by_render_word():
     # #557: the citation edge renders as a row-subject verb-phrase leaf —
     # `it's cited by (…)` — with the legacy field-word form kept as input.
-    assert _render("works where cited_by is w1984893742") == "works where it's cited by (w1984893742)"
-    assert _render("works where it's cited by (w1984893742)") == "works where it's cited by (w1984893742)"
+    assert _render("works where cited_by is w1984893742") == "works where it's cited by (W1984893742)"
+    assert _render("works where it's cited by (w1984893742)") == "works where it's cited by (W1984893742)"
 
 
 def test_case7_cites_render_word():
@@ -126,9 +126,9 @@ def test_case7_cites_render_word():
     # at the parse boundary since #455). #557: the canonical render is the
     # row-subject verb form `it cites (…)`; every legacy spelling (`cites is`,
     # `references is`) converges on it.
-    assert _render("works where cites is w1984893742") == "works where it cites (w1984893742)"
-    assert _render("works where references is w1984893742") == "works where it cites (w1984893742)"
-    assert _render("works where it cites (w1984893742)") == "works where it cites (w1984893742)"
+    assert _render("works where cites is w1984893742") == "works where it cites (W1984893742)"
+    assert _render("works where references is w1984893742") == "works where it cites (W1984893742)"
+    assert _render("works where it cites (w1984893742)") == "works where it cites (W1984893742)"
 
 
 def _work_title_resolver():

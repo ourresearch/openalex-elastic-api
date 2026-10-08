@@ -354,9 +354,23 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
     # the parser, so apply the same column-casing here for round-trip stability and
     # to avoid case-sensitive ES misses (e.g. country=ca vs the indexed CA).
     if isinstance(value, str):
-        return canon_value_for_column(value, column_id)
+        return _short_entity_id(canon_value_for_column(value, column_id), column_id)
 
     return value
+
+
+def _short_entity_id(value: str, column_id: str) -> str:
+    """An entity column's ID in its short form (oxjob #1555): `https://openalex.org/
+    I63966007`, `i63966007`, `types/article` -> `I63966007`, `article`, the same as the
+    OQL parser writes them, so a URL-built OQO and its OQL echo agree. Only values of
+    the column's ID shape change (a DOI's `/` is safe: DOI columns aren't entities)."""
+    from query_translation import oql_lang as L
+    fld = L._BY_COLUMN.get(column_id)
+    if (column_id in L._SELF_ID_COLUMNS or value.startswith("col_")
+            or (fld is not None and fld.kind not in ("id", "enum"))):
+        return value
+    ns = L.entity_type_for_column(column_id)
+    return L._short_id(ns, value) if ns is not None else value
 
 
 def canonicalize_branch_filter(f: BranchFilter, sort_operands: bool = True) -> Union[FilterType, List[FilterType], None]:

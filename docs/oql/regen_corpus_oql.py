@@ -58,7 +58,7 @@ CORPUS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corpus.yaml")
 # production, so the corpus renders them name-annotated the same way (oxjob #418).
 _ANNOT_RE = re.compile(r"([A-Z]\d{4,})\s+\[([^\]]+)\]")
 _NAME_FIRST_RE = re.compile(
-    r"(?:\bis |\bis not |\(|, | or )((?:(?! is | or )[^\[\];()\n])+?) \[([A-Z]\d{4,})\]")
+    r"\[([^\[\]\n]+)\]\(([A-Z]\d{4,})\)")
 
 # Real display names for opaque IDs the corpus authored BARE (no `[name]` to
 # harvest) and the offline test env can't resolve via ES. Fetched from the live
@@ -101,7 +101,7 @@ def harvest_names(text: str) -> dict:
     names: dict = {}
     for ent_id, name in _ANNOT_RE.findall(text):
         names.setdefault(ent_id, name)
-    # the name-first form of the pipeline echo, `MIT [I63966007]` (oxjob #1555)
+    # the pipeline echo's Markdown links, `[MIT](I63966007)` (oxjob #1555)
     for name, ent_id in _NAME_FIRST_RE.findall(text):
         names.setdefault(ent_id, name.strip())
     return names

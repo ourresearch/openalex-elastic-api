@@ -41,9 +41,9 @@ def _fmt(oql: str) -> str:
 # subfield / domain / sdg). Mirrors docs/oql/regen_corpus_oql.py exactly (KEEP IN
 # SYNC), so the corpus annotates as production renders + the no-drift check holds.
 _ANNOT_RE = re.compile(r"([A-Z]\d{4,})\s+\[([^\]]+)\]")
-# the pipeline echo's name-first form, `MIT [I63966007]` (oxjob #1555)
+# the pipeline echo's Markdown links, `[MIT](I63966007)` (oxjob #1555)
 _NAME_FIRST_RE = re.compile(
-    r"(?:\bis |\bis not |\(|, | or )((?:(?! is | or )[^\[\];()\n])+?) \[([A-Z]\d{4,})\]")
+    r"\[([^\[\]\n]+)\]\(([A-Z]\d{4,})\)")
 _SUPPLEMENTAL_NAMES = {
     "A5022654839": "Terry Law",
     "W1984893742": "Uncertainty and Pension Systems Reforms",

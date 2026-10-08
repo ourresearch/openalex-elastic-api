@@ -66,12 +66,44 @@ _SINGLE = re.compile(r'(?P<op> is| is not| >=| <=| >| <| =|\bsample|\bseed|\bbin
                      r'\((?P<v>-?[^()\s"]+|"[^"]*")\)')
 
 
+_FIELD_VALUE = re.compile(r"(?P<field>\b[a-zA-Z][a-zA-Z' -]*?) (?P<op>is not|is) "
+                          r"(?!(?:in|not|null|unknown)\b)(?P<v>[A-Za-z0-9][\w-]*)(?=$|[\s;),])")
+_SET_SUBJECTS = ("co-author", "collaborator", "that author", "that institution")
+
+
+def _link(field, v):
+    """An entity value as the echo writes it with no name resolver: a closed
+    vocabulary's link (`[Kenya](KE)`), else `(I63966007)`; None if not an entity."""
+    from query_translation import oql_lang as L
+    from query_translation.oql_renderer import _builtin_name
+    if field.lower().endswith(_SET_SUBJECTS):
+        return f"({v})"
+    words = field.lower().split()
+    for k in range(len(words)):
+        fld = L._ALIAS.get(" ".join(words[k:]))
+        if fld is None:
+            continue
+        ns = (L.entity_type_for_column(fld.column)
+              if fld.column not in L._SELF_ID_COLUMNS else None)
+        if ns is None or fld.kind not in ("id", "enum") or v.startswith("col_"):
+            return None
+        name = _builtin_name(ns, v)
+        return f"[{name}]({v})" if name else f"({v})"
+    return None
+
+
 def bare_values(text):
-    """Today's value forms (oxjob #1555): `I1 [Name]` -> `Name [I1]` (a bare ID for
-    `[no entity found]`), and one value loses its parentheses."""
-    text = _ANNOTATED.sub(lambda m: m["id"] if m["name"] == "no entity found"
-                          else f'{m["name"]} [{m["id"]}]', text)
-    return _SINGLE.sub(lambda m: f'{m["op"]} {m["v"]}', text)
+    """Today's value forms (oxjob #1555): an annotated ID `I1 [Name]` becomes the link
+    `[Name](I1)`; an entity value is a link (`[Kenya](KE)`, `(I63966007)`); any other
+    single value loses its parentheses."""
+    text = _ANNOTATED.sub(lambda m: f'({m["id"]})' if m["name"] == "no entity found"
+                          else f'[{m["name"]}]({m["id"]})', text)
+
+    def entity(m):
+        link = _link(m["field"], m["v"])
+        return m[0] if link is None else f'{m["field"]} {m["op"]} {link}'
+    text = _SINGLE.sub(lambda m: f'{m["op"]} {m["v"]}', text)
+    return _FIELD_VALUE.sub(entity, text)
 
 
 def modern(text):

@@ -1829,12 +1829,12 @@ rows:
     type: "analytics question"
     label: "Jason's walkthrough batch 2 — cited_by had no curated render word and the W-id value didn't resolve to a title"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=cited_by:w1984893742,type:article'
+  oxurl: 'https://openalex.org/works?filter=cited_by:W1984893742,type:article'
   status: ok
   oql: |-
-    works where it's cited by (w1984893742 [Uncertainty and Pension Systems Reforms])
+    works where it's cited by (W1984893742 [Uncertainty and Pension Systems Reforms])
       and type is (article)
-  oqo: {get_rows: works, filter_rows: [{column_id: cited_by, value: w1984893742}, {column_id: type, value: article}]}
+  oqo: {get_rows: works, filter_rows: [{column_id: cited_by, value: W1984893742}, {column_id: type, value: article}]}
   note: "cited_by:W = the works in W's reference list; cites:W/referenced_works:W = works citing W. #557: the citation edge renders as row-subject verb-phrase leaves — `it's cited by (…)` / `it cites (…)` — mirror forms of one edge; legacy field-word spellings (`cited by is`, `cites is`, `references is`) stay accepted input. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length. (oxjob #363 case 7; #557)"
 
 - id: 108
@@ -1843,10 +1843,10 @@ rows:
     type: "analytics question"
     label: "Jason's walkthrough batch 2 — a real author SR query: quoted phrases inside an OR-group lost their quotes on URL->OQL render, producing invalid un-reparseable OQL"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=authorships.author.id:a5018352470,fulltext.search:simulation,publication_year:2015-2025,type:article,fulltext.search:%22data%20assimilation%22|%22state%20estimation%22|real-time,fulltext.search:%22reduced%20order%20model%22|%22surrogate%20model%22,primary_topic.field.id:15|16|17|19|21|22|23|25|26|31'
+  oxurl: 'https://openalex.org/works?filter=authorships.author.id:A5018352470,fulltext.search:simulation,publication_year:2015-2025,type:article,fulltext.search:%22data%20assimilation%22|%22state%20estimation%22|real-time,fulltext.search:%22reduced%20order%20model%22|%22surrogate%20model%22,primary_topic.field.id:15|16|17|19|21|22|23|25|26|31'
   status: ok
   oql: |-
-    works where author is (a5018352470 [Kenji Takizawa])
+    works where author is (A5018352470 [Kenji Takizawa])
       and full text has (
         simulation
         and (stemmed "data assimilation" or stemmed "state estimation" or real-time)
@@ -1861,7 +1861,7 @@ rows:
         or 23 [Environmental Science] or 25 [Materials Science] or 26 [Mathematics]
         or 31 [Physics and Astronomy]
       )
-  oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: a5018352470}, {column_id: fulltext.search, operator: has, value: simulation}, {column_id: publication_year, operator: '>=', value: 2015}, {column_id: publication_year, operator: <=, value: 2025}, {column_id: type, value: article}, {join: or, filters: [{column_id: fulltext.search, operator: has, value: '"data assimilation"'}, {column_id: fulltext.search, operator: has, value: '"state estimation"'}, {column_id: fulltext.search, operator: has, value: real-time}]}, {join: or, filters: [{column_id: fulltext.search, operator: has, value: '"reduced order model"'}, {column_id: fulltext.search, operator: has, value: '"surrogate model"'}]}, {join: or, filters: [{column_id: primary_topic.field.id, value: '15'}, {column_id: primary_topic.field.id, value: '16'}, {column_id: primary_topic.field.id, value: '17'}, {column_id: primary_topic.field.id, value: '19'}, {column_id: primary_topic.field.id, value: '21'}, {column_id: primary_topic.field.id, value: '22'}, {column_id: primary_topic.field.id, value: '23'}, {column_id: primary_topic.field.id, value: '25'}, {column_id: primary_topic.field.id, value: '26'}, {column_id: primary_topic.field.id, value: '31'}]}]}
+  oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5018352470}, {column_id: fulltext.search, operator: has, value: simulation}, {column_id: publication_year, operator: '>=', value: 2015}, {column_id: publication_year, operator: <=, value: 2025}, {column_id: type, value: article}, {join: or, filters: [{column_id: fulltext.search, operator: has, value: '"data assimilation"'}, {column_id: fulltext.search, operator: has, value: '"state estimation"'}, {column_id: fulltext.search, operator: has, value: real-time}]}, {join: or, filters: [{column_id: fulltext.search, operator: has, value: '"reduced order model"'}, {column_id: fulltext.search, operator: has, value: '"surrogate model"'}]}, {join: or, filters: [{column_id: primary_topic.field.id, value: '15'}, {column_id: primary_topic.field.id, value: '16'}, {column_id: primary_topic.field.id, value: '17'}, {column_id: primary_topic.field.id, value: '19'}, {column_id: primary_topic.field.id, value: '21'}, {column_id: primary_topic.field.id, value: '22'}, {column_id: primary_topic.field.id, value: '23'}, {column_id: primary_topic.field.id, value: '25'}, {column_id: primary_topic.field.id, value: '26'}, {column_id: primary_topic.field.id, value: '31'}]}]}
   note: "A real multi-block systematic-review search. Each quoted phrase ('reduced order model') is one atom and MUST keep its quotes inside the OR-group, else it renders bare ('reduced order model') and re-parses as an ambiguous mix of implicit-AND (space) and explicit-or. The URL parser's boolean-group handler used to strip phrase quotes (case 8a fix). Bare multi-word atoms mixed with 'or' are a hard ambiguity error — OQL never guesses precedence (case 8b). (oxjob #363)"
 
 - id: 109
@@ -2099,18 +2099,18 @@ rows:
     label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): subject-heading/MeSH concept → OpenAlex keyword membership"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,keywords.id:keywords/electronic-cigarette,language:en,publication_year:2003-2025,type:types/article'
+  oxurl: 'https://openalex.org/works?filter=keywords.id:!animal-model,keywords.id:electronic-cigarette,language:en,publication_year:2003-2025,type:article'
   status: ok
   oql: |-
     works where keyword is (
-        not keywords/animal-model [Animal model]
-        and keywords/electronic-cigarette [Electronic cigarette]
+        not animal-model [Animal model]
+        and electronic-cigarette [Electronic cigarette]
       )
       and language is (en [English])
       and year >= (2003)
       and year <= (2025)
-      and type is (types/article)
-  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: keywords.id, value: keywords/electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}]}
+      and type is (article)
+  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: animal-model, is_negated: true}, {column_id: keywords.id, value: electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: article}]}
   note: |-
     zd#8101 "Vaping & Health Living Map" (Claire Stansfield, UCL EPPI-Centre),
     OpenAlex Custom-filter line 9, run May 2025, 3433 hits. Round-trip verified
@@ -2134,16 +2134,16 @@ rows:
     label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): title-field OR of term variants (display_name.search)"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,language:en,publication_year:2003-2025,type:types/article,display_name.search:vape|vaper|vapers|vapes|vaping'
+  oxurl: 'https://openalex.org/works?filter=keywords.id:!animal-model,language:en,publication_year:2003-2025,type:article,display_name.search:vape|vaper|vapers|vapes|vaping'
   status: ok
   oql: |-
-    works where keyword is (not keywords/animal-model [Animal model])
+    works where keyword is (not animal-model [Animal model])
       and language is (en [English])
       and year >= (2003)
       and year <= (2025)
-      and type is (types/article)
+      and type is (article)
       and title has (vape or vaper or vapers or vapes or vaping)
-  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: has}, {column_id: display_name.search, value: vaper, operator: has}, {column_id: display_name.search, value: vapers, operator: has}, {column_id: display_name.search, value: vapes, operator: has}, {column_id: display_name.search, value: vaping, operator: has}]}]}
+  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: has}, {column_id: display_name.search, value: vaper, operator: has}, {column_id: display_name.search, value: vapers, operator: has}, {column_id: display_name.search, value: vapes, operator: has}, {column_id: display_name.search, value: vaping, operator: has}]}]}
   note: |-
     zd#8101 "Vaping & Health Living Map" (Claire), OpenAlex Custom-filter line 7,
     run May 2025, 3342 hits. Round-trip verified (identity, 2026-06-10). The
@@ -2909,7 +2909,7 @@ rows:
     title-abstract search.
   oql: |-
     works where (
-        keyword is (keywords/anticoagulant [Anticoagulant])
+        keyword is (anticoagulant [Anticoagulant])
         or title-abstract has (
           INR
           or aPTT
@@ -2920,16 +2920,16 @@ rows:
         )
       )
       and (
-        keyword is (keywords/central-venous-catheter [Central venous catheter])
+        keyword is (central-venous-catheter [Central venous catheter])
         or title-abstract has (CVC or "central line" or "central venous catheter")
       )
-  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: keywords/anticoagulant},
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: anticoagulant},
     {column_id: title_and_abstract.search, value: INR, operator: has}, {column_id: title_and_abstract.search,
     value: aPTT, operator: has}, {column_id: title_and_abstract.search, value: coagulopathy,
     operator: has}, {column_id: title_and_abstract.search, value: thrombocytopenia,
     operator: has}, {column_id: title_and_abstract.search.exact, value: '"blood coagulation
     disorders"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"coagulation
-    disorder"', operator: has}]}, {join: or, filters: [{column_id: keywords.id, value: keywords/central-venous-catheter},
+    disorder"', operator: has}]}, {join: or, filters: [{column_id: keywords.id, value: central-venous-catheter},
     {column_id: title_and_abstract.search, value: CVC, operator: has}, {column_id: title_and_abstract.search.exact,
     value: '"central line"', operator: has}, {column_id: title_and_abstract.search.exact,
     value: '"central venous catheter"', operator: has}]}]}
@@ -2953,11 +2953,11 @@ rows:
     b). Plus year/type/language scalars and a negated keyword filter. oql-only
     (mixes proximity/exact and stemmed match modes).
   oql: |-
-    works where keyword is (not keywords/animal-model [Animal model])
+    works where keyword is (not animal-model [Animal model])
       and language is (en [English])
       and year >= (2003)
       and year <= (2025)
-      and type is (types/article)
+      and type is (article)
       and title-abstract has (
         vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor"
         or "e vapors" or "e vapour" or "e vapours" or "liquid nicotine"
@@ -2988,9 +2988,9 @@ rows:
         or (nicotine and vapour) or (nicotine and vapouriser)
         or (nicotine and vapourizer) or (nicotine and "e-vaping")
       )
-  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
+  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: animal-model, is_negated: true},
     {column_id: language, value: en}, {column_id: publication_year, value: 2003, operator: '>='},
-    {column_id: publication_year, value: 2025, operator: <=}, {column_id: type, value: types/article},
+    {column_id: publication_year, value: 2025, operator: <=}, {column_id: type, value: article},
     {join: or, filters: [{column_id: title_and_abstract.search, value: vapes, operator: has},
     {column_id: title_and_abstract.search.exact, value: '"e vape"', operator: has}, {column_id: title_and_abstract.search.exact,
     value: '"e vapes"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
@@ -3122,11 +3122,11 @@ rows:
     scalar + negated-keyword tail as row 161. (Fixes the mis-quoted line 8 =
     row 162.)
   oql: |-
-    works where keyword is (not keywords/animal-model [Animal model])
+    works where keyword is (not animal-model [Animal model])
       and language is (en [English])
       and year >= (2003)
       and year <= (2025)
-      and type is (types/article)
+      and type is (article)
       and title-abstract has (
         Juul or "VUSE" or "Vype" or "Geek Bar"
         or within 4 ("cigarette", "ultra sonic") or "e Voke" or "e cigar"
@@ -3145,9 +3145,9 @@ rows:
         or "u cigarettes" or "u cigars" or within 4 ("ultrasonic", "cigarette")
         or within 4 ("ultrasonic", "nicotine")
       )
-  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
+  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: animal-model, is_negated: true},
     {column_id: language, value: en}, {column_id: publication_year, value: 2003, operator: '>='},
-    {column_id: publication_year, value: 2025, operator: <=}, {column_id: type, value: types/article},
+    {column_id: publication_year, value: 2025, operator: <=}, {column_id: type, value: article},
     {join: or, filters: [{column_id: title_and_abstract.search, value: Juul, operator: has}, {
     column_id: title_and_abstract.search.exact, value: VUSE, operator: has}, {column_id: title_and_abstract.search.exact,
     value: Vype, operator: has}, {column_id: title_and_abstract.search.exact, value: '"Geek
@@ -3240,13 +3240,13 @@ rows:
         or 2024 or 2025
       )
       and type is (
-        types/book
-        or types/book-chapter
-        or types/dissertation
-        or types/erratum
-        or types/other
-        or types/report
-        or types/retraction
+        book
+        or book-chapter
+        or dissertation
+        or erratum
+        or other
+        or report
+        or retraction
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: review, operator: has},
     {join: or, filters: [{column_id: publication_year, value: 2014}, {column_id: publication_year,
@@ -3346,10 +3346,10 @@ rows:
     {column_id: title_and_abstract.search.exact, value: '"special measures"', operator: has},
     {join: and, filters: [{column_id: title_and_abstract.search, value: school, operator: has},
     {column_id: title_and_abstract.search.exact, value: '"educational quality"', operator: has}]}]},
-    {join: or, filters: [{column_id: type, value: types/book}, {column_id: type, value: types/book-chapter},
-    {column_id: type, value: types/dissertation}, {column_id: type, value: types/erratum},
-    {column_id: type, value: types/other}, {column_id: type, value: types/report}, {column_id: type,
-    value: types/retraction}]}]}
+    {join: or, filters: [{column_id: type, value: book}, {column_id: type, value: book-chapter},
+    {column_id: type, value: dissertation}, {column_id: type, value: erratum},
+    {column_id: type, value: other}, {column_id: type, value: report}, {column_id: type,
+    value: retraction}]}]}
 
 - id: 165
   tags: [boolean-nesting, sr-transcription, wildcard]
@@ -3403,13 +3403,13 @@ rows:
         or ("Education Review Office" and "New Zealand")
       )
       and type is (
-        types/book
-        or types/book-chapter
-        or types/dissertation
-        or types/erratum
-        or types/other
-        or types/report
-        or types/retraction
+        book
+        or book-chapter
+        or dissertation
+        or erratum
+        or other
+        or report
+        or retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: publication_year, value: 2014},
     {column_id: publication_year, value: 2015}, {column_id: publication_year, value: 2016},
@@ -3486,10 +3486,10 @@ rows:
     value: '"Education Evaluation Centre"', operator: has}]}, {join: and, filters: [
     {column_id: title_and_abstract.search.exact, value: '"Education Review Office"', operator: has},
     {column_id: title_and_abstract.search.exact, value: '"New Zealand"', operator: has}]}]},
-    {join: or, filters: [{column_id: type, value: types/book}, {column_id: type, value: types/book-chapter},
-    {column_id: type, value: types/dissertation}, {column_id: type, value: types/erratum},
-    {column_id: type, value: types/other}, {column_id: type, value: types/report}, {column_id: type,
-    value: types/retraction}]}]}
+    {join: or, filters: [{column_id: type, value: book}, {column_id: type, value: book-chapter},
+    {column_id: type, value: dissertation}, {column_id: type, value: erratum},
+    {column_id: type, value: other}, {column_id: type, value: report}, {column_id: type,
+    value: retraction}]}]}
 
 - id: 166
   tags: [boolean-nesting, negation, sr-transcription]
@@ -3558,13 +3558,13 @@ rows:
         )
       )
       and type is (
-        types/book
-        or types/book-chapter
-        or types/dissertation
-        or types/erratum
-        or types/other
-        or types/report
-        or types/retraction
+        book
+        or book-chapter
+        or dissertation
+        or erratum
+        or other
+        or report
+        or retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: publication_year, value: 2014},
     {column_id: publication_year, value: 2015}, {column_id: publication_year, value: 2016},
@@ -3680,10 +3680,10 @@ rows:
     value: '"special measures"', operator: has}, {join: and, filters: [{column_id: title_and_abstract.search,
     value: school, operator: has}, {column_id: title_and_abstract.search.exact,
     value: '"educational quality"', operator: has}]}]}, {join: or, filters: [{
-    column_id: type, value: types/book}, {column_id: type, value: types/book-chapter}, {
-    column_id: type, value: types/dissertation}, {column_id: type, value: types/erratum},
-    {column_id: type, value: types/other}, {column_id: type, value: types/report}, {column_id: type,
-    value: types/retraction}]}]}
+    column_id: type, value: book}, {column_id: type, value: book-chapter}, {
+    column_id: type, value: dissertation}, {column_id: type, value: erratum},
+    {column_id: type, value: other}, {column_id: type, value: report}, {column_id: type,
+    value: retraction}]}]}
 
 - id: 167
   tags: [boolean-nesting, negation, sr-transcription]
@@ -3702,8 +3702,8 @@ rows:
     block vs entity filter) in one corpus.
   oql: |-
     works where country is (
-        CA [Canada] or COUNTRIES/GB [United Kingdom] or EE [Estonia] or FI [Finland]
-        or FR [France] or IE [Ireland] or JP [Japan] or NL [Netherlands]
+        CA [Canada] or EE [Estonia] or FI [Finland] or FR [France]
+        or GB [United Kingdom] or IE [Ireland] or JP [Japan] or NL [Netherlands]
         or NZ [New Zealand] or PL [Poland] or SG [Singapore]
       )
       and year is (
@@ -3747,16 +3747,16 @@ rows:
         )
       )
       and type is (
-        types/book
-        or types/book-chapter
-        or types/dissertation
-        or types/erratum
-        or types/other
-        or types/report
-        or types/retraction
+        book
+        or book-chapter
+        or dissertation
+        or erratum
+        or other
+        or report
+        or retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: authorships.countries, value: CA},
-    {column_id: authorships.countries, value: COUNTRIES/GB}, {column_id: authorships.countries,
+    {column_id: authorships.countries, value: GB}, {column_id: authorships.countries,
     value: EE}, {column_id: authorships.countries, value: FI}, {column_id: authorships.countries,
     value: FR}, {column_id: authorships.countries, value: IE}, {column_id: authorships.countries,
     value: JP}, {column_id: authorships.countries, value: NL}, {column_id: authorships.countries,
@@ -3848,10 +3848,10 @@ rows:
     value: '"special measures"', operator: has}, {join: and, filters: [{column_id: title_and_abstract.search,
     value: school, operator: has}, {column_id: title_and_abstract.search.exact,
     value: '"educational quality"', operator: has}]}]}, {join: or, filters: [{
-    column_id: type, value: types/book}, {column_id: type, value: types/book-chapter}, {
-    column_id: type, value: types/dissertation}, {column_id: type, value: types/erratum},
-    {column_id: type, value: types/other}, {column_id: type, value: types/report}, {column_id: type,
-    value: types/retraction}]}]}
+    column_id: type, value: book}, {column_id: type, value: book-chapter}, {
+    column_id: type, value: dissertation}, {column_id: type, value: erratum},
+    {column_id: type, value: other}, {column_id: type, value: report}, {column_id: type,
+    value: retraction}]}]}
 
 
 # ---------------------------------------------------------------------------
@@ -4198,7 +4198,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where country is Kenya [KE] and year >= 2015;
+    get works where country is [Kenya](KE) and year >= 2015;
     then, group those works by year;
     finally, summarize using percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.countries", "value": "KE"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "publication_year"}], "calculate": [{"measure": "percent", "column_id": "open_access.is_oa"}]}
@@ -4211,7 +4211,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is MIT [I63966007];
+    get works where institution is [MIT](I63966007);
     then, group those works by open access status;
     finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "open_access.oa_status"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
@@ -4224,7 +4224,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is MIT [I63966007];
+    get works where institution is [MIT](I63966007);
     then, group those works by author;
     finally, summarize using mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "authorships.author.id"}], "calculate": [{"measure": "mean", "column_id": "fwci"}]}
@@ -4240,7 +4240,7 @@ rows:
     get works where title-abstract has (kelp);
     then, group those works by author
       where count of those works > 10
-      and co-author is not A5023888391
+      and co-author is not (A5023888391)
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">", "value": 10}, {"column_id": "co_author", "value": "A5023888391", "is_negated": true}]}}]}
 - id: 211
   tags: [pipeline, listed-values, search-semantics]
@@ -4265,8 +4265,8 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is CRISPR and Genetic Engineering [T10878];
-    then, group those works by institution in (MIT [I63966007], Stanford [I97018004], Harvard [I136199984]);
+    get works where topic is [CRISPR and Genetic Engineering](T10878);
+    then, group those works by institution in ([MIT](I63966007), [Stanford](I97018004), [Harvard](I136199984));
     finally, summarize using count, mean FWCI, and percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "group_by": [{"column_id": "authorships.institutions.lineage", "values": ["I63966007", "I97018004", "I136199984"]}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}]}
 - id: 213
@@ -4278,7 +4278,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where country is Kenya [KE] and year >= 2015;
+    get works where country is [Kenya](KE) and year >= 2015;
     then, group those works by funder;
     finally, summarize using count and mean citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.countries", "value": "KE"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "funders.id"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "cited_by_count"}]}
@@ -4292,7 +4292,7 @@ rows:
   status: ok
   oql: |-
     get works where topic is in (col_abc123);
-    then, group those works by institution where collaborator is not I63966007;
+    then, group those works by institution where collaborator is not (I63966007);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"column_id": "authorships.institutions.lineage", "where": {"column_id": "collaborator", "value": "I63966007", "is_negated": true}}], "calculate": [{"measure": "count"}]}
 - id: 215
@@ -4305,7 +4305,7 @@ rows:
   status: ok
   oql: |-
     get works where year >= 2016;
-    then, group those works into ((institution is KU Leuven [I99464096]), (country is Belgium [BE]));
+    then, group those works into ((institution is [KU Leuven](I99464096)), (country is [Belgium](BE)));
     then, group those works again by SDG;
     finally, summarize using count and percent of those works
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
@@ -4332,7 +4332,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is MIT [I63966007] and year >= 2015;
+    get works where institution is [MIT](I63966007) and year >= 2015;
     then, group those works into citation count bins at (1, 10, 100);
     finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "cited_by_count", "bins": {"at": [1, 10, 100]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
@@ -4345,7 +4345,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is MIT [I63966007] and year >= 2020;
+    get works where institution is [MIT](I63966007) and year >= 2020;
     then, group those works by year;
     then, group those works again into FWCI bins of 0.5;
     finally, summarize using count
@@ -4374,7 +4374,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is University of Kansas [I146416000];
+    get works where institution is [University of Kansas](I146416000);
     then, group those works by author
       where count of those works >= 5
       and that author is not in (col_abc123);
@@ -4389,7 +4389,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is CRISPR and Genetic Engineering [T10878];
+    get works where topic is [CRISPR and Genetic Engineering](T10878);
     then, summarize using count, mean FWCI, percent open access, and median citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}, {"measure": "median", "column_id": "cited_by_count"}]}
 - id: 222
@@ -4470,7 +4470,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is MIT [I63966007];
+    get works where institution is [MIT](I63966007);
     then, get each author of those works;
     then, get all that author's works;
     finally, summarize using mean FWCI
@@ -4484,7 +4484,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is CRISPR and Genetic Engineering [T10878];
+    get works where topic is [CRISPR and Genetic Engineering](T10878);
     then, get authors of those works;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "walks": [{"column_id": "authorships.author.id", "each": false}], "calculate": [{"measure": "count"}]}
@@ -4525,7 +4525,7 @@ rows:
   status: ok
   oql: |-
     get works where it cites works in (
-        get works where institution is I146416000
+        get works where institution is (I146416000)
       );
     then, group those works by country;
     finally, summarize using count
@@ -4539,7 +4539,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is Stanford [I97018004] and year >= 2020;
+    get works where institution is [Stanford](I97018004) and year >= 2020;
     then, get each source of those works;
     then, get all that source's works;
     finally, summarize using percent open access
@@ -4569,7 +4569,7 @@ rows:
   oql: |-
     get works where year >= 2025
       and it doesn't cite works in (
-        get works where institution is I146416000
+        get works where institution is (I146416000)
       )
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "referenced_works", "operator": "in", "is_negated": true, "value": {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}]}}, {"column_id": "publication_year", "value": 2025, "operator": ">="}]}
 - id: 238

@@ -209,86 +209,75 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
 _BARE_RESERVED_SEARCH = {"group", "sample", "stemmed", "and", "or", "&"}
 
 
-def _label_text(name: str, column_id: str) -> str:
-    """A display name as the label before its `[ID]` (oxjob #1555). The parser never
-    reads a label, so the renderer may tidy it: brackets become parentheses and
-    double quotes single ones; a name the parser could mistake for structure (a `;`,
-    a leading `(` or `not`, a connective followed by a field and an operator) is
-    quoted. Measured 2026-10-06: 1 of 107M names needs the last."""
-    s = " ".join(name.split()).replace("[", "(").replace("]", ")").replace('"', "'")
-    first = s.split(" ", 1)[0].lower()
-    if (";" in s or s.startswith("(") or first in ("not", "unknown", "null", "it", "it's")
-            or _reads_as_a_clause(s)):
-        return f'"{s}"'
-    return s
+# Co-occurrence relations name entities too (oxjob #1535): `co-author is (A1)`.
+_RELATION_ENTITY = {"co_author": "authors", "collaborator": "institutions"}
 
 
-def _starts_a_condition(s: str) -> bool:
-    """`s` opens with something that reads as a condition (a few words and an
-    operator, or a `(`), for line breaks. A break inside a name is only cosmetic:
-    the parser reads names up to their `[ID]` whatever the whitespace."""
-    try:
-        return L._Parser(L.lex(s))._clause_lookahead(0, False)
-    except Exception:  # noqa: BLE001 (unlexable: don't break the line here)
-        return False
+def _link_name(name: str) -> str:
+    """A display name as a link's text: one line, square brackets as parentheses
+    (the parser never reads it, so tidying it changes nothing)."""
+    return " ".join(name.split()).replace("[", "(").replace("]", ")")
 
 
-def _reads_as_a_clause(s: str) -> bool:
-    """Some `and`/`or` in `s` is followed by a known field word and an operator."""
-    low = f" {s.lower()} "
-    if " and " not in low and " or " not in low:
-        return False
-    try:
-        p = L._Parser(L.lex(s))
-    except Exception:  # noqa: BLE001 (an unlexable name gets quoted)
-        return True
-    for j, t in enumerate(p.toks):
-        if t.kind == "WORD" and t.val.lower() in ("and", "or") and \
-                p._clause_lookahead(j + 1, True):
-            return True
-    return False
+def _entity_type(column_id: Optional[str]) -> Optional[str]:
+    if not column_id or column_id in L._SELF_ID_COLUMNS:
+        return None
+    if column_id in _RELATION_ENTITY:
+        return _RELATION_ENTITY[column_id]
+    fld = L._BY_COLUMN.get(column_id)
+    if fld is not None and fld.kind in ("search", "collection", "num", "date", "bool"):
+        return None
+    return L.entity_type_for_column(column_id)
 
 
-def _name_first(segs: List[Segment]) -> List[Segment]:
-    """`I63966007 [MIT]` segments become `MIT [I63966007]` (oxjob #1555); a value whose
-    name wasn't found stays a bare ID."""
+def _links(segs: List[Segment], in_list: bool) -> List[Segment]:
+    """Every entity value as a Markdown link (oxjob #1555, Jason 2026-10-08):
+    `[Massachusetts Institute of Technology](I63966007)`, `[Kenya](KE)`,
+    `[article](article)`. The name comes from the resolver, else the closed
+    vocabulary's table; with none, the link is just `(I63966007)` (a bare ID inside
+    a list's own parentheses)."""
+    from query_translation.oql_renderer import _builtin_name
     segs = list(segs)
     out: List[Segment] = []
     i = 0
     while i < len(segs):
         s = segs[i]
-        nxt = segs[i + 2] if i + 2 < len(segs) else None
-        if (s.kind == "value" and nxt is not None and nxt.kind == "id"
-                and segs[i + 1].kind == "text" and segs[i + 1].text == " "):
-            if nxt.text == L._NO_ENTITY_ANNOTATION:
-                out.append(s)
-            else:
-                meta = nxt.meta
-                name = (meta.full_name or meta.entity_display_name) if meta else None
-                name = name or nxt.text.strip("[]")
-                col = s.meta.column_id if s.meta else ""
-                out.extend([L._seg("id", _label_text(name, col),
-                                   entity_display_name=name),
-                            _text(" "),
-                            Segment(kind="value", text=f"[{s.text}]", meta=s.meta)])
-            i += 3
+        col = s.meta.column_id if s.kind == "value" and s.meta else None
+        ns = _entity_type(col)
+        if ns is None or (isinstance(s.meta.value, str) and s.meta.value.startswith("col_")):
+            out.append(s)
+            i += 1
             continue
-        out.append(s)
-        i += 1
+        nxt = segs[i + 2] if i + 2 < len(segs) else None
+        name = None
+        if (nxt is not None and nxt.kind == "id" and segs[i + 1].kind == "text"
+                and segs[i + 1].text == " "):
+            if nxt.text != L._NO_ENTITY_ANNOTATION and nxt.meta is not None:
+                name = nxt.meta.full_name or nxt.meta.entity_display_name
+            i += 3
+        else:
+            i += 1
+        if name is None and isinstance(s.meta.value, str):
+            name = _builtin_name(ns, s.meta.value)
+        if name:
+            text = f"[{_link_name(name)}]({s.text})"
+        else:
+            text = s.text if in_list else f"({s.text})"
+        out.append(Segment(kind="value", text=text, meta=s.meta))
     return out
 
 
 def _bare_values(cn: ClauseNode) -> ClauseNode:
-    """Today's value forms (oxjob #1555, Jason 2026-10-06): an entity value reads
-    `<display name> [<ID>]` (a bare ID when no name is known), and a single value
-    loses its parentheses: `year >= 2020`, `type is not review`, `institution is
-    Massachusetts Institute of Technology [I63966007]`. Lists of two or more keep
-    one pair; searches, sets (`in (...)`) and row-subject relations (`it cites
-    (...)`) keep theirs."""
-    out = _name_first(cn.segments)
+    """Today's value forms (oxjob #1555): entity values as Markdown links (Jason
+    2026-10-08), and a single value without its parentheses (2026-10-06): `year >=
+    2020`, `type is not [review](review)`, `institution is [Massachusetts Institute
+    of Technology](I63966007)`. Lists of two or more keep one pair; searches, sets
+    (`in (...)`) and row-subject relations (`it cites (...)`) keep theirs."""
+    n_values = sum(1 for x in cn.segments if x.kind == "value")
+    out = _links(cn.segments, in_list=n_values > 1)
     meta = cn.meta
     if len(out) != len(cn.segments) or any(x is not y for x, y in zip(out, cn.segments)):
-        # the multi-line formatter lays value lists out from the vtree's ID-first
+        # the multi-line formatter lays value lists out from the vtree's own
         # segments: keep a rewritten clause whole instead
         meta = _meta_without_vtree(meta)
     col = next((x for x in out if x.kind == "column"), None)
@@ -441,9 +430,7 @@ def _set_clause_text(node, ctx, resolver=None) -> Optional[str]:
         if node.join != ("and" if negated else "or"):
             return None
     vals = " or ".join(str(x.value) for x in leaves)
-    if len(leaves) > 1:
-        vals = f"({vals})"
-    return f"{subject} {'is not' if negated else 'is'} {vals}"
+    return f"{subject} {'is not' if negated else 'is'} ({vals})"
 
 
 def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[str, List[Segment]]:
@@ -469,7 +456,7 @@ def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[
                 vals.append(_text(", "))
             vsegs, _ent = L._value_segments(L._BY_COLUMN.get(g.column_id), v,
                                             g.column_id, resolver)
-            vals.extend(_name_first(vsegs))
+            vals.extend(_links(vsegs, in_list=len(g.values) > 1))
         return lead + "by ", [col, _text(" in (")] + vals + [_text(")")]
     return lead + "by ", [col]
 
@@ -660,11 +647,13 @@ def _wrap_step(line: str, width: int) -> List[str]:
             depth += 1
         elif not quoted and c == ")":
             depth -= 1
+        elif not quoted and c == "[":
+            depth += 1      # a link's name: `[Marine and coastal ecosystems](T10032)`
+        elif not quoted and c == "]":
+            depth -= 1
         elif not quoted and depth == 0:
             for conn in (" and ", " or "):
-                if rest.startswith(conn, j) and _starts_a_condition(rest[j + len(conn):]):
-                    # (an `and` inside a name, `Marine and coastal ecosystems [T10032]`,
-                    # isn't followed by a field and an operator: no break there)
+                if rest.startswith(conn, j):
                     parts.append(rest[start:j])
                     conns.append(conn.strip())
                     j += len(conn)
