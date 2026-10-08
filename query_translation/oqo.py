@@ -471,7 +471,7 @@ class OQO:
     page: Optional[int] = None
     cursor: Optional[str] = None
     # The final `calculate` step of the pipeline language (oxjob #1530): the
-    # measures computed per group (and for the total row), or for the whole set
+    # measures computed per group (and for the summary), or for the whole set
     # when there is no split. Part of WHICH ROWS a query returns, so public.
     calculate: List["Measure"] = field(default_factory=list)
 

@@ -834,7 +834,7 @@ get <entity> [ where <conditions> ]
   - `by <search field> search in ((<search>), (<search>), ...)`: one group per portable
     search string; up to 100, at most 5 AND/OR/NOT each (`OQL_SEARCH_TOO_COMPLEX`).
   - `into ((<conditions>), (<conditions>), ...)`: one group per condition, in order; up
-    to 100; no empty group (the total row is the baseline).
+    to 100; no empty group (the summary's whole-set row is the baseline).
   - `into <number field> bins at (<e1>, <e2>, ...)` (increasing edges; integer labels
     `0`, `1-9`, `100+`, decimal labels `under 0.5`, `0.5-1`, `2+`) or `bins of (<w>)`.
 - **Group filters** (`where` after a split): a boolean of
