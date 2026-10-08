@@ -468,14 +468,14 @@ class OQOValidator:
                                                    for m in oqo.calculate)):
             errors.append(ValidationError(
                 type="invalid_walk", location="calculate" if not oqo.group_by else "group_by",
-                message=(f"after walking to {end}, a query can count them (calculate count); "
+                message=(f"after walking to {end}, a query can count them (summarize using count); "
                          f"walk back to their works to split or measure")))
         if end != "works" and oqo.calculate and oqo.walks and oqo.walks[-1].each:
             errors.append(ValidationError(
                 type="invalid_walk", location="calculate",
                 message=(f"each row is one of the {end}, so there is nothing to count per "
-                         f"row; count the set (get {end} of those works; then calculate "
-                         f"count) or walk back to their works")))
+                         f"row; count the set (get {end} of those works; then, summarize "
+                         f"using count) or walk back to their works")))
         tail = OQO(get_rows=end, corpus="core", group_by=oqo.group_by,
                    calculate=[m for m in oqo.calculate] if end == "works" else [],
                    sort_by=oqo.sort_by, select=oqo.select, per_page=oqo.per_page,

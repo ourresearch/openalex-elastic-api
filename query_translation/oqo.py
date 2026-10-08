@@ -310,7 +310,7 @@ class Walk:
       column that links them, the one the noun means in a filter (`author` is
       `authorships.author.id`); `each` gives one result per thing (`get each author
       of those works`), else one combined set (`get authors of those works`, so
-      `calculate count` counts distinct authors).
+      `summarize using count` counts distinct authors).
     * A walk back, from the things to everything they did: `to: "works"` (`get all
       that author's works`, or `get all those authors' works` after a set). It
       follows the walk out's column, or after a non-works start that entity's
@@ -437,7 +437,7 @@ class GroupBy:
 # Calculations (oxjob #1530). `percent_of_those` is the group's share of the set it
 # came from (`percent of those works`); `percent` takes a yes/no column; the rest a
 # numeric column (min / max also a date); `count` none. `value` is a split's own
-# field shown beside each group (`calculate count, h-index` after a split by author):
+# field shown beside each group (`summarize using count, h-index` after a split by author):
 # not computed from the works but read from the group's own record.
 MEASURES = ("count", "mean", "median", "sum", "min", "max", "percent", "percent_of_those",
             "value")
@@ -446,7 +446,7 @@ NUMERIC_MEASURES = ("mean", "median", "sum", "min", "max")
 
 @dataclass
 class Measure:
-    """One calculation in the final `calculate` step: `count`, `mean FWCI`,
+    """One measure in the final `summarize using` step: `count`, `mean FWCI`,
     `percent open access`, `percent of those works`."""
     measure: str
     column_id: Optional[str] = None
@@ -570,7 +570,7 @@ class OQO:
     per_page: Optional[int] = None
     page: Optional[int] = None
     cursor: Optional[str] = None
-    # The final `calculate` step of the pipeline language (oxjob #1530): the
+    # The final `summarize using` step of the pipeline language (oxjob #1530): the
     # measures computed per group (and for the total row), or for the whole set
     # when there is no split. Part of WHICH ROWS a query returns, so public.
     calculate: List["Measure"] = field(default_factory=list)

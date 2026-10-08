@@ -27,26 +27,26 @@ def _echo(q):
 ECHOES = [
     # a split list (launch form) -> listed values of one field
     ("get works where topic is (T10878); then group those works by institution in "
-     "(I63966007, I97018004, I136199984); then calculate count, mean FWCI, percent open access",
+     "(I63966007, I97018004, I136199984); then summarize using count, mean FWCI, percent open access",
      "get works where topic is (T10878); then, compare institution (I63966007) versus "
      "(I97018004) versus (I136199984); summarize using count, mean FWCI, and percent "
      "open access"),
     # listed searches; a breakdown
     ('get works where year >= (2010); then group those works by title-abstract search in '
      '(("inference latency"), ("neuromorphic computing"), ("edge AI")); then group those '
-     'works again by year; then calculate count',
+     'works again by year; then summarize using count',
      'get works where year >= 2010; then, compare title-abstract has "inference latency" '
      'versus "neuromorphic computing" versus "edge AI" by year; summarize using count'),
     # named sets on different fields: each names its field
     ("get works where year >= (2016); then group those works into ((institution is "
-     "(I99464096)), (country is (BE))); then group those works again by SDG; then calculate "
+     "(I99464096)), (country is (BE))); then group those works again by SDG; then summarize using "
      "count, percent of those works",
      "get works where year >= 2016; then, compare institution (I99464096) versus country "
      "[Belgium](BE) by SDG; summarize using count and percent of those works"),
     # a compound item takes parentheses; comparisons keep their verb
     ("get works where institution is in (col_abc123); then group those works into ((year >= "
      "(2016) and year <= (2019)), (year >= (2021))); then group those works again by topic; "
-     "then calculate count",
+     "then summarize using count",
      "get works where institution is in the collection (col_abc123); then, compare (year >= 2016 "
      "and year <= 2019) versus year >= 2021 by topic; summarize using count"),
     # a yes/no field alone is true; `not` makes it false
@@ -90,7 +90,7 @@ def test_echo_and_round_trip(q, echo):
 
 def test_no_step_word_before_the_summary():
     echo = _echo("get works where topic is T10878; then compare institution I63966007 "
-                 "versus I97018004; then calculate count")
+                 "versus I97018004; then summarize using count")
     assert "; summarize using count" in echo
     assert "finally" not in echo
 

@@ -1964,9 +1964,9 @@ class _Parser:
                 self._skip_annot()
                 if calculate:
                     nt = self.peek()
-                    raise oql_error("OQL_STEP_AFTER_CALCULATE",
-                                    "a calculation must be the last step",
-                                    "move `calculate ...` to the end of the query",
+                    raise oql_error("OQL_STEP_AFTER_SUMMARY",
+                                    "the summary must be the last step",
+                                    "move `summarize using ...` to the end of the query",
                                     nt.pos if nt else t.pos)
                 if (self.word_is("get") and cur == "works" and not group_by
                         and self.word_is("works", k=1) and self.word_is("where", k=2)):
@@ -2050,9 +2050,9 @@ class _Parser:
                     sample, seed = val
                 continue
             if calculate:
-                raise oql_error("OQL_STEP_AFTER_CALCULATE",
-                                "a calculation must be the last step",
-                                "move `calculate ...` to the end of the query", t.pos)
+                raise oql_error("OQL_STEP_AFTER_SUMMARY",
+                                "the summary must be the last step",
+                                "move `summarize using ...` to the end of the query", t.pos)
             if t.kind == "WORD" and t.val.lower() == "group" and self.word_is("by", k=1):
                 self.i += 2
                 group_by = group_by + self._parse_group_by()
@@ -3647,9 +3647,9 @@ class _Parser:
         return n, seed
 
     # -- pipeline steps (oxjob #1530) --------------------------------------------
-    # `get works where ...; then group those works [again] by|into ... [where ...];
-    # then calculate ...`. Splits become GroupBy entries (outermost first), the
-    # calculation the OQO's `calculate`. Spec: #1512 SYNTAX.md "The language now".
+    # `get works where ...; then group those works by ... [where ...]; then,
+    # summarize using ...`. Splits become GroupBy entries (outermost first), the
+    # summary the OQO's `calculate`. Spec: #1512 SYNTAX.md "The language now".
 
     def _parse_step(self, entity: str, n_splits: int, splits=None):
         """One step after `then`: ("split", GroupBy) | ("calculate", [Measure]) |
@@ -3663,12 +3663,10 @@ class _Parser:
         if w == "group":
             self.next()
             return "split", self._parse_split(entity, n_splits)
-        if w == "calculate":
-            self.next()
-            return "calculate", self._parse_measures(entity, splits or [])
         if w == "summarize":
             # `summarize using count, mean FWCI` (oxjob #1555); `with`, `by` and
-            # nothing are accepted too
+            # nothing are accepted too. `calculate` is gone (Jason 2026-10-08): it
+            # fails like any other word that doesn't start a step
             self.next()
             if self.word_is("using") or self.word_is("with") or self.word_is("by"):
                 self.next()
@@ -3870,8 +3868,8 @@ class _Parser:
             raise oql_error(
                 "OQL_QUERY_SET_RETURNS_NUMBERS",
                 "a query in parentheses must return things, not numbers or groups",
-                "end it at the step that names the things: drop its `group ...` and "
-                "`calculate ...` steps", pos)
+                "end it at the step that names the things: drop its `group ...`, "
+                "`compare ...` and `summarize using ...` steps", pos)
         if any(has_query_value(f) for f in inner.filter_rows) or any(
                 w.where is not None and has_query_value(w.where) for w in inner.walks):
             raise oql_error("OQL_NESTED_QUERY_DEPTH",
@@ -4445,27 +4443,28 @@ class _Parser:
                 raise oql_error(
                     "OQL_BAD_MEASURE",
                     f'percent takes a yes/no field; "{fld.oql}" isn\'t one',
-                    f"e.g. calculate percent open access; for the share of each "
-                    f"{fld.oql}, split by it: group those {noun} by {fld.oql}; then "
-                    f"calculate percent of those {noun}",
+                    f"e.g. summarize using percent open access; for the share of "
+                    f"each {fld.oql}, split by it: group those {noun} by {fld.oql}; "
+                    f"then, summarize using percent of those {noun}",
                     t.pos)
-            # min / max of a date: the earliest / latest (`calculate max date`)
+            # min / max of a date: the earliest / latest (`summarize using max date`)
             if name != "percent" and fld.kind != "num" and not (
                     fld.kind == "date" and name in ("min", "max")):
                 raise oql_error(
                     "OQL_BAD_MEASURE",
                     f'{name} takes a number field; "{fld.oql}" isn\'t one',
-                    f"e.g. calculate {name} citation count, or {name} FWCI", t.pos)
+                    f"e.g. summarize using {name} citation count, or {name} FWCI",
+                    t.pos)
             self._parse_of_those(entity)
             return Measure(name, fld.column)
-        # A field of a split's own things (`calculate count, h-index` after `group
+        # A field of a split's own things (`summarize using count, h-index` after `group
         # those works by author`): each group's own value, the same reading a group
         # filter gives a non-calculation field (#1512: other fields belong to the
         # thing itself).
         own = self._group_own_field(entity, splits) if t is not None else None
         if own is not None:
             return own
-        # A field where a measure belongs (`calculate authors count`, `calculate
+        # A field where a measure belongs (`summarize using authors count`, `calculate
         # h-index`): say which measure to write, or that it isn't calculated at all.
         if t is not None and t.kind == "WORD":
             m = match_field(self.toks, self.i)
@@ -4478,18 +4477,19 @@ class _Parser:
                 if fld.kind == "num":
                     listing = "" if splits else (
                         f"; or, to list each of the {_plural_noun(entity)} with its "
-                        f"{spelling}, drop the calculate step (the results show every "
+                        f"{spelling}, drop the summary step (the results show every "
                         f"field and sort by any of them)")
                     raise oql_error(
                         "OQL_BAD_MEASURE",
                         f'"{spelling}" is a field, not a calculation',
-                        f"name the calculation: calculate mean {spelling} (or median, "
+                        f"name the calculation: summarize using mean {spelling} (or "
+                        f"median, "
                         f"sum, min, max {spelling}){listing}", t.pos)
                 if fld.kind == "bool":
                     raise oql_error(
                         "OQL_BAD_MEASURE",
                         f'"{spelling}" is a field, not a calculation',
-                        f"name the calculation: calculate percent {spelling}", t.pos)
+                        f"name the calculation: summarize using percent {spelling}", t.pos)
             for other in ("authors", "institutions", "sources"):
                 om = match_entity_fallback(self.toks, self.i, other)
                 if om is not None and other != entity:
@@ -4508,7 +4508,7 @@ class _Parser:
             t.pos if t is not None else None)
 
     def _group_own_field(self, entity: str, splits) -> Optional[Measure]:
-        """A bare field in `calculate` that belongs to a split's own things (an
+        """A bare field in `summarize using` that belongs to a split's own things (an
         author's h-index) and not to the measured things: Measure("value", column).
         Consumes it; None (nothing consumed) when it isn't one."""
         if self.peek() is None or self.peek().kind != "WORD":

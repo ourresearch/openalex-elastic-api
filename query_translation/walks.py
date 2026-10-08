@@ -3,7 +3,7 @@
 A walk moves a query from works to the things they relate to and back:
 
     get works where institution is (I146416000); then get each author of those works;
-    then get all that author's works; then calculate mean FWCI
+    then get all that author's works; then, summarize using mean FWCI
 
 `get each <noun> of those works` walks out (one result per thing), `get <nouns> of
 those works` walks out to one combined set, and `get all that <noun>'s works` /

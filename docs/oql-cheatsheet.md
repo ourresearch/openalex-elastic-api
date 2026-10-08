@@ -3,7 +3,7 @@
 **OQL** is the OpenAlex Query Language: a readable way to write any OpenAlex query, from a
 simple search to a breakdown with calculations. A query is a series of steps, each starting
 with a verb: `get works where title has (cancer) and year >= (2020); then group those works by
-year; then calculate count, mean FWCI`. Try it in the **OQL tab** at the top of the search
+year; then, summarize using count, mean FWCI`. Try it in the **OQL tab** at the top of the search
 page, or call the API: `https://api.openalex.org/?oql=<your query>`. Checking a query is
 free: `https://api.openalex.org/query/oql/<your query>` says whether it's valid, how long it
 should take and what it costs, without running it.
@@ -17,7 +17,7 @@ should take and what it costs, without running it.
 ```
 get <things> where <conditions>
   [; then group those <things> by <field> [where <group filter>]]   up to three splits
-  [; then calculate <calculation>, <calculation>]                     always last
+  [; then, summarize using <calculation>, <calculation>]             always last
 ```
 
 - **get**: what you start from: `works`, `authors`, `institutions`, `sources`, `funders`, `topics`, ...
@@ -107,10 +107,10 @@ get works where topic is (T10878); then group those works by institution where c
 ## Calculate: always the last step
 
 ```
-get works where country is (KE) and year >= (2015); then group those works by year; then calculate percent open access
-get works where institution is (I63966007); then group those works by open access status; then calculate count, mean FWCI
-get works where topic is (T10878); then calculate count, median citation count, sum APC paid
-get works where source is (S137773608); then group those works by author; then calculate count, h-index
+get works where country is (KE) and year >= (2015); then group those works by year; then, summarize using percent open access
+get works where institution is (I63966007); then group those works by open access status; then, summarize using count, mean FWCI
+get works where topic is (T10878); then, summarize using count, median citation count, sum APC paid
+get works where source is (S137773608); then group those works by author; then, summarize using count, h-index
 ```
 
 `count`; `mean`, `median`, `sum`, `min`, `max` of a number field; `percent` of a yes/no field;
@@ -139,7 +139,7 @@ fix**, never a silent wrong answer.
 | You wrote | OQL says |
 |---|---|
 | `... then group those works by FWCI` | FWCI is a decimal: split it into bins, `group those works into FWCI bins at (0.5, 1, 2)` |
-| `... then calculate authors count` | name the calculation: `calculate mean authors count` |
+| `... then, summarize using authors count` | name the calculation: `summarize using mean authors count` |
 | `... then group those authors by year` (after `get works`) | this query holds works: `group those works by year` |
 | `title has bar*` | wildcards need quotes: `title has ("bar*")` |
 | `type is (article review)` | two values need a connective: add `or` between them |

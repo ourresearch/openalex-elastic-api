@@ -121,7 +121,7 @@ def _parser_recognized_words():
             words.add(q.lower())
     # `and` / `or` are recognized via the `_CONNECTIVES` set (membership test),
     # not a literal `word_is(...)` — harvest that named set too.
-    for m in re.finditer(r"(?:_CONNECTIVES|_VERSUS)\s*=\s*\{([^}]*)\}", src):
+    for m in re.finditer(r"(?:_CONNECTIVES|_VERSUS|_STEP_OPENERS)\s*=\s*\{([^}]*)\}", src):
         for q in re.findall(r'"([^"]+)"|\'([^\']+)\'', m.group(1)):
             w = (q[0] or q[1]).strip().lower()
             if w:

@@ -15,10 +15,10 @@ How each shape runs:
   those authors' works`) becomes a works filter on the walked ids, so every split,
   calculation and list the works path has works on it unchanged;
 * a walk to each thing and back (`get each author of those works; then get all
-  that author's works; then calculate mean FWCI`) runs one aggregation per
+  that author's works; then, summarize using mean FWCI`) runs one aggregation per
   partition of about 25,000 things, 8 in flight, and names only the returned page;
 * a walk out with nothing after it lists the things (Rung 1's split by them);
-  `calculate count` after a set walk counts them, exactly while that fits the
+  `summarize using count` after a set walk counts them, exactly while that fits the
   budget, approximately (within 0.5%) past it, and says which.
 """
 import math
@@ -514,7 +514,7 @@ def _flat(tree) -> List:
 
 
 def count_things(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
-    """`get authors of those works; then calculate count`: how many distinct things.
+    """`get authors of those works; then, summarize using count`: how many distinct things.
     Exact while listing them fits the budget; else approximate (`cardinality`,
     within 0.5% on sets measured 2026-10-03), and the result says which."""
     entity = plan["entity"]

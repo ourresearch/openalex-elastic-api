@@ -294,9 +294,9 @@ Dimension order is meaningful and is preserved by the canonicalizer.
 
 ### 8.1 Splits, group filters and calculations (oxjob #1530, schema v1.5)
 
-OQL's pipeline language (`get works where ...; then group those works by ...; then
-calculate ...`) keeps `group_by` as the list of splits (up to three, outermost first)
-and adds `calculate`. A plain `{column_id}` split is today's group-by; a split may
+OQL's pipeline language (`get works where ...; then group those works by ...; then,
+summarize using ...`) keeps `group_by` as the list of splits (up to three, outermost first)
+and adds `calculate` (the OQO keeps that name; the OQL word `calculate` is gone, 2026-10-08). A plain `{column_id}` split is today's group-by; a split may
 instead carry **one** of:
 
 | Field | OQL | Meaning |

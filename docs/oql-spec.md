@@ -72,7 +72,7 @@ This invariant is the spec's runnable contract — see §9.
 ## 2. Statement shape
 
 The canonical form is the step form of §4.1 (`get works where ...; then group those works
-by ...; then calculate ...`). The classic statement below is still accepted on input, and is
+by ...; then, summarize using ...`). The classic statement below is still accepted on input, and is
 what §3's condition rules are written against:
 
 ```
@@ -815,7 +815,7 @@ get <entity> [ where <conditions> ]
   [ ; then sample (<n>) of those <entity> [ with seed (<s>) ] ]
   [ ; then group those <entity> [again] by <split> [ where <group filter> ] ]   ×0-3
   [ ; then group those <entity> [again] into <split> [ where <group filter> ] ]
-  [ ; then calculate <measure> [, <measure>]* ]                               last
+  [ ; then, summarize using <measure> [, <measure>]* ]                        last
 ```
 
 - **Start:** `get <entity> where ...` is the classic statement with the verb `get`. The
@@ -846,11 +846,11 @@ get <entity> [ where <conditions> ]
     (institution groups). Fields a group doesn't have: `OQL_BAD_GROUP_FILTER`.
   Measures and own fields combine with `and`; an `or` mixing the two kinds is refused at
   execution.
-- **`calculate`** is always the last step (`OQL_STEP_AFTER_CALCULATE`): `count`; `mean`,
+- **`summarize using`** is always the last step (`OQL_STEP_AFTER_SUMMARY`): `count`; `mean`,
   `median`, `sum`, `min`, `max` of a number field (`min`/`max` also of a date); `percent`
   of a yes/no field; `percent of those <entity>` (each group's share of its parent set);
   after a split by entities, their own number fields (`h-index`), shown beside each group.
-  A bare works field (`calculate authors count`) is `OQL_BAD_MEASURE` with the fix
+  A bare works field (`summarize using authors count`) is `OQL_BAD_MEASURE` with the fix
   `mean authors count`.
 - **Walks** (`get each author of those works`) are Rung 2: `OQL_WALK_NOT_YET`.
 

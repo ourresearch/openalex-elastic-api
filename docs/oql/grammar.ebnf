@@ -24,12 +24,14 @@ groupBy      ::= 'group' 'by' word ( ',' word )*
 sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
 
 /* The pipeline language (oxjob #1530; spec: #1512 SYNTAX.md). Canonical form:
-   `get works where ...; then group those works by ...; then group those works
-   again by ...; then calculate ...`. A calculation is always the last step; up to
-   three splits; `those <entity>` must name what the query holds; `again` is
+   `get works where ...; then, group those works by year and type; finally,
+   summarize using ...`. The summary is always the last step (`calculate` is gone,
+   2026-10-08; `summarize with`, `summarize by` and a bare `summarize` read the same);
+   up to three splits; `those <entity>` must name what the query holds; `again` is
    optional on input and always rendered on every split after the first. */
-step         ::= ';'? 'then' ( split | calculation | sampleStep | walk | compare )
-               | ';' ( 'summarize' 'using' measures | compare )   /* no step word needed */
+step         ::= ';'? opener? ( split | summary | sampleStep | walk | compare )
+               | ';' ( summary | compare )   /* no step word needed */
+opener       ::= ( 'then' | 'first' | 'next' | 'finally' | 'lastly' ) ','?
 /* Comparisons (oxjob #1555, Jason 2026-10-08): the things compared, one group each
    (the summary row is the whole set), breakdowns, and optional measures. Replaces
    split lists and named sets (still accepted; they echo as `compare`). Inside an
@@ -67,7 +69,7 @@ searchItem   ::= '(' searchExpr ')'     /* up to 5 AND/OR/NOT; up to 100 items *
 
 bins         ::= 'bins' ( 'at' '(' NUMBER ( ',' NUMBER )* ')' | 'of' '(' NUMBER ')' )
 
-calculation  ::= 'calculate' measure ( ( ',' | 'and' ) measure )*
+summary      ::= 'summarize' ( 'using' | 'with' | 'by' )? measures
 
 measure      ::= 'count' ( 'of' those )?
                | ( 'mean' | 'median' | 'sum' | 'min' | 'max' ) field ( 'of' those )?

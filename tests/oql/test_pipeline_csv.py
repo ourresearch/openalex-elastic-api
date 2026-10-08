@@ -9,7 +9,7 @@ from query_translation.oql_lang import parse
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 Q = ("get works where year >= (2020); then group those works by institution in "
-     "(I1, I2); then group those works again by year; then calculate count, mean FWCI")
+     "(I1, I2); then group those works again by year; then summarize using count, mean FWCI")
 
 
 def _body():

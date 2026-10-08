@@ -202,7 +202,7 @@ usually ends with a concrete `Fix:`.
 ### Auth and cost
 
 No API key is required. These endpoints follow the same rules as the rest of the API: a
-free-account key raises your daily credit budget. A query with a `calculate` step, a split by
+free-account key raises your daily credit budget. A query with a `summarize using` step, a split by
 a list, bins or conditions, or a filter on its groups is priced from what it does: the
 starting set costs what a list (1 credit) or a search (10) costs, each listed search 10, each
 lookup 1 (see [Example costs](/access/example-costs/#what-an-oql-calculation-costs)). Every

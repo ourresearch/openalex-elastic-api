@@ -1,5 +1,5 @@
 """The step words of the canonical echo (oxjob #1555), for tests written in the
-launch form (`; then group ...; then calculate ...`).
+launch form (`; then group ...; then summarize using ...`).
 
 `modern(text)` turns a one-line launch-form query into today's echo
 (`; then, group ...; finally, summarize using ...`); `launch_form(text)` goes back.
@@ -231,14 +231,16 @@ def modern(text):
     text = named_sets(set_words(bare_values(text)))
     head, *steps = _top_level_parts(_inner(text, _modern_inner))
     steps = merge_splits([_bare(s) for s in steps])
-    steps = [SUMMARIZE + english_list(s[len("calculate "):].split(", "))
-             if s.startswith("calculate ") else s for s in steps]
+    steps = [SUMMARIZE + english_list(re.split(r",? and |, ", s[len(SUMMARIZE):]))
+             if s.startswith(SUMMARIZE) else s for s in steps]
     return "; ".join([head] + [f"{w}, {s}" for w, s in zip(transitions(len(steps)), steps)])
 
 
 def launch_form(text):
     head, *steps = _top_level_parts(_inner(text, launch_form))
     steps = [_bare(s) for s in steps]
-    steps = ["calculate " + ", ".join(re.split(r",? and |, ", s[len(SUMMARIZE):]))
+    # `calculate` was the launch word for the summary; it's gone (Jason 2026-10-08), so
+    # the launch form keeps the old openers and commas with today's `summarize using`
+    steps = [SUMMARIZE + ", ".join(re.split(r",? and |, ", s[len(SUMMARIZE):]))
              if s.startswith(SUMMARIZE) else s for s in steps]
     return "; ".join([head] + [f"then {s}" for s in steps])

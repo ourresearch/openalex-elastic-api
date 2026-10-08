@@ -1,6 +1,6 @@
 """The pipeline language (oxjob #1530; spec #1512 SYNTAX.md and work/oql_draft.md).
 
-`get works where ...; then group those works by ...; then calculate ...` parses to
+`get works where ...; then group those works by ...; then summarize using ...` parses to
 OQO splits (`group_by`) and a `calculate` list, renders back in the pipeline style,
 and every limit or type slip is a loud error with a fix.
 """
@@ -33,17 +33,17 @@ def _flat(text):
 # values, searches or conditions now echo as `compare` (tests/oql/test_compare.py).
 EXAMPLES = [
     "get works where country is (KE) and year >= (2015); then group those works by year; "
-    "then calculate percent open access",
+    "then summarize using percent open access",
     "get works where institution is (I63966007); then group those works by open access "
-    "status; then calculate count, mean FWCI",
+    "status; then summarize using count, mean FWCI",
     "get works where institution is (I63966007); then group those works by author; then "
-    "calculate mean FWCI",
+    "summarize using mean FWCI",
     "get works where title-abstract has (kelp); then group those works by author where "
     "count of those works > (10) and co-author is not (A5023888391)",
     "get works where country is (KE) and year >= (2015); then group those works by funder; "
-    "then calculate count, mean citation count",
+    "then summarize using count, mean citation count",
     "get works where topic is in (col_abc123); then group those works by institution where "
-    "collaborator is not (I63966007); then calculate count",
+    "collaborator is not (I63966007); then summarize using count",
 ]
 
 
@@ -99,11 +99,11 @@ def test_bins_and_values():
      "get works where year > (2020); then group those works by year; then group those "
      "works again by type"),
     # the classic group-by plus a calculation
-    ("works where year > 2020 group by year; then calculate count",
-     "get works where year > (2020); then group those works by year; then calculate count"),
-    ("get works where year > (2020); then group by year; then calculate average FWCI and "
+    ("works where year > 2020 group by year; then summarize using count",
+     "get works where year > (2020); then group those works by year; then summarize using count"),
+    ("get works where year > (2020); then group by year; then summarize using average FWCI and "
      "number of works",
-     "get works where year > (2020); then group those works by year; then calculate mean "
+     "get works where year > (2020); then group those works by year; then summarize using mean "
      "FWCI, count"),
     # on author groups, `author is ...` can only mean each group's own author
     ("get works where year > (2020); then group those works by author where author is "
@@ -243,15 +243,15 @@ def test_walk_parses_since_rung_2():
 
 
 def test_step_after_calculate():
-    e = _err("get works where year > (2020); then calculate count; then group those works "
+    e = _err("get works where year > (2020); then summarize using count; then group those works "
              "by year")
-    assert e.code == "OQL_STEP_AFTER_CALCULATE"
+    assert e.code == "OQL_STEP_AFTER_SUMMARY"
 
 
 @pytest.mark.parametrize("q,code", [
-    ("get works where year > (2020); then calculate mean type", "OQL_BAD_MEASURE"),
-    ("get works where year > (2020); then calculate percent year", "OQL_BAD_MEASURE"),
-    ("get works where year > (2020); then calculate total", "OQL_BAD_MEASURE"),
+    ("get works where year > (2020); then summarize using mean type", "OQL_BAD_MEASURE"),
+    ("get works where year > (2020); then summarize using percent year", "OQL_BAD_MEASURE"),
+    ("get works where year > (2020); then summarize using total", "OQL_BAD_MEASURE"),
     ("get works where year > (2020); then group those works by year where h-index > (20)",
      "OQL_BAD_GROUP_FILTER"),
     ("get works where year > (2020); then group those works by institution where "
@@ -271,7 +271,7 @@ def test_more_loud_errors(q, code):
 def test_a_groups_own_field_in_calculate():
     # the same reading a group filter gives a non-calculation field: the group's own value
     q = ("get works where source is (S137773608); then group those works by author; then "
-         "calculate count, h-index, works count")
+         "summarize using count, h-index, works count")
     oqo = _canon(q)
     assert oqo.calculate[1] == Measure("value", "summary_stats.h_index")
     assert oqo.calculate[1].key == "summary_stats_h_index"
@@ -283,18 +283,18 @@ def test_a_groups_own_field_in_calculate():
 def test_a_field_of_both_needs_a_calculation():
     # works and authors both have a citation count: ambiguous, so it needs mean / sum
     e = _err("get works where year > (2020); then group those works by author; then "
-             "calculate citation count")
+             "summarize using citation count")
     assert e.code == "OQL_BAD_MEASURE" and "mean citation count" in e.fixit
 
 
 def test_own_field_without_a_split_of_those_things():
-    e = _err("get works where year > (2020); then calculate count, h-index")
+    e = _err("get works where year > (2020); then summarize using count, h-index")
     assert e.code == "OQL_BAD_MEASURE" and "group those works by author" in e.fixit
 
 
 def test_min_max_date():
     q = ("get works where year > (2020); then group those works by publisher; then "
-         "calculate count, max date, min date")
+         "summarize using count, max date, min date")
     oqo = _canon(q)
     assert [m.measure for m in oqo.calculate] == ["count", "max", "min"]
     assert _flat(render(oqo)) == modern(q)
@@ -303,16 +303,16 @@ def test_min_max_date():
 
 
 def test_a_field_with_no_split_says_how_to_list_instead():
-    # `get sources where ...; then calculate 2-year mean citedness` usually wants the list
-    e = _err("get authors where h-index > (50); then calculate h-index")
-    assert e.code == "OQL_BAD_MEASURE" and "drop the calculate step" in e.fixit
+    # `get sources where ...; then summarize using 2-year mean citedness` usually wants the list
+    e = _err("get authors where h-index > (50); then summarize using h-index")
+    assert e.code == "OQL_BAD_MEASURE" and "drop the summary step" in e.fixit
     e = _err("get works where year > (2020); then group those works by year; then "
-             "calculate citation count")
-    assert "drop the calculate step" not in e.fixit
+             "summarize using citation count")
+    assert "drop the summary step" not in e.fixit
 
 
 def test_mean_of_a_date_is_an_error():
-    assert _err("get works where year > (2020); then calculate mean date").code == "OQL_BAD_MEASURE"
+    assert _err("get works where year > (2020); then summarize using mean date").code == "OQL_BAD_MEASURE"
 
 
 def test_wrong_type_id_is_a_validation_error():

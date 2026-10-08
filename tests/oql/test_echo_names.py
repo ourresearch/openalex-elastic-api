@@ -31,7 +31,7 @@ R = make_engine_resolver(_lookup)
      "get works where it cites a work in the collection [Climate topics](col_abc123)"),
     ("get works where topic is in (col_unknown)",
      "get works where topic is in the collection (col_unknown)"),
-    ("get each author in (col_auth9); then get all that author's works; then calculate count",
+    ("get each author in (col_auth9); then get all that author's works; then summarize using count",
      "get each author in the collection [Our lab](col_auth9); then, get all that author's works; "
      "finally, summarize using count"),
     ("get each institution in (I63966007, I97018004); then get all that institution's works",
@@ -40,12 +40,12 @@ R = make_engine_resolver(_lookup)
     ("get authors where co-author is (A5066175077 or A1)",
      "get authors where co-author is ([Jane Smith](A1) or [Stephen Hawking](A5066175077))"),
     ("get works where year > 2020; then group those works by author where that author is "
-     "not in (col_auth9) and co-author is not (A1); then calculate count",
+     "not in (col_auth9) and co-author is not (A1); then summarize using count",
      "get works where year > 2020; then, group those works by author where co-author is "
      "not [Jane Smith](A1) and that author is not in the collection [Our lab](col_auth9); "
      "finally, summarize using count"),
     ("get works where year >= 2016; then group those works into ((institution is "
-     "(I99464096)), (country is (BE))); then calculate count",
+     "(I99464096)), (country is (BE))); then summarize using count",
      "get works where year >= 2016; then, compare institution [KU Leuven](I99464096) "
      "versus country [Belgium](BE); summarize using count"),
 ])
@@ -57,7 +57,7 @@ def test_names_and_round_trip(q, echo):
 
 def test_named_set_conditions_may_open_with_a_parenthesis():
     q = ("get works where year >= 2016; then group those works into ((institution is "
-         "I99464096 or country is BE) and year > 2020, year >= 2021); then calculate count")
+         "I99464096 or country is BE) and year > 2020, year >= 2021); then summarize using count")
     o = canonicalize_oqo(parse(q))
     assert len(o.group_by[0].conditions) == 2
     echo = render_pipeline_line(o, R)

@@ -2,7 +2,7 @@
 
     get works where institution is (I63966007); then group those works by author
     where count of those works > (10); then group those works again by year;
-    then calculate count, mean FWCI
+    then, summarize using count, mean FWCI
 
 `render_pipeline(oqo)` renders ANY OQO in this style. Until the launch flips the
 default (Jason's call, 2026-10-03: every query switches at launch, old forms are
@@ -72,7 +72,8 @@ _MEASURE_SURFACE = {"mean": "mean", "median": "median", "sum": "sum",
 
 # The last step's verb (oxjob #1555, Jason 2026-10-05: "summarize" reads better than
 # "calculate"; "using" over "with", which `with seed` already uses). The parser also
-# takes `calculate`, `summarize with` and `summarize by`.
+# takes `summarize with`, `summarize by` and a bare `summarize`; `calculate` is gone
+# (Jason 2026-10-08: it fails like any other word that doesn't start a step).
 SUMMARIZE = "summarize using "
 
 

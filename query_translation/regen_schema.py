@@ -104,7 +104,7 @@ def build_schema() -> dict:
             "calculate": {
                 "type": "array",
                 "description": (
-                    "OQL's final `calculate ...` step (oxjob #1530): the measures "
+                    "OQL's final `summarize using ...` step (oxjob #1530, #1555): the measures "
                     "computed for each group and for the total row (the whole "
                     "starting set), or for the whole set when there is no split."
                 ),
@@ -347,7 +347,7 @@ def build_schema() -> dict:
                 "description": (
                     "Calculations by listed values (oxjob #1530): get works where topic is "
                     "(T10878); then group those works by institution in (I63966007, "
-                    "I97018004); then calculate count, mean FWCI, percent open access"),
+                    "I97018004); then, summarize using count, mean FWCI, percent open access"),
                 "value": {"get_rows": "works",
                           "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}],
                           "group_by": [{"column_id": "authorships.institutions.lineage",

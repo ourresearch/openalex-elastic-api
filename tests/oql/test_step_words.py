@@ -1,7 +1,7 @@
 """The echo's step words (oxjob #1555, Jason 2026-10-05): a comma after the
 opener; one step `then`, two `then` + `finally`, three or more `first`, `then`
 ..., `finally` (no `first`, 2026-10-08); the last step `summarize using`. Input takes any opener anywhere,
-with or without the comma, and `calculate` / `summarize with` / `summarize by`."""
+with or without the comma, and `summarize with` / `summarize by` (`calculate` is gone)."""
 import os
 
 import pytest
@@ -46,12 +46,12 @@ def test_echo_is_its_own_canonical_form(q):
 
 
 @pytest.mark.parametrize("typed", [
-    "get works where year > 2020; then group those works by year; then calculate count",
+    "get works where year > 2020; then group those works by year; then summarize using count",
     "get works where year > 2020; then group by year; finally summarize count",
     "get works where year > 2020; first group by year; next, summarize with count",
     "get works where year > 2020; then, group by year; lastly, summarize by count",
-    "get works where year > 2020 then group by year then calculate count",
-    "get works where year > 2020; finally, group by year; first, calculate count",
+    "get works where year > 2020 then group by year then summarize using count",
+    "get works where year > 2020; finally, group by year; first, summarize using count",
 ])
 def test_any_opener_any_order(typed):
     assert _line(typed) == ("get works where year > 2020; then, group those works by "
@@ -79,3 +79,44 @@ def test_launch_form_still_parses_the_same(row):
     flat = flat.replace("( ", "(").replace(" )", ")")
     old = launch_form(flat)
     assert _canon(old).to_dict() == _canon(flat).to_dict()
+
+
+# `calculate` is gone (Jason 2026-10-08 08:41 CT): "silently removed and silently fail".
+# No alias and no targeted message: it fails like any other word that doesn't start a step.
+@pytest.mark.parametrize("q", [
+    "get works where year > 2020; then calculate count",
+    "get works where year > 2020; then, calculate count",
+    "get works where year > 2020; then group those works by year; then calculate count, mean FWCI",
+    "get works where year > 2020; then, group those works by year; finally, calculate count",
+    "get works where year > 2020; calculate count",
+])
+def test_calculate_is_not_a_step(q):
+    from query_translation.diagnostics import OQLError
+    with pytest.raises(OQLError) as e:
+        parse(q)
+    assert "calculate" not in (e.value.fixit or "").lower()
+
+
+def test_no_message_teaches_calculate():
+    """Every diagnostic's message and fix-it says `summarize using`, never `calculate`."""
+    import re
+    from query_translation.diagnostics import DIAGNOSTICS
+    for code, spec in DIAGNOSTICS.items():
+        for text in (spec.summary, spec.default_fixit):
+            assert not re.search(r"\bcalculate\b", text or ""), (code, text)
+
+
+@pytest.mark.parametrize("q", [
+    "get works where year > 2020; then group those works by year; then summarize using count; "
+    "then group those works by type",
+    "get works where year > 2020; then, summarize using percent year",
+    "get works where year > 2020; then, summarize using authors count",
+    "get works where year > 2020; then, summarize using mean type",
+    "get works where author is in (get works where title has kelp; then, get authors of "
+    "those works; then, summarize using count)",
+])
+def test_fixits_say_summarize_using(q):
+    from query_translation.diagnostics import OQLError
+    with pytest.raises(OQLError) as e:
+        parse(q)
+    assert "calculate" not in f"{e.value} {e.value.fixit or ''}".lower()

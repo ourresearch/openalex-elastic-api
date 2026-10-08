@@ -62,17 +62,17 @@ def test_split_where_refuses_an_or_mixing_kinds():
 
 
 @pytest.mark.parametrize("q,credits", [
-    ("get works where year > (2020); then group those works by year; then calculate count", 1),
+    ("get works where year > (2020); then group those works by year; then summarize using count", 1),
     ("get works where title-abstract has (kelp); then group those works by year; then "
-     "calculate count", 10),
+     "summarize using count", 10),
     ('get works where year > (2020); then group those works by title-abstract search in '
-     '(("a"), ("b"), ("c")); then calculate count', 31),
+     '(("a"), ("b"), ("c")); then summarize using count', 31),
     ("get works where title-abstract has (kelp); then group those works by author where "
      "count of those works > (10) and h-index > (20) and co-author is not (A1)", 12),
     ("get works where year > (2020); then group those works by author where that author "
      "is in (A1, A2)", 1),
     ("get works where year > (2020); then group those works into ((title has (a)), "
-     "(year > (2021))); then calculate count", 11),
+     "(year > (2021))); then summarize using count", 11),
 ])
 def test_price(q, credits):
     p = A.price(_oqo(q))

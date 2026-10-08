@@ -6,7 +6,7 @@ them in something close to plain English.** A query is a short series of steps:
 ```
 get works where title-abstract has ("climate change") and year >= (2020);
 then group those works by year;
-then calculate count, percent open access
+then, summarize using count, percent open access
 ```
 
 You can read that aloud and know what it returns: climate-change papers since 2020, year by
@@ -22,7 +22,7 @@ again for the same answer.
 2. **Filter fields with `is` and comparisons; search text with `has`. The value always sits
    in parentheses.** `year is (2020)`, `citation count >= (100)`, `title has (cancer)`.
 3. **Add steps with `; then`.** `group those works by <field>` splits the works into groups;
-   `calculate ...` computes numbers, and is always the last step.
+   `summarize using ...` computes numbers, and is always the last step.
 4. **Combine conditions with `and` / `or`; group them with parentheses.**
 
 That's enough for most questions. Everything below is detail.
@@ -153,19 +153,19 @@ put a count filter first; without one, a big set can take too long and the check
 
 ## Calculating
 
-`calculate` is always the last step:
+`summarize using` is always the last step:
 
 ```
 get works where country is (KE) and year >= (2015);
 then group those works by year;
-then calculate count, percent open access
+then, summarize using count, percent open access
 ```
 
 - `count`
 - `mean`, `median`, `sum`, `min`, `max` of a number field: `mean FWCI`, `median citation count`, `sum APC paid`, `max date`
 - `percent` of a yes/no field: `percent open access`, `percent retracted`
 - `percent of those works`: each group's share of the set it came from
-- after a split by authors, institutions or sources, their own fields: `calculate count, h-index`
+- after a split by authors, institutions or sources, their own fields: `summarize using count, h-index`
 
 With splits you get one row per group plus the total row; without any, one row.
 
@@ -180,7 +180,7 @@ display them.
 Up to three splits; up to 100 items in a list; at most 5 AND/OR/NOT in each listed search; a
 nested split up to 10,000 groups per split (a single split pages through any number); about
 ten seconds a query. Anything over a limit is refused before it runs, with the limit and how
-to fix it. A query with a `calculate` step, a split by a list, bins or conditions, or a filter
+to fix it. A query with a `summarize using` step, a split by a list, bins or conditions, or a filter
 on its groups is priced from what it does: the starting set costs what a list (1 credit) or a
 search (10) costs, each listed search 10, each lookup 1. Nothing else adds to the price:
 splits by a field, counts, means and percentages are free. Any other query costs 1 credit.
@@ -193,7 +193,7 @@ silent wrong answer:
 
 ```
 ... then group those works by FWCI       →  FWCI is a decimal: group those works into FWCI bins at (0.5, 1, 2)
-... then calculate authors count         →  name the calculation: calculate mean authors count
+... then, summarize using authors count         →  name the calculation: summarize using mean authors count
 ... then group those authors by year     →  this query holds works: group those works by year
 title has (bar*)                         →  wildcards need quotes: title has ("bar*")
 type is (article review)                 →  two values need a connective: type is (article or review)

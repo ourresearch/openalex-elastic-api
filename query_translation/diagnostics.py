@@ -348,13 +348,13 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "yes/no column; percent of those works (needs a split)"),
         _spec("OQL_UNKNOWN_STEP", ERROR, PARSE,
               "a step after `; then` doesn't start with a known verb",
-              "steps are: group those works by ...; group those works into ...; "
-              "calculate ...; sample (N) of those works"),
+              "steps are: group those works by ...; compare A versus B; "
+              "summarize using ...; sample (N) of those works; get ... of those works"),
         # walks and sets (oxjob #1535)
         _spec("invalid_walk", ERROR, VALIDATE,
               "a walk doesn't fit where it is",
               "walk out from works once (get each author of those works), back once "
-              "(get all that author's works), then split and calculate"),
+              "(get all that author's works), then split and summarize"),
         _spec("invalid_query_set", ERROR, VALIDATE,
               "a query used as a set is the wrong kind",
               "the query in parentheses must return the things the field takes, and "
@@ -395,7 +395,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "the query in parentheses isn't closed", "add the closing )"),
         _spec("OQL_QUERY_SET_RETURNS_NUMBERS", ERROR, PARSE,
               "a query in parentheses must return things, not numbers or groups",
-              "drop its `group ...` and `calculate ...` steps"),
+              "drop its `group ...`, `compare ...` and `summarize using ...` steps"),
         _spec("OQL_NESTED_QUERY_DEPTH", ERROR, PARSE,
               "a query in parentheses can't hold another one (for now)",
               "save the inner set as a collection and use it by name"),
@@ -405,9 +405,9 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_WRONG_SET", ERROR, PARSE,
               "a step names a different kind of thing than the query holds",
               "name the current things, e.g. group those works by year"),
-        _spec("OQL_STEP_AFTER_CALCULATE", ERROR, PARSE,
-              "a calculation must be the last step",
-              "move `calculate ...` to the end"),
+        _spec("OQL_STEP_AFTER_SUMMARY", ERROR, PARSE,
+              "the summary must be the last step",
+              "move `summarize using ...` to the end"),
         _spec("OQL_TOO_MANY_SPLITS", ERROR, PARSE,
               "a query can split its works at most three times",
               "drop a split, or run several queries"),

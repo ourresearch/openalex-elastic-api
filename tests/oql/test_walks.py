@@ -30,15 +30,15 @@ def _err(q):
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("q", [
     "get works where institution is (I63966007); then get each author of those works",
-    "get works where topic is (T10878); then get authors of those works; then calculate count",
+    "get works where topic is (T10878); then get authors of those works; then summarize using count",
     "get works where year >= (2020); then get each funder of those works; "
-    "then get all that funder's works; then calculate mean citation count",
+    "then get all that funder's works; then summarize using mean citation count",
     "get works where year >= (2020); then get SDGs of those works",
     "get works where year >= (2020); then get each SDG of those works; "
-    "then get all that SDG's works where year >= (2024); then calculate count",
+    "then get all that SDG's works where year >= (2024); then summarize using count",
     "get works where title has (kelp); then get authors of those works; "
-    "then get all those authors' works; then group those works by year; then calculate count",
-    "get authors where h-index > (50); then get all those authors' works; then calculate count",
+    "then get all those authors' works; then group those works by year; then summarize using count",
+    "get authors where h-index > (50); then get all those authors' works; then summarize using count",
     "get works where it's cited by works in (get works where institution is (I146416000))",
     "get works where it isn't cited by works in (get works where institution is (I146416000))",
     "get works where institution is not in (get works where title has (kelp); "
@@ -51,7 +51,7 @@ def test_round_trip(q):
 
 def test_walk_oqo_shape():
     o = parse("get works where title-abstract has (kelp); then get each author of those works "
-              "where h-index > (20); then get all that author's works; then calculate count")
+              "where h-index > (20); then get all that author's works; then summarize using count")
     assert o.to_dict()["walks"] == [
         {"column_id": "authorships.author.id", "each": True,
          "where": {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}},
@@ -149,11 +149,11 @@ def _v(d):
 
 def test_validator_accepts_the_examples():
     for q in ["get works where institution is (I63966007); then get each author of those "
-              "works; then get all that author's works; then calculate mean FWCI",
+              "works; then get all that author's works; then summarize using mean FWCI",
               "get works where it cites works in (get works where institution is "
-              "(I146416000)); then group those works by country; then calculate count",
+              "(I146416000)); then group those works by country; then summarize using count",
               "get authors where h-index > (50); then get all those authors' works; then "
-              "group those works by year; then calculate count"]:
+              "group those works by year; then summarize using count"]:
         assert validate_oqo(parse(q)).valid, q
 
 
@@ -214,7 +214,7 @@ def test_idset_translates_to_chunked_terms_and_echoes_small():
 
 def test_walk_price_counts_the_calls():
     o = parse("get works where title has (kelp); then get authors of those works; "
-              "then calculate count")
+              "then summarize using count")
     p = W.walk_price(o, 7)
     assert p["credits"] == 10 + 6
     assert p["steps"][-1]["what"] == "walks and sets: 6 more calls"
@@ -241,7 +241,7 @@ def test_a_walk_that_ends_at_the_things_lists_them_as_rung_1_splits():
     "get institutions where collaborator is not (I63966007)",
     "get works where title has (kelp); then get each author of those works "
     "where co-author is not (A5026692680); then get all that author's works; "
-    "then calculate count",
+    "then summarize using count",
 ])
 def test_cooccurrence_round_trip(q):
     assert _line(q) == modern(q)

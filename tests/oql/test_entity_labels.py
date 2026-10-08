@@ -127,7 +127,7 @@ def test_old_bare_and_url_forms(q):
 def test_multi_line_echo_round_trips_with_names():
     q = ("get works where institution is I1 and topic is T10032 and funder is F4320334764 "
          "and year >= 2020 and type is article; then group those works by institution "
-         "in (I1, I63966007); then calculate count")
+         "in (I1, I63966007); then summarize using count")
     echo = _echo(q)
     assert "\n" in echo
     assert _canon(echo) == _canon(q)

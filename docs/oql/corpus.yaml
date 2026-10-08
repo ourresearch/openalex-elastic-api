@@ -4441,8 +4441,8 @@ rows:
     type: "spec design"
     label: 'A calculation is the last step'
   status: error
-  oql: 'get works where year > (2020); then calculate count; then group those works by year'
-  diagnostic: OQL_STEP_AFTER_CALCULATE
+  oql: 'get works where year > (2020); then, summarize using count; then, group those works by year'
+  diagnostic: OQL_STEP_AFTER_SUMMARY
 - id: 228
   tags: [pipeline]
   provenance:
@@ -4615,5 +4615,5 @@ rows:
     type: "spec design"
     label: 'A query in parentheses returns things, not numbers (oxjob #1535)'
   status: error
-  oql: 'get works where author is in (get works where title has (kelp); then get authors of those works; then calculate count)'
+  oql: 'get works where author is in (get works where title has (kelp); then get authors of those works; then, summarize using count)'
   diagnostic: OQL_QUERY_SET_RETURNS_NUMBERS
