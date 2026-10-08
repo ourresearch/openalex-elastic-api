@@ -4070,9 +4070,18 @@ class _Parser:
         while True:
             self._skip_annot()
             nt = self.peek()
-            if nt is not None and (nt.kind == "COMMA" or self.word_is("and", "then")) \
-                    and self.word_is("by", k=1):
-                self.i += 2
+            last = self._more_splits[-1] if self._more_splits else g
+            # `by author and year`, `by year, type, and country`, `and by year`
+            lead = 0
+            if nt is not None and nt.kind == "COMMA":
+                lead = 2 if self.word_is("and", k=1) else 1
+            elif self.word_is("and", "then"):
+                lead = 1
+            by = lead and self.word_is("by", k=lead)
+            bare = (lead and not by and last.where is None and last.bins is None
+                    and not self.word_is("then") and self._at_known_field(self.i + lead))
+            if by or bare:
+                self.i += lead + (1 if by else 0)
                 m = self._parse_split_by(entity)
                 self._skip_annot()
                 if self.word_is("where"):

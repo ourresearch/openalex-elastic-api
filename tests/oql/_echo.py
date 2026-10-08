@@ -181,10 +181,55 @@ def _modern_inner(text):
     return set_phrase(modern(text))
 
 
+_GROUP = re.compile(r"^group those (\w+) (again )?(by|into) (.*)$")
+
+
+def merge_splits(steps):
+    """`group those works by A; then group those works again by B` -> `group those
+    works by A and B` (Jason 2026-10-08): `and by` after a group filter or bins, the
+    Oxford comma for three plain splits; a later bins split reads `by <field> bins`."""
+    out, run = [], []
+
+    def flush():
+        if not run:
+            return
+        noun = run[0][0]
+        parts = [(m3, rest) for _n, m3, rest in run]
+        plain = len(parts) >= 3 and all(m3 == "by" and " where " not in r for m3, r in parts)
+        text = f"group those {noun} {parts[0][0]} {parts[0][1]}"
+        for i in range(1, len(parts)):
+            m3, rest = parts[i]
+            prev_m3, prev = parts[i - 1]
+            if plain:
+                text += (", and " if i == len(parts) - 1 else ", ") + rest
+            elif m3 == "into":
+                text += " and by " + rest
+            elif " where " in prev or prev_m3 == "into":
+                text += " and by " + rest
+            else:
+                text += " and " + rest
+        out.append(text)
+        run.clear()
+
+    for s in steps:
+        m = _GROUP.match(s)
+        if m and m[3] != "into" or m and " bins " in m[4]:
+            if m[2] and run:
+                run.append((m[1], m[3], m[4]))
+                continue
+            flush()
+            run.append((m[1], m[3], m[4]))
+            continue
+        flush()
+        out.append(s)
+    flush()
+    return out
+
+
 def modern(text):
     text = named_sets(set_words(bare_values(text)))
     head, *steps = _top_level_parts(_inner(text, _modern_inner))
-    steps = [_bare(s) for s in steps]
+    steps = merge_splits([_bare(s) for s in steps])
     steps = [SUMMARIZE + english_list(s[len("calculate "):].split(", "))
              if s.startswith("calculate ") else s for s in steps]
     return "; ".join([head] + [f"{w}, {s}" for w, s in zip(transitions(len(steps)), steps)])

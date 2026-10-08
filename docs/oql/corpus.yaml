@@ -4344,8 +4344,7 @@ rows:
   status: ok
   oql: |-
     get works where institution is [MIT](I63966007) and year >= 2020;
-    then, group those works by year;
-    then, group those works again into FWCI bins of 0.5;
+    then, group those works by year and by FWCI bins of 0.5;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}, {"column_id": "publication_year", "value": 2020, "operator": ">="}], "group_by": [{"column_id": "publication_year"}, {"column_id": "fwci", "bins": {"of": 0.5}}], "calculate": [{"measure": "count"}]}
 - id: 219

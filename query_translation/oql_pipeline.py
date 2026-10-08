@@ -587,7 +587,18 @@ def compare_text(splits: List[GroupBy], entity: str, noun: str, resolver=None) -
                    "singular": _singular_noun(ge) if ge else None}
             t += " where " + _group_where_text(b.where, ctx, resolver)
         bys.append(t)
-    return text + "".join((" " if i == 0 else " and ") + t for i, t in enumerate(bys))
+    out = text
+    for i, t in enumerate(bys):
+        if i == 0:
+            out += " " + t
+        elif splits[i].where is not None or splits[i].bins is not None \
+                or splits[i + 1].bins is not None:   # `and by` after a filter or bins
+            out += " and " + t
+        elif len(bys) >= 3 and all(b.where is None and b.bins is None for b in splits[1:]):
+            out += (", and " if i == len(bys) - 1 else ", ") + t[len("by "):]
+        else:                                  # `by year and type`
+            out += " and " + t[len("by "):]
+    return out
 
 
 def _search_item_text(tree) -> str:
@@ -742,16 +753,39 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
                 meta=StepMeta("calculate", data={
                     "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
         return
+    # `group those works by author and year` (Jason 2026-10-08): every split in one
+    # step, joined `and`; `and by` after a group filter, so the next split can't read
+    # as part of the condition. A listed set of conditions keeps its own step.
+    cur = None
+    plain_run = (len(oqo.group_by) >= 3 and all(
+        g.where is None and g.bins is None and g.conditions is None for g in oqo.group_by))
     for i, g in enumerate(oqo.group_by):
-        prefix, segs = _split_segments(g, noun, again=i > 0, resolver=resolver)
+        prefix, segs = _split_segments(g, noun, again=cur is not None, resolver=resolver)
+        if cur is not None and g.bins is not None:
+            segs = [_text("by ")] + segs      # `... and by citation count bins at (...)`
         if g.where is not None:
             from query_translation.oql_lang import _group_entity, _singular_noun
             ge = _group_entity(g, entity)
             ctx = {"noun": noun, "group_entity": ge,
                    "singular": _singular_noun(ge) if ge else None}
             segs = segs + [_text(" where " + _group_where_text(g.where, ctx, resolver))]
-        steps.append(StepDirective(prefix=prefix, segments=segs,
-                                   meta=StepMeta("split", index=i, data=g.to_dict())))
+        if cur is not None and g.conditions is None:
+            prev = oqo.group_by[i - 1]
+            if plain_run:   # `by year, type, and country` (the Oxford comma, as in lists)
+                joiner = ", and " if i == len(oqo.group_by) - 1 else ", "
+            elif g.bins is not None:
+                joiner = " and "
+            elif prev.where is not None or prev.bins is not None:
+                joiner = " and by "
+            else:
+                joiner = " and "
+            cur.segments = cur.segments + [_text(joiner)] + segs
+            cur.meta.data.setdefault("splits", [oqo.group_by[cur.meta.index].to_dict()])
+            cur.meta.data["splits"].append(g.to_dict())
+            continue
+        cur = StepDirective(prefix=prefix, segments=segs,
+                            meta=StepMeta("split", index=i, data=g.to_dict()))
+        steps.append(cur)
     if oqo.calculate:
         text = english_list([measure_text(m, noun) for m in oqo.calculate])
         steps.append(StepDirective(

@@ -49,3 +49,28 @@ def test_a_saved_list_of_works_echoes_as_a_start():
     echo = render_pipeline_line(canonicalize_oqo(parse("get works in (col_mylist) where year > 2020")))
     assert echo == "get works in the collection (col_mylist) where year > 2020"
     assert _canon(echo) == _canon("get works in (col_mylist) where year > 2020")
+
+
+# Jason 2026-10-08: the splits read as one step, `by author and year` (no second `by`);
+# `and by` after a group filter or bins; the Oxford comma for three. Either is accepted.
+ECHOES = [
+    ("get works where year > 2015; then group by author; then group again by year; then summarize using count",
+     "get works where year > 2015; then, group those works by author and year; finally, summarize using count"),
+    ("get works where year > 2015; then group those works by year and by type and by country",
+     "get works where year > 2015; then, group those works by year, type, and country"),
+    ("get works where title-abstract has kelp; then group by author where count of those works > 10; "
+     "then group again by year",
+     "get works where title-abstract has (kelp); then, group those works by author where count of those "
+     "works > 10 and by year"),
+    ("get works where year > 2015; then group those works into citation count bins at (1, 10); then group again by year",
+     "get works where year > 2015; then, group those works into citation count bins at (1, 10) and by year"),
+    ("get works where year > 2020; then compare type article versus review by year and by country",
+     "get works where year > 2020; then, compare type [article](article) versus [review](review) by year and country"),
+]
+
+
+@pytest.mark.parametrize("q,echo", ECHOES)
+def test_splits_read_as_one_step(q, echo):
+    o = canonicalize_oqo(parse(q))
+    assert render_pipeline_line(o) == echo
+    assert _canon(echo) == o.to_dict()
