@@ -151,3 +151,19 @@ AFTER_A_VALUE = [
 @pytest.mark.parametrize("q,road", AFTER_A_VALUE)
 def test_a_condition_after_a_plain_value(q, road):
     assert _canon(q) == _canon(road)
+
+
+# Jason 2026-10-08: a yes/no flag echoes as its sentence; flags with none keep `is true|false`.
+FLAG_ECHOES = [
+    ("get works where country is GH and retracted is false and has abstract is true",
+     "get works where country is [Ghana](GH) and it has an abstract and it's not retracted"),
+    ("get works where global south is true and PubMed is false",
+     "get works where it's from the global south and it's not indexed by PubMed"),
+]
+
+
+@pytest.mark.parametrize("q,echo", FLAG_ECHOES)
+def test_a_flag_echoes_as_its_sentence(q, echo):
+    o = canonicalize_oqo(parse(q))
+    assert render_pipeline_line(o) == echo
+    assert _canon(echo) == o.to_dict()

@@ -337,9 +337,25 @@ def _meta_without_vtree(meta: ClauseMeta) -> ClauseMeta:
     return replace(meta, vtree=None)
 
 
+def _flag_sentence(cn: ClauseNode) -> Optional[ClauseNode]:
+    """A yes/no flag as its sentence (Jason 2026-10-08): `it's not retracted`, `it has
+    a DOI`; flags with no sentence keep `<flag> is true|false`."""
+    from query_translation.oql_bool_phrases import BOOL_PHRASES
+    meta = cn.meta
+    if cn.clause_kind != "boolean" or meta is None or not isinstance(meta.value, bool) \
+            or (meta.operator or "is") != "is":
+        return None
+    pair = BOOL_PHRASES.get(meta.column_id)
+    if pair is None:
+        return None
+    return ClauseNode(segments=[L._seg("column", pair[0] if meta.value else pair[1],
+                                       column_id=meta.column_id)],
+                      clause_kind=cn.clause_kind, meta=_meta_without_vtree(meta))
+
+
 def _pipeline_expr(node, resolver=None):
     if isinstance(node, ClauseNode):
-        return _bare_values(_pipeline_clause(node), resolver)
+        return _flag_sentence(node) or _bare_values(_pipeline_clause(node), resolver)
     if isinstance(node, GroupNode):
         node.children = [_pipeline_expr(c, resolver) for c in node.children]
     return node

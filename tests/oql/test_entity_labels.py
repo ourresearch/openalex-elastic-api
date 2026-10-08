@@ -140,7 +140,7 @@ def test_multi_line_echo_round_trips_with_names():
      "get works where institution is ([Massachusetts Institute of Technology](I63966007) "
      "or [Stanford University](I97018004))"),
     ("works where year >= (2020) and type is not (review) and open access is (true)",
-     "get works where open access is true and year >= 2020 and type is not [review](review)"),
+     "get works where it's open access and year >= 2020 and type is not [review](review)"),
     ("works where country is KE and language is fr",
      "get works where country is [Kenya](KE) and language is [French](fr)"),
     ("works where institution is I999", "get works where institution is (I999)"),
