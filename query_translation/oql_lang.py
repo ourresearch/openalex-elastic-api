@@ -5154,6 +5154,10 @@ def _render_term(value: str, column: str) -> str:
         toks = split_exact_words(value)
         if toks:
             return " and ".join(f'"{t}"' for t in toks)
+        # a one-word wildcard renders bare, Scopus-style (`adolescen*`): the parser
+        # reads a bare one-word wildcard as exact (Jason 2026-10-08, oxjob #1555)
+        if ("*" in value or "?" in value) and not any(c in value for c in ' "()[],;!~'):
+            return value
         # exact single word/token => quoted (`.search.exact` carries exactness)
         return f'"{value}"'
     # A stemmed value is ONE node (#1 single node, D2 reversal): emit its inner

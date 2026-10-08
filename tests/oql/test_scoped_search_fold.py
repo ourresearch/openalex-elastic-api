@@ -156,7 +156,7 @@ def test_wildcard_token_splits_and_renders():
     assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
     values = [r["value"] for r in oqo.to_dict()["filter_rows"]]
     assert values == ["cancer", "treat*"]
-    assert 'has ("cancer" and "treat*")' in render(oqo)
+    assert 'has ("cancer" and treat*)' in render(oqo)   # a one-word wildcard is bare (#1555)
 
 
 def test_exact_boolean_lift_renders_faithful_oql():

@@ -344,7 +344,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:bar*'
   status: ok
-  oql: 'works where title has ("bar*")'
+  oql: 'works where title has (bar*)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'bar*', operator: has}]}
   note: 'Quoted wildcard = the sanctioned path (oxjob #364): runs on the no-stem `.search.exact` column. Reverses #337''s old `OQL_WILDCARD_IN_QUOTES` — quotes are now where wildcards belong (stemming would drop the literal prefix).'
 
@@ -356,7 +356,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:bar*'
   status: ok
-  oql: 'works where title has ("bar*")'
+  oql: 'works where title has (bar*)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'bar*', operator: has}]}
   note: 'A bare one-word wildcard runs on exact (no-stem) text, as if quoted (oxjob #1555, Haiku''s cow path; was OQL_WILDCARD_NEEDS_EXACT since #364, whose fix-it said to quote it). Stemming would remove the literal prefix, so the word is read as exact; a multi-word bare run with a wildcard still errors.'
 
@@ -380,7 +380,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:foo*bar'
   status: ok
-  oql: 'works where title has ("foo*bar")'
+  oql: 'works where title has (foo*bar)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'foo*bar', operator: has}]}
   note: Mid-word `*` (>=3-char prefix, within one token), quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `foo*bar` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -392,7 +392,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:wom%3Fn'
   status: ok
-  oql: 'works where title has ("wom?n")'
+  oql: 'works where title has (wom?n)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'wom?n', operator: has}]}
   note: Mid-word `?` = exactly one character, quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `wom?n` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -952,7 +952,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:phone*'
   status: ok
-  oql: 'works where title-abstract has ("phone*")'
+  oql: 'works where title-abstract has (phone*)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'phone*', operator: has}]}
   note: 'Trailing wildcard, quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `phone*` is now an error (OQL_WILDCARD_NEEDS_EXACT) — stemming would drop the literal prefix.'
 
@@ -990,7 +990,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:behavio*r'
   status: ok
-  oql: 'works where title-abstract has ("behavio*r")'
+  oql: 'works where title-abstract has (behavio*r)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'behavio*r', operator: has}]}
   note: Mid-word wildcard (UK/US spellings in one query), quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `behavio*r` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -2378,7 +2378,7 @@ rows:
         Iran
         and (colimycin or colistimethate or colistin or "Polymyxin E")
         and ("K.pneumoniae" or "Klebsiella pneumoniae")
-        and ("Resistan*" or "suscep*")
+        and (Resistan* or suscep*)
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: Iran, operator: has},
     {join: or, filters: [{column_id: title_and_abstract.search, value: colimycin, operator: has},
@@ -2526,7 +2526,7 @@ rows:
           facebook or instagram or linkedin or reddit or tiktok or twitter
           or youtube or "sina weibo" or "social media"
         )
-        and ("immuni*" or "vaccin*")
+        and (immuni* or vaccin*)
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: facebook,
     operator: has}, {column_id: title_and_abstract.search, value: instagram, operator: has},
@@ -2601,7 +2601,7 @@ rows:
           or "energy source*"
           or "renewable energy"
         )
-        and ("college*" or "school*" or "universit*")
+        and (college* or school* or universit*)
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search.exact,
     value: '"clean energy"', operator: has}, {column_id: title_and_abstract.search.exact,
@@ -2792,7 +2792,7 @@ rows:
     1.1.0 or
     1.1.1 engineering
     1.1.2 industry
-    1.1.3 "application*"
+    1.1.3 application*
     1.2 ( … )
     1.2.0 or
     1.2.1 genai
@@ -2809,7 +2809,7 @@ rows:
     2.2.1 ( … )
     2.2.1.0 or
     2.2.1.1 generation
-    2.2.1.2 "model*"
+    2.2.1.2 model*
     2.2.2 ( … )
     2.2.2.0 or
     2.2.2.1 multimodal
@@ -2830,12 +2830,12 @@ rows:
     keyword text field). (source DB: Scopus).
   oql: |-
     works where title has (
-        (engineering or industry or "application*")
+        (engineering or industry or application*)
         and (genai or "generative ai" or "generative artificial intelligence")
       )
       and title-abstract has (
         (generation and text)
-        or ((generation or "model*") and (multimodal or nlp or "natural language"))
+        or ((generation or model*) and (multimodal or nlp or "natural language"))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: engineering,
     operator: has}, {column_id: display_name.search, value: industry, operator: has},
@@ -2881,9 +2881,7 @@ rows:
     Web of Science TI= OR AB=: an OR ACROSS two different fields (title vs
     abstract). Classic URL filters cannot OR across fields -> oql-only (the
     #191.7 cross-field-OR shape). (source DB: Web of Science).
-  oql: |-
-    works where abstract has ("Suzuki*" and "music*")
-      or title has ("Suzuki*" and "music*")
+  oql: 'works where abstract has (Suzuki* and music*) or title has (Suzuki* and music*)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{join: and, filters: [{column_id: abstract.search.exact,
     value: Suzuki*, operator: has}, {column_id: abstract.search.exact, value: music*,
     operator: has}]}, {join: and, filters: [{column_id: display_name.search.exact,
@@ -3219,8 +3217,7 @@ rows:
         )
         and (
           Policies or context or electoral or policy or political or reform
-          or reforming or "national standards" or "school improvement"
-          or "influence*"
+          or reforming or "national standards" or "school improvement" or influence*
         )
         and (evidence or literature)
         and (
@@ -3974,7 +3971,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:!climat*'
   status: ok
-  oql: 'works where title has (not "climat*")'
+  oql: 'works where title has (not climat*)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'climat*', operator: has, is_negated: true}]}
   note: 'A negated bare one-word wildcard reads as exact text like a positive one (oxjob #1555; was OQL_WILDCARD_NEEDS_EXACT).'
 - id: 180
@@ -4181,7 +4178,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:e-cigarette*'
   status: ok
-  oql: 'works where title has ("e-cigarette*")'
+  oql: 'works where title has (e-cigarette*)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'e-cigarette*', operator: has}]}
   note: 'The standard tokenizer splits `e-cigarette` into `e` + `cigarette`, so the engine compiles `e-cigarette*` as an adjacency `intervals` query: match `e` then prefix `cigarette` (ordered, max_gaps=0) — the same query `"e cigarette*"` already built (live works-v34: both 10,850). Before #1260 OQL rejected it as OQL_SHORT_WILDCARD_PREFIX (the check counted from the token start and saw only `e`), and the classic filter ran a literal `e-cigarette` prefix that matched nothing (0 hits, silently). The 3-char floor is measured on the run right before the `*`: `x-ray*`, `t-cell*` pass; `covid-19*` does not (row 206).'
 - id: 206

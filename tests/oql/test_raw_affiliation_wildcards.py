@@ -44,7 +44,7 @@ def test_simple_quoted_wildcard_parses_to_exact_column_and_round_trips():
         ("raw_affiliation_strings.search.exact", "process*")]
     rendered, identity = _rt('works where raw affiliation has "process*"')
     assert identity, rendered
-    assert rendered == 'works where raw affiliation has ("process*")'
+    assert rendered == 'works where raw affiliation has (process*)'   # bare (#1555)
 
 
 def test_nathalies_one_liner_parses_and_round_trips():
