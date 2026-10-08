@@ -554,6 +554,11 @@ def _compare_item(tree, resolver=None) -> Tuple[Optional[str], str]:
         name = L._oql_field(tree.column_id)[0]
         if text.startswith(name + " is "):
             return name, text[len(name) + 4:]
+    if isinstance(tree, LeafFilter):
+        # `versus not country [India](IN)`: `not` in front, as for a yes/no field
+        name = L._oql_field(tree.column_id)[0]
+        if text.startswith(name + " is not "):
+            return None, f"not {name} {text[len(name) + 8:]}"
     text = _drop_is(text)
     if isinstance(tree, BranchFilter):
         leaves = tree.filters

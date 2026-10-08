@@ -2978,6 +2978,10 @@ class _Parser:
         else:
             ns = (entity_type_for_column(fld.column, self._entity)
                   if fld.kind in ("id", "enum") else None)
+            if fld.kind == "string" and ns is None:
+                # licenses are strings the echo writes as links (`[CC-BY](cc-by)`)
+                et = entity_type_for_column(fld.column, self._entity)
+                ns = et if et in _READABLE_SLUG_TYPES else None
         labeled = self._labeled_value(fld, ns) if ns is not None else None
         if labeled is not None:
             t, val = labeled

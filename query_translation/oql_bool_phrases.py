@@ -85,6 +85,26 @@ _PATTERNS = sorted(
     [(_phrase_words(p), col, val) for col, (pt, pf) in BOOL_PHRASES.items()
      for p, val in ((pt, True), (pf, False))],
     key=lambda x: -len(x[0]))
+_ALL_PATTERNS = None
+
+
+def _name_patterns():
+    """Sentences built from each yes/no field's own OQL names: `it's top 10% cited`,
+    `it's not paratext`, `it has PMCID`, `it doesn't have references` (cow paths round
+    3, 2026-10-08: Haiku wrote `it's top 10% cited` for a flag whose June sentence is
+    `it's in the top 10% by citations`)."""
+    from query_translation.oql_lang import _FIELDS
+    out = []
+    for spellings, fld in _FIELDS:
+        if fld.kind != "bool":
+            continue
+        for name in spellings:
+            if name.startswith("has "):
+                pairs = ((f"it has {name[4:]}", True), (f"it does not have {name[4:]}", False))
+            else:
+                pairs = ((f"it is {name}", True), (f"it is not {name}", False))
+            out += [(_phrase_words(p), fld.column, val) for p, val in pairs]
+    return out
 
 
 def match(words: List[str], entity: Optional[str] = None) -> Optional[Tuple[str, bool, int]]:
@@ -94,9 +114,12 @@ def match(words: List[str], entity: Optional[str] = None) -> Optional[Tuple[str,
     entity has wins."""
     if not words or words[0].lower() not in ("it", "it's", "it’s", "its"):
         return None
+    global _ALL_PATTERNS
+    if _ALL_PATTERNS is None:
+        _ALL_PATTERNS = sorted(_PATTERNS + _name_patterns(), key=lambda x: -len(x[0]))
     norm = _norm(words)
     seq = [w for w, _i in norm]
-    hits = [(col, val, len(pat)) for pat, col, val in _PATTERNS if seq[:len(pat)] == pat]
+    hits = [(col, val, len(pat)) for pat, col, val in _ALL_PATTERNS if seq[:len(pat)] == pat]
     if not hits:
         return None
     longest = max(n for _c, _v, n in hits)

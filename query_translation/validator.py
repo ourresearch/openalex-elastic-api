@@ -732,6 +732,10 @@ class OQOValidator:
                     message=f"'{f.column_id}' filters {want} groups, not {group_entity}.",
                     location=loc)]
             return []
+        if f.column_id == "ids.openalex":
+            # `that country is not [Iran](IR)`: the group itself, matched on its bucket
+            # key by the engine for every kind of group (countries have no id column)
+            return []
         g_entity = _resolve_property_entity(group_entity)
         g_columns = get_entity_properties(g_entity) if g_entity else None
         if not g_columns:

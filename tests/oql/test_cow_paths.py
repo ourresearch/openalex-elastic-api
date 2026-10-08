@@ -167,3 +167,50 @@ def test_a_flag_echoes_as_its_sentence(q, echo):
     o = canonicalize_oqo(parse(q))
     assert render_pipeline_line(o) == echo
     assert _canon(echo) == o.to_dict()
+
+
+# Round 3 (Haiku 5.5, guide v4, 300 fresh questions, 2026-10-08): 286 valid; these are the
+# misses that were ours.
+ROUND_3 = [
+    # a flag sentence from the flag's own name (its June sentence is `it's in the top 10%
+    # by citations`)
+    ("get works where it's top 10% cited and year > 2020",
+     "get works where top 10% cited is true and year > 2020"),
+    ("get works where it's not top 1% cited", "get works where top 1% cited is false"),
+    ("get works where it has PMCID and it doesn't have references and it's not paratext",
+     "get works where has PMCID is true and has references is false and paratext is false"),
+    ("get sources where it's DOAJ", "get sources where DOAJ is true"),
+    # a license as a link: the echo writes one, so it has to read one back
+    ("get works where license is [CC BY](cc-by)", "get works where license is cc-by"),
+    ("get works where license is ([CC-BY](cc-by) or [CC-BY-SA](cc-by-sa))",
+     "get works where license is (cc-by or cc-by-sa)"),
+]
+
+
+@pytest.mark.parametrize("cow,road", ROUND_3)
+def test_cow_path_round_3(cow, road):
+    assert _canon(cow) == _canon(road)
+
+
+def test_every_linked_value_reads_back():
+    """Whatever the echo writes as a link parses back to the same query (licenses are
+    strings the echo links)."""
+    for q in ["get works where license is cc-by", "get works where best OA license is cc-by-nc",
+              "get works where any location license is cc-by-sa"]:
+        o = canonicalize_oqo(parse(q))
+        echo = render_pipeline_line(o)
+        assert "](cc-by" in echo
+        assert _canon(echo) == o.to_dict()
+
+
+def test_not_in_front_of_a_compared_condition():
+    echo = render_pipeline_line(canonicalize_oqo(parse(
+        "get works where year > 2020; then compare country IN versus country is not IN")))
+    assert echo.endswith("compare country [India](IN) versus not country [India](IN)")
+
+
+def test_that_country_is_a_valid_group_filter():
+    from query_translation.validator import validate_oqo
+    o = canonicalize_oqo(parse("get works where year > 2020; then group those works by "
+                               "country where that country is not [Iran](IR)"))
+    assert validate_oqo(o).valid
