@@ -118,15 +118,16 @@ def index():
         view_param_keys = ("sort", "select", "page", "per_page", "cursor")
         # rerank (oxjob #1521) rides beside the view params but isn't one: it is read
         # from flask.g by query_translation/execution.py, not folded into the OQO.
-        # format ("csv": a pipeline result as a zip, oxjob #1530) rides the same way.
-        allowed_keys = ("oql", "oqo", "rerank", "format") + view_param_keys
+        # format ("csv": a pipeline result as a CSV, oxjob #1530) and table ("groups"
+        # or "summary": which CSV, oxjob #1550) ride the same way.
+        allowed_keys = ("oql", "oqo", "rerank", "format", "table") + view_param_keys
         extra_keys = [k for k in body if k not in allowed_keys]
         if extra_keys:
             return _error_response(
                 "Unexpected top-level key(s) in request body: "
                 f"{', '.join(sorted(extra_keys))}. The body may contain one of "
                 "'oql'/'oqo' plus the sibling view params "
-                "(sort/select/page/per_page/cursor), rerank and format. sample/seed belong inside "
+                "(sort/select/page/per_page/cursor), rerank, format and table. sample/seed belong inside "
                 "the OQO.",
                 "invalid_body",
                 status=400,
@@ -147,6 +148,9 @@ def index():
         if body.get("format") is not None:
             from flask import g
             g.format_param = body["format"]
+        if body.get("table") is not None:
+            from flask import g
+            g.table_param = body["table"]
         if "oqo" in body:
             return execute_oqo_dict(body["oqo"], view_params=view_params)
         if "oql" in body:

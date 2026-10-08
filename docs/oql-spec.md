@@ -854,9 +854,12 @@ get <entity> [ where <conditions> ]
   `mean authors count`.
 - **Walks** (`get each author of those works`) are Rung 2: `OQL_WALK_NOT_YET`.
 
-**Results.** Every grouped result has one row per group (nested groups under their
-parents) with one column per measure, plus a **total row** for the whole starting set with
-the same measures and the same later splits.
+**Results.** Every grouped result has one row per group (in the JSON, nested groups under
+their parents; on the website and in the CSV, flat, a column per split) with one column per
+measure, plus a **summary** (`summary` in the JSON): the whole starting set (`summary.all`)
+and, with two or more splits, each split's groups on their own over the whole set
+(`summary.splits[i].groups`, in the order of `meta.splits`). Summary numbers are computed
+from the works, never from the group rows.
 
 **Negation and search in the canonical form.** Filters negate on the verb: `type is not
 (review)`, `institution is not (I1 or I2)`, `topic is not in (col_x)`. A search renders as

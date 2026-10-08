@@ -91,8 +91,8 @@ get works where institution is (I63966007); then group those works into citation
 Splits by a field, by listed values (up to 100), by searches (up to 100, at most 5 AND/OR/NOT
 each), by conditions (compare sets, or periods), or into bins (`bins at (...)` or `bins of
 (10)`). A yes/no field gives two groups: `open access` and `not open access`. Every grouped
-result also has a **total row** for the whole starting set, so start from the widest set you
-compare against.
+result also has a **summary**: the whole starting set, and each split's groups on their own,
+computed from the works, so start from the widest set you compare against.
 
 **Filter the groups** with `where`: a calculation tests each group's works; any other field
 belongs to the group itself.

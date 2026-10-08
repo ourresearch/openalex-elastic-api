@@ -1,19 +1,24 @@
-"""Pipeline results as a download (oxjob #1530; spec from #1536, Jason 2026-10-03):
-a zip of `groups.csv` (one row per innermost group, ancestors repeated), `totals.csv`
-(the total row and its breakdown, and each outer group's own row: they don't sum
-from the leaves) and `query.oql` (the query, when it ran, how many works, the price).
+"""Pipeline results as two flat CSVs (oxjob #1550, Jason 2026-10-05: "JSON wants to
+nest. CSV wants to be flat."), replacing #1530's zip:
+
+- the groups table: one row per innermost group, a column per split (ancestors
+  repeated), so every row stands on its own and sorts on its own;
+- the summary table: the whole set, then each split's groups on their own, all
+  computed from the works (never summed or averaged from group rows). Its first
+  column says what the row summarizes (`all works`, `year`); the split columns it
+  doesn't break down are empty.
+
 Headers are OQL words: each split's (`institution`, plus `institution id` for
 splits by things with ids) and each calculation's (`meta.measures[].oql`)."""
 import csv
 import io
 import re
-import zipfile
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 
-from query_translation.oqo import OQO, GroupBy
+from query_translation.oqo import GroupBy
 
 KINDS = ("column", "values", "searches", "bins", "conditions")
+TABLES = ("groups", "summary")
 
 
 def split_meta(g: GroupBy, entity: str) -> dict:
@@ -77,22 +82,6 @@ def _leaves(rows: List[dict], depth: int, n: int, path: List[dict]):
             yield p, r
 
 
-def _all_rows(rows: List[dict], depth: int, n: int, path: List[Optional[dict]]):
-    for r in rows:
-        p = path + [r]
-        yield p, r
-        if depth + 1 < n:
-            yield from _all_rows(r.get("groups") or [], depth + 1, n, p)
-
-
-def _subtotals(rows: List[dict], depth: int, n: int, path: List[dict]):
-    """Each non-innermost group's own row."""
-    for r in rows:
-        if depth + 1 < n:
-            yield path + [r], r
-            yield from _subtotals(r.get("groups") or [], depth + 1, n, path + [r])
-
-
 def _csv(header: List[str], rows: List[List[str]]) -> str:
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
@@ -101,44 +90,39 @@ def _csv(header: List[str], rows: List[List[str]]) -> str:
     return buf.getvalue()
 
 
-def filename(oql_text: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", oql_text.lower()).strip("-")[:80].strip("-")
-    return f"openalex-{slug or 'query'}.zip"
-
-
-def build_zip(oqo: OQO, body: dict, cost: dict, oql_text: str,
-              cap_note: Optional[str] = None) -> Tuple[bytes, str]:
+def groups_csv(body: dict) -> str:
+    """The groups table, flat. A calculation with no split is one row: the whole set."""
     meta = body["meta"]
-    splits = meta.get("splits") or [split_meta(g, oqo.get_rows) for g in oqo.group_by]
-    measures = meta["measures"]
+    splits, measures = meta["splits"], meta["measures"]
     n = len(splits)
-    pad = lambda p: p + [None] * (n - len(p))  # noqa: E731
+    if not n:
+        return _csv(_header([], measures), [_cells([], [], body["summary"]["all"], measures)])
+    rows = [_cells(splits, p, r, measures) for p, r in _leaves(body.get("group_by") or [], 0, n, [])]
+    return _csv(_header(splits, measures), rows)
 
-    groups = [_cells(splits, pad(p), r, measures)
-              for p, r in _leaves(body.get("group_by") or [], 0, n, [])] if n else []
 
-    total = body["total"]
-    totals = [["total"] + _cells(splits, [None] * n, total, measures)]
-    if n > 1:
-        totals += [["total"] + _cells(splits, pad([None] + p), r, measures)
-                   for p, r in _all_rows(total.get("groups") or [], 1, n, [])]
-        totals += [["subtotal"] + _cells(splits, pad(p), r, measures)
-                   for p, r in _subtotals(body.get("group_by") or [], 0, n, [])]
+def summary_csv(body: dict, entity: str) -> str:
+    """The summary table: the whole set, then each split's groups on their own."""
+    meta = body["meta"]
+    splits, measures = meta["splits"], meta["measures"]
+    summary = body["summary"]
+    n = len(splits)
+    rows = [[f"all {entity.replace('-', ' ')}"]
+            + _cells(splits, [None] * n, summary["all"], measures)]
+    for i, part in enumerate(summary.get("splits") or []):
+        for r in part["groups"]:
+            path = [r if j == i else None for j in range(n)]
+            rows.append([splits[i]["oql"]] + _cells(splits, path, r, measures))
+    return _csv(["summary of"] + _header(splits, measures), rows)
 
-    header = _header(splits, measures)
-    run_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    noun = oqo.get_rows.replace("-", " ")
-    notes = [f"# run: {run_at}",
-             f"# {noun}: {total.get('count')}",
-             f"# price: {cost['credits']} credit{'s' if cost['credits'] != 1 else ''} "
-             f"(${cost['usd']})"]
-    if cap_note:
-        notes.append(f"# {cap_note}")
-    query = oql_text.rstrip() + "\n\n" + "\n".join(notes) + "\n"
 
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("groups.csv", _csv(header, groups))
-        z.writestr("totals.csv", _csv(["row"] + header, totals))
-        z.writestr("query.oql", query)
-    return out.getvalue(), filename(" ".join(oql_text.split()))
+def filename(oql_text: str, table: str = "groups") -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", oql_text.lower()).strip("-")[:80].strip("-")
+    suffix = "-summary" if table == "summary" else ""
+    return f"openalex-{slug or 'query'}{suffix}.csv"
+
+
+def build_csv(body: dict, entity: str, oql_text: str, table: str = "groups"):
+    """(text, file name) for one of the two tables."""
+    text = summary_csv(body, entity) if table == "summary" else groups_csv(body)
+    return text, filename(" ".join(oql_text.split()), table)

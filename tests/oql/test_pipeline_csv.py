@@ -1,8 +1,8 @@
-"""Pipeline results as a zip (oxjob #1530; spec from #1536): groups.csv one row per
-innermost group, totals.csv the total and subtotal rows, query.oql the query."""
+"""Pipeline results as two flat CSVs (oxjob #1550): the groups table, one row per
+innermost group with a column per split; the summary table, the whole set and each
+split's groups on their own, first column naming what the row summarizes."""
 import csv
 import io
-import zipfile
 
 from query_translation import analytics_csv
 from query_translation.oql_lang import parse
@@ -12,43 +12,75 @@ Q = ("get works where year >= (2020); then group those works by institution in "
      "(I1, I2); then group those works again by year; then calculate count, mean FWCI")
 
 
+def _row(key, name, count, fwci, groups=None):
+    r = {"key": key, "key_display_name": name, "count": count, "mean_fwci": fwci}
+    if groups is not None:
+        r["groups"] = groups
+    return r
+
+
 def _body():
-    def row(key, name, count, fwci, groups=None):
-        r = {"key": key, "key_display_name": name, "count": count, "mean_fwci": fwci}
-        if groups is not None:
-            r["groups"] = groups
-        return r
-    years = lambda a, b: [row("2020", "2020", a, 1.5), row("2021", "2021", b, None)]  # noqa: E731
+    years = lambda a, b: [_row("2020", "2020", a, 1.5), _row("2021", "2021", b, None)]  # noqa: E731
+    mit = _row("https://openalex.org/I1", "MIT", 10, 2.0)
+    stanford = _row("https://openalex.org/I2", "Stanford", 8, 1.75)
+    oqo = canonicalize_oqo(parse(Q))
     return {
         "meta": {"measures": [{"key": "count", "oql": "count"},
-                              {"key": "mean_fwci", "oql": "mean FWCI"}]},
-        "total": row("total", "all works", 100, 1.0, groups=years(60, 40)),
-        "group_by": [row("https://openalex.org/I1", "MIT", 10, 2.0, groups=years(6, 4)),
-                     row("https://openalex.org/I2", "Stanford", 8, 1.75, groups=years(5, 3))],
+                              {"key": "mean_fwci", "oql": "mean FWCI"}],
+                 "splits": [analytics_csv.split_meta(g, "works") for g in oqo.group_by]},
+        "summary": {"all": _row("all", "all works", 100, 1.0),
+                    "splits": [{"groups": [mit, stanford], "more_groups": False},
+                               {"groups": years(60, 40), "more_groups": False}]},
+        "group_by": [dict(mit, groups=years(6, 4)), dict(stanford, groups=years(5, 3))],
     }
 
 
-def _read(z, name):
-    return list(csv.reader(io.StringIO(z.read(name).decode())))
+def _read(text):
+    return list(csv.reader(io.StringIO(text)))
 
 
-def test_the_zip_holds_tidy_groups_totals_and_the_query():
-    oqo = canonicalize_oqo(parse(Q))
-    data, name = analytics_csv.build_zip(oqo, _body(), {"credits": 1, "usd": 0.0001}, Q)
-    assert name.startswith("openalex-get-works-where-year-2020") and name.endswith(".zip")
-    z = zipfile.ZipFile(io.BytesIO(data))
-    groups = _read(z, "groups.csv")
-    assert groups[0] == ["institution", "institution id", "year", "count", "mean FWCI"]
-    assert groups[1] == ["MIT", "I1", "2020", "6", "1.5"]
-    assert groups[2] == ["MIT", "I1", "2021", "4", ""]          # a missing value is empty
-    assert len(groups) == 5
-    totals = _read(z, "totals.csv")
-    assert totals[0][0] == "row"
-    assert totals[1] == ["total", "", "", "", "100", "1"]
-    assert totals[2] == ["total", "", "", "2020", "60", "1.5"]  # the world by year
-    assert ["subtotal", "MIT", "I1", "", "10", "2"] in totals
-    query = z.read("query.oql").decode()
-    assert query.startswith(Q) and "# price: 1 credit ($0.0001)" in query
+def test_the_groups_table_is_flat_a_column_per_split():
+    text, name = analytics_csv.build_csv(_body(), "works", Q)
+    assert name.startswith("openalex-get-works-where-year-2020") and name.endswith(".csv")
+    assert not name.endswith("-summary.csv")
+    rows = _read(text)
+    assert rows[0] == ["institution", "institution id", "year", "count", "mean FWCI"]
+    assert rows[1] == ["MIT", "I1", "2020", "6", "1.5"]
+    assert rows[2] == ["MIT", "I1", "2021", "4", ""]          # a missing value is empty
+    assert rows[3] == ["Stanford", "I2", "2020", "5", "1.5"]  # every row names its groups
+    assert len(rows) == 5
+
+
+def test_the_summary_table_is_the_whole_set_then_each_split_alone():
+    text, name = analytics_csv.build_csv(_body(), "works", Q, table="summary")
+    assert name.endswith("-summary.csv")
+    rows = _read(text)
+    assert rows[0] == ["summary of", "institution", "institution id", "year", "count",
+                       "mean FWCI"]
+    assert rows[1] == ["all works", "", "", "", "100", "1"]
+    assert rows[2] == ["institution", "MIT", "I1", "", "10", "2"]
+    assert rows[3] == ["institution", "Stanford", "I2", "", "8", "1.75"]
+    assert rows[4] == ["year", "", "", "2020", "60", "1.5"]   # the whole set by year
+    assert len(rows) == 6
+
+
+def test_a_calculation_with_no_split_is_one_row_in_both_tables():
+    body = {"meta": {"measures": [{"key": "count", "oql": "count"}], "splits": []},
+            "summary": {"all": {"key": "all", "key_display_name": "all works", "count": 7}},
+            "group_by": []}
+    assert _read(analytics_csv.groups_csv(body)) == [["count"], ["7"]]
+    assert _read(analytics_csv.summary_csv(body, "works")) == [["summary of", "count"],
+                                                                ["all works", "7"]]
+
+
+def test_one_split_summary_is_the_whole_set_only():
+    body = _body()
+    body["meta"]["splits"] = body["meta"]["splits"][:1]
+    body["summary"].pop("splits")
+    body["group_by"] = [dict(r, groups=None) for r in body["group_by"]]
+    rows = _read(analytics_csv.summary_csv(body, "works"))
+    assert rows[1:] == [["all works", "", "", "100", "1"]]
+    assert len(_read(analytics_csv.groups_csv(body))) == 3
 
 
 def test_split_meta_names_each_split_in_oql_words():

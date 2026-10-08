@@ -10,7 +10,10 @@ every measure goes into ONE Elasticsearch request:
     conditions, yes/no
     bins                        range (`at`) or histogram (`of`)
     measures                    avg / percentiles 50 / sum / min / max / a filter for
-                                `percent`, at every level and at the root (the total row)
+                                `percent`, at every level and at the root (the summary's
+                                whole-set row)
+    each inner split alone      the same split at the root, over the whole set (the
+                                summary, #1550)
     group filters on measures   min_doc_count + bucket_selector
 
 Group filters on a group's own fields (an author's h-index), `co-author` and
@@ -896,10 +899,8 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
 
 def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -> dict:
     """The one request: nested split aggs with measures at every level, plus the same
-    measures at the root (the total row)."""
-    inner: Dict[str, dict] = {}
-    chains: Dict[int, Dict[str, dict]] = {}
-    for lv in reversed(levels):
+    measures at the root (the summary's whole-set row) and each inner split alone."""
+    def level_aggs(lv: Level, inner: Dict[str, dict]) -> dict:
         sub = dict(measure_aggs)
         sub.update(inner)
         if lv.selector is not None:
@@ -908,14 +909,17 @@ def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -
         body = dict(lv.agg)
         if sub:
             body["aggs"] = sub
-        inner = {f"s{lv.index}": body}
-        chains[lv.index] = inner
+        return body
+
+    inner: Dict[str, dict] = {}
+    for lv in reversed(levels):
+        inner = {f"s{lv.index}": level_aggs(lv, inner)}
     aggs = dict(measure_aggs)
     aggs.update(inner)
-    # The total row carries the inner splits too (#1512 measured "17 SDG rows per
-    # group and in the total"): the world by SDG beside each group's SDGs.
-    if len(levels) > 1:
-        aggs.update(chains[1])
+    # The summary (#1550): each inner split on its own over the whole set (the world
+    # by SDG), computed from the works; the outer split on its own is s0 itself.
+    for lv in levels[1:]:
+        aggs[f"m{lv.index}"] = level_aggs(lv, {})
     return {"size": 0, "track_total_hits": True, "query": base_query, "aggs": aggs}
 
 
@@ -1036,8 +1040,9 @@ def _bucket_rows(lv: Level, agg: dict) -> List[Tuple[str, dict]]:
 
 
 def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
-                  total_count: int, index_name: str) -> List[dict]:
-    """Rows for every level, unnamed: `name_rows` names the ones that are returned."""
+                  total_count: int, index_name: str) -> Tuple[List[dict], Dict[int, List[dict]]]:
+    """Rows for every level, unnamed (`name_rows` names the ones that are returned),
+    and each inner split's groups on their own over the whole set (for the summary)."""
     from core.group_by.results import format_key
 
     def rows(level_i: int, agg: dict, parent_count: int) -> List[dict]:
@@ -1092,9 +1097,9 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
         return out
 
     out = rows(0, agg_root["s0"], total_count)
-    total_groups = (rows(1, agg_root["s1"], total_count)
-                    if len(levels) > 1 and "s1" in agg_root else None)
-    return out, total_groups
+    margins = {lv.index: rows(lv.index, agg_root[f"m{lv.index}"], total_count)
+               for lv in levels[1:] if f"m{lv.index}" in agg_root}
+    return out, margins
 
 
 def name_rows(levels: List[Level], rows: List[dict], connection) -> List[dict]:
@@ -1338,14 +1343,15 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     aggs = res.get("aggregations", {})
     check_truncated(levels, aggs)
 
-    total_row = {"key": "total", "key_display_name": f"all {oqo.get_rows.replace('-', ' ')}",
-                 "count": total_count}
+    all_row = {"key": "all", "key_display_name": f"all {oqo.get_rows.replace('-', ' ')}",
+               "count": total_count}
     for m in measures:
         if m.measure != "count":
-            total_row[m.key] = _measure_value(m, aggs, total_count, None)
-    total_row.pop("percent_of_those", None)
+            all_row[m.key] = _measure_value(m, aggs, total_count, None)
+    all_row.pop("percent_of_those", None)   # always 100%
 
     group_rows: List[dict] = []
+    margins: Dict[int, List[dict]] = {}
     groups_count = None
     more_groups = False
     next_cursor = None
@@ -1356,10 +1362,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             keys = sorted(_keys_at(levels, aggs, idx))
             lv.post_keep = survivors_lookup(lv, parts, keys, deadline)
         _name_conditions(levels, oqo.get_rows)
-        group_rows, total_groups = format_levels(levels, measures, aggs, total_count,
-                                                 index_name)
-        if total_groups is not None:
-            total_row["groups"] = total_groups
+        group_rows, margins = format_levels(levels, measures, aggs, total_count, index_name)
         top = levels[0]
         filtered = (top.selector is not None or top.post_keep is not None) \
             and not top.paged_floor
@@ -1417,17 +1420,30 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     if levels:
         deadline.mark("naming the groups")
         group_rows = name_rows(levels, group_rows, connection)   # the page only
-        if total_row.get("groups"):
-            total_row["groups"] = name_rows(levels, total_row["groups"], connection)
+        margins = {i: name_rows(levels, rs, connection) for i, rs in margins.items()}
         if nested:
             groups_count = len(group_rows)
     if group_rows:
         fill_own_values(levels, group_rows, measures, deadline)   # the page only
-        if total_row.get("groups"):
-            fill_own_values(levels, total_row["groups"], measures, deadline, start_level=1)
+    for i, rs in margins.items():
+        fill_own_values(levels, rs, measures, deadline, start_level=i)
     for m in measures:
         if m.measure == "value":
-            total_row.pop(m.key, None)   # a group's own field has no total
+            all_row.pop(m.key, None)   # a group's own field has no whole-set value
+    summary = {"all": all_row}
+    if nested:
+        # each split's groups on their own, computed from the works (never summed
+        # from group rows): the outer split is the top level of group_by
+        summary["splits"] = [{"groups": [{k: v for k, v in r.items() if k != "groups"}
+                                         for r in group_rows], "more_groups": False}]
+        for lv in levels[1:]:
+            buckets = aggs.get(f"m{lv.index}", {}).get("buckets")
+            summary["splits"].append({
+                "groups": margins.get(lv.index, []),
+                # a terms split sized for the nested request came back full: more groups
+                # exist over the whole set than the summary lists
+                "more_groups": bool(lv.kind == "terms" and lv.size and isinstance(buckets, list)
+                                    and len(buckets) >= lv.size)})
     meta = {
         "count": total_count,
         "db_response_time_ms": res.get("took"),
@@ -1443,7 +1459,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "steps": deadline.log,
         "cost": price(oqo),
     }
-    return {"meta": meta, "total": total_row, "group_by": group_rows, "results": []}
+    return {"meta": meta, "summary": summary, "group_by": group_rows, "results": []}
 
 
 def _encode_cursor(key) -> str:
@@ -1475,6 +1491,10 @@ def _keys_at(levels: List[Level], aggs: dict, idx: int) -> set:
                 walk(level_i + 1, b[f"s{level_i + 1}"])
 
     walk(0, aggs["s0"])
+    if f"m{idx}" in aggs:   # the split on its own (the summary) has groups of its own
+        lv = levels[idx]
+        out |= {k if lv.kind == "terms" else lv.labels[k][0]
+                for k, _ in _bucket_rows(lv, aggs[f"m{idx}"])}
     return {k for k in out if isinstance(k, str)}
 
 
