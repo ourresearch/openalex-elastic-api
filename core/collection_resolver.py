@@ -201,6 +201,41 @@ class CollectionUrlIdsInQuery:
         return self.wsgi_app(environ, start_response)
 
 
+# A name lookup is decoration, so it gets a short leash and never raises.
+NAME_TIMEOUT = 2
+
+
+def collection_display_name(collection_id):
+    """A collection's name, for its Markdown link in the OQL echo (oxjob #1555), or
+    None. `GET /collections/{id}` with the caller's own Authorization: users-api
+    answers only callers who can read the collection (the owner, or anyone for one
+    shared by link), the same gate the filter itself passes, so the echo never shows
+    a name its reader couldn't see. One call per collection per request."""
+    if not settings.USERS_API_URL or not collection_id.startswith("col_"):
+        return None
+    state = _request_state()
+    names = state.setdefault("names", {}) if state is not None else {}
+    if collection_id in names:
+        return names[collection_id]
+    headers = {}
+    if has_request_context() and request.headers.get("Authorization"):
+        headers["Authorization"] = request.headers["Authorization"]
+    if settings.COLLECTION_RESOLVER_KEY:
+        headers["X-Collection-Resolver-Key"] = settings.COLLECTION_RESOLVER_KEY
+    name = None
+    try:
+        resp = requests.get(
+            f"{settings.USERS_API_URL.rstrip('/')}/collections/{collection_id}",
+            headers=headers, timeout=NAME_TIMEOUT,
+        )
+        if resp.status_code == 200:
+            name = (resp.json() or {}).get("display_name") or None
+    except Exception as e:  # noqa: BLE001
+        logger.info("collection name lookup failed for %s: %s", collection_id, e)
+    names[collection_id] = name
+    return name
+
+
 def _request_state():
     """Per-request memo and budget on flask.g, or None outside a request."""
     if not has_request_context():

@@ -168,8 +168,8 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
             # a collection of works on a relation (oxjob #1535): `it cites works in (col_x)`
             subj, verb = rel[1] if leaf.is_negated else rel[0]
             col = L._seg("column", subj, column_id=leaf.column_id)
-        new = [col, L._seg("operator", verb), _text("("),
-               L._seg("value", val, value=leaf.value), _text(")")]
+        new = [col, L._seg("operator", verb),
+               L._seg("value", val, value=leaf.value, column_id=leaf.column_id)]
         return ClauseNode(segments=new, clause_kind=cn.clause_kind,
                           meta=_meta_without_vtree(meta))
     if meta.operator != "is" or cn.clause_kind == "boolean":
@@ -209,10 +209,6 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
 _BARE_RESERVED_SEARCH = {"group", "sample", "stemmed", "and", "or", "&"}
 
 
-# Co-occurrence relations name entities too (oxjob #1535): `co-author is (A1)`.
-_RELATION_ENTITY = {"co_author": "authors", "collaborator": "institutions"}
-
-
 def _link_name(name: str) -> str:
     """A display name as a link's text: one line, square brackets as parentheses
     (the parser never reads it, so tidying it changes nothing)."""
@@ -222,15 +218,38 @@ def _link_name(name: str) -> str:
 def _entity_type(column_id: Optional[str]) -> Optional[str]:
     if not column_id or column_id in L._SELF_ID_COLUMNS:
         return None
-    if column_id in _RELATION_ENTITY:
-        return _RELATION_ENTITY[column_id]
     fld = L._BY_COLUMN.get(column_id)
     if fld is not None and fld.kind in ("search", "collection", "num", "date", "bool"):
         return None
     return L.entity_type_for_column(column_id)
 
 
-def _links(segs: List[Segment], in_list: bool) -> List[Segment]:
+def _name_column(ns: str) -> Optional[str]:
+    """A column whose values are `ns` IDs, to ask the (value, column) resolver."""
+    from query_translation.walks import WALK_LINKS
+    return {"works": "cited_by", "collections": "collection"}.get(ns) or WALK_LINKS.get(ns)
+
+
+def link_text(value, ns: str, resolver=None, in_list: bool = False, name=None) -> str:
+    """One entity value as a Markdown link (oxjob #1555): `[name](ID)`, the name from
+    `name`, the resolver, or the closed vocabulary's table; with none, `(ID)` (a bare
+    ID inside a list's own parentheses). Collections (`col_x`) name themselves the
+    same way, through the resolver."""
+    from query_translation.oql_renderer import _builtin_name
+    text = str(value)
+    if name is None and resolver is not None and _name_column(ns):
+        try:
+            name = resolver(value, _name_column(ns)) or None
+        except Exception:  # noqa: BLE001 (a name is decoration; never fail on it)
+            name = None
+    if name is None and isinstance(value, str) and not value.startswith("col_"):
+        name = _builtin_name(ns, value)
+    if name:
+        return f"[{_link_name(name)}]({text})"
+    return text if in_list else f"({text})"
+
+
+def _links(segs: List[Segment], in_list: bool, resolver=None) -> List[Segment]:
     """Every entity value as a Markdown link (oxjob #1555, Jason 2026-10-08):
     `[Massachusetts Institute of Technology](I63966007)`, `[Kenya](KE)`,
     `[article](article)`. The name comes from the resolver, else the closed
@@ -243,8 +262,15 @@ def _links(segs: List[Segment], in_list: bool) -> List[Segment]:
     while i < len(segs):
         s = segs[i]
         col = s.meta.column_id if s.kind == "value" and s.meta else None
+        if col is not None and isinstance(s.meta.value, str) \
+                and s.meta.value.startswith("col_"):
+            # a collection: `[Climate topics](col_abc123)` (oxjob #1555)
+            out.append(Segment(kind="value", meta=s.meta, text=link_text(
+                s.meta.value, "collections", resolver, in_list)))
+            i += 1
+            continue
         ns = _entity_type(col)
-        if ns is None or (isinstance(s.meta.value, str) and s.meta.value.startswith("col_")):
+        if ns is None:
             out.append(s)
             i += 1
             continue
@@ -267,14 +293,14 @@ def _links(segs: List[Segment], in_list: bool) -> List[Segment]:
     return out
 
 
-def _bare_values(cn: ClauseNode) -> ClauseNode:
+def _bare_values(cn: ClauseNode, resolver=None) -> ClauseNode:
     """Today's value forms (oxjob #1555): entity values as Markdown links (Jason
     2026-10-08), and a single value without its parentheses (2026-10-06): `year >=
     2020`, `type is not [review](review)`, `institution is [Massachusetts Institute
     of Technology](I63966007)`. Lists of two or more keep one pair; searches, sets
     (`in (...)`) and row-subject relations (`it cites (...)`) keep theirs."""
     n_values = sum(1 for x in cn.segments if x.kind == "value")
-    out = _links(cn.segments, in_list=n_values > 1)
+    out = _links(cn.segments, in_list=n_values > 1, resolver=resolver)
     meta = cn.meta
     if len(out) != len(cn.segments) or any(x is not y for x, y in zip(out, cn.segments)):
         # the multi-line formatter lays value lists out from the vtree's own
@@ -301,11 +327,11 @@ def _meta_without_vtree(meta: ClauseMeta) -> ClauseMeta:
     return replace(meta, vtree=None)
 
 
-def _pipeline_expr(node):
+def _pipeline_expr(node, resolver=None):
     if isinstance(node, ClauseNode):
-        return _bare_values(_pipeline_clause(node))
+        return _bare_values(_pipeline_clause(node), resolver)
     if isinstance(node, GroupNode):
-        node.children = [_pipeline_expr(c) for c in node.children]
+        node.children = [_pipeline_expr(c, resolver) for c in node.children]
     return node
 
 
@@ -313,8 +339,8 @@ def where_node(filters: List, resolver=None, top: bool = True):
     """The pipeline-style ExprNode for an implicit-AND list of filters (or one)."""
     rows = L._merge_same_field_items(list(filters), "and")
     if len(rows) == 1:
-        return _pipeline_expr(L._filter_node(rows[0], top=top, resolver=resolver))
-    children = [_pipeline_expr(L._filter_node(f, top=False, resolver=resolver))
+        return _pipeline_expr(L._filter_node(rows[0], top=top, resolver=resolver), resolver)
+    children = [_pipeline_expr(L._filter_node(f, top=False, resolver=resolver), resolver)
                 for f in rows]
     if top:
         return GroupNode(join="and", children=children, prefix="", suffix="",
@@ -414,7 +440,7 @@ def _set_clause_text(node, ctx, resolver=None) -> Optional[str]:
     if col == "collection" and isinstance(node, LeafFilter):
         subject = f"that {ctx['singular']}"
         verb = "is not in the set" if node.is_negated else "is in the set"
-        return f"{subject} {verb} ({node.value})"
+        return f"{subject} {verb} {link_text(node.value, 'collections', resolver)}"
     if col == "ids.openalex" and ctx.get("singular"):
         subject = f"that {ctx['singular']}"
     elif col in _SET_SUBJECTS:
@@ -429,14 +455,21 @@ def _set_clause_text(node, ctx, resolver=None) -> Optional[str]:
         # positive OR (`is (A or B)`) or the NNF of `is not (A or B)` (AND of nots)
         if node.join != ("and" if negated else "or"):
             return None
-    vals = " or ".join(str(x.value) for x in leaves)
-    return f"{subject} {'is not' if negated else 'is'} ({vals})"
+    ns = (ctx.get("group_entity") if col == "ids.openalex"
+          else L.entity_type_for_column(col)) or "works"
+    vals = " or ".join(link_text(x.value, ns, resolver, in_list=len(leaves) > 1)
+                       for x in leaves)
+    if len(leaves) > 1:
+        vals = f"({vals})"
+    return f"{subject} {'is not' if negated else 'is'} {vals}"
 
 
 def _split_segments(g: GroupBy, noun: str, again: bool, resolver=None) -> Tuple[str, List[Segment]]:
     lead = f"group those {noun}{' again' if again else ''} "
     if g.conditions is not None:
-        items = ", ".join(f"({_expr_text(c, resolver)})" for c in g.conditions)
+        # `into (institution is [KU Leuven](I99464096), country is [Belgium](BE))`
+        # (oxjob #1555); each condition's own parentheses stay accepted on input
+        items = ", ".join(_expr_text(c, resolver) for c in g.conditions)
         return lead + "into ", [_text(f"({items})")]
     name = L._oql_field(g.column_id)[0] if g.column_id else ""
     col = L._seg("column", name, column_id=g.column_id)
@@ -542,7 +575,10 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
         head_text = f"get each {singular(entity)}"
         ids = _start_ids(filters[0]) if filters else None
         if ids is not None:
-            head_text += " in (" + ", ".join(str(v) for v in ids) + ")"
+            ns = "collections" if str(ids[0]).startswith("col_") else entity
+            items = [link_text(v, ns, resolver, in_list=len(ids) > 1) for v in ids]
+            head_text += (" in " + items[0] if len(ids) == 1
+                          else " in (" + ", ".join(items) + ")")
             filters = filters[1:]
     head = EntityHead(id=entity, text=head_text)
     corpus_phrase = ""

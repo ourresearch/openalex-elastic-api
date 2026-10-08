@@ -60,6 +60,9 @@ def safe_get_display_name(entity_id: str):
         return None
 
     entity_type, short_id = entity_id.split("/", 1)
+    if entity_type == "collections":
+        from core.collection_resolver import collection_display_name
+        return collection_display_name(short_id)
     if entity_type not in NATIVE_ENTITY_TYPES:
         return None  # Let default resolver handle it
 

@@ -148,6 +148,15 @@ def make_engine_resolver(
     def resolve(value: Any, column_id: str) -> Optional[str]:
         if not isinstance(value, str):
             return None
+        if value.startswith("col_"):
+            # a collection's name, for its link in the echo (oxjob #1555)
+            key = f"collections/{value}"
+            if key not in cache:
+                try:
+                    cache[key] = entity_resolver(key) if entity_resolver else None
+                except Exception:
+                    cache[key] = None
+            return cache[key]
         ns = oql_lang.namespace_for_column(column_id, entity)
         if ns is None:
             return None

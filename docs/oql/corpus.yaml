@@ -4292,7 +4292,8 @@ rows:
   status: ok
   oql: |-
     get works where topic is in the set (col_abc123);
-    then, group those works by institution where collaborator is not (I63966007);
+    then, group those works by institution
+      where collaborator is not [MIT](I63966007);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"column_id": "authorships.institutions.lineage", "where": {"column_id": "collaborator", "value": "I63966007", "is_negated": true}}], "calculate": [{"measure": "count"}]}
 - id: 215
@@ -4305,7 +4306,7 @@ rows:
   status: ok
   oql: |-
     get works where year >= 2016;
-    then, group those works into ((institution is [KU Leuven](I99464096)), (country is [Belgium](BE)));
+    then, group those works into (institution is [KU Leuven](I99464096), country is [Belgium](BE));
     then, group those works again by SDG;
     finally, summarize using count and percent of those works
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
@@ -4319,7 +4320,7 @@ rows:
   status: ok
   oql: |-
     get works where institution is in the set (col_abc123);
-    then, group those works into ((year >= 2016 and year <= 2019), (year >= 2021));
+    then, group those works into (year >= 2016 and year <= 2019, year >= 2021);
     then, group those works again by topic;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"conditions": [{"join": "and", "filters": [{"column_id": "publication_year", "value": 2016, "operator": ">="}, {"column_id": "publication_year", "value": 2019, "operator": "<="}]}, {"column_id": "publication_year", "value": 2021, "operator": ">="}]}, {"column_id": "primary_topic.id"}], "calculate": [{"measure": "count"}]}
@@ -4553,7 +4554,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get each institution in (I63966007, I97018004);
+    get each institution in ([MIT](I63966007), [Stanford](I97018004));
     then, get all that institution's works;
     then, group those works by year;
     finally, summarize using count and mean FWCI

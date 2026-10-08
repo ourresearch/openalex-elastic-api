@@ -1454,6 +1454,10 @@ _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     "cites": "works",
     "referenced_works": "works",
     "related_to": "works",
+    # co-occurrence relations (oxjob #1535) name authors and institutions: their
+    # values are links with names (oxjob #1555) and autocomplete as those entities
+    "co_author": "authors",
+    "collaborator": "institutions",
 }
 
 # A row's OWN id never name-annotates: a resolver miss there means "no name
@@ -1735,6 +1739,7 @@ class _Parser:
                                       # errors so they name what the user wrote
         self._in_list = False     # are we inside a parenthesized value list?
         self._directive = None    # "group" when inside a directive
+        self._in_condition_list = False   # a comma ends a condition (`into (A, B)`)
         self._labels = []         # (column, ID, name as typed) for `Name [ID]` values
                                   # (oxjob #1555): advice only, never meaning
         # --- editor sectioned-menu bookkeeping (oxjob #357, ctx-mode only) ---
@@ -1831,10 +1836,10 @@ class _Parser:
         sample = None
         seed = None
         self._skip_annot()
-        if start_each and self.word_is("in") and self.peek(1) is not None \
-                and self.peek(1).kind == "LP":
-            # `get each institution in (MIT, Stanford)`: the start's own ids
-            self.next()
+        if start_each and self.word_is("in") and self._set_words(1) is not None:
+            # `get each institution in (MIT, Stanford)`: the start's own ids; one
+            # reads `in [MIT](I63966007)`, a collection `in [Our lab](col_x)` (#1555)
+            self.i += self._set_words(1)
             filters.append(self._parse_in_set("openalex id", _BY_COLUMN["ids.openalex"], False))
             self._skip_annot()
         # After a complete entity with nothing typed yet, the cursor sits in the
@@ -2204,6 +2209,9 @@ class _Parser:
                 continue
             # directive keywords end the where-expression
             if t.kind == "WORD" and t.val.lower() in ("group", "sample", "then"):
+                break
+            # a comma ends one condition in `into (A, B)` (oxjob #1555)
+            if t.kind == "COMMA" and self._in_condition_list:
                 break
             # anything else with no connective = implicit adjacency
             if self._recover_mode:
@@ -2786,9 +2794,11 @@ class _Parser:
     def _parse_scalar(self, fld: Field):
         # an empty value slot at the cursor (scalar or list element)
         self._want(CTX_VALUE, fld=fld, in_list=self._in_list)
-        ns = (entity_type_for_column(fld.column, self._entity)
-              if fld.kind in ("id", "enum") and fld.column not in _SELF_ID_COLUMNS
-              else None)
+        if fld.column in _SELF_ID_COLUMNS:
+            ns = self._entity or "works"
+        else:
+            ns = (entity_type_for_column(fld.column, self._entity)
+                  if fld.kind in ("id", "enum") else None)
         labeled = self._labeled_value(fld, ns) if ns is not None else None
         if labeled is not None:
             t, val = labeled
@@ -3702,6 +3712,8 @@ class _Parser:
         elif self.word_is("set", k=j):
             j += 1
         t = self.peek(j)
+        if t is not None and t.kind == "ANNOT" and _is_link_text(self.toks, self.i + j):
+            return j            # a collection's link: `[Climate topics](col_x)`
         return j if t is not None and t.kind == "LP" else None
 
     def _parse_relation_query(self, column: str, negated: bool) -> FilterType:
@@ -3832,6 +3844,8 @@ class _Parser:
         return GroupBy(column_id=fld.column, bins=self._parse_bins(fld, noun))
 
     def _list_open(self, what: str, example: str):
+        if self.peek() is not None and _is_link_text(self.toks, self.i):
+            self.next()         # `[Climate topics](col_x)`: the name is a label
         t = self.peek()
         if t is None or t.kind != "LP":
             raise oql_error("OQL_BAD_LIST", f"expected ( to open the {what}",
@@ -3912,18 +3926,29 @@ class _Parser:
         return items
 
     def _parse_condition_list(self, entity: str) -> List[FilterType]:
-        """`into ((<conditions>), (<conditions>))`: one group per condition."""
+        """`into (<conditions>, <conditions>)`: one group per condition, separated by
+        commas (oxjob #1555); each condition in its own parentheses (`into
+        ((...), (...))`, the launch form) stays accepted."""
         noun = _plural_noun(entity)
-        example = (f"group those {noun} into ((institution is (I63966007)), "
-                   f"(country is (BE)))")
+        example = (f"group those {noun} into (institution is [MIT](I63966007), "
+                   f"country is [Belgium](BE))")
         open_tok = self._list_open("list of conditions", example)
         conds: List[FilterType] = []
         while True:
             t = self.peek()
-            if t is None or t.kind != "LP":
-                raise oql_error("OQL_BAD_LIST",
-                                "each group's conditions go in their own parentheses",
-                                f"e.g. {example}", t.pos if t else None)
+            if t is None or t.kind != "LP" or not self._wrapped_condition():
+                if t is None or t.kind == "RP":
+                    raise oql_error("OQL_BAD_LIST", "a condition group can't be empty",
+                                    f"e.g. {example}", t.pos if t else None)
+                was, self._in_condition_list = self._in_condition_list, True
+                try:
+                    conds.append(self._parse_expr(top=True))
+                finally:
+                    self._in_condition_list = was
+                if not self._list_next("list of conditions", example, len(conds),
+                                       open_tok):
+                    break
+                continue
             self.next()
             nt = self.peek()
             if nt is not None and nt.kind == "RP":
@@ -3939,6 +3964,23 @@ class _Parser:
             if not self._list_next("list of conditions", example, len(conds), open_tok):
                 break
         return conds
+
+    def _wrapped_condition(self) -> bool:
+        """At a `(` in a list of conditions: does it wrap one whole condition (the
+        `into ((...), (...))` form), i.e. is its `)` followed by `,` or the list's
+        `)`? Else the `(` opens part of a bare condition (`(A or B) and C`)."""
+        depth, j = 0, self.i
+        while j < len(self.toks):
+            k = self.toks[j].kind
+            if k == "LP":
+                depth += 1
+            elif k == "RP":
+                depth -= 1
+                if depth == 0:
+                    nxt = self.toks[j + 1] if j + 1 < len(self.toks) else None
+                    return nxt is None or nxt.kind in ("COMMA", "RP")
+            j += 1
+        return True
 
     def _parse_number_group(self, fld: "Field", what: str):
         """A single number, canonically parenthesized: `(10)`."""

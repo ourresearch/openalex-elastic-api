@@ -120,6 +120,46 @@ _PHRASE = re.compile(r"^get (?P<base>\w+)(?P<where> where .*?)?"
                      r"(?:; (?:then|finally), get (?P<to>\w+) of those (?P=base))?$")
 
 
+def _balanced(text, i):
+    """The index of the `)` matching the `(` at text[i]."""
+    depth = 0
+    for j in range(i, len(text)):
+        if text[j] == "(":
+            depth += 1
+        elif text[j] == ")":
+            depth -= 1
+            if depth == 0:
+                return j
+    return len(text) - 1
+
+
+def named_sets(text):
+    """`into ((A), (B))` -> `into (A, B)` (oxjob #1555)."""
+    out, i = [], 0
+    while True:
+        k = text.find(" into ((", i)
+        if k < 0:
+            return "".join(out) + text[i:]
+        start = k + len(" into ")
+        end = _balanced(text, start)
+        items, depth, cur = [], 0, ""
+        for c in text[start + 1:end]:
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+            if c == "," and depth == 0:
+                items.append(cur.strip())
+                cur = ""
+            else:
+                cur += c
+        items.append(cur.strip())
+        items = [x[1:-1] if x.startswith("(") and _balanced(x, 0) == len(x) - 1 else x
+                 for x in items]
+        out.append(text[i:start] + "(" + ", ".join(items) + ")")
+        i = end + 1
+
+
 def set_words(text):
     """Sets (oxjob #1555): `in the set (...)`, `it cites a work in the set (...)`."""
     for old, new in _SET_VERBS:
@@ -142,7 +182,7 @@ def _modern_inner(text):
 
 
 def modern(text):
-    text = set_words(bare_values(text))
+    text = named_sets(set_words(bare_values(text)))
     head, *steps = _top_level_parts(_inner(text, _modern_inner))
     steps = [_bare(s) for s in steps]
     steps = [SUMMARIZE + english_list(s[len("calculate "):].split(", "))
