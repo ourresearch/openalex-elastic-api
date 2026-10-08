@@ -363,6 +363,12 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_BAD_LIST", ERROR, PARSE,
               "a listed set is malformed",
               "write the items in parentheses, separated by commas: in (A, B, C)"),
+        _spec("OQL_UNMATCHED_BRACKET", ERROR, PARSE,
+              'a "]" has no "[" before it',
+              "remove it, or put text with brackets inside double quotes"),
+        _spec("OQL_UNEXPECTED_CHARACTER", ERROR, PARSE,
+              "a character the language doesn't use",
+              "remove it, or put it inside double quotes"),
         _spec("OQL_LIST_TOO_LONG", ERROR, PARSE,
               "a list holds more than 100 items",
               "keep each list to 100 items; use a collection or several queries "
