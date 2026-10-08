@@ -83,15 +83,14 @@ def english_list(items: List[str]) -> str:
 
 def transitions(n: int) -> List[str]:
     """The word that opens each of n steps after the start (oxjob #1555, Jason
-    2026-10-05): one step `then`; two `then`, `finally`; three or more `first`,
-    `then` ..., `finally`. Input takes any of them anywhere (they're sugar)."""
+    2026-10-08): `then` for each step, `finally` for the last of two or more. No
+    `first`: the `get` step is the first. Input takes `first`, `next`, `lastly`
+    anywhere too (they're sugar)."""
     if n <= 0:
         return []
     if n == 1:
         return ["then"]
-    if n == 2:
-        return ["then", "finally"]
-    return ["first"] + ["then"] * (n - 2) + ["finally"]
+    return ["then"] * (n - 1) + ["finally"]
 
 
 def _text(s: str) -> Segment:

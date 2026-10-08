@@ -1,6 +1,6 @@
 """The echo's step words (oxjob #1555, Jason 2026-10-05): a comma after the
 opener; one step `then`, two `then` + `finally`, three or more `first`, `then`
-..., `finally`; the last step `summarize using`. Input takes any opener anywhere,
+..., `finally` (no `first`, 2026-10-08); the last step `summarize using`. Input takes any opener anywhere,
 with or without the comma, and `calculate` / `summarize with` / `summarize by`."""
 import os
 
@@ -27,17 +27,17 @@ def test_transitions():
     assert transitions(0) == []
     assert transitions(1) == ["then"]
     assert transitions(2) == ["then", "finally"]
-    assert transitions(3) == ["first", "then", "finally"]
-    assert transitions(4) == ["first", "then", "then", "finally"]
+    assert transitions(3) == ["then", "then", "finally"]
+    assert transitions(4) == ["then", "then", "then", "finally"]
 
 
 @pytest.mark.parametrize("q", [
     "get works where year > 2020; then, sample 100 of those works",
     "get works where year > 2020; then, group those works by year; "
     "finally, summarize using count",
-    "get works where year > 2020; first, group those works by year; "
+    "get works where year > 2020; then, group those works by year; "
     "then, group those works again by type; finally, summarize using count and mean FWCI",
-    "get works where year >= 2020; first, get each funder of those works; "
+    "get works where year >= 2020; then, get each funder of those works; "
     "then, get all that funder's works; then, group those works by year; "
     "finally, summarize using mean citation count",
 ])
@@ -60,11 +60,11 @@ def test_any_opener_any_order(typed):
 
 def test_multi_line_echo_carries_the_step_words():
     q = ("get works where institution is I63966007 and year >= 2015; "
-         "first, group those works by author where count of those works > 10; "
+         "then, group those works by author where count of those works > 10; "
          "then, group those works again by year; "
          "finally, summarize using count, mean FWCI, and percent open access")
     lines = render(_canon(q), style="pipeline").split("\n")
-    assert [ln.split(",")[0] for ln in lines[1:]] == ["first", "then", "finally"]
+    assert [ln.split(",")[0] for ln in lines[1:]] == ["then", "then", "finally"]
     assert all(ln.endswith(";") for ln in lines[:-1])
 
 
