@@ -695,7 +695,8 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
         if ids is not None:
             ns = "collections" if str(ids[0]).startswith("col_") else entity
             items = [link_text(v, ns, resolver, in_list=len(ids) > 1) for v in ids]
-            head_text += (" in " + items[0] if len(ids) == 1
+            head_text += (" in the collection " + items[0] if ns == "collections"
+                          else " in " + items[0] if len(ids) == 1
                           else " in (" + ", ".join(items) + ")")
             filters = filters[1:]
     head = EntityHead(id=entity, text=head_text)

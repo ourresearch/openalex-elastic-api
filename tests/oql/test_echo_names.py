@@ -32,7 +32,7 @@ R = make_engine_resolver(_lookup)
     ("get works where topic is in (col_unknown)",
      "get works where topic is in the collection (col_unknown)"),
     ("get each author in (col_auth9); then get all that author's works; then calculate count",
-     "get each author in [Our lab](col_auth9); then, get all that author's works; "
+     "get each author in the collection [Our lab](col_auth9); then, get all that author's works; "
      "finally, summarize using count"),
     ("get each institution in (I63966007, I97018004); then get all that institution's works",
      "get each institution in ([Massachusetts Institute of Technology](I63966007), "
