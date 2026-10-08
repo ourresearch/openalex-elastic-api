@@ -171,18 +171,28 @@ def filename(oql_text: str, suffix: str = "", ext: str = "csv") -> str:
     return f"openalex-{slug or 'query'}{suffix}.{ext}"
 
 
+def data_rows(text: str) -> int:
+    """Rows below the header (a quoted value may hold a line break, so parse, don't count
+    lines)."""
+    return max(0, sum(1 for _ in csv.reader(io.StringIO(text))) - 1)
+
+
 def build_download(body: dict, oqo: OQO, oql_text: str, table: str = "groups"
-                   ) -> Tuple[bytes, str, str]:
-    """(content, file name, mimetype) for one download: the groups CSV, or the summary
-    as one CSV or, when it has several tables, a zip of them."""
+                   ) -> Tuple[bytes, str, str, int]:
+    """(content, file name, mimetype, rows) for one download: the groups CSV, or the
+    summary as one CSV or, when it has several tables, a zip of them. `rows` (every data
+    row in every file) prices it."""
     if table == "summary":
         files = summary_files(body, oqo)
+        rows = sum(data_rows(text) for _, text in files)
         if len(files) == 1:
             return (files[0][1].encode("utf-8"), filename(oql_text, "-summary"),
-                    "text/csv")
+                    "text/csv", rows)
         out = io.BytesIO()
         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
             for name, text in files:
                 z.writestr(name, text)
-        return out.getvalue(), filename(oql_text, "-summary", "zip"), "application/zip"
-    return groups_csv(body, oqo).encode("utf-8"), filename(oql_text), "text/csv"
+        return (out.getvalue(), filename(oql_text, "-summary", "zip"), "application/zip",
+                rows)
+    text = groups_csv(body, oqo)
+    return text.encode("utf-8"), filename(oql_text), "text/csv", data_rows(text)

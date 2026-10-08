@@ -53,6 +53,8 @@ FILTERED_CANDIDATES = 20_000   # a single split with a group filter checks this 
 LOOKUP_LIMIT = 60_000          # own-field lookups list at most this many ids
 DEFAULT_PER_PAGE = 200
 MAX_PAGE_DEPTH = 10_000        # page x per_page on a single split
+CSV_PAGE_GROUPS = 10_000       # groups in one page of an export (format=csv with a cursor, #1550)
+ROWS_PER_PRICE = 100           # an export costs the query's price per 100 rows, like works (#1550)
 ID_PREFIX = "https://openalex.org/"
 
 
@@ -1586,6 +1588,30 @@ def price(oqo: OQO) -> dict:
         steps.append({"what": "the groups' own fields (a lookup)", "credits": LOOKUP_CREDITS})
     credits = sum(s["credits"] for s in steps)
     return {"credits": credits, "usd": round(credits * CREDIT_USD, 6), "steps": steps}
+
+
+def export_price(query_price: dict, rows: int) -> dict:
+    """What a download of `rows` rows costs: the query's price for every ROWS_PER_PRICE
+    rows, like works exports (Jason, 2026-10-08; at least one unit, so an empty file
+    costs what the query costs)."""
+    units = max(1, -(-rows // ROWS_PER_PRICE))
+    credits = query_price["credits"] * units
+    return {"credits": credits, "usd": round(credits * CREDIT_USD, 6),
+            "steps": query_price.get("steps", []) + [
+                {"what": f"x {units} for {rows:,} rows (the query's price per "
+                         f"{ROWS_PER_PRICE} rows)", "credits": credits - query_price["credits"]}]}
+
+
+def pages_by_cursor(oqo: OQO, fields_dict, index_name: str) -> bool:
+    """A single split by a column (terms) pages through any number of groups with a
+    cursor; anything else (no split, nested splits, listed values, searches,
+    conditions, bins, yes/no) returns all its groups at once."""
+    if len(oqo.group_by) != 1:
+        return False
+    try:
+        return build_level(0, oqo.group_by[0], oqo, fields_dict, index_name).kind == "terms"
+    except Exception:
+        return False
 
 
 def _lookup_kinds(where) -> List[str]:

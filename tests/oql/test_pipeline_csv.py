@@ -60,7 +60,7 @@ def _zip(data):
 # --- the groups --------------------------------------------------------------------
 
 def test_the_groups_are_one_flat_csv_a_column_per_split():
-    data, name, mime = analytics_csv.build_download(_body(), _oqo(), Q)
+    data, name, mime, rows = analytics_csv.build_download(_body(), _oqo(), Q)
     assert mime == "text/csv"
     assert name.startswith("openalex-get-works-where-year-2020") and name.endswith(".csv")
     assert "-summary" not in name
@@ -78,9 +78,9 @@ def test_no_split_is_one_row_the_whole_set_without_shares():
             "summary": {"all": {"key": "all", "key_display_name": "all works", "count": 7,
                                 "mean_fwci": 1.25}},
             "group_by": []}
-    data, name, mime = analytics_csv.build_download(body, oqo, "q")
+    data, name, mime, rows = analytics_csv.build_download(body, oqo, "q")
     assert _read(data.decode()) == [["count", "mean FWCI"], ["7", "1.25"]]
-    data, name, mime = analytics_csv.build_download(body, oqo, "q", "summary")
+    data, name, mime, rows = analytics_csv.build_download(body, oqo, "q", "summary")
     assert mime == "text/csv" and name == "openalex-q-summary.csv"
     assert _read(data.decode()) == [["count", "mean FWCI"], ["7", "1.25"]]
 
@@ -130,7 +130,7 @@ def test_repeated_split_names_get_a_number():
                                    {"groups": [cond("c", 6), cond("d", 3)]}]},
             "group_by": [cond("a", 4, [cond("c", 3)]), cond("b", 5, [cond("d", 2)])]}
     assert _read(analytics_csv.groups_csv(body, oqo))[0] == ["condition", "condition 2", "count"]
-    data, name, mime = analytics_csv.build_download(body, oqo, q, "summary")
+    data, name, mime, rows = analytics_csv.build_download(body, oqo, q, "summary")
     files = _zip(data)
     assert sorted(files) == ["all-works.csv", "by-condition-2.csv", "by-condition.csv"]
     assert files["by-condition-2.csv"] == [["condition", "count"], ["c", "6"], ["d", "3"]]
@@ -139,7 +139,7 @@ def test_repeated_split_names_get_a_number():
 # --- the summary -------------------------------------------------------------------
 
 def test_two_splits_summary_is_a_zip_all_works_and_each_split_alone():
-    data, name, mime = analytics_csv.build_download(_body(), _oqo(), Q, "summary")
+    data, name, mime, rows = analytics_csv.build_download(_body(), _oqo(), Q, "summary")
     assert mime == "application/zip" and name.endswith("-summary.zip")
     files = _zip(data)
     assert list(files) == ["all-works.csv", "by-institution.csv", "by-year.csv"]
@@ -154,7 +154,7 @@ def test_one_split_summary_is_one_plain_csv():
     oqo = _oqo("get works where year >= (2020); then group those works by year; then calculate count, mean FWCI")
     body = _body(oqo)
     body["summary"].pop("splits")
-    data, name, mime = analytics_csv.build_download(body, oqo, "q", "summary")
+    data, name, mime, rows = analytics_csv.build_download(body, oqo, "q", "summary")
     assert mime == "text/csv" and name == "openalex-q-summary.csv"
     assert _read(data.decode()) == [["count", "mean FWCI"], ["100", "1"]]
 
@@ -209,3 +209,24 @@ def test_split_meta_names_each_split_in_oql_words():
     got = [analytics_csv.split_meta(g, "works") for g in oqo.group_by]
     assert [(s["oql"], s["kind"], s["has_ids"]) for s in got] == [
         ("citation count bins", "bins", False), ("title-abstract search", "searches", False)]
+
+
+# --- price and rows (Jason, 2026-10-08: the query's price for every 100 rows) -------
+
+def test_rows_count_data_rows_even_with_line_breaks_in_values():
+    body = _body()
+    body["group_by"][0]["key_display_name"] = "two\nlines"
+    data, name, mime, rows = analytics_csv.build_download(body, _oqo(), Q)
+    assert rows == 4
+    data, name, mime, rows = analytics_csv.build_download(_body(), _oqo(), Q, "summary")
+    assert rows == 1 + 2 + 2          # all works, two institutions, two years
+
+
+@pytest.mark.parametrize("rows,units", [(0, 1), (1, 1), (100, 1), (101, 2), (10_000, 100), (128_284, 1283)])
+def test_an_export_costs_the_query_price_per_100_rows(rows, units):
+    from query_translation.analytics import export_price
+    for base in (1, 10, 31):
+        p = export_price({"credits": base, "usd": base * 0.0001, "steps": []}, rows)
+        assert p["credits"] == base * units
+        assert p["usd"] == round(base * units * 0.0001, 6)
+        assert sum(s["credits"] for s in p["steps"]) == p["credits"] - base   # the extra over the base
