@@ -161,10 +161,11 @@ def named_sets(text):
 
 
 def set_words(text):
-    """Sets (oxjob #1555): `in the set (...)`, `it cites a work in the set (...)`."""
+    """Sets (oxjob #1555): `in the set (...)`, `it cites a work in the set (...)`; a saved
+    collection reads `in the collection (col_x)` (Jason 2026-10-08)."""
     for old, new in _SET_VERBS:
         text = text.replace(old, new)
-    return text
+    return re.sub(r"in the set (\(col_|\[[^\]]*\]\(col_)", r"in the collection \1", text)
 
 
 def set_phrase(inner):

@@ -33,9 +33,9 @@ def _line(q):
      "has (kelp))",
      "get works where institution is not in (get works where title has (kelp); then get "
      "institutions of those works)"),
-    ("get works where topic is in the set (col_abc123)",
+    ("get works where topic is in the collection (col_abc123)",
      "get works where topic is in (col_abc123)"),
-    ("get works where it cites a work in the set (col_abc123)",
+    ("get works where it cites a work in the collection (col_abc123)",
      "get works where it cites works in (col_abc123)"),
 ])
 def test_set_phrase_is_canonical_and_old_forms_read_the_same(canonical, older):

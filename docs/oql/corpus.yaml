@@ -4290,7 +4290,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is in the set (col_abc123);
+    get works where topic is in the collection (col_abc123);
     then, group those works by institution
       where collaborator is not [MIT](I63966007);
     finally, summarize using count
@@ -4317,7 +4317,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is in the set (col_abc123);
+    get works where institution is in the collection (col_abc123);
     then, compare (year >= 2016 and year <= 2019) versus year >= 2021 by topic;
     summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "col_abc123", "operator": "in collection"}], "group_by": [{"conditions": [{"join": "and", "filters": [{"column_id": "publication_year", "value": 2016, "operator": ">="}, {"column_id": "publication_year", "value": 2019, "operator": "<="}]}, {"column_id": "publication_year", "value": 2021, "operator": ">="}]}, {"column_id": "primary_topic.id"}], "calculate": [{"measure": "count"}]}
@@ -4374,7 +4374,7 @@ rows:
     get works where institution is [University of Kansas](I146416000);
     then, group those works by author
       where count of those works >= 5
-      and that author is not in the set (col_abc123);
+      and that author is not in the collection (col_abc123);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">=", "value": 5}, {"column_id": "collection", "value": "col_abc123", "operator": "in collection", "is_negated": true}]}}], "calculate": [{"measure": "count"}]}
 - id: 221

@@ -26,11 +26,11 @@ R = make_engine_resolver(_lookup)
 
 @pytest.mark.parametrize("q,echo", [
     ("get works where topic is in (col_abc123)",
-     "get works where topic is in the set [Climate topics](col_abc123)"),
+     "get works where topic is in the collection [Climate topics](col_abc123)"),
     ("get works where it cites works in (col_abc123)",
-     "get works where it cites a work in the set [Climate topics](col_abc123)"),
+     "get works where it cites a work in the collection [Climate topics](col_abc123)"),
     ("get works where topic is in (col_unknown)",
-     "get works where topic is in the set (col_unknown)"),
+     "get works where topic is in the collection (col_unknown)"),
     ("get each author in (col_auth9); then get all that author's works; then calculate count",
      "get each author in [Our lab](col_auth9); then, get all that author's works; "
      "finally, summarize using count"),
@@ -42,7 +42,7 @@ R = make_engine_resolver(_lookup)
     ("get works where year > 2020; then group those works by author where that author is "
      "not in (col_auth9) and co-author is not (A1); then calculate count",
      "get works where year > 2020; then, group those works by author where co-author is "
-     "not [Jane Smith](A1) and that author is not in the set [Our lab](col_auth9); "
+     "not [Jane Smith](A1) and that author is not in the collection [Our lab](col_auth9); "
      "finally, summarize using count"),
     ("get works where year >= 2016; then group those works into ((institution is "
      "(I99464096)), (country is (BE))); then calculate count",

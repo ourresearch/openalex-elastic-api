@@ -170,6 +170,9 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
             # a collection of works on a relation (oxjob #1535): `it cites works in (col_x)`
             subj, verb = rel[1] if leaf.is_negated else rel[0]
             col = L._seg("column", subj, column_id=leaf.column_id)
+        # a saved collection reads `in the collection` (Jason 2026-10-08: the
+        # signpost says whether it's a collection or a set defined by a query)
+        verb = verb.replace("in the set", "in the collection")
         new = [col, L._seg("operator", verb),
                L._seg("value", val, value=leaf.value, column_id=leaf.column_id)]
         return ClauseNode(segments=new, clause_kind=cn.clause_kind,
@@ -441,7 +444,7 @@ def _set_clause_text(node, ctx, resolver=None) -> Optional[str]:
     col = cols.pop()
     if col == "collection" and isinstance(node, LeafFilter):
         subject = f"that {ctx['singular']}"
-        verb = "is not in the set" if node.is_negated else "is in the set"
+        verb = "is not in the collection" if node.is_negated else "is in the collection"
         return f"{subject} {verb} {link_text(node.value, 'collections', resolver)}"
     if col == "ids.openalex" and ctx.get("singular"):
         subject = f"that {ctx['singular']}"

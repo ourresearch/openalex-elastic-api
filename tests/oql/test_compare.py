@@ -47,7 +47,7 @@ ECHOES = [
     ("get works where institution is in (col_abc123); then group those works into ((year >= "
      "(2016) and year <= (2019)), (year >= (2021))); then group those works again by topic; "
      "then calculate count",
-     "get works where institution is in the set (col_abc123); then, compare (year >= 2016 "
+     "get works where institution is in the collection (col_abc123); then, compare (year >= 2016 "
      "and year <= 2019) versus year >= 2021 by topic; summarize using count"),
     # a yes/no field alone is true; `not` makes it false
     ("get works where institution is I146416000 and year >= 2020; then compare open access "
