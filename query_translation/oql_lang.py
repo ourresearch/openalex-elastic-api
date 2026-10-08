@@ -728,6 +728,11 @@ def _compare_split(items: List) -> GroupBy:
     items = [LeafFilter(i.column_id, not i.value, "is")
              if isinstance(i, LeafFilter) and isinstance(i.value, bool) and i.is_negated
              else i for i in items]
+    uniq = []
+    for i in items:   # `A versus A`: one row, as a listed split keeps one
+        if i not in uniq:
+            uniq.append(i)
+    items = uniq
     if all(isinstance(i, LeafFilter) and i.operator == "is" and not i.is_negated
            and not isinstance(i.value, (list, bool)) for i in items):
         cols = {i.column_id for i in items}
