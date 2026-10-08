@@ -354,9 +354,25 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
     # the parser, so apply the same column-casing here for round-trip stability and
     # to avoid case-sensitive ES misses (e.g. country=ca vs the indexed CA).
     if isinstance(value, str):
+        value = _vocab_code_for_name(value, column_id)
         return _short_entity_id(canon_value_for_column(value, column_id), column_id)
 
     return value
+
+
+def _vocab_code_for_name(value: str, column_id: str) -> str:
+    """A closed vocabulary's name stands for its code (oxjob #1555, Haiku's cow path):
+    `continent is (Africa)`, `country is ("United Kingdom")`, `language is (English)`.
+    Only when the value isn't already a code and exactly one entry has that name."""
+    from query_translation import oql_lang as L
+    from query_translation.oql_renderer import _config_table, is_vocab_member
+    from query_translation.validator import CLOSED_VOCAB_NAMESPACE
+    ns = CLOSED_VOCAB_NAMESPACE.get(L.entity_type_for_column(column_id) or "")
+    if ns is None or is_vocab_member(ns, value):
+        return value
+    table = _config_table(ns) or {}
+    codes = [code for code, name in table.items() if name.lower() == value.strip().lower()]
+    return codes[0] if len(codes) == 1 else value
 
 
 def _short_entity_id(value: str, column_id: str) -> str:

@@ -666,6 +666,14 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
     noun = L._plural_noun(entity)
     head_text = f"get {entity.lower()}"
     filters = list(oqo.filter_rows)
+    start_list = (entity == "works" and not oqo.each and filters
+                  and getattr(filters[0], "column_id", None) == "ids.openalex"
+                  and str((_start_ids(filters[0]) or [""])[0]).startswith("col_"))
+    if start_list:
+        # `get works in [My list](col_x)`: a saved list of works (oxjob #1555)
+        head_text = (f"get works in the collection "
+                     f"{link_text(_start_ids(filters[0])[0], 'collections', resolver)}")
+        filters = filters[1:]
     if oqo.each:
         # `get each institution in (I1, I2)` (oxjob #1535)
         head_text = f"get each {singular(entity)}"

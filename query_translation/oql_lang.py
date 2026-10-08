@@ -1902,7 +1902,9 @@ class _Parser:
         sample = None
         seed = None
         self._skip_annot()
-        if start_each and self.word_is("in") and self._set_words(1) is not None:
+        if (start_each or entity == "works") and self.word_is("in") \
+                and self._set_words(1) is not None:
+            # `get works in (col_mylist)` too: a saved list of works (Haiku's cow path)
             # `get each institution in (MIT, Stanford)`: the start's own ids; one
             # reads `in [MIT](I63966007)`, a collection `in [Our lab](col_x)` (#1555)
             self.i += self._set_words(1)
@@ -2350,6 +2352,10 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)              # bare prefix `not` (decision 23)
             inner = self._parse_operand()     # negate the next operand (clause/group)
+            if isinstance(inner, LeafFilter) and isinstance(inner.value, bool) \
+                    and inner.operator == "is" and not inner.is_negated:
+                # `not has DOI` is `has DOI is false`, the way `is not true` folds
+                return LeafFilter(inner.column_id, not inner.value, "is")
             self._last_operand_simple = False  # negated -> not a plain clause (#357)
             return _negate(inner)
         if t.kind == "LP" and self._compare_mode and self._compare_prev is not None \
@@ -2392,6 +2398,18 @@ class _Parser:
             gc = self._parse_group_clause()
             if gc is not None:
                 return gc
+        if self._compare_mode and self._compare_prev is not None \
+                and self._compare_value_start(0):
+            # `compare institution [MIT] versus [Stanford]`: a bare value takes the
+            # field and verb of the condition before it (oxjob #1555); before any
+            # pronoun reading, so `versus (IT)` is Italy, not `it`
+            field, fld, op = self._compare_prev
+            self._cur_fld = fld
+            self._cur_search_word = field if fld.kind == "search" else None
+            if fld.kind == "search":
+                tree = self._parse_search_value(fld.column)
+                return _negate(tree) if op == "nhas" else tree
+            return self._parse_value_clause(field, fld, op)
         # co-occurrence at the top level (oxjob #1535): `get authors where co-author
         # is (A1)`, `get institutions where collaborator is not (I1)`; also inside a
         # walk's `where` on authors or institutions. Same words and meaning as the
@@ -2437,17 +2455,6 @@ class _Parser:
         # same-type membership names the queried entity: `location is in collection
         # (col_x)` on locations (oxjob #1524). `work is in collection` stays accepted
         # on every entity (what earlier renders said).
-        if self._compare_mode and self._compare_prev is not None \
-                and self._compare_value_start(0):
-            # `compare institution [MIT] versus [Stanford]`: a bare value takes the
-            # field and verb of the condition before it (oxjob #1555)
-            field, fld, op = self._compare_prev
-            self._cur_fld = fld
-            self._cur_search_word = field if fld.kind == "search" else None
-            if fld.kind == "search":
-                tree = self._parse_search_value(fld.column)
-                return _negate(tree) if op == "nhas" else tree
-            return self._parse_value_clause(field, fld, op)
         n = _collection_subject_len(self.toks, self.i, self._entity)
         if n:
             field = " ".join(t.val for t in self.toks[self.i:self.i + n])
@@ -2459,6 +2466,13 @@ class _Parser:
         self._cur_search_word = field if fld.kind == "search" else None
         # a complete field with the cursor right after it -> operator slot
         self._want(CTX_OPERATOR, fld=fld)
+        if fld.kind == "bool" and not self._compare_mode \
+                and match_operator(self.toks, self.i) is None \
+                and not self.word_is("is", "does", "doesn't", "doesnt", "contains") \
+                and self._at_condition_end():
+            # `where has DOI and global south`: a yes/no field alone is true (Haiku's
+            # cow path, oxjob #1555; `not has DOI` is false through `not`)
+            return LeafFilter(fld.column, True, "is")
         if self._compare_mode and match_operator(self.toks, self.i) is None \
                 and not self.word_is("is", "does", "doesn't", "doesnt", "contains"):
             # in a comparison `is` goes unsaid: `institution [MIT]`; a yes/no
@@ -2797,7 +2811,7 @@ class _Parser:
         if grp is not None:
             return _negate(grp) if negated else grp
         # unknown / null
-        if self.word_is("unknown", "null"):
+        if self.word_is("unknown", "null", "none"):
             self.next()
             return LeafFilter(fld.column, None, "is", is_negated=negated)
         # the dash range literal (`year is 2019-2023` / `2019-` / `-2023`) was
@@ -2881,7 +2895,7 @@ class _Parser:
         # groups expressible: `language is (en or unknown)`. A literal value
         # spelled "unknown" stays reachable via quotes (the canonical render
         # quotes it — see `_value_needs_quote`).
-        if self.word_is("unknown", "null"):
+        if self.word_is("unknown", "null", "none"):
             self.next()
             return LeafFilter(fld.column, None, "is")
         v = self._parse_scalar(fld)
@@ -3840,11 +3854,12 @@ class _Parser:
 
     def _set_words(self, k: int) -> Optional[int]:
         """At `in` (offset k-1 is `in`): the tokens up to the set's `(`, counted from
-        the cursor (`in (` 1, `in set (` 2, `in the set (` 3), or None."""
+        the cursor (`in (` 1, `in set (` 2, `in the set (` 3; `collection` as `set`,
+        oxjob #1555), or None."""
         j = k
-        if self.word_is("the", k=j) and self.word_is("set", k=j + 1):
+        if self.word_is("the", k=j) and self.word_is("set", "collection", k=j + 1):
             j += 2
-        elif self.word_is("set", k=j):
+        elif self.word_is("set", "collection", k=j):
             j += 1
         t = self.peek(j)
         if t is not None and t.kind == "ANNOT" and _is_link_text(self.toks, self.i + j):
@@ -3906,6 +3921,14 @@ class _Parser:
     # breakdowns (`by <field>`, joined `and by`) and optional measures (`on ...`).
     # Underneath it's a split: listed values of one field, listed searches of one
     # search field, or a list of conditions; a collection's members with `each`.
+
+    def _at_condition_end(self) -> bool:
+        """Nothing more of this condition follows: the end, `)`, `;`, a connective or a
+        step word."""
+        t = self.peek()
+        return (t is None or t.kind in ("RP", "SEMI", "COMMA")
+                or (t.kind == "WORD" and t.val.lower() in (_CONNECTIVES | _COMPARE_STOPS
+                                                           | {"then", "group", "sample"})))
 
     def _compare_value_start(self, k: int) -> bool:
         """Does a bare value (not a field) start at offset k? A link, a quoted
