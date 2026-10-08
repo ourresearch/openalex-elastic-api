@@ -132,3 +132,22 @@ def test_a_relation_still_reads_as_a_relation():
     assert _canon("get works where it's cited by (W2741809807)") != _canon("get works where has DOI is true")
     echo = render_pipeline_line(canonicalize_oqo(parse("get works where it cites (W2741809807)")))
     assert echo == "get works where it cites (W2741809807)"   # not ((W2741809807))
+
+
+# After a plain value, a flag sentence, a flag alone, or `not <condition>` starts a new
+# condition (each was read as a second value: the yes/no write test found it, 2026-10-08).
+AFTER_A_VALUE = [
+    ("get works where type is [article](article) and year is 2021 and it's not open access",
+     "get works where type is article and year is 2021 and open access is false"),
+    ("get works where type is article and has DOI and year is 2020",
+     "get works where type is article and has DOI is true and year is 2020"),
+    ("get works where country is [Ghana](GH) and not retracted",
+     "get works where country is GH and retracted is false"),
+    ("get works where type is article and not year is 2020",
+     "get works where type is article and year is not 2020"),
+]
+
+
+@pytest.mark.parametrize("q,road", AFTER_A_VALUE)
+def test_a_condition_after_a_plain_value(q, road):
+    assert _canon(q) == _canon(road)

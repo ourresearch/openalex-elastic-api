@@ -3238,9 +3238,32 @@ class _Parser:
         self._skip_annot()
         try:
             t = self.peek()
+            # `... and not <condition>`: look past the `not` (oxjob #1555)
+            while t is not None and t.kind == "WORD" and t.val.lower() == "not":
+                self.i += 1
+                self._skip_annot()
+                t = self.peek()
             # a `(` opens a clause-group (only the relaxed probe accepts this)
             if not require_known_field and t and t.kind == "LP":
                 return True
+            # a yes/no flag as a sentence (`it's not open access`) or alone (`has DOI`
+            # then a connective, `;`, `)` or the end) opens a clause (oxjob #1555)
+            if t is not None and t.kind == "WORD":
+                from query_translation.oql_bool_phrases import match as _bool_phrase
+                words = []
+                for j in range(14):
+                    tk = self.peek(j)
+                    if tk is None or tk.kind != "WORD":
+                        break
+                    words.append(tk.val)
+                if _bool_phrase(words, self._entity) is not None:
+                    return True
+                mf = match_field(self.toks, self.i)
+                if mf is not None and mf[1].kind == "bool":
+                    after = self.peek(mf[2])
+                    if after is None or after.kind in ("RP", "SEMI") or (
+                            after.kind == "WORD" and after.val.lower() in _CONNECTIVES):
+                        return True
             # a COMPLETE row-subject verb phrase followed by `(` (`it cites (…`)
             # opens a clause (oxjob #557); an incomplete one (`… and it`) does
             # not — inside a bare search run, a lone `it` stays an ordinary
