@@ -382,7 +382,12 @@ CAP_COLUMN = "column"
 # "country" as words on author queries, which bumps the properties version): authors
 # `last_known_institutions.country_code` gains the OQL input aliases `last known institution country`, `last known
 # country` and `country` (#1494's log: 8 refusals). Alias additions = MINOR.
-PROPERTIES_VERSION = "15.3.0"
+# 16.0.0 (oxjob #1555, 2026-10-09; Jason's "Yes" 18:35 CT to taking back the `country` word on author queries,
+# a MAJOR bump): authors `last_known_institutions.country_code` drops the aliases `country` and `last known country`
+# added in 15.3.0 about 20 minutes earlier (no outside use). Last known institution is our guess from the
+# publication record and isn't foregrounded; "Brazilian researchers" read from the record
+# (`get authors in [Brazil](BR) who published works where ...`). `last known institution country` stays.
+PROPERTIES_VERSION = "16.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

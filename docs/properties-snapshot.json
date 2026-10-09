@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "d4f56788a6b2844bfca813c20ed8d51633470e10fc8154f6f280c4184683735a",
+    "fingerprint": "8bf4687ab1921255582e092befb5d8d368ea9694ddded0c67608e2f153e49193",
     "property_count": 904,
-    "version": "15.3.0"
+    "version": "16.0.0"
   },
   "properties": {
     "authors": {
@@ -493,8 +493,6 @@
           "sort"
         ],
         "aliases": [
-          "country",
-          "last known country",
           "last known institution country"
         ],
         "alternate_keys": [],

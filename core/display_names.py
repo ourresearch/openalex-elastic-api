@@ -89,8 +89,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'ids.openalex': {"display_name": 'OpenAlex ID', "aliases": ['id']},
         # what models write for it (#1494's log, oxjob #1555; Jason's yes 2026-10-09 18:14 CT)
         'last_known_institutions.country_code': {"display_name": 'institution country',
-                                                 "aliases": ['last known institution country',
-                                                             'last known country', 'country']},
+                                                 "aliases": ['last known institution country']},
         'last_known_institutions.id': {"display_name": 'institution'},
         'last_known_institutions.type': {"display_name": 'institution type'},
         'observed_orcids': {"display_name": 'Observed ORCIDs'},  # column-only since #1340; the ORCID filter covers the list
