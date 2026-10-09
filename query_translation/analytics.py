@@ -345,6 +345,7 @@ class Level:
     post_keep: Optional[set] = None            # keys kept after a survivors lookup
     size: Optional[int] = None
     composite: bool = False                    # cursor paging (a single terms split)
+    by_count: bool = False                     # filters: biggest first, empty ones dropped
     paged_floor: bool = False                  # a count floor sorted and paged by ES
 
 
@@ -474,6 +475,19 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
         width = g.bins["of"]
         lv = Level(i, g, "histogram", column_id=column_id, is_float=is_float)
         lv.agg = {"histogram": {"field": es_field, "interval": width, "min_doc_count": 1}}
+        return lv
+    if "continent" in fld.param and g.bins is None:
+        # a split by continent (#1494's cow path, oxjob #1555): continents come from
+        # countries, so one filter per continent, biggest first, empty ones dropped
+        from settings import CONTINENT_NAMES
+        lv = Level(i, g, "filters", column_id=column_id, group_entity=group_entity, by_count=True)
+        filters = {}
+        for j, c in enumerate(CONTINENT_NAMES):
+            k = f"v{j}"
+            filters[k] = _translate(LeafFilter(column_id, c["id"]), fields_dict).to_dict()
+            lv.labels[k] = (c["id"], c["display_name"])
+            lv.order_keys.append(k)
+        lv.agg = {"filters": {"filters": filters}}
         return lv
     # a plain column
     ftype = type(fld).__name__
@@ -1158,7 +1172,10 @@ def _bucket_rows(lv: Level, agg: dict) -> List[Tuple[str, dict]]:
     """(bucket key, bucket) in display order for one level's aggregation result."""
     buckets = agg["buckets"]
     if isinstance(buckets, dict):          # filters
-        return [(k, buckets[k]) for k in lv.order_keys]
+        rows = [(k, buckets[k]) for k in lv.order_keys]
+        if lv.by_count:
+            rows = sorted([r for r in rows if r[1]["doc_count"]], key=lambda r: -r[1]["doc_count"])
+        return rows
     if lv.composite:
         return [(b["key"]["k"], b) for b in buckets]
     if lv.kind == "range":
