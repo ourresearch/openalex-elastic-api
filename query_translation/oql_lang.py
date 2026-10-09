@@ -5209,16 +5209,22 @@ class _Parser:
                         "OQL_BAD_MEASURE",
                         f'"{spelling}" is a field, not a calculation',
                         f"name the calculation: summarize using percent {spelling}", t.pos)
-            for other in ("authors", "institutions", "sources"):
-                om = match_entity_fallback(self.toks, self.i, other)
-                if om is not None and other != entity:
-                    raise oql_error(
-                        "OQL_BAD_MEASURE",
-                        f'"{om[0]}" belongs to each {other[:-1]}, not to the {noun}, so it '
-                        f"isn't calculated",
-                        f"split by {other[:-1]} to show it beside each one: group those "
-                        f"{noun} by {other[:-1]}; then, summarize using count and {om[0]}",
-                        t.pos)
+            found = [(other, om) for other in ("authors", "institutions", "sources")
+                     if other != entity
+                     and (om := match_entity_fallback(self.toks, self.i, other)) is not None]
+            # a field's own name before another field's alias (`country` is institutions'
+            # country, and an alias of authors' institution country)
+            found.sort(key=lambda x: _is_column_alias(
+                x[0], _entity_resolve_field(x[1][1], x[0]).column, x[1][0]))
+            if found:
+                other, om = found[0]
+                raise oql_error(
+                    "OQL_BAD_MEASURE",
+                    f'"{om[0]}" belongs to each {other[:-1]}, not to the {noun}, so it '
+                    f"isn't calculated",
+                    f"split by {other[:-1]} to show it beside each one: group those "
+                    f"{noun} by {other[:-1]}; then, summarize using count and {om[0]}",
+                    t.pos)
         raise oql_error(
             "OQL_BAD_MEASURE",
             f'"{t.val if t is not None else ""}" isn\'t a calculation',
@@ -5478,6 +5484,13 @@ _AT_YEARS = _AT_EVER
 _THING_IN = {"institutions": ("country_code", "continent"),
              "sources": ("country_code", None), "funders": ("country_code", None),
              "publishers": ("country_codes", None)}
+
+
+def _is_column_alias(entity: str, column: str, spelling: str) -> bool:
+    """Is `spelling` one of the registry's input aliases for `column` (not its name)?"""
+    from core.display_names import DISPLAY_NAME_OVERRIDES
+    aliases = DISPLAY_NAME_OVERRIDES.get(entity, {}).get(column, {}).get("aliases") or []
+    return spelling.lower() in {a.lower() for a in aliases}
 
 
 def _walk_entity(w) -> Optional[str]:
