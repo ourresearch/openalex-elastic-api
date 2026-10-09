@@ -4516,9 +4516,9 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where title has (neuromorphic) and date >= 2026-09-14;
+    get works where title has (neuromorphic) and published since 2026-09-14;
     then, get authors of those works;
-    finally, get all those authors' works where date >= 2026-08-01
+    finally, get all those authors' works where published since 2026-08-01
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "display_name.search", "value": "neuromorphic", "operator": "has"}, {"column_id": "from_publication_date", "value": "2026-09-14"}], "walks": [{"column_id": "authorships.author.id", "each": false}, {"to": "works", "where": {"column_id": "from_publication_date", "value": "2026-08-01"}}]}
 - id: 234
   tags: [pipeline, query-set, group-by, calculate]

@@ -109,3 +109,56 @@ def test_a_negated_comparison_keeps_its_not(q):
     echo = render_pipeline_line(o)
     assert "not " in echo
     assert _canon(echo) == o.to_dict()
+
+
+# Dates read like years (Jason 2026-10-09 13:26 CT), and the created date reads `added`.
+DATE_ECHOES = [
+    ("get works where date >= 2021-06-01", "get works where published since 2021-06-01"),
+    ("get works where date <= 2021-06-30", "get works where published through 2021-06-30"),
+    ("get works where date < 2021-06-01", "get works where published before 2021-06-01"),
+    ("get works where date >= 2021-06-01 and date <= 2021-06-30",
+     "get works where published from 2021-06-01 through 2021-06-30"),
+    ("get works where created date >= 2025-01-01", "get works where added since 2025-01-01"),
+    ("get works where created date >= 2025-01-01 and created date <= 2025-01-31",
+     "get works where added from 2025-01-01 through 2025-01-31"),
+    # a strict lower bound, an exact date, the updated date and a negation keep symbols
+    ("get works where date > 2021-06-01", "get works where date > 2021-06-01"),
+    ("get works where date is 2021-06-01", "get works where date is 2021-06-01"),
+    ("get works where updated date >= 2025-01-01", "get works where updated date >= 2025-01-01"),
+    ("get works where not date >= 2021-06-01", "get works where not date >= 2021-06-01"),
+]
+
+
+@pytest.mark.parametrize("q,echo", DATE_ECHOES)
+def test_dates_echo_in_words(q, echo):
+    assert _echo(q) == echo
+    assert _canon(echo) == _canon(q)
+
+
+@pytest.mark.parametrize("words,symbols", [
+    ("get works where added since 2025-01-01", "get works where created date >= 2025-01-01"),
+    ("get works where added on or after 2025-01-01", "get works where created date >= 2025-01-01"),
+    ("get works where added between 2025-01-01 and 2025-01-31",
+     "get works where created date >= 2025-01-01 and created date <= 2025-01-31"),
+    ("get works where published from 2021-06-01 through 2021-06-30",
+     "get works where date >= 2021-06-01 and date <= 2021-06-30"),
+])
+def test_date_words_read_like_the_symbols(words, symbols):
+    assert _canon(words) == _canon(symbols)
+
+
+@pytest.mark.parametrize("q,fix", [
+    ("get works where published after 2021-06-01", "published since 2021-06-02"),
+    ("get works where title has kelp and published after (2021-06-01)", "published since 2021-06-02"),
+    ("get works where added after 2025-01-31", "added since 2025-02-01"),
+    ("get works where date after 2021-06-01", "published since 2021-06-02"),
+    ("get works where created date after 2025-01-31", "added since 2025-02-01"),
+])
+def test_after_a_date_is_ambiguous(q, fix):
+    """Jason 2026-10-09: "after June 1st" may or may not include June 1, so the parser
+    says so and offers both readings; years keep `after` (`published after 2020`)."""
+    from query_translation.diagnostics import OQLError
+    with pytest.raises(OQLError) as e:
+        parse(q)
+    assert e.value.code == "OQL_AMBIGUOUS_DATE" and fix in e.value.fixit
+    assert _canon("get works where published after 2020") == _canon("get works where year > 2020")

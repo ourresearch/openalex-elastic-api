@@ -22,6 +22,7 @@ Design anchors (see docs/oql-spec.md for prose, oxjob #330 EXPLORE.md for the wh
 from __future__ import annotations
 
 import contextvars
+import datetime
 import re
 from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
@@ -1621,18 +1622,27 @@ def _word_at(toks: List[Tok], j: int) -> Optional[str]:
     return t.val.lower() if t is not None and t.kind == "WORD" else None
 
 
-def _year_or_date_at(toks: List[Tok], i: int) -> Optional[str]:
-    """`2020` -> "year", `2021-06-01` -> "date" at token i (or inside a one-value `(...)`)."""
+def _value_tok_at(toks: List[Tok], i: int) -> Optional[Tok]:
+    """The value token at i, looking inside a one-value `(...)`."""
     t = toks[i] if i < len(toks) else None
     if t is not None and t.kind == "LP":
         t = toks[i + 1] if i + 1 < len(toks) else None
-    if t is None or t.kind != "WORD":
-        return None
-    if _YEAR_RE.match(t.val):
+    return t
+
+
+def value_kind(text: str) -> Optional[str]:
+    """`2020` -> "year", `2021-06-01` -> "date", else None."""
+    if _YEAR_RE.match(text):
         return "year"
-    if _DATE_RE.match(t.val):
+    if _DATE_RE.match(text):
         return "date"
     return None
+
+
+def _year_or_date_at(toks: List[Tok], i: int) -> Optional[str]:
+    """`2020` -> "year", `2021-06-01` -> "date" at token i (or inside a one-value `(...)`)."""
+    t = _value_tok_at(toks, i)
+    return value_kind(t.val) if t is not None and t.kind == "WORD" else None
 
 
 def _match_word_op(toks: List[Tok], i: int):
@@ -1647,15 +1657,40 @@ def _match_word_op(toks: List[Tok], i: int):
     return (op, n, kind) if kind else None
 
 
+# The verbs that say a date or year field in words (oxjob #1555, Jason 2026-10-09):
+# verb -> {kind of value -> the field word it reads}
+PHRASE_VERBS = {"published": {"year": "year", "date": "date"},
+                "added": {"date": "created date"}}
+# field word -> (verb, kind): "year" -> ("published", "year"), "created date" -> ("added", "date")
+PHRASE_OF_WORD = {w: (verb, kind) for verb, kinds in PHRASE_VERBS.items() for kind, w in kinds.items()}
+
+
+def _after_a_date_error(lead: str, toks: List[Tok], i: int, pos):
+    """`after 2021-06-01` (the date at token i) is ambiguous for a date (Jason 2026-10-09:
+    does it start at midnight June 1 or June 2?): a loud error naming both readings."""
+    date = _value_tok_at(toks, i).val
+    try:
+        nxt = (datetime.date.fromisoformat(date) + datetime.timedelta(days=1)).isoformat()
+    except ValueError:
+        nxt = "the next day"
+    return oql_error("OQL_AMBIGUOUS_DATE",
+                     f'"after {date}" is ambiguous for a date: it may or may not include {date}',
+                     f'write "{lead} since {nxt}" to start the next day, or "{lead} since {date}" '
+                     f'to include it', pos)
+
+
 def match_published(toks: List[Tok], i: int):
-    """`published since 2020` and its family at token i -> (op, words before the value,
-    "year"|"date") or None. op: a comparison, "is" (`published in 2023`), "range"
-    (`published from 2015 through 2024`, `published between 2015 and 2024`)."""
-    if _word_at(toks, i) != "published":
+    """`published since 2020`, `added since 2025-01-01` and their family at token i ->
+    (op, words before the value, the field word) or None. op: a comparison, "is"
+    (`published in 2023`), "range" (`published from 2015 through 2024`, `published
+    between 2015 and 2024`)."""
+    verb = _word_at(toks, i)
+    if verb not in PHRASE_VERBS:
         return None
     wo = _match_word_op(toks, i + 1)
     if wo is not None:
-        return wo[0], wo[1] + 1, wo[2]
+        word = PHRASE_VERBS[verb].get(wo[2])
+        return (wo[0], wo[1] + 1, word) if word else None
     w1 = _word_at(toks, i + 1)
     if w1 == "on" and _word_at(toks, i + 2) == "or" and _word_at(toks, i + 3) in ("after", "before"):
         op, n = (">=" if _word_at(toks, i + 3) == "after" else "<="), 4
@@ -1668,7 +1703,8 @@ def match_published(toks: List[Tok], i: int):
     kind = _year_or_date_at(toks, i + n)
     if kind is None and op == "is" and i + n < len(toks) and toks[i + n].kind == "LP":
         kind = "year"                     # `published in (not 2020)`
-    return (op, n, kind) if kind else None
+    word = PHRASE_VERBS[verb].get(kind) if kind else None
+    return (op, n, word) if word else None
 
 
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
@@ -2746,6 +2782,12 @@ class _Parser:
             raise _CtxFound()
         if m is not None and m[2]:  # complete
             op, n, _complete = m
+            wo = _match_word_op(self.toks, self.i)
+            if wo is not None and wo[0] == ">" and wo[2] == "date":   # `date after 2021-06-01`
+                fld = self._cur_fld
+                word = (fld.date_axis or fld.oql) if fld is not None else "date"
+                raise _after_a_date_error(PHRASE_OF_WORD.get(word, (word,))[0], self.toks,
+                                          self.i + n, t.pos)
             self.i += n
             return op
         # Legacy `contains` was renamed to `has` (#363 decision 27). It's a HARD
@@ -4093,9 +4135,13 @@ class _Parser:
         `published through 2024` (`until`, `up to`), `published in 2023` (or a list, or
         `in 2020 or later` / `or earlier`), `published from 2015 through 2024` (`to`,
         `until`), `published between 2015 and 2024`; a full date reads the publication
-        date (`published on or after 2021-06-01`). The year form is the echo (Jason
-        2026-10-09); the rest is accepted input (oxjob #1555)."""
-        op, n, word = mp                  # word: "year" or "date", the field it reads
+        date (`published on or after 2021-06-01`), and `added since 2025-01-01` the
+        created date. `after` a date is refused as ambiguous (Jason 2026-10-09). The
+        year and date forms are the echo; the rest is accepted input (oxjob #1555)."""
+        op, n, word = mp                  # word: the field it reads ("year", "date", ...)
+        if op == ">" and word != "year":
+            raise _after_a_date_error(self.toks[self.i].val.lower(), self.toks, self.i + n,
+                                      self.toks[self.i + n].pos)
         fld = _entity_resolve_field(_ALIAS[word], self._entity)
         self._cur_fld = fld
         if self._compare_mode and op not in ("range", "is"):

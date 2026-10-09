@@ -8,7 +8,7 @@ queries keep their own steps.
 """
 import re
 
-from query_translation.oql_pipeline import SUMMARIZE, YEAR_WORDS, english_list, transitions
+from query_translation.oql_pipeline import COMPARISON_WORDS, SUMMARIZE, english_list, transitions
 
 _OPENERS = ("then, ", "first, ", "finally, ", "next, ", "lastly, ", "then ")
 
@@ -237,7 +237,7 @@ def year_words(text):
     through 2024` (a compared range loses its parentheses)."""
     text = re.sub(_YEAR + r" >= (\d{4}) and year <= (\d{4})",
                   lambda m: (f"published from {m[1]} through {m[2]}" if m[1] <= m[2] else m[0]), text)
-    text = re.sub(_YEAR + r" (>=|>|<=|<) (\d{4})", lambda m: f"published {YEAR_WORDS[m[1]]} {m[2]}", text)
+    text = re.sub(_YEAR + r" (>=|>|<=|<) (\d{4})", lambda m: f"published {COMPARISON_WORDS[m[1]]} {m[2]}", text)
     text = re.sub(_YEAR + r" is (?!not\b)(?=\(|\d)", "published in ", text)
     return re.sub(r"(compare |versus )\((published from \d{4} through \d{4})\)", r"\1\2", text)
 

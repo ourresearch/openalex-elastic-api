@@ -353,71 +353,99 @@ def _flag_sentence(cn: ClauseNode) -> Optional[ClauseNode]:
                       clause_kind=cn.clause_kind, meta=_meta_without_vtree(meta))
 
 
-# Words for a publication year's comparisons (Jason 2026-10-09: "published since 2020";
-# reading test in oxjob #1555 EXPLORE.md "Words for symbols"). `or earlier` and `after`
-# on dates misread; years' `after` reads exactly.
-YEAR_WORDS = {">=": "since", ">": "after", "<=": "through", "<": "before"}
+# Years and dates in words (Jason 2026-10-09: "published since 2020", then dates the
+# same way and "added since" for the created date; reading test in oxjob #1555 EXPLORE.md
+# "Words for symbols"). `after` is written for years only: for a date it's ambiguous
+# (does it include the day?), so a strict date bound keeps its symbol and the parser
+# refuses `after <date>`.
+COMPARISON_WORDS = {">=": "since", ">": "after", "<=": "through", "<": "before"}
+# low bound column -> (high bound column, low op, high op): pairs that read `<verb> from A
+# through B` (a date's inclusive bounds are their own columns, leaves with `is`)
+_RANGE_PAIRS = {"publication_year": ("publication_year", ">=", "<="),
+                "from_publication_date": ("to_publication_date", "is", "is"),
+                "from_created_date": ("to_created_date", "is", "is")}
 
 
-def _published(word: str) -> List:
-    return [L._seg("column", "published", column_id="publication_year"),
-            L._seg("operator", f" {word} ")]
+def _phrase_entry(column: str) -> Optional[Tuple[str, str]]:
+    """(verb, "year"|"date") for a column said in words (`published`, `added`), from the
+    parser's PHRASE_VERBS and the field registry (a date bound's axis word), else None."""
+    fld = L._BY_COLUMN.get(column)
+    return L.PHRASE_OF_WORD.get(fld.date_axis or fld.oql) if fld is not None else None
 
 
-def _year_words(cn: ClauseNode) -> Optional[ClauseNode]:
+def _phrase_value_ok(kind: str, text: str) -> bool:
+    return L.value_kind(text.strip()) == kind
+
+
+def _phrase(verb: str, column: str, word: str) -> List:
+    return [L._seg("column", verb, column_id=column), L._seg("operator", f" {word} ")]
+
+
+def _in_words(cn: ClauseNode) -> Optional[ClauseNode]:
     """`year >= 2020` -> `published since 2020`; `year is 2023` -> `published in 2023`;
-    `year is (2019 or 2021)` -> `published in (2019 or 2021)`. A negated year, and a
-    year that isn't four digits, keep their symbols."""
+    `date >= 2021-06-01` -> `published since 2021-06-01`; `created date >= 2025-01-01` ->
+    `added since 2025-01-01`. A negation, an odd value (a year that isn't four digits),
+    a date's strict lower bound and a date's `is` keep their symbols."""
     meta, segs = cn.meta, cn.segments
-    if meta is None or meta.column_id != "publication_year" \
-            or any(sg.kind == "negation" for sg in segs) \
-            or any(sg.kind == "value" and not L._YEAR_RE.match(sg.text.strip()) for sg in segs):
+    entry = _phrase_entry(meta.column_id) if meta is not None else None
+    if entry is None or any(sg.kind == "negation" for sg in segs) \
+            or any(sg.kind == "value" and not _phrase_value_ok(entry[1], sg.text) for sg in segs):
         return None
-    if cn.clause_kind == "comparison" and meta.operator in YEAR_WORDS:
-        word = YEAR_WORDS[meta.operator]
-    elif (meta.operator or "is") == "is" and len(segs) >= 2 and segs[1].text == " is ":
+    verb, kind = entry
+    op = meta.operator                        # a date bound's clause carries its >= / <=
+    if cn.clause_kind == "comparison" and op in COMPARISON_WORDS \
+            and not (kind == "date" and op == ">"):
+        word = COMPARISON_WORDS[op]
+    elif kind == "year" and (meta.operator or "is") == "is" and len(segs) >= 2 \
+            and segs[1].text == " is ":
         word = "in"
     else:
         return None
     vals = list(segs[2:])
     if len(vals) == 3 and vals[0].text == "(" and vals[2].text == ")":
-        vals = [vals[1]]                      # one year, bare: `published in 2023`
-    return ClauseNode(segments=_published(word) + vals, clause_kind=cn.clause_kind, meta=meta)
+        vals = [vals[1]]                      # one value, bare: `published in 2023`
+    return ClauseNode(segments=_phrase(verb, meta.column_id, word) + vals,
+                      clause_kind=cn.clause_kind, meta=meta)
 
 
-def _year_range(rows: List) -> List:
+def _phrase_ranges(rows: List) -> List:
     """`year >= 2015 and year <= 2024` side by side -> one `published from 2015 through
-    2024` clause (both bounds inclusive; a strict bound keeps its own phrase so the echo
-    reads back to the same query)."""
-    def bound(f, op):
-        return (isinstance(f, LeafFilter) and f.column_id == "publication_year"
-                and f.operator == op and not f.is_negated
-                and L._YEAR_RE.match(str(f.value)) is not None)
+    2024` clause; dates the same (`date >= ... and date <= ...`), created dates as `added
+    from ... through ...`. Both bounds inclusive; a strict bound keeps its own phrase so
+    the echo reads back to the same query."""
+    def bound(f, column, op):
+        return (isinstance(f, LeafFilter) and f.column_id == column and f.operator == op
+                and not f.is_negated
+                and _phrase_value_ok(_phrase_entry(column)[1], str(f.value)))
     out, i = [], 0
     while i < len(rows):
         a, b = rows[i], rows[i + 1] if i + 1 < len(rows) else None
-        if bound(a, ">=") and bound(b, "<=") and a.value <= b.value:
-            out.append(_range_node(a, b))
-            i += 2
-            continue
+        col = getattr(a, "column_id", None)
+        if col in _RANGE_PAIRS:
+            hi_col, lo_op, hi_op = _RANGE_PAIRS[col]
+            if bound(a, col, lo_op) and bound(b, hi_col, hi_op) and a.value <= b.value:
+                out.append(_range_node(a, b))
+                i += 2
+                continue
         out.append(a)
         i += 1
     return out
 
 
 def _range_node(a: LeafFilter, b: LeafFilter) -> ClauseNode:
+    verb = _phrase_entry(a.column_id)[0]
     return ClauseNode(
-        segments=_published("from") + [L._seg("value", str(a.value), value=a.value),
-                                        L._seg("operator", " through "),
-                                        L._seg("value", str(b.value), value=b.value)],
+        segments=_phrase(verb, a.column_id, "from") + [
+            L._seg("value", str(a.value), value=a.value), L._seg("operator", " through "),
+            L._seg("value", str(b.value), value=b.value)],
         clause_kind="comparison",
-        meta=ClauseMeta(column_id="publication_year", operator="range", value=[a.value, b.value],
-                        column_display_name="published"))
+        meta=ClauseMeta(column_id=a.column_id, operator="range", value=[a.value, b.value],
+                        column_display_name=verb))
 
 
 def _pipeline_expr(node, resolver=None):
     if isinstance(node, ClauseNode):
-        return (_flag_sentence(node) or _year_words(node)
+        return (_flag_sentence(node) or _in_words(node)
                 or _bare_values(_pipeline_clause(node), resolver))
     if isinstance(node, GroupNode):
         node.children = [_pipeline_expr(c, resolver) for c in node.children]
@@ -426,10 +454,10 @@ def _pipeline_expr(node, resolver=None):
 
 def where_node(filters: List, resolver=None, top: bool = True):
     """The pipeline-style ExprNode for an implicit-AND list of filters (or one)."""
-    rows = _year_range(L._merge_same_field_items(list(filters), "and"))
+    rows = _phrase_ranges(L._merge_same_field_items(list(filters), "and"))
 
     def node(f, top_):
-        if isinstance(f, ClauseNode):         # a year range, already a clause
+        if isinstance(f, ClauseNode):         # a year or date range, already a clause
             return f
         return _pipeline_expr(L._filter_node(f, top=top_, resolver=resolver), resolver)
     if len(rows) == 1:
