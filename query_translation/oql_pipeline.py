@@ -837,7 +837,23 @@ def thing_first(oqo: OQO) -> Optional[Tuple[str, bool]]:
     if g.values is not None or g.bins is not None or g.conditions is not None:
         return None
     ent = L.THING_BY_COLUMN.get(g.column_id)
-    return (ent, False) if ent else None
+    if ent is None or not _head_says(g.where):
+        return None
+    return ent, False
+
+
+def _head_says(where) -> bool:
+    """Can the thing-first start say this filter? Every calculation but one count is
+    the old split's (`group those works by author where mean FWCI of those works is at
+    least 2`): `keep` is gone (Jason 2026-10-09 18:37 CT: "Drop it")."""
+    measures = [p for p in _and_parts(where) if L._has_measure_filter(p)]
+    return not measures or (len(measures) == 1 and _count_in_head(measures[0]))
+
+
+def _count_in_head(m) -> bool:
+    """`who published more than 5 works where ...`"""
+    return (isinstance(m, MeasureFilter) and m.measure == "count" and not m.is_negated
+            and m.operator in _COUNT_WORDS)
 
 
 def _and_parts(node) -> List:
@@ -902,9 +918,9 @@ def _place_text(leaves: List, resolver=None) -> str:
     return f"{word} {vals_text}" + (f" {when}" if when else "")
 
 
-def _thing_head(where, thing: str, resolver=None):
-    """(the start up to `works`, the `keep` condition or None) for a thing's own
-    conditions: places first, then `where <own fields>`, the verb, a count."""
+def _thing_head(where, thing: str, resolver=None) -> str:
+    """The start up to `works` for a thing's own conditions: places first, then `where
+    <own fields>`, the verb, a count (`thing_first` checked the head can say them)."""
     from query_translation.walks import plural, singular
     places, own, measures = [], [], []
     for p in _and_parts(where):
@@ -917,11 +933,7 @@ def _thing_head(where, thing: str, resolver=None):
             measures.append(p)
         else:
             own.append(p)
-    count = None
-    if (len(measures) == 1 and isinstance(measures[0], MeasureFilter)
-            and measures[0].measure == "count" and not measures[0].is_negated
-            and measures[0].operator in _COUNT_WORDS):
-        count = measures.pop()
+    count = measures[0] if measures else None
     ctx = {"noun": "works", "group_entity": thing, "singular": singular(thing)}
     head = f"get {plural(thing)}"
     for leaves in places:
@@ -939,27 +951,19 @@ def _thing_head(where, thing: str, resolver=None):
     head += "works"
     if places and ANY_WORKS:
         head += f" {ANY_WORKS}"
-    keep = None
-    if measures:
-        keep = measures[0] if len(measures) == 1 else BranchFilter("and", measures)
-    return head, keep, ctx
+    return head
 
 
 def _build_thing_first(oqo: OQO, thing: str, whole_set: bool, resolver=None) -> OQLRenderTree:
     from query_translation.walks import plural, singular
     where = oqo.walks[0].where if whole_set else oqo.group_by[0].where
-    head_text, keep, ctx = _thing_head(where, thing, resolver)
+    head_text = _thing_head(where, thing, resolver)
     head = EntityHead(id="works", text=head_text)
     where_keyword, wnode = "", None
     if oqo.filter_rows:
         where_keyword = " where "
         wnode = where_node(list(oqo.filter_rows), resolver, top=True)
     steps: List[StepDirective] = []
-    if keep is not None:
-        steps.append(StepDirective(
-            prefix=f"keep those {plural(thing)} where ",
-            segments=[_text(_group_where_text(keep, ctx, resolver))],
-            meta=StepMeta("keep", index=0, data={"where": keep.to_dict()})))
     rest = [] if whole_set else oqo.group_by[1:]
     if rest:
         # each thing's works split further: `group each institution's works by year`

@@ -2218,8 +2218,6 @@ class _Parser:
                         walks.append(Walk(column_id=g0.column_id, each=False, where=g0.where))
                         cur = THING_BY_COLUMN[g0.column_id]
                         self._entity = cur
-                elif kind == "keep":
-                    group_by[0] = replace(group_by[0], where=_and_all([group_by[0].where, val]))
                 else:  # sample
                     if walks:
                         raise oql_error("OQL_SAMPLE_AFTER_WALK",
@@ -3912,10 +3910,15 @@ class _Parser:
             self.next()
             return "compare", self._parse_compare(entity)
         if w == "keep":
-            # `then, keep those authors where count of those works is above 5` (oxjob
+            # `keep` is gone (Jason 2026-10-09 18:37 CT: "Drop it"): no map question
+            # filters groups on anything but a count, and it was the slow path (oxjob
             # #1555): more conditions on the things a thing-first query started with
             self.next()
-            return "keep", self._parse_keep(splits or [])
+            raise oql_error(
+                "OQL_NO_KEEP", "`keep` isn't a step",
+                "filter on a count in the start: get authors who published more than 5 works "
+                "where ...; for any other calculation, download the table and filter it",
+                t.pos)
         raise oql_error("OQL_UNKNOWN_STEP", f'"{t.val}" doesn\'t start a step', None,
                         t.pos)
 
@@ -4505,30 +4508,6 @@ class _Parser:
                          else "summarize using ... (after a split, the split says per what)")
                         if group_by else f"summarize all those {_plural_noun(cur)} using ...",
                         pos)
-
-    def _parse_keep(self, splits) -> FilterType:
-        """`keep those authors where <condition>` after a thing-first start."""
-        from query_translation.walks import plural
-        t = self.peek()
-        first = THING_BY_COLUMN.get(splits[0].column_id) if splits else None
-        if first is None:
-            raise oql_error("OQL_KEEP_NEEDS_THINGS",
-                            "`keep` narrows the authors, institutions ... a query starts with",
-                            "start with them: get authors who published works where ...",
-                            t.pos if t is not None else None)
-        if self.word_is("those", "the", "these", "only"):
-            self.next()
-            nt = self.peek()
-            if nt is not None and nt.kind == "WORD" and nt.val.lower() in (
-                    plural(first).lower(), first):
-                self.next()
-        if not self.word_is("where"):
-            nt = self.peek()
-            raise oql_error("OQL_KEEP_NEEDS_THINGS", 'expected "where" after "keep those ..."',
-                            f"keep those {plural(first)} where count of those works is above 5",
-                            nt.pos if nt is not None else None)
-        self.next()
-        return self._parse_group_where("works", splits[0])
 
     def _at_thing_verb(self, k: int = 0) -> bool:
         """`who published`, `that funded`, `with works`, `of works` at offset k: where

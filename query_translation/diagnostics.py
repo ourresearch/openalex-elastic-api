@@ -445,10 +445,10 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "the summary names something the query doesn't hold",
               "summarize each author using ... after `get authors ... who published works where "
               "...`; summarize all those works using ... on works"),
-        _spec("OQL_KEEP_NEEDS_THINGS", ERROR, PARSE,
-              "`keep` narrows the authors, institutions ... a query starts with",
-              "get authors who published works where ...; then, keep those authors where "
-              "count of those works is above 5"),
+        _spec("OQL_NO_KEEP", ERROR, PARSE,
+              "`keep` isn't a step",
+              "filter on a count in the start: get authors who published more than 5 works where "
+              "...; for any other calculation, download the table and filter it"),
         _spec("OQL_COMPARE_NEEDS_TWO", ERROR, PARSE,
               "a comparison needs two or more things, separated by versus",
               "compare institution A versus B"),

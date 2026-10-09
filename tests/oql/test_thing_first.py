@@ -57,10 +57,12 @@ ECHOES = [
      "since 2016; then, group each institution's works by year; finally, summarize using count"),
     ("get authors where h-index is above 20 who published more than 5 works where title has kelp",
      "get authors where h-index is above 20 who published more than 5 works where title has (kelp)"),
-    ("get authors who published works where title has kelp; then, keep those authors where "
-     "mean FWCI of those works is at least 2",
-     "get authors who published works where title has (kelp); then, keep those authors where "
-     "mean FWCI of those works is at least 2"),
+    # other calculations on each one's works aren't the start's: the old split says them
+    # (`keep` is gone, Jason 2026-10-09 18:37 CT)
+    ("get works where title has kelp; then group those works by author where mean FWCI of "
+     "those works >= 2",
+     "get works where title has (kelp); then, group those works by author where mean FWCI of "
+     "those works is at least 2"),
     ("get funders that funded works where title has kelp; then, summarize each funder using count",
      "get funders that funded works where title has (kelp); then, summarize each funder using count"),
     ("get sources that published works where title has kelp",
@@ -165,11 +167,12 @@ def test_summarize_all_those_authors_is_the_combined_set():
     assert o.walks[0].where is None
 
 
-def test_keep_adds_to_the_things_conditions():
-    o = parse("get authors where h-index is above 20 who published works where title has kelp; "
-              "then, keep those authors where count of those works is above 5")
-    parts = o.group_by[0].where.filters
-    assert [type(p).__name__ for p in parts] == ["LeafFilter", "MeasureFilter"]
+def test_keep_is_gone():
+    with pytest.raises(OQLError) as e:
+        parse("get authors who published works where title has kelp; then, keep those authors "
+              "where count of those works is above 5")
+    assert e.value.code == "OQL_NO_KEEP"
+    assert "who published more than 5 works" in e.value.fixit
 
 
 @pytest.mark.parametrize("q,code", [
@@ -180,7 +183,7 @@ def test_keep_adds_to_the_things_conditions():
     ("get authors who published more than 5 works where title has kelp; then, summarize all "
      "those authors using count", "OQL_SUMMARY_SCOPE"),
     ("get works where title has kelp; then, keep those authors where h-index is above 20",
-     "OQL_KEEP_NEEDS_THINGS"),
+     "OQL_NO_KEEP"),
 ])
 def test_loud_errors(q, code):
     with pytest.raises(OQLError) as e:
