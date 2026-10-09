@@ -233,14 +233,17 @@ def _own_fields_query(entity: str, where) -> Tuple[dict, str]:
 def narrow(ctx: Ctx, entity: str, keys: List[str], where) -> List[str]:
     """The `keys` whose own record matches `where` (an author's h-index): id-filtered
     searches of 10,000, side by side."""
-    q, index = _own_fields_query(entity, where)
+    q, index = _own_fields_query(entity, A._es_tree(where))
     chunks = [keys[i:i + 10_000] for i in range(0, len(keys), 10_000)]
+    # `at [UBC](I141945490) since 2022`: the years are checked in each record (#1555)
+    years = A._has_affiliation(where)
 
     def one(chunk):
-        r = ctx.search({"size": len(chunk), "_source": ["id"],
+        r = ctx.search({"size": len(chunk), "_source": ["id", "affiliations"] if years else ["id"],
                         "query": {"bool": {"filter": [{"terms": {"id": chunk}}, q]}}},
                        f"checking the {plural(entity)}' own fields", index=index)
-        return [h["_source"]["id"] for h in r["hits"]["hits"]]
+        return [h["_source"]["id"] for h in r["hits"]["hits"]
+                if not years or A._record_matches(where, h["_source"])]
     keep = set()
     for got in _pmap(one, chunks):
         keep.update(got)

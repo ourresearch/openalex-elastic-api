@@ -39,7 +39,7 @@ from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
 from query_translation.analytics_csv import split_meta
 from query_translation.oqo import (
-    OQO, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
+    OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 
 # Limits (Jason, 2026-10-03; #1512 measured the costs).
 # The engine cancels anything still running at 11 s: Jason's ceiling is 15, but
@@ -51,6 +51,9 @@ MAX_LEVEL_GROUPS = 10_000      # a nested split returns at most this many groups
 MAX_RESPONSE_BUCKETS = 65_536  # ES search.max_buckets
 FILTERED_CANDIDATES = 20_000   # a single split with a group filter checks this many groups
 LOOKUP_LIMIT = 60_000          # own-field lookups list at most this many ids
+# the works side of a group filter (oxjob #1555): the groups the works have, listed and
+# checked in their records side by side at about 36,000 a second (walk_exec's measure)
+WORKS_SIDE_LIMIT = 250_000
 DEFAULT_PER_PAGE = 200
 MAX_PAGE_DEPTH = 10_000        # page x per_page on a single split
 CSV_PAGE_GROUPS = 10_000       # groups in one page of an export (format=csv with a cursor, #1550)
@@ -549,8 +552,90 @@ def _coauthor_keys(works_index, connection, column_ids: List[str], key_field: st
     return keys | set(ids)
 
 
+# -- an author's record with years, and the smaller side (oxjob #1555, thing-first) --
+# `at [UBC](I141945490) since 2022`: the authors index holds an author's institutions and
+# their years in one flat object, so ES can only match the institution; the years are
+# checked in each candidate's record (`_source.affiliations`). A precomputed
+# institution-year keyword at the next authors rebuild would make it one terms query.
+def _has_affiliation(node) -> bool:
+    if isinstance(node, AffiliationFilter):
+        return True
+    return isinstance(node, BranchFilter) and any(_has_affiliation(c) for c in node.filters)
+
+
+def _es_tree(node):
+    """A group-filter part for ES: an affiliation with years as its year-less leaf (a
+    superset of the candidates; the years are checked after)."""
+    if isinstance(node, AffiliationFilter):
+        if node.is_negated:
+            raise AnalyticsError(
+                "group_filter_not_available",
+                "`not at` an institution in given years can't run yet.",
+                "Say where they were instead, or drop the years: ever at ...")
+        return LeafFilter(node.column_id, node.value)
+    if isinstance(node, BranchFilter):
+        if _has_affiliation(node) and not all(isinstance(c, (AffiliationFilter, BranchFilter))
+                                              for c in node.filters):
+            raise AnalyticsError(
+                "group_filter_mix",
+                "An `or` can't mix an affiliation in given years with other conditions.",
+                "Join them with `and`.")
+        from dataclasses import replace
+        return replace(node, filters=[_es_tree(c) for c in node.filters])
+    return node
+
+
+def _record_matches(node, src: dict) -> bool:
+    """The years check on one author's record, for a part made of affiliations."""
+    if isinstance(node, AffiliationFilter):
+        return node.matches(src.get("affiliations") or []) != bool(node.is_negated)
+    if isinstance(node, BranchFilter):
+        r = (all if node.join == "and" else any)(_record_matches(c, src) for c in node.filters)
+        return (not r) if node.is_negated else r
+    return True
+
+
+def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadline) -> Optional[int]:
+    """About how many distinct groups the works have (a cardinality probe)."""
+    field = lv.agg["terms"]["field"]
+    res = _search(index, connection, {"size": 0, "query": base_query, "aggs": {
+        "n": {"cardinality": {"field": field, "precision_threshold": 40_000}}}},
+        deadline, "counting the groups the works have")
+    return res["aggregations"]["n"]["value"]
+
+
+def _own_side_ids(lv: Level, part, deadline: Deadline) -> Optional[set]:
+    """The groups whose own record matches an affiliation-with-years part, listed from
+    their own index when at most LOOKUP_LIMIT match the institution; None when more."""
+    from query_translation.oqo_to_es import _translate
+    from core.join_resolver import entity_index
+    from elasticsearch_dsl.connections import get_connection
+    n = _count_entity_matches(lv, _es_tree(part), deadline)
+    if n is None or n > LOOKUP_LIMIT:
+        return None
+    g_fields, g_index = entity_index(lv.group_entity)
+    q = {"bool": {"filter": [_translate(_es_tree(part), g_fields).to_dict()]}}
+    keep, after, es = set(), None, get_connection()
+    while True:
+        body = {"size": 10_000, "_source": ["id", "affiliations"], "query": q,
+                "sort": [{"id": "asc"}]}
+        if after is not None:
+            body["search_after"] = after
+        try:
+            res = es.search(index=g_index, body=body,
+                            request_timeout=deadline.timeout("checking the groups' records"))
+        except ConnectionTimeout:
+            raise too_slow("checking the groups' records")
+        hits = res["hits"]["hits"]
+        keep |= {h["_source"]["id"] for h in hits if _record_matches(part, h["_source"])}
+        if len(hits) < 10_000:
+            return keep
+        after = hits[-1]["sort"]
+
+
 def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connection,
-                    deadline: Deadline, has_measure_filter: bool) -> List:
+                    deadline: Deadline, has_measure_filter: bool,
+                    base_query: Optional[dict] = None) -> List:
     """Turn the key-set parts of a group filter into lv.include / lv.exclude. Returns
     the parts that need the survivors lookup (own fields with too many matches)."""
     from query_translation.oqo_to_es import _translate
@@ -611,16 +696,43 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
         if has_measure_filter:
             deferred.append(p)
             continue
-        g_fields, _g_index = entity_index(lv.group_entity)
-        q = _translate(p, g_fields)
-        extra = [Q("range", works_count={"gt": 0})] if lv.group_entity == "authors" else []
-        q_all = Q("bool", filter=[q] + extra) if extra else q
-        ids = resolve_query_ids(lv.group_entity, q_all,
-                                json.dumps(p.to_dict(), sort_keys=True), LOOKUP_LIMIT,
-                                request_timeout=deadline.timeout("looking up the groups' own fields"))
+        # The smaller side (oxjob #1555): list the groups whose own fields match (UBC's
+        # authors), or the groups the works have, checked in their own records (the
+        # kelp works' authors), whichever is fewer; loud when both are too many.
+        n_keys = (_works_side_count(lv, works_index, connection, base_query, deadline)
+                  if base_query is not None and lv.kind == "terms" else None)
+        n_own = _count_entity_matches(lv, _es_tree(p), deadline)
+        ids = None
+        if n_keys is None or n_own is None or n_own <= n_keys:
+            if _has_affiliation(p):
+                ids = _own_side_ids(lv, p, deadline)
+            else:
+                g_fields, _g_index = entity_index(lv.group_entity)
+                q = _translate(p, g_fields)
+                extra = [Q("range", works_count={"gt": 0})] if lv.group_entity == "authors" else []
+                q_all = Q("bool", filter=[q] + extra) if extra else q
+                ids = resolve_query_ids(lv.group_entity, q_all,
+                                        json.dumps(p.to_dict(), sort_keys=True), LOOKUP_LIMIT,
+                                        request_timeout=deadline.timeout("looking up the groups' own fields"))
+        if ids is None and n_keys is not None and n_keys <= WORKS_SIDE_LIMIT:
+            # list the works' groups and check their records side by side, as a walk does
+            from query_translation import walk_exec as WX
+            ctx = WX.Ctx(connection, deadline)
+            keys = WX.list_keys(ctx, base_query, lv.agg["terms"]["field"], n_keys,
+                                "listing the groups the works have")
+            ids = set(WX.narrow(ctx, lv.group_entity, keys, p))
         if ids is None:
-            deferred.append(p)
-            continue
+            if base_query is None or lv.kind != "terms":
+                deferred.append(p)
+                continue
+            raise AnalyticsError(
+                "query_too_slow",
+                f"Both sides are too big to check in time: about {n_own or 0:,} "
+                f"{lv.group_entity} match their own conditions, and the works have about "
+                f"{n_keys or 0:,} {lv.group_entity}; the engine lists up to "
+                f"{LOOKUP_LIMIT:,} from their own records or {WORKS_SIDE_LIMIT:,} from the works.",
+                "Narrow the works (a shorter year range, a narrower search or topic) or the "
+                f"{lv.group_entity} (a smaller institution, fewer years).")
         add_include(ids)
     lv.include = include
     lv.exclude = exclude or None
@@ -634,21 +746,23 @@ def survivors_lookup(lv: Level, parts: List, keys: List[str], deadline: Deadline
     from core.join_resolver import entity_index
     from elasticsearch_dsl.connections import get_connection
     g_fields, g_index = entity_index(lv.group_entity)
-    filters = [_translate(p, g_fields).to_dict() for p in parts]
+    filters = [_translate(_es_tree(p), g_fields).to_dict() for p in parts]
+    years = [p for p in parts if _has_affiliation(p)]   # checked in each record (#1555)
     keep = set()
     es = get_connection()
     # a plain id-filtered search, 10,000 ids a call (a composite over the 100M-row
     # authors index took 3 s for 495 ids; this takes about 0.1 s)
     for start in range(0, len(keys), 10_000):
         chunk = keys[start:start + 10_000]
-        body = {"size": len(chunk), "_source": ["id"],
+        body = {"size": len(chunk), "_source": ["id", "affiliations"] if years else ["id"],
                 "query": {"bool": {"filter": [{"terms": {"id": chunk}}] + filters}}}
         try:
             res = es.search(index=g_index, body=body,
                             request_timeout=deadline.timeout("checking the groups' own fields"))
         except ConnectionTimeout:
             raise too_slow("checking the groups' own fields")
-        keep |= {h["_source"]["id"] for h in res["hits"]["hits"]}
+        keep |= {h["_source"]["id"] for h in res["hits"]["hits"]
+                 if all(_record_matches(p, h["_source"]) for p in years)}
     return keep
 
 
@@ -1270,7 +1384,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     "These groups have no fields of their own to filter on.",
                     "Filter by a calculation, e.g. count of those works > (10).")
             rest = resolve_keysets(lv, k_parts, oqo, index_name, connection, deadline,
-                                   bool(m_parts))
+                                   bool(m_parts), base_query=base_query)
             if rest:
                 if lv.kind != "terms" and lv.kind != "filters":
                     raise AnalyticsError("group_filter_not_available",
@@ -1665,7 +1779,7 @@ def _lookup_kinds(where) -> List[str]:
         cols = set()
 
         def walk(n):
-            if isinstance(n, LeafFilter):
+            if isinstance(n, (LeafFilter, AffiliationFilter)):
                 cols.add(n.column_id)
             elif isinstance(n, BranchFilter):
                 for c in n.filters:
@@ -1730,7 +1844,17 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                 n = _count_entity_matches(lv, p, deadline)
                 if n is None:
                     continue
-                if n > LOOKUP_LIMIT:
+                n_keys = None
+                if n > LOOKUP_LIMIT and lv.kind == "terms":
+                    # the works side: the groups the works have, checked in their records
+                    try:
+                        n_keys = _works_side_count(lv, index_name, connection, base_query, deadline)
+                    except AnalyticsError:
+                        n_keys = None
+                if n_keys is not None and n_keys <= WORKS_SIDE_LIMIT:
+                    est += 0.4 + n_keys / 36_000
+                    calls += 2 + n_keys // 10_000
+                elif n > LOOKUP_LIMIT:
                     limits.append({
                         "error": "query_too_slow",
                         "message": (f"The filter on the {lv.group_entity}' own fields matches "
@@ -1793,7 +1917,7 @@ def _count_entity_matches(lv: Level, part, deadline: Deadline) -> Optional[int]:
     from elasticsearch_dsl.connections import get_connection
     try:
         g_fields, g_index = entity_index(lv.group_entity)
-        q = _translate(part, g_fields).to_dict()
+        q = _translate(_es_tree(part), g_fields).to_dict()
     except Exception:
         return None
     filters = [q] + ([{"range": {"works_count": {"gt": 0}}}]
