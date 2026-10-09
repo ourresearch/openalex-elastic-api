@@ -23,19 +23,48 @@
 OQL is the **human-readable surface over OQO**. It is defined and validated *in
 terms of* OQO (the canonical query object, [`oqo-spec.md`](./oqo-spec.md)) — not
 in terms of OXURL. Its whole bet, versus Scopus / Web of Science / Dimensions, is
-that a researcher can **read a query aloud and roughly understand it** (confirmed
-by the #277 peer survey: OQL is the only one of the four that does this).
+that **a person who has never seen OQL reads a query and knows what they're looking
+at**: the echo is the plain-language summary at the top of every results page.
 
 ---
 
 ## 0. Design principles (priority order)
 
-1. **Human-readable / reads aloud.** Protect this above all.
-2. **Map as tightly to OQO as possible.** OQO is canonical; OQL is sugar over it.
-3. **When (1) and (2) conflict, decide case-by-case** — no global tiebreak.
-4. **Cases > rules.** Rules emerge from worked examples; this doc leads with cases.
+Revised 2026-10-09 (Jason, oxjob #1555; charter `plans/oqlo.md` decision of that
+date). Later sections of this spec still describe forms from before the revision
+(every value in parentheses, `calculate`); the corpus and the tests are the truth
+until #1589 rewrites the prose.
+
+1. **Reads like English.** The echo is the plain-language summary at the top of
+   every results page; someone who has never seen OQL reads it and knows what
+   they're looking at. Protect this above all.
+2. **The parser carries the complexity, not the reader.** The OQO stays the tight,
+   exact structure underneath; OQL's job is to say it in English. When readable
+   English and a simple parser conflict, English wins.
+3. **Exact.** One meaning, one canonical text, and an exact round trip
+   (`OQO -> OQL -> OQO` is the identity, §1); a deterministic parser with no model
+   inside. Wherever English is ambiguous (and/or, negation on things a work has
+   many of), the echo picks wording that isn't.
+4. **Accept what people reach for; echo one form.** Input takes the forms people
+   and models naturally write (the "cow paths": Haiku is the cheap user test); the
+   echo shows one canonical form.
 5. **Loud, never silent.** A query that can't do what it appears to do is an
    **error with a fix-it**, never a silent wrong answer.
+6. **Grounded in real needs and real tests.** Decisions rest on the questions
+   users actually bring (#1602's map, #1492's question bank) and on reading and
+   writing tests with people and models, not on what makes a grammar tidy. Cases
+   over rules: worked examples lead, rules come from them.
+
+The cost, named so it stays watched: complexity moves, it doesn't vanish. The editor
+(#1597) must take its hints from this same parser rather than a second grammar; the
+docs must teach a richer language; English invites ambiguity, which principle 3
+guards. Few people write OQL from a blank page (models and the editor do most of
+the writing), so reading is what to optimize.
+
+Before 2026-10-09 the list was: reads aloud; map as tightly to OQO as possible
+(OQL as sugar over it); case by case when those two conflict; cases over rules;
+loud, never silent. In practice the second won most conflicts (values always
+parenthesized, symbols, `calculate`), which is what the revision reverses.
 
 ## 1. The canonical triple and the round-trip invariant
 
