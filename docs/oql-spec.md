@@ -30,10 +30,8 @@ at**: the echo is the plain-language summary at the top of every results page.
 
 ## 0. Design principles (priority order)
 
-Revised 2026-10-09 (Jason, oxjob #1555; charter `plans/oqlo.md` decision of that
-date). Later sections of this spec still describe forms from before the revision
-(every value in parentheses, `calculate`); the corpus and the tests are the truth
-until #1589 rewrites the prose.
+Later sections of this spec still show older forms (every value in parentheses,
+`calculate`); the corpus and the tests are the truth until #1589 rewrites them.
 
 1. **Reads like English.** The echo is the plain-language summary at the top of
    every results page; someone who has never seen OQL reads it and knows what
@@ -60,11 +58,6 @@ The cost, named so it stays watched: complexity moves, it doesn't vanish. The ed
 docs must teach a richer language; English invites ambiguity, which principle 3
 guards. Few people write OQL from a blank page (models and the editor do most of
 the writing), so reading is what to optimize.
-
-Before 2026-10-09 the list was: reads aloud; map as tightly to OQO as possible
-(OQL as sugar over it); case by case when those two conflict; cases over rules;
-loud, never silent. In practice the second won most conflicts (values always
-parenthesized, symbols, `calculate`), which is what the revision reverses.
 
 ## 1. The canonical triple and the round-trip invariant
 
