@@ -39,14 +39,14 @@ R = make_engine_resolver(_lookup)
      "[Stanford University](I97018004)); then, get all that institution's works"),
     ("get authors where co-author is (A5066175077 or A1)",
      "get authors where co-author is ([Jane Smith](A1) or [Stephen Hawking](A5066175077))"),
-    ("get works where year > 2020; then group those works by author where that author is "
+    ("get works where published after 2020; then group those works by author where that author is "
      "not in (col_auth9) and co-author is not (A1); then summarize using count",
-     "get works where year > 2020; then, group those works by author where co-author is "
+     "get works where published after 2020; then, group those works by author where co-author is "
      "not [Jane Smith](A1) and that author is not in the collection [Our lab](col_auth9); "
      "finally, summarize using count"),
-    ("get works where year >= 2016; then group those works into ((institution is "
+    ("get works where published since 2016; then group those works into ((institution is "
      "(I99464096)), (country is (BE))); then summarize using count",
-     "get works where year >= 2016; then, compare institution [KU Leuven](I99464096) "
+     "get works where published since 2016; then, compare institution [KU Leuven](I99464096) "
      "versus country [Belgium](BE) using count"),
 ])
 def test_names_and_round_trip(q, echo):
@@ -56,8 +56,8 @@ def test_names_and_round_trip(q, echo):
 
 
 def test_named_set_conditions_may_open_with_a_parenthesis():
-    q = ("get works where year >= 2016; then group those works into ((institution is "
-         "I99464096 or country is BE) and year > 2020, year >= 2021); then summarize using count")
+    q = ("get works where published since 2016; then group those works into ((institution is "
+         "I99464096 or country is BE) and published after 2020, published since 2021); then summarize using count")
     o = canonicalize_oqo(parse(q))
     assert len(o.group_by[0].conditions) == 2
     echo = render_pipeline_line(o, R)

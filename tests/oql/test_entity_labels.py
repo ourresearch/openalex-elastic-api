@@ -16,7 +16,7 @@ NAMES = {
     "T10032": "Marine and coastal ecosystems",
     "S1": 'The "Journal"; of [Things]',
     "S2": "Notes and Queries",
-    "A1": "and year is 2020",
+    "A1": "and published in 2020",
     "I63966007": "Massachusetts Institute of Technology",
     "I97018004": "Stanford University",
 }
@@ -43,7 +43,7 @@ def _values(q):
     ("T10032", "topic"), ("S1", "source"), ("S2", "source"), ("A1", "author"),
 ])
 def test_every_name_round_trips(ident, column):
-    q = f"get works where {column} is {ident} and year > 2020"
+    q = f"get works where {column} is {ident} and published after 2020"
     echo = _echo(q)
     assert f"]({ident})" in echo
     assert _canon(echo) == _canon(q)
@@ -52,29 +52,29 @@ def test_every_name_round_trips(ident, column):
 # and / or / not, parentheses, commas, quotes, semicolons inside a name: it's a label
 @pytest.mark.parametrize("q,want", [
     ("get works where institution is [Texas A&M University and Health Science Center](I1) "
-     "and year > 2020", ["I1", 2020]),
+     "and published after 2020", ["I1", 2020]),
     ("get works where institution is [Universidad Nacional Autónoma de México (UNAM)]"
      "(I8961855)", ["I8961855"]),
     ("get works where funder is [Japan Science and Technology Agency (JST)](F4320334764)",
      ["F4320334764"]),
     ("get works where institution is [University of California, Berkeley](I95457486)",
      ["I95457486"]),
-    ('get works where source is [The "Journal"; of (Things)](S1) and year > 2020', ["S1", 2020]),
-    ("get works where author is [and year is 2020](A1)", ["A1"]),
+    ('get works where source is [The "Journal"; of (Things)](S1) and published after 2020', ["S1", 2020]),
+    ("get works where author is [and published in 2020](A1)", ["A1"]),
 ])
 def test_a_name_is_never_parsed(q, want):
     assert sorted(map(str, _values(q))) == sorted(map(str, want))
 
 
 def test_brackets_in_a_name_become_parentheses():
-    assert _echo("get works where source is S1") == \
+    assert _echo("get works where source is S1") ==\
         "get works where source is [The \"Journal\"; of (Things)](S1)"
 
 
 def test_a_name_without_its_id_is_an_error():
     for q in ("get works where institution is [Massachusetts Institute of Technology]",
               "get works where institution is [Massachusetts Institute of Technology] "
-              "and year > 2020"):
+              "and published after 2020"):
         with pytest.raises(OQLError) as e:
             parse(q)
         assert e.value.code == "OQL_MISSING_ENTITY_ID"
@@ -94,7 +94,7 @@ def test_two_names_one_id_runs_as_the_id():
 
 
 def test_the_name_never_matters():
-    assert _canon("get works where institution is [Old Name](I63966007)") == \
+    assert _canon("get works where institution is [Old Name](I63966007)") ==\
         _canon("get works where institution is [Massachusetts Institute of Technology]"
                "(I63966007)")
 
@@ -126,7 +126,7 @@ def test_old_bare_and_url_forms(q):
 
 def test_multi_line_echo_round_trips_with_names():
     q = ("get works where institution is I1 and topic is T10032 and funder is F4320334764 "
-         "and year >= 2020 and type is article; then group those works by institution "
+         "and published since 2020 and type is article; then group those works by institution "
          "in (I1, I63966007); then summarize using count")
     echo = _echo(q)
     assert "\n" in echo
@@ -140,7 +140,7 @@ def test_multi_line_echo_round_trips_with_names():
      "get works where institution is ([Massachusetts Institute of Technology](I63966007) "
      "or [Stanford University](I97018004))"),
     ("works where year >= (2020) and type is not (review) and open access is (true)",
-     "get works where it's open access and year >= 2020 and type is not [review](review)"),
+     "get works where it's open access and published since 2020 and type is not [review](review)"),
     ("works where country is KE and language is fr",
      "get works where country is [Kenya](KE) and language is [French](fr)"),
     ("works where institution is I999", "get works where institution is (I999)"),

@@ -27,16 +27,16 @@ SAME = [
     # start from a saved list of works
     ("get works in (col_mylist); then group those works by year",
      "get works where openalex id is in (col_mylist); then group those works by year"),
-    ("get works in the collection [My list](col_mylist) where year > 2020",
-     "get works where openalex id is in (col_mylist) and year > 2020"),
+    ("get works in the collection [My list](col_mylist) where published after 2020",
+     "get works where openalex id is in (col_mylist) and published after 2020"),
     # more splits in one step
-    ("get works where year > 2020; then group those works by author and by year",
-     "get works where year > 2020; then group those works by author; then group those works again by year"),
-    ("get works where year > 2020; then group those works by publisher then by year",
-     "get works where year > 2020; then group those works by publisher; then group those works again by year"),
+    ("get works where published after 2020; then group those works by author and by year",
+     "get works where published after 2020; then group those works by author; then group those works again by year"),
+    ("get works where published after 2020; then group those works by publisher then by year",
+     "get works where published after 2020; then group those works by publisher; then group those works again by year"),
     # `IT` in a comparison is Italy, not the pronoun
-    ("get works where year > 2020; then compare country (US) versus (IT)",
-     "get works where year > 2020; then group those works by country in (US, IT)"),
+    ("get works where published after 2020; then compare country (US) versus (IT)",
+     "get works where published after 2020; then group those works by country in (US, IT)"),
 ]
 
 
@@ -46,26 +46,26 @@ def test_cow_path_reads_like_the_road(cow, road):
 
 
 def test_a_saved_list_of_works_echoes_as_a_start():
-    echo = render_pipeline_line(canonicalize_oqo(parse("get works in (col_mylist) where year > 2020")))
-    assert echo == "get works in the collection (col_mylist) where year > 2020"
-    assert _canon(echo) == _canon("get works in (col_mylist) where year > 2020")
+    echo = render_pipeline_line(canonicalize_oqo(parse("get works in (col_mylist) where published after 2020")))
+    assert echo == "get works in the collection (col_mylist) where published after 2020"
+    assert _canon(echo) == _canon("get works in (col_mylist) where published after 2020")
 
 
 # Jason 2026-10-08: the splits read as one step, `by author and year` (no second `by`);
 # `and by` after a group filter or bins; the Oxford comma for three. Either is accepted.
 ECHOES = [
-    ("get works where year > 2015; then group by author; then group again by year; then summarize using count",
-     "get works where year > 2015; then, group those works by author and year; finally, summarize using count"),
-    ("get works where year > 2015; then group those works by year and by type and by country",
-     "get works where year > 2015; then, group those works by year, type, and country"),
+    ("get works where published after 2015; then group by author; then group again by year; then summarize using count",
+     "get works where published after 2015; then, group those works by author and year; finally, summarize using count"),
+    ("get works where published after 2015; then group those works by year and by type and by country",
+     "get works where published after 2015; then, group those works by year, type, and country"),
     ("get works where title-abstract has kelp; then group by author where count of those works > 10; "
      "then group again by year",
      "get works where title-abstract has (kelp); then, group those works by author where count of those "
      "works > 10 and by year"),
-    ("get works where year > 2015; then group those works into citation count bins at (1, 10); then group again by year",
-     "get works where year > 2015; then, group those works into citation count bins at (1, 10) and by year"),
-    ("get works where year > 2020; then compare type article versus review by year and by country",
-     "get works where year > 2020; then, compare type [article](article) versus [review](review) by year and country"),
+    ("get works where published after 2015; then group those works into citation count bins at (1, 10); then group again by year",
+     "get works where published after 2015; then, group those works into citation count bins at (1, 10) and by year"),
+    ("get works where published after 2020; then compare type article versus review by year and by country",
+     "get works where published after 2020; then, compare type [article](article) versus [review](review) by year and country"),
 ]
 
 
@@ -79,10 +79,10 @@ def test_splits_read_as_one_step(q, echo):
 # Round 2 (Haiku 5.5, 300 fresh questions, guide in today's echo)
 SAME_R2 = [
     # the echo's own set form after another condition (was a parse error: a bug)
-    ("get works where source type is [journal](journal) and it cites a work in the set (works where year > 2020)",
-     "get works where source type is journal and it cites works in (get works where year > 2020)"),
-    ("get works where institution is I63966007 and it doesn't cite any work in the set (works where year > 2020)",
-     "get works where institution is I63966007 and it doesn't cite works in (get works where year > 2020)"),
+    ("get works where source type is [journal](journal) and it cites a work in the set (works where published after 2020)",
+     "get works where source type is journal and it cites works in (get works where published after 2020)"),
+    ("get works where institution is I63966007 and it doesn't cite any work in the set (works where published after 2020)",
+     "get works where institution is I63966007 and it doesn't cite works in (get works where published after 2020)"),
     # a bare one-word wildcard is exact text, as if quoted
     ("get works where title-abstract has (adolescen* OR teen*)",
      'get works where title-abstract has ("adolescen*" OR "teen*")'),
@@ -117,8 +117,8 @@ SENTENCES = [
     ("get works where it isn't retracted", "get works where retracted is false"),
     ("get works where it has no abstract", "get works where has abstract is false"),
     ("get works where it's in the top 10% by citations", "get works where top 10% cited is true"),
-    ("get works where year > 2020; then compare it's open access versus it isn't open access",
-     "get works where year > 2020; then compare open access versus not open access"),
+    ("get works where published after 2020; then compare it's open access versus it isn't open access",
+     "get works where published after 2020; then compare open access versus not open access"),
 ]
 
 
@@ -137,10 +137,10 @@ def test_a_relation_still_reads_as_a_relation():
 # After a plain value, a flag sentence, a flag alone, or `not <condition>` starts a new
 # condition (each was read as a second value: the yes/no write test found it, 2026-10-08).
 AFTER_A_VALUE = [
-    ("get works where type is [article](article) and year is 2021 and it's not open access",
-     "get works where type is article and year is 2021 and open access is false"),
-    ("get works where type is article and has DOI and year is 2020",
-     "get works where type is article and has DOI is true and year is 2020"),
+    ("get works where type is [article](article) and published in 2021 and it's not open access",
+     "get works where type is article and published in 2021 and open access is false"),
+    ("get works where type is article and has DOI and published in 2020",
+     "get works where type is article and has DOI is true and published in 2020"),
     ("get works where country is [Ghana](GH) and not retracted",
      "get works where country is GH and retracted is false"),
     ("get works where type is article and not year is 2020",
@@ -174,8 +174,8 @@ def test_a_flag_echoes_as_its_sentence(q, echo):
 ROUND_3 = [
     # a flag sentence from the flag's own name (its June sentence is `it's in the top 10%
     # by citations`)
-    ("get works where it's top 10% cited and year > 2020",
-     "get works where top 10% cited is true and year > 2020"),
+    ("get works where it's top 10% cited and published after 2020",
+     "get works where top 10% cited is true and published after 2020"),
     ("get works where it's not top 1% cited", "get works where top 1% cited is false"),
     ("get works where it has PMCID and it doesn't have references and it's not paratext",
      "get works where has PMCID is true and has references is false and paratext is false"),
@@ -207,15 +207,15 @@ def test_a_compared_negation_reads_is_not():
     """Jason 2026-10-09: `country is not [India](IN)` reads better than `not country
     [India](IN)` (which Haiku wrote 4 times in round 3; accepted, never echoed)."""
     echo = render_pipeline_line(canonicalize_oqo(parse(
-        "get works where year > 2020; then compare country IN versus not country IN")))
+        "get works where published after 2020; then compare country IN versus not country IN")))
     assert echo.endswith("compare country [India](IN) versus country is not [India](IN)")
-    assert _canon(echo) == _canon("get works where year > 2020; then compare country IN "
+    assert _canon(echo) == _canon("get works where published after 2020; then compare country IN "
                                   "versus not country IN")
 
 
 def test_that_country_is_a_valid_group_filter():
     from query_translation.validator import validate_oqo
-    o = canonicalize_oqo(parse("get works where year > 2020; then group those works by "
+    o = canonicalize_oqo(parse("get works where published after 2020; then group those works by "
                                "country where that country is not [Iran](IR)"))
     assert validate_oqo(o).valid
 
@@ -231,11 +231,11 @@ MAP_FIT = [
     ("get works where it cites [Attention](W2963403868) or it's cited by [Attention](W2963403868)",
      "get works where it cites (W2963403868) or it's cited by (W2963403868)"),
     # `and by` after a group filter that ends in a value: the next split
-    ("get works where year > 2020; then group those works by institution where country is [Canada](CA) and by language",
-     "get works where year > 2020; then group those works by institution where country is CA and by language"),
-    ("get works where year > 2019; then group those works by author where last known institution is not "
+    ("get works where published after 2020; then group those works by institution where country is [Canada](CA) and by language",
+     "get works where published after 2020; then group those works by institution where country is CA and by language"),
+    ("get works where published after 2019; then group those works by author where last known institution is not "
      "[Harvard University](I136199984) and by year",
-     "get works where year > 2019; then group those works by author where last known institution is not "
+     "get works where published after 2019; then group those works by author where last known institution is not "
      "(I136199984); then group those works again by year"),
     # a set of a collection's works, the way the echo writes it
     ("get works where it cites a work in the set (works in the collection [My seeds](col_seeds))",
@@ -243,9 +243,9 @@ MAP_FIT = [
     ("get works where topic is in the set (topics of works in the collection [Gov](col_gov))",
      "get works where topic is in the set (topics of works where openalex id is in (col_gov))"),
     # a relation as a compared thing
-    ("get works where year >= 2000; then compare institution [UM](I27837315) versus it's cited by a work "
+    ("get works where published since 2000; then compare institution [UM](I27837315) versus it's cited by a work "
      "in the set (works where institution is (I27837315)) using count",
-     "get works where year >= 2000; then compare institution is (I27837315) versus it's cited by a work "
+     "get works where published since 2000; then compare institution is (I27837315) versus it's cited by a work "
      "in the set (works where institution is (I27837315)) using count"),
     # yes/no sentences: `fulltext` as one word, `in` before an index's name
     ("get works where it has fulltext", "get works where has full text is true"),
@@ -254,7 +254,7 @@ MAP_FIT = [
      "get works where CWTS core is true or PubMed is false"),
     # whether a field has a value: `it has a funder`, `it has no SDG`
     ("get works where it has an SDG", "get works where SDG is not unknown"),
-    ("get works where it has no SDG and year > 2020", "get works where SDG is unknown and year > 2020"),
+    ("get works where it has no SDG and published after 2020", "get works where SDG is unknown and published after 2020"),
     ("get works where title has kelp and it doesn't have a funder",
      "get works where title has kelp and funder is unknown"),
     # a code written as a link
@@ -275,7 +275,7 @@ def test_cow_path_map_fit(cow, road):
 
 @pytest.mark.parametrize("q", [
     "get works where it cites a work in the set (works in the collection (col_seeds))",
-    "get works where year >= 2000; then, compare (institution is (I27837315) and year >= 2020) "
+    "get works where published since 2000; then, compare (institution is (I27837315) and published since 2020) "
     "versus it's cited by a work in the set (works where institution is (I27837315)) using count by source",
 ])
 def test_the_echo_reads_back(q):
@@ -333,5 +333,5 @@ def test_a_non_works_group_by_echo_reads_back(q):
 def test_a_split_after_a_walk_still_needs_the_works():
     from query_translation.diagnostics import OQLError
     with pytest.raises(OQLError) as e:
-        parse("get works where year > 2020; then get each author of those works; then group those authors by year")
+        parse("get works where published after 2020; then get each author of those works; then group those authors by year")
     assert e.value.code == "OQL_SPLIT_NEEDS_WORKS"

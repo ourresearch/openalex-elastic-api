@@ -353,9 +353,72 @@ def _flag_sentence(cn: ClauseNode) -> Optional[ClauseNode]:
                       clause_kind=cn.clause_kind, meta=_meta_without_vtree(meta))
 
 
+# Words for a publication year's comparisons (Jason 2026-10-09: "published since 2020";
+# reading test in oxjob #1555 EXPLORE.md "Words for symbols"). `or earlier` and `after`
+# on dates misread; years' `after` reads exactly.
+YEAR_WORDS = {">=": "since", ">": "after", "<=": "through", "<": "before"}
+
+
+def _published(word: str) -> List:
+    return [L._seg("column", "published", column_id="publication_year"),
+            L._seg("operator", f" {word} ")]
+
+
+def _year_words(cn: ClauseNode) -> Optional[ClauseNode]:
+    """`year >= 2020` -> `published since 2020`; `year is 2023` -> `published in 2023`;
+    `year is (2019 or 2021)` -> `published in (2019 or 2021)`. A negated year, and a
+    year that isn't four digits, keep their symbols."""
+    meta, segs = cn.meta, cn.segments
+    if meta is None or meta.column_id != "publication_year" \
+            or any(sg.kind == "negation" for sg in segs) \
+            or any(sg.kind == "value" and not L._YEAR_RE.match(sg.text.strip()) for sg in segs):
+        return None
+    if cn.clause_kind == "comparison" and meta.operator in YEAR_WORDS:
+        word = YEAR_WORDS[meta.operator]
+    elif (meta.operator or "is") == "is" and len(segs) >= 2 and segs[1].text == " is ":
+        word = "in"
+    else:
+        return None
+    vals = list(segs[2:])
+    if len(vals) == 3 and vals[0].text == "(" and vals[2].text == ")":
+        vals = [vals[1]]                      # one year, bare: `published in 2023`
+    return ClauseNode(segments=_published(word) + vals, clause_kind=cn.clause_kind, meta=meta)
+
+
+def _year_range(rows: List) -> List:
+    """`year >= 2015 and year <= 2024` side by side -> one `published from 2015 through
+    2024` clause (both bounds inclusive; a strict bound keeps its own phrase so the echo
+    reads back to the same query)."""
+    def bound(f, op):
+        return (isinstance(f, LeafFilter) and f.column_id == "publication_year"
+                and f.operator == op and not f.is_negated
+                and L._YEAR_RE.match(str(f.value)) is not None)
+    out, i = [], 0
+    while i < len(rows):
+        a, b = rows[i], rows[i + 1] if i + 1 < len(rows) else None
+        if bound(a, ">=") and bound(b, "<=") and a.value <= b.value:
+            out.append(_range_node(a, b))
+            i += 2
+            continue
+        out.append(a)
+        i += 1
+    return out
+
+
+def _range_node(a: LeafFilter, b: LeafFilter) -> ClauseNode:
+    return ClauseNode(
+        segments=_published("from") + [L._seg("value", str(a.value), value=a.value),
+                                        L._seg("operator", " through "),
+                                        L._seg("value", str(b.value), value=b.value)],
+        clause_kind="comparison",
+        meta=ClauseMeta(column_id="publication_year", operator="range", value=[a.value, b.value],
+                        column_display_name="published"))
+
+
 def _pipeline_expr(node, resolver=None):
     if isinstance(node, ClauseNode):
-        return _flag_sentence(node) or _bare_values(_pipeline_clause(node), resolver)
+        return (_flag_sentence(node) or _year_words(node)
+                or _bare_values(_pipeline_clause(node), resolver))
     if isinstance(node, GroupNode):
         node.children = [_pipeline_expr(c, resolver) for c in node.children]
     return node
@@ -363,11 +426,15 @@ def _pipeline_expr(node, resolver=None):
 
 def where_node(filters: List, resolver=None, top: bool = True):
     """The pipeline-style ExprNode for an implicit-AND list of filters (or one)."""
-    rows = L._merge_same_field_items(list(filters), "and")
+    rows = _year_range(L._merge_same_field_items(list(filters), "and"))
+
+    def node(f, top_):
+        if isinstance(f, ClauseNode):         # a year range, already a clause
+            return f
+        return _pipeline_expr(L._filter_node(f, top=top_, resolver=resolver), resolver)
     if len(rows) == 1:
-        return _pipeline_expr(L._filter_node(rows[0], top=top, resolver=resolver), resolver)
-    children = [_pipeline_expr(L._filter_node(f, top=False, resolver=resolver), resolver)
-                for f in rows]
+        return node(rows[0], top)
+    children = [node(f, False) for f in rows]
     if top:
         return GroupNode(join="and", children=children, prefix="", suffix="",
                          joiner=" and ", meta=GroupMeta(implicit=True))
@@ -587,6 +654,8 @@ def _compare_item(tree, resolver=None) -> Tuple[Optional[str], str]:
             if text.startswith(name + " (") and text.endswith(")"):
                 # `country ([China](CN) and [US](US))` -> `(country [China](CN) and ...)`
                 return None, f"({name} {text[len(name) + 2:-1]})"
+        if " and " not in text and " or " not in text:
+            return None, text                 # one phrase: `published from 2010 through 2014`
         return None, f"({text})"
     return None, text
 

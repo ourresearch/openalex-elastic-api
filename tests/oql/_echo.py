@@ -8,7 +8,7 @@ queries keep their own steps.
 """
 import re
 
-from query_translation.oql_pipeline import SUMMARIZE, english_list, transitions
+from query_translation.oql_pipeline import SUMMARIZE, YEAR_WORDS, english_list, transitions
 
 _OPENERS = ("then, ", "first, ", "finally, ", "next, ", "lastly, ", "then ")
 
@@ -227,8 +227,23 @@ def merge_splits(steps):
     return out
 
 
+# `year` as a condition's field (not `start year`, not a split's `by year`)
+_YEAR = r"(?:(?<=where )|(?<=and )|(?<=or )|(?<=\()|(?<=, )|(?<=versus )|(?<=compare )|(?<=^))year"
+
+
+def year_words(text):
+    """Years in words (Jason 2026-10-09): `year >= 2020` -> `published since 2020`, `year is
+    2023` -> `published in 2023`, `year >= 2015 and year <= 2024` -> `published from 2015
+    through 2024` (a compared range loses its parentheses)."""
+    text = re.sub(_YEAR + r" >= (\d{4}) and year <= (\d{4})",
+                  lambda m: (f"published from {m[1]} through {m[2]}" if m[1] <= m[2] else m[0]), text)
+    text = re.sub(_YEAR + r" (>=|>|<=|<) (\d{4})", lambda m: f"published {YEAR_WORDS[m[1]]} {m[2]}", text)
+    text = re.sub(_YEAR + r" is (?!not\b)(?=\(|\d)", "published in ", text)
+    return re.sub(r"(compare |versus )\((published from \d{4} through \d{4})\)", r"\1\2", text)
+
+
 def modern(text):
-    text = named_sets(set_words(bare_values(text)))
+    text = year_words(named_sets(set_words(bare_values(text))))
     head, *steps = _top_level_parts(_inner(text, _modern_inner))
     steps = merge_splits([_bare(s) for s in steps])
     steps = [SUMMARIZE + english_list(re.split(r",? and |, ", s[len(SUMMARIZE):]))

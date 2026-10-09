@@ -1608,6 +1608,69 @@ def namespace_for_column(column_id: str, entity: Optional[str] = None
     return et
 
 
+# Words for comparisons (oxjob #1555, Jason 2026-10-09: `published since 2020`): input
+# for any year or date field (`year since 2020`), and the `published ...` phrases.
+_WORD_OPS = {"since": ">=", "after": ">", "before": "<", "through": "<=", "until": "<=",
+             "till": "<="}
+_YEAR_RE = re.compile(r"^\d{4}$")   # a full date is `_DATE_RE` (above)
+
+
+def _word_at(toks: List[Tok], j: int) -> Optional[str]:
+    """The lowercased WORD at token j, else None."""
+    t = toks[j] if j < len(toks) else None
+    return t.val.lower() if t is not None and t.kind == "WORD" else None
+
+
+def _year_or_date_at(toks: List[Tok], i: int) -> Optional[str]:
+    """`2020` -> "year", `2021-06-01` -> "date" at token i (or inside a one-value `(...)`)."""
+    t = toks[i] if i < len(toks) else None
+    if t is not None and t.kind == "LP":
+        t = toks[i + 1] if i + 1 < len(toks) else None
+    if t is None or t.kind != "WORD":
+        return None
+    if _YEAR_RE.match(t.val):
+        return "year"
+    if _DATE_RE.match(t.val):
+        return "date"
+    return None
+
+
+def _match_word_op(toks: List[Tok], i: int):
+    """`since`, `after`, `before`, `through`, `until`, `up to` before a year or date ->
+    (op, words, "year"|"date"), else None (so a search word is never read as one)."""
+    w0 = _word_at(toks, i)
+    if w0 == "up" and _word_at(toks, i + 1) == "to":
+        op, n = "<=", 2
+    else:
+        op, n = _WORD_OPS.get(w0), 1
+    kind = op and _year_or_date_at(toks, i + n)
+    return (op, n, kind) if kind else None
+
+
+def match_published(toks: List[Tok], i: int):
+    """`published since 2020` and its family at token i -> (op, words before the value,
+    "year"|"date") or None. op: a comparison, "is" (`published in 2023`), "range"
+    (`published from 2015 through 2024`, `published between 2015 and 2024`)."""
+    if _word_at(toks, i) != "published":
+        return None
+    wo = _match_word_op(toks, i + 1)
+    if wo is not None:
+        return wo[0], wo[1] + 1, wo[2]
+    w1 = _word_at(toks, i + 1)
+    if w1 == "on" and _word_at(toks, i + 2) == "or" and _word_at(toks, i + 3) in ("after", "before"):
+        op, n = (">=" if _word_at(toks, i + 3) == "after" else "<="), 4
+    elif w1 == "in":
+        op, n = "is", 2
+    elif w1 in ("from", "between"):
+        op, n = "range", 2
+    else:
+        return None
+    kind = _year_or_date_at(toks, i + n)
+    if kind is None and op == "is" and i + n < len(toks) and toks[i + n].kind == "LP":
+        kind = "year"                     # `published in (not 2020)`
+    return (op, n, kind) if kind else None
+
+
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
     """Greedy operator match at ``toks[i]``.
 
@@ -1636,6 +1699,9 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
         return tk.val.lower() if tk and tk.kind == "WORD" else None
 
     w0 = w(0)
+    wo = _match_word_op(toks, i)          # `year since 2020` (oxjob #1555)
+    if wo is not None:
+        return wo[0], wo[1], True
     if w0 == "has":
         return "has", 1, True
     if w0 in ("=", "=="):
@@ -2442,6 +2508,9 @@ class _Parser:
                 fld, has, n = hv
                 self.i += n
                 return LeafFilter(fld.column, None, "is", is_negated=has)
+        mp = match_published(self.toks, self.i)
+        if mp is not None:
+            return self._parse_published(mp)
         if self._compare_mode and self._compare_prev is not None \
                 and self._compare_value_start(0):
             # `compare institution [MIT] versus [Stanford]`: a bare value takes the
@@ -3317,6 +3386,8 @@ class _Parser:
                     return True
             if match_negated_relation(self.toks, self.i) is not None:
                 return True   # `it doesn't cite any work in the set (...)`
+            if match_published(self.toks, self.i) is not None:
+                return True   # `published since 2020` (#1555)
             if self._match_has_value(self.i) is not None:
                 return True   # `it has an SDG` (#1555)
             # a (known, when required) field word-run followed by an operator
@@ -3328,10 +3399,8 @@ class _Parser:
                 parts.append(tt.val)
                 if require_known_field and " ".join(parts).lower() not in _ALIAS:
                     continue
-                after = self.peek(j + 1)
-                if after and (after.kind == "OP" or
-                              (after.kind == "WORD" and after.val.lower() in
-                               ("is", "has", "does", "doesn't", "doesnt"))):
+                # an operator follows (`is`, `>=`, `has`, `since 2020` ...): one matcher
+                if match_operator(self.toks, self.i + j + 1) is not None:
                     return True
             return False
         finally:
@@ -4018,6 +4087,38 @@ class _Parser:
     # the breakdowns) and breakdowns (`by <field>`, joined `and`).
     # Underneath it's a split: listed values of one field, listed searches of one
     # search field, or a list of conditions; a collection's members with `each`.
+
+    def _parse_published(self, mp) -> FilterType:
+        """`published since 2020`, `published after 2020`, `published before 2020`,
+        `published through 2024` (`until`, `up to`), `published in 2023` (or a list, or
+        `in 2020 or later` / `or earlier`), `published from 2015 through 2024` (`to`,
+        `until`), `published between 2015 and 2024`; a full date reads the publication
+        date (`published on or after 2021-06-01`). The year form is the echo (Jason
+        2026-10-09); the rest is accepted input (oxjob #1555)."""
+        op, n, word = mp                  # word: "year" or "date", the field it reads
+        fld = _entity_resolve_field(_ALIAS[word], self._entity)
+        self._cur_fld = fld
+        if self._compare_mode and op not in ("range", "is"):
+            # `compare published since 2020 versus 2010`: the next bare value reuses it
+            self._compare_prev = (word, fld, op)
+        self.i += n
+        if op == "range":
+            low = self._parse_value_clause(word, fld, ">=")
+            if not self.word_is("through", "to", "until", "till", "and"):
+                t = self.peek()
+                raise oql_error("OQL_BAD_RANGE", "a range needs both ends",
+                                "e.g. published from 2015 through 2024", t.pos if t else None)
+            self.next()
+            high = self._parse_value_clause(word, fld, "<=")
+            return BranchFilter("and", [low, high])
+        if op == "is":
+            if self.word_is("or", k=1) and self.word_is("later", "earlier", k=2):
+                later = self.word_is("later", k=2)
+                leaf = self._parse_value_clause(word, fld, ">=" if later else "<=")
+                self.i += 2
+                return leaf
+            return self._parse_value_clause(word, fld, "is")
+        return self._parse_value_clause(word, fld, op)
 
     def _match_has_value(self, i: int):
         """`it has a funder`, `it has an SDG`, `it doesn't have a license`, `it has no
@@ -5814,11 +5915,15 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
     # date bound columns (from_*/to_*) render via the axis word + comparison op
     # (oxjob #407). The leaf carries op="is" on the bound column; we print
     # `<axis> >= <date>` / `<axis> <= <date>` (the inverse of the parse routing).
+    # A negated comparison keeps its `not` (`not year >= 2015`): the echo dropped it and
+    # read as the opposite query (found 2026-10-09, oxjob #1555). Not a flipped operator:
+    # `not FWCI >= 1` also holds works with no FWCI, which `FWCI < 1` leaves out.
+    neg = [_seg("negation", "not ")] if f.is_negated else []
     if fld and fld.kind == "date" and fld.date_bound and f.value is not None:
-        segs = [_seg("column", fld.date_axis, column_id=f.column_id),
-                _seg("operator", f" {fld.date_bound} "), _seg("text", "("),
-                _seg("value", _render_value(fld, f.value), value=f.value),
-                _seg("text", ")")]
+        segs = neg + [_seg("column", fld.date_axis, column_id=f.column_id),
+                      _seg("operator", f" {fld.date_bound} "), _seg("text", "("),
+                      _seg("value", _render_value(fld, f.value), value=f.value),
+                      _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
             column_id=f.column_id, operator=fld.date_bound, value=f.value,
             column_display_name=fld.date_axis))
@@ -5869,10 +5974,10 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
             column_id=f.column_id, operator="is", value=None,
             column_display_name=name))
     if f.operator in (">", ">=", "<", "<="):
-        segs = [_seg("column", name, column_id=f.column_id),
-                _seg("operator", f" {f.operator} "), _seg("text", "("),
-                _seg("value", _render_value(fld, f.value), value=f.value),
-                _seg("text", ")")]
+        segs = neg + [_seg("column", name, column_id=f.column_id),
+                      _seg("operator", f" {f.operator} "), _seg("text", "("),
+                      _seg("value", _render_value(fld, f.value), value=f.value),
+                      _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
             column_id=f.column_id, operator=f.operator, value=f.value,
             column_display_name=name))
