@@ -144,6 +144,9 @@ class AffiliationFilter:
     since: Optional[int] = None
     through: Optional[int] = None
     is_negated: bool = False
+    # `at [UBC] in 2+ years since 2022`: at least this many of those years (Jason
+    # 2026-10-09: stricter readings are options, not the default)
+    min_years: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {"affiliation": self.column_id, "value": self.value}
@@ -151,6 +154,8 @@ class AffiliationFilter:
             result["since"] = self.since
         if self.through is not None:
             result["through"] = self.through
+        if self.min_years is not None:
+            result["min_years"] = self.min_years
         if self.is_negated:
             result["is_negated"] = True
         return result
@@ -159,7 +164,7 @@ class AffiliationFilter:
     def from_dict(cls, data: Dict[str, Any]) -> "AffiliationFilter":
         return cls(column_id=data["affiliation"], value=data["value"],
                    since=data.get("since"), through=data.get("through"),
-                   is_negated=data.get("is_negated", False))
+                   is_negated=data.get("is_negated", False), min_years=data.get("min_years"))
 
     def matches(self, affiliations: List[dict]) -> bool:
         """Does an author's record (`_source.affiliations`) list the place in the
@@ -167,17 +172,18 @@ class AffiliationFilter:
         from core.utils import get_full_openalex_id
         want = (str(self.value).upper() if self.column_id.endswith("country_code")
                 else get_full_openalex_id(self.value))
+        years = set()
         for a in affiliations or []:
             inst = a.get("institution") or {}
             if self.column_id.endswith("country_code"):
                 hit = (inst.get("country_code") or "").upper() == want
             else:
                 hit = want in (inst.get("lineage") or [inst.get("id")])
-            if hit and any((self.since is None or y >= self.since)
-                           and (self.through is None or y <= self.through)
-                           for y in a.get("years") or []):
-                return True
-        return False
+            if hit:
+                years.update(y for y in a.get("years") or []
+                             if (self.since is None or y >= self.since)
+                             and (self.through is None or y <= self.through))
+        return len(years) >= (self.min_years or 1)
 
 
 FilterType = Union[LeafFilter, BranchFilter]

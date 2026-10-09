@@ -734,6 +734,11 @@ class OQOValidator:
                     type="invalid_group_filter",
                     message="An affiliation record names an institution or a country.",
                     location=loc))
+            if f.min_years is not None and (not isinstance(f.min_years, int)
+                                            or isinstance(f.min_years, bool) or f.min_years < 1):
+                errors.append(ValidationError(
+                    type="invalid_value", message="'min_years' is a whole number of years.",
+                    location=f"{loc}.min_years"))
             for k in ("since", "through"):
                 v = getattr(f, k)
                 if v is not None and (not isinstance(v, int) or isinstance(v, bool)):

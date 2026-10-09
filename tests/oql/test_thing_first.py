@@ -210,3 +210,31 @@ def test_summarize_all_after_a_split_that_isnt_a_thing_is_an_oql_error():
     with pytest.raises(OQLError):
         parse("get works where published after 2020; then group those works by type; then "
               "summarize all using count")
+
+
+@pytest.mark.parametrize("words", ["in 2+ years since 2022", "for at least 2 years since 2022",
+                                   "in 2 or more years since 2022", "2+ years since 2022"])
+def test_a_number_of_years_at_a_place(words):
+    # a stricter reading, an option (Jason 2026-10-09 17:42 CT), never the default
+    q = f"get authors at {UBC} {words} who published works where title has kelp"
+    o = parse(q)
+    assert o.group_by[0].where == AffiliationFilter("affiliations.institution.lineage", "I141945490",
+                                                    since=2022, min_years=2)
+    assert _echo(q) == ("get authors at (I141945490) in 2+ years since 2022 who published works "
+                        "where title has (kelp)")
+    assert validate_oqo(o).valid
+
+
+def test_ever_at_a_place_for_some_years():
+    q = f"get authors ever at {UBC} in 3+ years who published works where title has kelp"
+    o = parse(q)
+    assert o.group_by[0].where == AffiliationFilter("affiliations.institution.lineage", "I141945490",
+                                                    min_years=3)
+    assert _echo(q) == "get authors ever at (I141945490) in 3+ years who published works where title has (kelp)"
+
+
+def test_years_counted_across_the_record():
+    a = AffiliationFilter("affiliations.institution.lineage", "I141945490", since=2022, min_years=2)
+    ubc = {"id": "https://openalex.org/I141945490", "lineage": ["https://openalex.org/I141945490"]}
+    assert not a.matches([{"institution": ubc, "years": [2015, 2023]}])
+    assert a.matches([{"institution": ubc, "years": [2023, 2025]}])

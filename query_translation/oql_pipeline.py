@@ -841,7 +841,7 @@ def _place_leaves(node, thing: str) -> Optional[List]:
     kinds = set()
     for x in leaves:
         if isinstance(x, AffiliationFilter) and not x.is_negated and thing == "authors":
-            kinds.add((x.column_id, x.since, x.through))
+            kinds.add((x.column_id, x.since, x.through, x.min_years))
         elif (isinstance(x, LeafFilter) and not x.is_negated and x.operator == "is"
               and not isinstance(x.value, OQO)
               and ((thing == "authors" and x.column_id in _PLACE_COLUMNS)
@@ -875,6 +875,11 @@ def _place_text(leaves: List, resolver=None) -> str:
           else "institutions")
     vals = [link_text(v.value, ns, resolver, in_list=len(leaves) > 1) for v in leaves]
     vals_text = vals[0] if len(vals) == 1 else "(" + " or ".join(vals) + ")"
+    if isinstance(x, AffiliationFilter):
+        # `at [UBC] in 2+ years since 2022`; no years at all reads `ever at`
+        lead = "" if when else "ever "
+        mid = f" in {x.min_years}+ years" if x.min_years else ""
+        return f"{lead}{word} {vals_text}{mid}" + (f" {when}" if when else "")
     if when == "ever":
         return f"ever {word} {vals_text}"
     return f"{word} {vals_text}" + (f" {when}" if when else "")

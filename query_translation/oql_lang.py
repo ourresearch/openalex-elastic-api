@@ -4723,7 +4723,12 @@ class _Parser:
                 ("authors are `at` an institution or `in` a country; institutions, sources, "
                  "funders and publishers are `in` a country"), t.pos)
         tree = self._parse_value_operand(fld)
+        min_years = self._parse_min_years() if entity == "authors" else None
         since, through, mode = self._parse_place_years(entity, word, ever)
+        if min_years is not None and mode == "now":
+            raise oql_error("OQL_THING_PLACE",
+                            "`now` is one place; a number of years goes with a period",
+                            f"{word} [the place](its ID) in {min_years}+ years since 2022", t.pos)
 
         def leaf(f):
             if isinstance(f, BranchFilter):
@@ -4735,12 +4740,32 @@ class _Parser:
                 return replace(f, column_id=column)
             if mode == "now":
                 return replace(f, column_id=_AT_NOW[word])
-            if mode == "ever":
+            if mode == "ever" and min_years is None:
                 return replace(f, column_id=_AT_EVER[word])
             return AffiliationFilter(_AT_YEARS[word],
                                      str(v).upper() if word == "in" else str(v),
-                                     since=since, through=through, is_negated=f.is_negated)
+                                     since=since, through=through, is_negated=f.is_negated,
+                                     min_years=min_years)
         return leaf(tree)
+
+    def _parse_min_years(self) -> Optional[int]:
+        """`in 2+ years`, `for at least 2 years`, `in 2 or more years` after a place:
+        the record lists it in at least that many years (oxjob #1555)."""
+        k = 1 if self.word_is("in", "for") else 0
+        w = _word_at(self.toks, self.i + k) or ""
+        n, used = None, 0
+        if re.fullmatch(r"\d+\+", w) and self.word_is("years", "year", k=k + 1):
+            n, used = int(w[:-1]), k + 2
+        elif w == "at" and self.word_is("least", k=k + 1) and (_word_at(self.toks, self.i + k + 2) or "").isdigit() \
+                and self.word_is("years", "year", k=k + 3):
+            n, used = int(_word_at(self.toks, self.i + k + 2)), k + 4
+        elif w.isdigit() and len(w) < 4 and self.word_is("or", k=k + 1) and self.word_is("more", k=k + 2) \
+                and self.word_is("years", "year", k=k + 3):
+            n, used = int(w), k + 4
+        if n is None:
+            return None
+        self.i += used
+        return n
 
     def _parse_place_years(self, entity: str, word: str, ever: bool):
         """The years after a place: (since, through, mode); mode "now" (the last known
