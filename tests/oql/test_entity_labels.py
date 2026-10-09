@@ -144,7 +144,7 @@ def test_multi_line_echo_round_trips_with_names():
     ("works where country is KE and language is fr",
      "get works where country is [Kenya](KE) and language is [French](fr)"),
     ("works where institution is I999", "get works where institution is (I999)"),
-    ("works where FWCI > (-1)", "get works where FWCI > -1"),
+    ("works where FWCI > (-1)", "get works where FWCI is above -1"),
     ("works where title-abstract has (wind power)",
      "get works where title-abstract has (wind power)"),
 ])

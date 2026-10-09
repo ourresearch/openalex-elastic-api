@@ -1896,9 +1896,9 @@ rows:
     type: "spec design"
     label: "OQL date kind (#407): strict comparison stays on the base column (ES gt/lt)"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=publication_date:>2020-01-01'
+  oxurl: 'https://openalex.org/works?filter=from_publication_date:2020-01-02'
   status: ok
-  oql: 'works where date > (2020-01-01)'
+  oql: 'works where date >= (2020-01-02)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_date, value: '2020-01-01', operator: '>'}]}
   note: "Strict `>`/`<` map to the base `publication_date` param (ES gt/lt), distinct from the inclusive `>=`/`<=` which route to from_/to_ (gte/lte). Mirrors the classic URL `publication_date:>2020-01-01`."
 
@@ -4240,7 +4240,7 @@ rows:
   oql: |-
     get works where title-abstract has (kelp);
     then, group those works by author
-      where count of those works > 10
+      where count of those works is above 10
       and co-author is not (A5023888391)
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">", "value": 10}, {"column_id": "co_author", "value": "A5023888391", "is_negated": true}]}}]}
 - id: 211
@@ -4366,8 +4366,8 @@ rows:
   oql: |-
     get works where title-abstract has (kelp);
     then, group those works by author
-      where count of those works > 10
-      and h-index > 20;
+      where count of those works is above 10
+      and h-index is above 20;
     finally, summarize using count and mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">", "value": 10}, {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
 - id: 220
@@ -4381,7 +4381,7 @@ rows:
   oql: |-
     get works where institution is [University of Kansas](I146416000);
     then, group those works by author
-      where count of those works >= 5
+      where count of those works is at least 5
       and that author is not in the collection (col_abc123);
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}], "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [{"measure": "count", "operator": ">=", "value": 5}, {"column_id": "collection", "value": "col_abc123", "operator": "in collection", "is_negated": true}]}}], "calculate": [{"measure": "count"}]}
@@ -4503,7 +4503,7 @@ rows:
   status: ok
   oql: |-
     get works where title-abstract has (kelp);
-    then, get each author of those works where h-index > 20;
+    then, get each author of those works where h-index is above 20;
     then, get all that author's works;
     finally, summarize using count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "walks": [{"column_id": "authorships.author.id", "each": true, "where": {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}}, {"to": "works"}], "calculate": [{"measure": "count"}]}

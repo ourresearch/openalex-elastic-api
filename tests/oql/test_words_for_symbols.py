@@ -1,4 +1,5 @@
-"""Years in words (oxjob #1555, Jason 2026-10-09: "published since 2020").
+"""Comparisons in words (oxjob #1555, Jason 2026-10-09: years "published since 2020", dates
+the same, numbers "is above 30"; "always emit words so that we're consistent").
 
 The echo writes a publication year's comparisons as words: `published since 2020`,
 `published after 2020`, `published before 2020`, `published through 2024`, `published in
@@ -31,10 +32,10 @@ ECHOES = [
     ("get works where year >= 2015 and year <= 2024", "get works where published from 2015 through 2024"),
     # a strict pair keeps two phrases, so the echo reads back to the same query
     ("get works where year > 2014 and year < 2025", "get works where published after 2014 and published before 2025"),
-    # not every year comparison: a negation, a year that isn't four digits, other year fields
-    ("get works where year is not 2020", "get works where year is not 2020"),
-    ("get works where year > 42", "get works where year > 42"),
-    ("get awards where start year >= 2020", "get awards where start year >= 2020"),
+    # a negation, a year that isn't four digits, other year fields: words too (Jason: always)
+    ("get works where year is not 2020", "get works where not published in 2020"),
+    ("get works where year > 42", "get works where year is above 42"),
+    ("get awards where start year >= 2020", "get awards where start year is at least 2020"),
     # a compared range reads without parentheses
     ("get works where year > 2000; then compare (year >= 2010 and year <= 2014) versus (year >= 2015 and year <= 2019)",
      "get works where published after 2000; then, compare published from 2010 through 2014 versus "
@@ -121,11 +122,11 @@ DATE_ECHOES = [
     ("get works where created date >= 2025-01-01", "get works where added since 2025-01-01"),
     ("get works where created date >= 2025-01-01 and created date <= 2025-01-31",
      "get works where added from 2025-01-01 through 2025-01-31"),
-    # a strict lower bound, an exact date, the updated date and a negation keep symbols
-    ("get works where date > 2021-06-01", "get works where date > 2021-06-01"),
-    ("get works where date is 2021-06-01", "get works where date is 2021-06-01"),
-    ("get works where updated date >= 2025-01-01", "get works where updated date >= 2025-01-01"),
-    ("get works where not date >= 2021-06-01", "get works where not date >= 2021-06-01"),
+    # a strict lower bound is the next day; an exact date, the updated date, a negation
+    ("get works where date > 2021-06-01", "get works where published since 2021-06-02"),
+    ("get works where date is 2021-06-01", "get works where published on 2021-06-01"),
+    ("get works where updated date >= 2025-01-01", "get works where updated since 2025-01-01"),
+    ("get works where not date >= 2021-06-01", "get works where not published since 2021-06-01"),
 ]
 
 
@@ -162,3 +163,59 @@ def test_after_a_date_is_ambiguous(q, fix):
         parse(q)
     assert e.value.code == "OQL_AMBIGUOUS_DATE" and fix in e.value.fixit
     assert _canon("get works where published after 2020") == _canon("get works where year > 2020")
+
+
+# Numbers read in words too, everywhere (Jason 2026-10-09 14:03 CT); the symbols parse.
+NUMBER_ECHOES = [
+    ("get authors where h-index > 30", "get authors where h-index is above 30"),
+    ("get authors where h-index >= 30 and works count <= 500",
+     "get authors where h-index is at least 30 and works count is at most 500"),
+    ("get works where citation count < 10 and FWCI > 1.5",
+     "get works where citation count is below 10 and FWCI is above 1.5"),
+    ("get works where title has kelp; then group those works by author where count of those works > 5 "
+     "and h-index >= 30",
+     "get works where title has (kelp); then, group those works by author where count of those works "
+     "is above 5 and h-index is at least 30"),
+    ("get works where not h-index > 30", "get works where not h-index is above 30"),
+    ("get works where year > 2000; then compare citation count > 100 versus citation count <= 10",
+     "get works where published after 2000; then, compare citation count above 100 versus citation "
+     "count at most 10"),
+]
+
+
+@pytest.mark.parametrize("q,echo", NUMBER_ECHOES)
+def test_numbers_echo_in_words(q, echo):
+    assert _echo(q) == echo
+    assert _canon(echo) == _canon(q)
+
+
+@pytest.mark.parametrize("words,symbols", [
+    ("get authors where h-index is above 30", "get authors where h-index > 30"),
+    ("get authors where h-index above 30", "get authors where h-index > 30"),
+    ("get authors where h-index is over 30", "get authors where h-index > 30"),
+    ("get authors where h-index is more than 30", "get authors where h-index > 30"),
+    ("get authors where h-index at least 30", "get authors where h-index >= 30"),
+    ("get works where citation count is under 10", "get works where citation count < 10"),
+    ("get works where citation count is fewer than 10", "get works where citation count < 10"),
+    ("get works where citation count at most 10", "get works where citation count <= 10"),
+    ("get works where FWCI is above -1", "get works where FWCI > -1"),
+])
+def test_number_words_read_like_the_symbols(words, symbols):
+    assert _canon(words) == _canon(symbols)
+
+
+def test_number_words_inside_a_search_stay_a_search():
+    o = canonicalize_oqo(parse("get works where title has (above water) and year > 2000"))
+    leaves = [f for row in o.filter_rows for f in (getattr(row, "filters", None) or [row])]
+    assert any(".search" in f.column_id and "above" in str(f.value) for f in leaves)
+
+
+@pytest.mark.parametrize("strict,inclusive", [
+    ("get works where date > 2021-06-01", "get works where date >= 2021-06-02"),
+    ("get works where date > 2021-12-31", "get works where date >= 2022-01-01"),
+    ("get works where created date > 2025-01-31", "get works where created date >= 2025-02-01"),
+])
+def test_a_strict_date_bound_is_the_next_day(strict, inclusive):
+    """A whole-day date's `>` is the next day, inclusive (the same works; checked live
+    2026-10-09: 1,893 kelp works either way), so the echo never needs "after"."""
+    assert _canon(strict) == _canon(inclusive)

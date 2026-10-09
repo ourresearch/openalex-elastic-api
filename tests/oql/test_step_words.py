@@ -60,11 +60,13 @@ def test_any_opener_any_order(typed):
 
 def test_multi_line_echo_carries_the_step_words():
     q = ("get works where institution is I63966007 and published since 2015; "
-         "then, group those works by author where count of those works > 10 and by year; "
+         "then, group those works by author where count of those works is above 10 and by year; "
          "finally, summarize using count, mean FWCI, and percent open access")
     lines = render(_canon(q), style="pipeline").split("\n")
-    assert [ln.split(",")[0] for ln in lines[1:]] == ["then", "finally"]
-    assert all(ln.endswith(";") for ln in lines[:-1])
+    steps = [ln for ln in lines[1:] if not ln.startswith(" ")]   # a long step wraps, indented
+    assert [ln.split(",")[0] for ln in steps] == ["then", "finally"]
+    starts = [i for i, ln in enumerate(lines) if not ln.startswith(" ")]
+    assert all(lines[j - 1].endswith(";") for j in starts[1:])
 
 
 def _pipeline_rows():

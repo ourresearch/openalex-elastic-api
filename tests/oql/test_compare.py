@@ -67,9 +67,9 @@ ECHOES = [
      "(col_abc123) using count"),
     # a breakdown with a group filter, then another breakdown (`and by`)
     ("get works where title-abstract has kelp; then compare institution I63966007 versus "
-     "I97018004 by author where count of those works > 10 and by year; summarize using count",
+     "I97018004 by author where count of those works is above 10 and by year; summarize using count",
      "get works where title-abstract has (kelp); then, compare institution (I63966007) versus "
-     "(I97018004) using count by author where count of those works > 10 and by year"),
+     "(I97018004) using count by author where count of those works is above 10 and by year"),
     # a boolean search item keeps its parentheses; bins as a breakdown
     ("get works where published since 2020; then compare title-abstract has (kelp OR seaweed) versus "
      '"sea grass" by citation count bins at (1, 10, 100); summarize using count',
@@ -176,10 +176,10 @@ ERRORS = [
     ("get works where published after 2020; then compare type article versus review by year by "
      "country by funder", "OQL_TOO_MANY_SPLITS"),
     # splits divide works: no comparing authors (start or walk)
-    ("get authors where h-index > 20; then compare last known institution I1 versus I2",
+    ("get authors where h-index is above 20; then compare last known institution I1 versus I2",
      "OQL_SPLIT_NEEDS_WORKS"),
     ("get works where published after 2020; then get authors of those works; then compare h-index > "
-     "20 versus h-index <= 20", "OQL_SPLIT_NEEDS_WORKS"),
+     "20 versus h-index at most 20", "OQL_SPLIT_NEEDS_WORKS"),
 ]
 
 

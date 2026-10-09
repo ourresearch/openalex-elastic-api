@@ -269,6 +269,10 @@ def canonicalize_filter(f: FilterType, sort_operands: bool = True) -> Union[Filt
     return None
 
 
+# whole-day date column -> its inclusive lower-bound column (the date has no time of day)
+_NEXT_DAY_BOUND = {"publication_date": "from_publication_date", "created_date": "from_created_date"}
+
+
 def canonicalize_leaf_filter(f: LeafFilter, sort_operands: bool = True) -> Union[LeafFilter, BranchFilter]:
     """
     Canonicalize a leaf filter.
@@ -291,6 +295,16 @@ def canonicalize_leaf_filter(f: LeafFilter, sort_operands: bool = True) -> Union
                           operator="in", is_negated=bool(f.is_negated))
     value = canonicalize_value(f.value, f.column_id)
     operator = f.operator or "is"
+
+    # A strict lower bound on a whole-day date is the next day, inclusive (oxjob #1555,
+    # Jason 2026-10-09): `date > 2021-06-01` is `from_publication_date 2021-06-02`, so
+    # the echo reads `published since 2021-06-02` and never the ambiguous "after".
+    col = _NEXT_DAY_BOUND.get(f.column_id)
+    if col is not None and operator == ">" and isinstance(value, str):
+        from query_translation.oql_lang import next_day
+        day = next_day(value)
+        if day is not None:
+            return LeafFilter(column_id=col, value=day, operator="is", is_negated=bool(f.is_negated))
 
     if f.column_id.endswith(".search.exact") and isinstance(value, str):
         value = canonical_exact_search_value(value)

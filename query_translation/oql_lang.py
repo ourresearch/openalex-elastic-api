@@ -1645,6 +1645,33 @@ def _year_or_date_at(toks: List[Tok], i: int) -> Optional[str]:
     return value_kind(t.val) if t is not None and t.kind == "WORD" else None
 
 
+# Words for a number's comparisons (Jason 2026-10-09: "numbers should read in words too,
+# and be consistent ... always emit words"): the echo writes `is above`, `is at least`,
+# `is below`, `is at most`; input also takes `over`, `under`, `more than`, `greater
+# than`, `less than`, `fewer than`, with or without `is`. Only before a number, year or
+# date, so a search word is never read as one.
+NUMBER_WORDS = {">": "above", ">=": "at least", "<": "below", "<=": "at most"}   # the echo's
+_NUMBER_WORD_OPS = {**{tuple(w.split()): op for op, w in NUMBER_WORDS.items()},
+                    ("over",): ">", ("more", "than"): ">", ("greater", "than"): ">",
+                    ("under",): "<", ("less", "than"): "<", ("fewer", "than"): "<"}
+_NUMBER_RE = re.compile(r"^-?\d+(\.\d+)?$")   # a year too
+
+
+def _number_word_op(toks: List[Tok], i: int):
+    """`is above 30`, `at least 5`, `is at most 10` at token i -> (op, words), else None.
+    (No key is a prefix of another, so a two-word then a one-word lookup decides.)"""
+    j = i + (1 if _word_at(toks, i) == "is" else 0)
+    w0 = _word_at(toks, j)
+    for words in ((w0, _word_at(toks, j + 1)), (w0,)):
+        op = _NUMBER_WORD_OPS.get(words)
+        if op is not None:
+            t = _value_tok_at(toks, j + len(words))
+            if t is not None and t.kind == "WORD" and (_NUMBER_RE.match(t.val) or _DATE_RE.match(t.val)):
+                return op, j - i + len(words)
+            return None
+    return None
+
+
 def _match_word_op(toks: List[Tok], i: int):
     """`since`, `after`, `before`, `through`, `until`, `up to` before a year or date ->
     (op, words, "year"|"date"), else None (so a search word is never read as one)."""
@@ -1660,19 +1687,25 @@ def _match_word_op(toks: List[Tok], i: int):
 # The verbs that say a date or year field in words (oxjob #1555, Jason 2026-10-09):
 # verb -> {kind of value -> the field word it reads}
 PHRASE_VERBS = {"published": {"year": "year", "date": "date"},
-                "added": {"date": "created date"}}
+                "added": {"date": "created date"},
+                "updated": {"date": "updated date"}}
 # field word -> (verb, kind): "year" -> ("published", "year"), "created date" -> ("added", "date")
 PHRASE_OF_WORD = {w: (verb, kind) for verb, kinds in PHRASE_VERBS.items() for kind, w in kinds.items()}
+
+
+def next_day(date: str) -> Optional[str]:
+    """`2021-06-01` -> `2021-06-02` (`2021-12-31` -> `2022-01-01`); None if not a date."""
+    try:
+        return (datetime.date.fromisoformat(date) + datetime.timedelta(days=1)).isoformat()
+    except ValueError:
+        return None
 
 
 def _after_a_date_error(lead: str, toks: List[Tok], i: int, pos):
     """`after 2021-06-01` (the date at token i) is ambiguous for a date (Jason 2026-10-09:
     does it start at midnight June 1 or June 2?): a loud error naming both readings."""
     date = _value_tok_at(toks, i).val
-    try:
-        nxt = (datetime.date.fromisoformat(date) + datetime.timedelta(days=1)).isoformat()
-    except ValueError:
-        nxt = "the next day"
+    nxt = next_day(date) or "the next day"
     return oql_error("OQL_AMBIGUOUS_DATE",
                      f'"after {date}" is ambiguous for a date: it may or may not include {date}',
                      f'write "{lead} since {nxt}" to start the next day, or "{lead} since {date}" '
@@ -1694,6 +1727,8 @@ def match_published(toks: List[Tok], i: int):
     w1 = _word_at(toks, i + 1)
     if w1 == "on" and _word_at(toks, i + 2) == "or" and _word_at(toks, i + 3) in ("after", "before"):
         op, n = (">=" if _word_at(toks, i + 3) == "after" else "<="), 4
+    elif w1 == "on":
+        op, n = "is", 2                   # `published on 2021-06-01`
     elif w1 == "in":
         op, n = "is", 2
     elif w1 in ("from", "between"):
@@ -1738,6 +1773,9 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
     wo = _match_word_op(toks, i)          # `year since 2020` (oxjob #1555)
     if wo is not None:
         return wo[0], wo[1], True
+    nw = _number_word_op(toks, i)         # `h-index is above 30` (oxjob #1555)
+    if nw is not None:
+        return nw[0], nw[1], True
     if w0 == "has":
         return "has", 1, True
     if w0 in ("=", "=="):

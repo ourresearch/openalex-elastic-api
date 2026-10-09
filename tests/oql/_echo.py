@@ -242,8 +242,20 @@ def year_words(text):
     return re.sub(r"(compare |versus )\((published from \d{4} through \d{4})\)", r"\1\2", text)
 
 
+def number_words(text):
+    """Every other number in words (Jason 2026-10-09): `h-index > 50` -> `h-index is above
+    50`, `count of those works >= 3` -> `count of those works is at least 3` (dates and the
+    publication year are `year_words`'); a compared item drops `is` (`citation count above
+    100`), as the echo does."""
+    from query_translation.oql_pipeline import NUMBER_WORDS
+    text = re.sub(r"(?<= )(>=|>|<=|<) (-?\d+(?:\.\d+)?)(?![\d-])",
+                  lambda m: f"{NUMBER_WORDS[m[1]]} {m[2]}", text)
+    return re.sub(r"((?:compare |versus )[^;]*?) is (above|below|at least|at most) ",
+                  r"\1 \2 ", text)
+
+
 def modern(text):
-    text = year_words(named_sets(set_words(bare_values(text))))
+    text = number_words(year_words(named_sets(set_words(bare_values(text)))))
     head, *steps = _top_level_parts(_inner(text, _modern_inner))
     steps = merge_splits([_bare(s) for s in steps])
     steps = [SUMMARIZE + english_list(re.split(r",? and |, ", s[len(SUMMARIZE):]))

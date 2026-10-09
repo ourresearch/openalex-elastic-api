@@ -58,10 +58,10 @@ ECHOES = [
      "get works where published after 2015; then, group those works by author and year; finally, summarize using count"),
     ("get works where published after 2015; then group those works by year and by type and by country",
      "get works where published after 2015; then, group those works by year, type, and country"),
-    ("get works where title-abstract has kelp; then group by author where count of those works > 10; "
+    ("get works where title-abstract has kelp; then group by author where count of those works is above 10; "
      "then group again by year",
      "get works where title-abstract has (kelp); then, group those works by author where count of those "
-     "works > 10 and by year"),
+     "works is above 10 and by year"),
     ("get works where published after 2015; then group those works into citation count bins at (1, 10); then group again by year",
      "get works where published after 2015; then, group those works into citation count bins at (1, 10) and by year"),
     ("get works where published after 2020; then compare type article versus review by year and by country",
@@ -317,7 +317,7 @@ def test_topics_parent_subfield_is_the_topics_own_column():
 @pytest.mark.parametrize("q", [
     "institutions where country is (DE) group by type",
     "sources group by publisher",
-    "authors where h-index > 50 group by last known institution",
+    "authors where h-index is above 50 group by last known institution",
 ])
 def test_a_non_works_group_by_echo_reads_back(q):
     """A classic group-by on authors, institutions or sources echoes `then, group those

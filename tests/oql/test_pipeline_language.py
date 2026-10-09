@@ -99,7 +99,7 @@ def test_bins_and_values():
      "get works where year > (2020); then group those works by year; then group those "
      "works again by type"),
     # the classic group-by plus a calculation
-    ("works where year > 2020 group by year; then summarize using count",
+    ("works where published after 2020 group by year; then summarize using count",
      "get works where year > (2020); then group those works by year; then summarize using count"),
     ("get works where year > (2020); then group by year; then summarize using average FWCI and "
      "number of works",
@@ -119,7 +119,7 @@ def test_the_launch_switch_renders_every_query_as_a_pipeline(monkeypatch):
     # the launch sets OQL_CANONICAL_STYLE=pipeline (read into CANONICAL_STYLE)
     from query_translation import oql_lang
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
-    assert _flat(render(_canon("works where year >= 2020 group by year, type"))) == modern(
+    assert _flat(render(_canon("works where published since 2020 group by year, type"))) == modern(
         "get works where year >= (2020); then group those works by year; then group "
         "those works again by type")
     assert render(_canon("works where type is not (review)")) == modern(
@@ -134,7 +134,7 @@ def test_a_plain_query_in_the_pipeline_style_keeps_its_url_and_builder_tree(monk
     from query_translation.validator import ValidationResult
     from query_translation.views import render_all_formats
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
-    oqo = parse("works where year >= 1976 group by topic, year")
+    oqo = parse("works where published since 1976 group by topic, year")
     with Flask(__name__).test_request_context("/"):
         out = render_all_formats(oqo, ValidationResult(valid=True, errors=[], warnings=[]),
                                  sort_operands=False)
@@ -147,7 +147,7 @@ def test_a_plain_query_in_the_pipeline_style_keeps_its_url_and_builder_tree(monk
 
 
 def test_classic_queries_render_classic():
-    assert render(_canon("works where year >= 2020 group by year, type")) == (
+    assert render(_canon("works where published since 2020 group by year, type")) == (
         "works where year >= (2020) group by year, type")
 
 
@@ -159,7 +159,7 @@ def test_classic_queries_render_classic():
      "get works where institution is not in (col_abc)"),
     ("works where title-abstract has ((asthma OR wheeze) NOT (pediatric OR child))",
      "get works where title-abstract has ((asthma OR wheeze) NOT (child OR pediatric))"),
-    ("works where year >= 2020 sample 100 seed 4",
+    ("works where published since 2020 sample 100 seed 4",
      "get works where year >= (2020); then sample (100) of those works with seed (4)"),
 ])
 def test_pipeline_style(typed, pipeline):
@@ -169,9 +169,9 @@ def test_pipeline_style(typed, pipeline):
 
 
 def test_in_sets():
-    assert _canon("get works where institution is in (I1, I2)").to_dict() == \
+    assert _canon("get works where institution is in (I1, I2)").to_dict() ==\
         _canon("works where institution is (I1 or I2)").to_dict()
-    assert _canon("get works where topic is in (col_x)").filter_rows[0].operator == \
+    assert _canon("get works where topic is in (col_x)").filter_rows[0].operator ==\
         "in collection"
 
 
@@ -325,11 +325,11 @@ def test_own_value_cells():
          "country_code": "US"},
         {"id": "https://openalex.org/I1", "display_name": "Fred Hutch", "country_code": "US"}]}
     assert own_value({"summary_stats": {"h_index": 41}}, "summary_stats.h_index", "authors") == 41
-    assert own_value(lki, "last_known_institutions.id", "authors") == \
+    assert own_value(lki, "last_known_institutions.id", "authors") ==\
         "University of Washington; Fred Hutch"
     assert own_value(lki, "last_known_institutions.country_code", "authors") == "United States"
     assert own_value({"country_code": "GB"}, "country_code", "institutions") == "United Kingdom"
-    assert own_value({"issn": ["0028-0836", "1476-4687"]}, "issn", "sources") == \
+    assert own_value({"issn": ["0028-0836", "1476-4687"]}, "issn", "sources") ==\
         "0028-0836; 1476-4687"
     assert own_value({"is_oa": False}, "is_oa", "sources") is False
     assert own_value(None, "issn", "sources") is None

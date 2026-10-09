@@ -54,7 +54,7 @@ def test_permissive_set_wording(q):
 
 
 def test_walk_back_in_a_set():
-    q = ("get works where it cites a work in the set (works of authors where h-index > 50)")
+    q = ("get works where it cites a work in the set (works of authors where h-index is above 50)")
     o = _canon(q)
     inner = o.filter_rows[0].value
     assert inner.get_rows == "authors" and inner.walks[0].to == "works"

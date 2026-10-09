@@ -381,31 +381,46 @@ def _phrase(verb: str, column: str, word: str) -> List:
     return [L._seg("column", verb, column_id=column), L._seg("operator", f" {word} ")]
 
 
+# Every other number reads in words too (Jason 2026-10-09: "always emit words so that
+# we're consistent"); the symbols stay accepted input.
+NUMBER_WORDS = {op: f"is {w}" for op, w in L.NUMBER_WORDS.items()}   # the parser reads them
+
+
 def _in_words(cn: ClauseNode) -> Optional[ClauseNode]:
-    """`year >= 2020` -> `published since 2020`; `year is 2023` -> `published in 2023`;
-    `date >= 2021-06-01` -> `published since 2021-06-01`; `created date >= 2025-01-01` ->
-    `added since 2025-01-01`. A negation, an odd value (a year that isn't four digits),
-    a date's strict lower bound and a date's `is` keep their symbols."""
+    """A comparison in words: `year >= 2020` -> `published since 2020`, `year is 2023` ->
+    `published in 2023`, `date is 2021-06-01` -> `published on 2021-06-01`, `created date
+    >= 2025-01-01` -> `added since 2025-01-01`, `h-index > 30` -> `h-index is above 30`.
+    A negation keeps its `not` in front (`not published since 2015`)."""
     meta, segs = cn.meta, cn.segments
-    entry = _phrase_entry(meta.column_id) if meta is not None else None
-    if entry is None or any(sg.kind == "negation" for sg in segs) \
-            or any(sg.kind == "value" and not _phrase_value_ok(entry[1], sg.text) for sg in segs):
+    if meta is None:
         return None
-    verb, kind = entry
-    op = meta.operator                        # a date bound's clause carries its >= / <=
-    if cn.clause_kind == "comparison" and op in COMPARISON_WORDS \
-            and not (kind == "date" and op == ">"):
-        word = COMPARISON_WORDS[op]
-    elif kind == "year" and (meta.operator or "is") == "is" and len(segs) >= 2 \
-            and segs[1].text == " is ":
-        word = "in"
-    else:
+    neg = list(segs[:1]) if segs and segs[0].kind == "negation" else []
+    body = segs[len(neg):]
+    if len(body) < 3 or body[1].kind != "operator":
         return None
-    vals = list(segs[2:])
+    vals = list(body[2:])
+    if len(vals) == 4 and vals[0].text == "(" and vals[1].kind == "negation" and vals[3].text == ")":
+        neg, vals = [vals[1]], [vals[2]]      # `year is not 2020` -> `not published in 2020`
     if len(vals) == 3 and vals[0].text == "(" and vals[2].text == ")":
-        vals = [vals[1]]                      # one value, bare: `published in 2023`
-    return ClauseNode(segments=_phrase(verb, meta.column_id, word) + vals,
-                      clause_kind=cn.clause_kind, meta=meta)
+        vals = [vals[1]]                      # one value, bare
+    op, comparison, head = meta.operator, cn.clause_kind == "comparison", None
+    entry = _phrase_entry(meta.column_id)
+    if entry is not None and all(_phrase_value_ok(entry[1], sg.text)
+                                 for sg in vals if sg.kind == "value"):
+        verb, kind = entry
+        if comparison and op in COMPARISON_WORDS and not (kind == "date" and op == ">"):
+            word = COMPARISON_WORDS[op]
+        elif (op or "is") == "is" and body[1].text == " is ":
+            word = "in" if kind == "year" else "on"
+        else:
+            word = None
+        if word is not None:
+            head = _phrase(verb, meta.column_id, word)
+    if head is None and comparison and op in NUMBER_WORDS:
+        head = [body[0], L._seg("operator", f" {NUMBER_WORDS[op]} ")]
+    if head is None:
+        return None
+    return ClauseNode(segments=neg + head + vals, clause_kind=cn.clause_kind, meta=meta)
 
 
 def _phrase_ranges(rows: List) -> List:
@@ -504,6 +519,9 @@ def _group_where_text(node, ctx: dict, resolver=None, top=True) -> str:
     if isinstance(node, MeasureFilter):
         what = "count" if node.measure == "count" else measure_text(
             Measure(node.measure, node.column_id), noun)
+        if node.operator in NUMBER_WORDS:     # `count of those works is above 5`
+            lead = "not " if node.is_negated else ""
+            return f"{lead}{what} of those {noun} {NUMBER_WORDS[node.operator]} {_number(node.value)}"
         op = "is not" if node.is_negated and node.operator == "is" else node.operator
         return f"{what} of those {noun} {op} {_number(node.value)}"
     if isinstance(node, BranchFilter):
