@@ -114,14 +114,23 @@ def say_seconds(s: float) -> str:
     return f"{n} second" if n == 1 else f"{n} seconds"
 
 
+def count_fix(lv: Optional["Level"] = None, n: int = 10) -> str:
+    """A count filter as the echo writes it (oxjob #1555): thing-first for a split by a
+    thing, else the group filter."""
+    from query_translation.oql_lang import THING_BY_COLUMN, THING_VERBS
+    thing = THING_BY_COLUMN.get(lv.column_id) if lv is not None and lv.column_id else None
+    if thing:
+        return f"get {thing} {THING_VERBS[thing]} more than {n} works where ..."
+    return f"... where count of those works is above {n}"
+
+
 def too_slow(what: str) -> AnalyticsError:
     return AnalyticsError(
         "query_too_slow",
         f"This query ran past the {int(QUERY_DEADLINE_S)}-second limit while {what}, "
         f"so it was stopped.",
         "Narrow the starting set (a shorter year range, a smaller institution or topic), "
-        "add a count filter before a filter on the groups' own fields "
-        "(where count of those works > (10) and ...), or split it into several queries.")
+        f"add a count filter ({count_fix()}), or split it into several queries.")
 
 
 # ---------------------------------------------------------------------------
@@ -432,8 +441,8 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
                     f"The collection {g.values[0]} holds {len(values)} items; a split by "
                     f"listed values takes up to 100.",
                     "Split by the column itself and filter the works by the collection "
-                    "instead: get works where ... is in (col_...); then group those works "
-                    "by ...")
+                    "instead: get works where ... is in the collection [name](col_x); then, "
+                    "group those works by ...")
         filters = {}
         for j, v in enumerate(values):
             k = f"v{j}"
@@ -1387,7 +1396,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 raise AnalyticsError(
                     "group_filter_not_available",
                     "These groups have no fields of their own to filter on.",
-                    "Filter by a calculation, e.g. count of those works > (10).")
+                    f"Filter by a calculation, e.g. {count_fix(lv)}.")
             rest = resolve_keysets(lv, k_parts, oqo, index_name, connection, deadline,
                                    bool(m_parts), base_query=base_query)
             if rest:
@@ -1401,8 +1410,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                         f"{LOOKUP_LIMIT:,} {lv.group_entity}, and without a count filter "
                         f"every group in the set would have to be looked up, which takes "
                         f"longer than this query's time limit.",
-                        f"Add a count filter so only the busiest groups are looked up: "
-                        f"where count of those works > (5) and ..., or narrow the starting set.")
+                        f"Add a count filter so only the busiest groups are looked up "
+                        f"({count_fix(lv, 5)}), or narrow the starting set.")
                 deferred[lv.index] = rest
                 lv.post_keep = set()   # filled after the main request
 
@@ -1558,15 +1567,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 group_rows = group_rows[start:start + per_page]
                 more_groups = True
             else:
-                from query_translation.oql_lang import _plural_noun
-                noun = _plural_noun(oqo.get_rows)
                 raise AnalyticsError(
                     "too_many_groups",
                     f"More than {FILTERED_CANDIDATES:,} {_split_noun(top)} groups are left "
                     f"to check against the group filter; a filtered split checks up to "
                     f"{FILTERED_CANDIDATES:,}.",
-                    f"Put a count filter first (count of those {noun} > (10)) or raise it, "
-                    f"or narrow the starting set.")
+                    f"Add a count filter or raise it ({count_fix(top)}), or narrow the "
+                    f"starting set.")
         else:
             # every group is here: sort and page in Python
             if sort:

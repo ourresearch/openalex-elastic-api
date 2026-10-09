@@ -546,7 +546,7 @@ def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
             "Splitting each thing's works (each author's works by year) isn't available "
             "yet.",
             "Drop the split, or walk to the combined set: get authors of those works; "
-            "then get all those authors' works; then group those works by year.")
+            "then, get all those authors' works; then, group those works by year.")
     measures = list(oqo.calculate) or [Measure("count")]
     m_aggs = A._measure_aggs(measures, ctx.works_fields)
     keys, field = plan["keys"], plan["field"]
