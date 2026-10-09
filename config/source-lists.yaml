@@ -50,3 +50,73 @@ values:
   display_name: ABDC Journal Quality List, B
 - id: source-lists/abdc-c
   display_name: ABDC Journal Quality List, C
+- id: source-lists/russia-white-list-1
+  display_name: Russian White List, level 1
+- id: source-lists/russia-white-list-2
+  display_name: Russian White List, level 2
+- id: source-lists/russia-white-list-3
+  display_name: Russian White List, level 3
+- id: source-lists/russia-white-list-4
+  display_name: Russian White List, level 4
+- id: source-lists/poland-200
+  display_name: Polish journal list, 200 points
+- id: source-lists/poland-140
+  display_name: Polish journal list, 140 points
+- id: source-lists/poland-100
+  display_name: Polish journal list, 100 points
+- id: source-lists/poland-70
+  display_name: Polish journal list, 70 points
+- id: source-lists/poland-40
+  display_name: Polish journal list, 40 points
+- id: source-lists/poland-20
+  display_name: Polish journal list, 20 points
+- id: source-lists/vabb-shw
+  display_name: VABB-SHW (Flanders)
+- id: source-lists/fnege-1-star
+  display_name: FNEGE (France), 1*
+- id: source-lists/fnege-1
+  display_name: FNEGE (France), 1
+- id: source-lists/fnege-2
+  display_name: FNEGE (France), 2
+- id: source-lists/fnege-3
+  display_name: FNEGE (France), 3
+- id: source-lists/fnege-4
+  display_name: FNEGE (France), 4
+- id: source-lists/tr-dizin
+  display_name: TR Dizin (Türkiye)
+- id: source-lists/dhet
+  display_name: DHET (South Africa)
+- id: source-lists/ft50
+  display_name: FT50
+- id: source-lists/utd24
+  display_name: UTD24
+- id: source-lists/anvur-class-a
+  display_name: ANVUR Class A (Italy)
+- id: source-lists/anvur-scientific
+  display_name: ANVUR scientific (Italy)
+- id: source-lists/kci-excellent
+  display_name: KCI Excellent (Korea)
+- id: source-lists/kci-registered
+  display_name: KCI Registered (Korea)
+- id: source-lists/kci-candidate
+  display_name: KCI Candidate (Korea)
+- id: source-lists/ccf-a
+  display_name: CCF (China), class A
+- id: source-lists/ccf-b
+  display_name: CCF (China), class B
+- id: source-lists/ccf-c
+  display_name: CCF (China), class C
+- id: source-lists/fecyt-seal
+  display_name: FECYT seal (Spain)
+- id: source-lists/nbra
+  display_name: Núcleo Básico (Argentina)
+- id: source-lists/publindex-a1
+  display_name: Publindex (Colombia), A1
+- id: source-lists/publindex-a2
+  display_name: Publindex (Colombia), A2
+- id: source-lists/publindex-b
+  display_name: Publindex (Colombia), B
+- id: source-lists/publindex-c
+  display_name: Publindex (Colombia), C
+- id: source-lists/publindex-recognized
+  display_name: Publindex (Colombia), recognized
