@@ -312,3 +312,26 @@ def test_topics_parent_subfield_is_the_topics_own_column():
     (on production too, 2026-10-09)."""
     o = canonicalize_oqo(parse("get topics where parent subfield is (2712)"))
     assert o.filter_rows[0].column_id == "subfield.id"
+
+
+@pytest.mark.parametrize("q", [
+    "institutions where country is (DE) group by type",
+    "sources group by publisher",
+    "authors where h-index > 50 group by last known institution",
+])
+def test_a_non_works_group_by_echo_reads_back(q):
+    """A classic group-by on authors, institutions or sources echoes `then, group those
+    institutions by ...`, which must parse back (live regression after step 1, found by
+    #1494's gold re-render 2026-10-09); only a walk to non-works things needs its works
+    before a split."""
+    o = canonicalize_oqo(parse(q))
+    echo = render_pipeline_line(o)
+    assert "; then, group those " in echo
+    assert _canon(echo) == o.to_dict()
+
+
+def test_a_split_after_a_walk_still_needs_the_works():
+    from query_translation.diagnostics import OQLError
+    with pytest.raises(OQLError) as e:
+        parse("get works where year > 2020; then get each author of those works; then group those authors by year")
+    assert e.value.code == "OQL_SPLIT_NEEDS_WORKS"

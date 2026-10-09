@@ -2005,7 +2005,11 @@ class _Parser:
                         cur, cur_each = entity_for_link(w.column_id), w.each
                     self._entity = cur
                     continue
-                if cur != "works" and self.word_is("group", "compare"):
+                # after a walk to authors, sources ... a split needs their works first; a
+                # query that starts from them splits them as it always has (the classic
+                # `institutions where ... group by type`, echoed `then, group those
+                # institutions by institution type`; #1555 regression fix)
+                if cur != "works" and (self.word_is("compare") or (walks and self.word_is("group"))):
                     from query_translation.walks import plural, possessive
                     raise oql_error(
                         "OQL_SPLIT_NEEDS_WORKS",
