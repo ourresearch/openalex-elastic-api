@@ -28,7 +28,7 @@ import json
 import os
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple
 
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
@@ -506,7 +506,6 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
 def _nnf_group_filters(oqo: OQO) -> OQO:
     """Group filters in negation normal form: `that author is not in (A1, A2)` parses
     to a negated OR; the key-set rules read an AND of negated leaves."""
-    from dataclasses import replace
     from query_translation.oqo_canonicalizer import _canonicalize_tree
     return replace(oqo, group_by=[
         replace(g, where=_canonicalize_tree(g.where, sort_operands=False))
@@ -580,7 +579,6 @@ def _es_tree(node):
                 "group_filter_mix",
                 "An `or` can't mix an affiliation in given years with other conditions.",
                 "Join them with `and`.")
-        from dataclasses import replace
         return replace(node, filters=[_es_tree(c) for c in node.filters])
     return node
 
@@ -618,13 +616,13 @@ def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadli
     return res["aggregations"]["n"]["value"]
 
 
-def _own_side_ids(lv: Level, part, deadline: Deadline) -> Optional[set]:
+def _own_side_ids(lv: Level, part, n: Optional[int], deadline: Deadline) -> Optional[set]:
     """The groups whose own record matches an affiliation-with-years part, listed from
-    their own index when at most LOOKUP_LIMIT match the institution; None when more."""
+    their own index when at most LOOKUP_LIMIT (`n`, counted by the caller) match the
+    institution; None when more."""
     from query_translation.oqo_to_es import _translate
     from core.join_resolver import entity_index
     from elasticsearch_dsl.connections import get_connection
-    n = _count_entity_matches(lv, _es_tree(part), deadline)
     if n is None or n > LOOKUP_LIMIT:
         return None
     g_fields, g_index = entity_index(lv.group_entity)
@@ -719,7 +717,7 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
         ids = None
         if n_keys is None or n_own is None or n_own <= n_keys:
             if _has_affiliation(p):
-                ids = _own_side_ids(lv, p, deadline)
+                ids = _own_side_ids(lv, p, n_own, deadline)
             else:
                 g_fields, _g_index = entity_index(lv.group_entity)
                 q = _translate(p, g_fields)
@@ -1857,7 +1855,7 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                     try:
                         n_keys = _works_side_count(lv, index_name, connection, base_query, deadline)
                     except AnalyticsError:
-                        n_keys = None
+                        pass
                 if n_keys is not None and n_keys <= WORKS_SIDE_LIMIT:
                     est += 0.4 + n_keys / 36_000
                     calls += 2 + n_keys // 10_000

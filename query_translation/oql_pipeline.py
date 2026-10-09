@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from query_translation import oql_lang as L
 from query_translation.oqo import (
-    OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, Walk)
+    OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 from query_translation.oql_render_tree import (
     ClauseMeta, ClauseNode, EntityHead, GroupMeta, GroupNode, OQLRenderTree,
     Segment, _stringify_expr)
@@ -333,7 +333,6 @@ def _bare_values(cn: ClauseNode, resolver=None) -> ClauseNode:
 
 
 def _meta_without_vtree(meta: ClauseMeta) -> ClauseMeta:
-    from dataclasses import replace
     return replace(meta, vtree=None)
 
 
@@ -797,8 +796,9 @@ _PLACE_COLUMNS = {
 _OWN_PLACE_COLUMNS = {"country_code", "continent", "country_codes"}
 
 
-_THING_VERB_AT = re.compile(r" (?:who published|that published|that funded|of) "
-                            r"(?=(?:more than |at least |fewer than |at most )?\d* ?works\b)")
+# where a thing-first start's verb sits (`who published [more than 5] works`)
+_THING_VERB_AT = re.compile(r" (?:%s) (?=(?:(?:%s) )?\d* ?works\b)" % (
+    "|".join(sorted(set(L.THING_VERBS.values()))), "|".join(_COUNT_WORDS.values())))
 
 
 def thing_first(oqo: OQO) -> Optional[Tuple[str, bool]]:
@@ -811,7 +811,7 @@ def thing_first(oqo: OQO) -> Optional[Tuple[str, bool]]:
         w = oqo.walks[0]
         if (len(oqo.walks) == 1 and w.to is None and not w.each and not oqo.group_by
                 and oqo.calculate and w.column_id in L.THING_BY_COLUMN
-                and not _has_measure(w.where)):
+                and not L._has_measure_filter(w.where)):
             return L.THING_BY_COLUMN[w.column_id], True
         return None
     if not oqo.group_by:
@@ -821,14 +821,6 @@ def thing_first(oqo: OQO) -> Optional[Tuple[str, bool]]:
         return None
     ent = L.THING_BY_COLUMN.get(g.column_id)
     return (ent, False) if ent else None
-
-
-def _has_measure(node) -> bool:
-    if isinstance(node, MeasureFilter):
-        return True
-    if isinstance(node, BranchFilter):
-        return any(_has_measure(c) for c in node.filters)
-    return False
 
 
 def _and_parts(node) -> List:
@@ -899,7 +891,7 @@ def _thing_head(where, thing: str, resolver=None):
             places.append(leaves)
         elif isinstance(p, LeafFilter) and p.column_id == "collection":
             places.append(p)          # `not in the collection [Our lab](col_x)`
-        elif _has_measure(p):
+        elif L._has_measure_filter(p):
             measures.append(p)
         else:
             own.append(p)
@@ -965,11 +957,7 @@ def _build_thing_first(oqo: OQO, thing: str, whole_set: bool, resolver=None) -> 
             prefix = SUMMARIZE
         else:
             prefix = f"summarize each {singular(thing)} using "
-        text = english_list([measure_text(m, "works") for m in oqo.calculate])
-        steps.append(StepDirective(
-            prefix=prefix, segments=[_text(text)],
-            meta=StepMeta("calculate", data={
-                "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
+        steps.append(_summary_step(oqo, prefix, "works"))
     for d, word in zip(steps, transitions(len(steps))):
         d.joiner = f"; {word}, "
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
@@ -986,7 +974,7 @@ def _summary_prefix(oqo: OQO) -> str:
     """The summary names what it summarizes (Jason 2026-10-09): `summarize all those
     works using`, `summarize all those authors using`, `summarize each author using`
     (one row per thing); after a split, `summarize using` (the split says per what)."""
-    from query_translation.walks import entity_for_link, plural, singular
+    from query_translation.walks import entity_for_link, singular
     if oqo.group_by:
         return SUMMARIZE
     cur, each = oqo.get_rows, bool(oqo.each)
@@ -1088,9 +1076,6 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
                           else " in (" + ", ".join(items) + ")")
             filters = filters[1:]
     head = EntityHead(id=entity, text=head_text)
-    corpus_phrase = ""
-    if getattr(oqo, "corpus", "core") and oqo.corpus != "core":
-        corpus_phrase = f" ({L.CORPUS_CANONICAL_PHRASE.get(oqo.corpus, oqo.corpus)})"
     where_keyword, where = "", None
     if filters:
         where_keyword = " where "
@@ -1120,7 +1105,7 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
     for d, word in zip(steps, transitions(len(steps))):
         d.joiner = f"; {word}, "
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
-                         where=where, directives=steps, corpus_phrase=corpus_phrase)
+                         where=where, directives=steps, corpus_phrase=_corpus_phrase(oqo))
 
 
 def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
@@ -1173,11 +1158,16 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
                             meta=StepMeta("split", index=i, data=g.to_dict()))
         steps.append(cur)
     if oqo.calculate:
-        text = english_list([measure_text(m, noun) for m in oqo.calculate])
-        steps.append(StepDirective(
-            prefix=_summary_prefix(oqo), segments=[_text(text)],
-            meta=StepMeta("calculate", data={
-                "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
+        steps.append(_summary_step(oqo, _summary_prefix(oqo), noun))
+
+
+def _summary_step(oqo: OQO, prefix: str, noun: str) -> StepDirective:
+    """`summarize ... using <measures>`: the calculation's step."""
+    return StepDirective(
+        prefix=prefix,
+        segments=[_text(english_list([measure_text(m, noun) for m in oqo.calculate]))],
+        meta=StepMeta("calculate", data={
+            "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]}))
 
 
 def stringify_pipeline(tree: OQLRenderTree) -> str:
@@ -1312,7 +1302,6 @@ def set_phrase(oqo: OQO, resolver=None) -> Optional[str]:
     `get`, no article): `works where X`, `authors of works where X`, `works of authors
     where X`. None when the query is more than a filter and plain walks (a walk with
     its own `where`, `each`, a sample): it's written out whole then."""
-    from dataclasses import replace
     from query_translation.walks import entity_for_link, plural
     if oqo.sample or oqo.group_by or oqo.calculate or oqo.each:
         return None

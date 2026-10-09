@@ -1959,7 +1959,6 @@ class _Parser:
         self._compare_mode = False        # inside `compare A versus B` (oxjob #1555)
         self._thing_head = False          # in `get authors where ... who published` (#1555)
         self._summary_scope = None        # `summarize each author` (#1555)
-        self._start_entity = None
         self._compare_prev = None         # (field, Field, op) a bare value reuses
         self._labels = []         # (column, ID, name as typed) for `Name [ID]` values
                                   # (oxjob #1555): advice only, never meaning
@@ -2046,8 +2045,7 @@ class _Parser:
             entity = self._parse_each_start_noun()
         else:
             entity = self._parse_entity()
-        self._entity = entity
-        self._start_entity = entity
+        self._entity = start_entity = entity
         # Optional corpus selector parenthetical right after the entity (#481),
         # e.g. `works (all corpora) where ...`. Default "core" when absent.
         corpus = self._parse_corpus_opt()
@@ -2059,13 +2057,11 @@ class _Parser:
         sample = None
         seed = None
         self._skip_annot()
-        self._thing = None
         if (not start_each and entity in THING_COLUMNS and not self._ctx_mode
                 and self._thing_first_ahead()):
             # `get authors at [UBC](I141945490) since 2022 who published works where ...`
             # (oxjob #1555): a split of works by the thing, the thing's own record first
             group_by.append(self._parse_thing_head(entity))
-            self._thing = entity
             entity = self._entity = "works"
             self._skip_annot()
         if (start_each or entity == "works") and self.word_is("in") \
@@ -2205,7 +2201,7 @@ class _Parser:
                     calculate = val
                     scope, self._summary_scope = self._summary_scope, None
                     if self._check_summary_scope(scope, cur, cur_each, group_by, walks,
-                                                 self._start_entity, start_each) == "walk":
+                                                 start_entity, start_each) == "walk":
                         # `summarize all those authors using ...` after a thing-first
                         # start: the combined set of authors (a walk), not one row each
                         g0 = group_by.pop(0)
@@ -2213,12 +2209,7 @@ class _Parser:
                         cur = THING_BY_COLUMN[g0.column_id]
                         self._entity = cur
                 elif kind == "keep":
-                    g0 = group_by[0]
-                    parts = [p for f in (g0.where, val) if f is not None
-                             for p in (_flatten_and(f) if isinstance(f, BranchFilter)
-                                       and f.join == "and" and not f.is_negated else [f])]
-                    group_by[0] = replace(g0, where=parts[0] if len(parts) == 1
-                                          else BranchFilter("and", parts))
+                    group_by[0] = replace(group_by[0], where=_and_all([group_by[0].where, val]))
                 else:  # sample
                     if walks:
                         raise oql_error("OQL_SAMPLE_AFTER_WALK",
@@ -4436,7 +4427,7 @@ class _Parser:
 
     def _parse_summary_scope(self):
         """`each author`, `all those authors`, `all the works`, `them all`, `all` after
-        `summarize`: ("each" | "all", entity or None), or None when unsaid."""
+        `summarize`: ("each" | "all", entity or None, position), or None when unsaid."""
         from query_translation.walks import noun_entity
         t = self.peek()
         if self.word_is("each"):
@@ -4458,7 +4449,6 @@ class _Parser:
             if nt is not None and nt.kind == "WORD" and nt.val.lower() in ("works", "work"):
                 self.next()
                 return "all", "works", t.pos
-            from query_translation.walks import noun_entity
             got = noun_entity(nt.val) if nt is not None and nt.kind == "WORD" else None
             if got is not None:
                 self.next()
@@ -4491,7 +4481,7 @@ class _Parser:
         # all
         if ent is None:
             ent = first if first else cur
-        if not group_by and (ent == cur or (ent == "works" and cur == "works")) and not cur_each:
+        if not group_by and ent == cur and not cur_each:
             return None
         if first == ent and len(group_by) == 1 and not walks:
             if _has_measure_filter(group_by[0].where):
@@ -4538,7 +4528,7 @@ class _Parser:
         w = _word_at(self.toks, self.i + k)
         if w in ("who", "that", "which"):
             j = k + 1
-            while _word_at(self.toks, self.i + j) in ("ever", "have", "has", "also", "all"):
+            while _word_at(self.toks, self.i + j) in _THING_VERB_FILLER:
                 j += 1
             return _word_at(self.toks, self.i + j) in _THING_VERBS
         if w in ("with", "of"):
@@ -4629,10 +4619,9 @@ class _Parser:
         verb = THING_VERBS[entity]
         if self.word_is("who", "that", "which"):
             self.next()
-            while self.word_is("ever", "have", "has", "also", "all"):
+            while _word_at(self.toks, self.i) in _THING_VERB_FILLER:
                 self.next()
-            if not (self.peek() is not None and self.peek().kind == "WORD"
-                    and self.peek().val.lower() in _THING_VERBS):
+            if _word_at(self.toks, self.i) not in _THING_VERBS:
                 nt = self.peek()
                 raise oql_error("OQL_THING_VERB",
                                 f"expected what the {plural(entity)} did with the works",
@@ -4664,12 +4653,7 @@ class _Parser:
                             nt.pos if nt is not None else None)
         self.next()
         self._skip_works_filler()
-        flat: List = []
-        for p in parts:
-            flat.extend(_flatten_and(p) if isinstance(p, BranchFilter) and p.join == "and"
-                        and not p.is_negated else [p])
-        where = None if not flat else flat[0] if len(flat) == 1 else BranchFilter("and", flat)
-        return GroupBy(column_id=col, where=where)
+        return GroupBy(column_id=col, where=_and_all(parts))
 
     def _works_filler_ahead(self) -> bool:
         """`at any institution`, `in any year`: words that say the works may come from
@@ -4762,12 +4746,11 @@ class _Parser:
         if self.word_is("now", "currently"):
             self.next()
             return None, None, "now"
-        y1, y2, y3 = (_year_word(self.peek(k)) for k in (1, 2, 3))
+        y1, y3 = _year_word(self.peek(1)), _year_word(self.peek(3))
         if self.word_is("since") and y1:
             self.i += 2
             return y1, None, "years"
-        if self.word_is("from") and y1 and self.word_is("through", "to", "until", k=2) \
-                and _year_word(self.peek(3)):
+        if self.word_is("from") and y1 and self.word_is("through", "to", "until", k=2) and y3:
             self.i += 4
             return y1, y3, "years"
         if self.word_is("through", "until") and y1:
@@ -5449,6 +5432,7 @@ _THING_VERBS = {"published", "publish", "publishes", "wrote", "write", "writes",
                 "produced", "produce", "produces", "cover", "covers", "covered", "include",
                 "includes", "included", "hold", "holds", "contributed", "co-authored"}
 _THING_LEAD = _THING_VERBS | {"with", "of"}
+_THING_VERB_FILLER = ("ever", "have", "has", "also", "all")   # `who have also published`
 # `at [UBC]` with no years: the record in the last five years (Jason 2026-10-09, "up to
 # you"); the echo writes the year (`since 2022`) so the query stays exact
 AT_DEFAULT_YEARS = 5
@@ -5476,7 +5460,15 @@ def _has_measure_filter(node) -> bool:
 
 
 def _year_word(t) -> Optional[int]:
-    return int(t.val) if t is not None and t.kind == "WORD" and re.fullmatch(r"\d{4}", t.val) else None
+    return int(t.val) if t is not None and t.kind == "WORD" and _YEAR_RE.match(t.val) else None
+
+
+def _and_all(parts) -> Optional[FilterType]:
+    """The parts ANDed into one flat tree (None parts skipped); None when there are none."""
+    flat = [p for f in parts if f is not None
+            for p in (_flatten_and(f) if isinstance(f, BranchFilter) and f.join == "and"
+                      and not f.is_negated else [f])]
+    return None if not flat else flat[0] if len(flat) == 1 else BranchFilter("and", flat)
 
 
 def _is_column_of(column: str, entity: str) -> bool:
