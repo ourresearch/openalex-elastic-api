@@ -191,3 +191,22 @@ def test_plain_starts_are_unchanged():
     assert o.get_rows == "authors" and not o.group_by
     o = parse("get sources where works count is above 1000")
     assert o.get_rows == "sources"
+
+
+def test_a_walk_to_each_thing_then_a_summary_is_the_thing_first_split():
+    # #1494's cow path: refused before (nothing to count per row); one row per author now
+    q = ("get works where institution is [Virginia Tech](I859038795) and country is [Ukraine](UA); "
+         "then, get each author of those works where last known institution is "
+         "[Virginia Tech](I859038795); finally, summarize using count")
+    o = parse(q)
+    assert not o.walks and o.group_by[0].column_id == "authorships.author.id"
+    assert validate_oqo(o).valid
+    assert _echo(q) == ("get authors where last known institution is (I859038795) who published "
+                        "works where institution is (I859038795) and country is [Ukraine](UA); "
+                        "then, summarize each author using count")
+
+
+def test_summarize_all_after_a_split_that_isnt_a_thing_is_an_oql_error():
+    with pytest.raises(OQLError):
+        parse("get works where published after 2020; then group those works by type; then "
+              "summarize all using count")

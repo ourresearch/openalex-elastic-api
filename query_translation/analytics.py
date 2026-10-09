@@ -1846,6 +1846,11 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                 est += EST_LOOKUP_S       # survivors of the count filter
             else:
                 # the reverse lookup: how many of the group entity match?
+                try:
+                    _es_tree(p)        # what the run refuses, the check says (`not at ... since`)
+                except AnalyticsError as e:
+                    limits.append(e.to_dict())
+                    continue
                 n = _count_entity_matches(lv, p, deadline)
                 if n is None:
                     continue

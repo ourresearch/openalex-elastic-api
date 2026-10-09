@@ -2166,6 +2166,16 @@ class _Parser:
                         f"walk back to their works first: then get all "
                         f"{possessive(cur, cur_each)} works; then group those works by ...",
                         t.pos)
+                if (self.word_is("summarize") and len(walks) == 1 and walks[0].to is None
+                        and walks[0].each and not group_by
+                        and walks[0].column_id in THING_BY_COLUMN):
+                    # `get each author of those works where ...; then, summarize using count`
+                    # (#1494's cow path, oxjob #1555): one row per author over those works,
+                    # which is the thing-first split
+                    w = walks.pop()
+                    group_by.append(GroupBy(column_id=w.column_id, where=w.where))
+                    cur, cur_each = "works", False
+                    self._entity = "works"
                 kind, val = self._parse_step(cur, len(group_by), group_by)
                 if kind == "compare":
                     gbs, measures = val
@@ -3884,10 +3894,9 @@ class _Parser:
             scope = self._summary_scope = self._parse_summary_scope()
             if self.word_is("using") or self.word_is("with") or self.word_is("by"):
                 self.next()
-            if (scope is not None and scope[0] == "all" and splits and len(splits) == 1
-                    and THING_BY_COLUMN.get(splits[0].column_id) == (scope[1] or
-                                                                   THING_BY_COLUMN.get(splits[0].column_id))
-                    and scope[1] != "works"):
+            thing = THING_BY_COLUMN.get(splits[0].column_id) if splits else None
+            if (scope is not None and scope[0] == "all" and thing is not None
+                    and len(splits) == 1 and (scope[1] or thing) == thing):
                 # `summarize all those authors using mean works count`: the authors' own
                 # fields, over the combined set (oxjob #1555)
                 ent = THING_BY_COLUMN[splits[0].column_id]
