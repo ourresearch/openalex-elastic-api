@@ -26,7 +26,7 @@ import json
 from dataclasses import replace
 from typing import List, Union, Any
 from query_translation.oqo import (OQO, LeafFilter, BranchFilter, FilterType, SortBy, GroupBy,
-                                   MeasureFilter, canonicalize_oqo_column_ids)
+                                   MeasureFilter, AffiliationFilter, canonicalize_oqo_column_ids)
 from query_translation.oql_lang import (
     canon_value_for_column,
     canonical_exact_search_value,
@@ -217,6 +217,8 @@ def push_negation(f: FilterType, negate: bool) -> FilterType:
             filters=[push_negation(c, eff) for c in f.filters],
             is_negated=False,
         )
+    if isinstance(f, AffiliationFilter):
+        return replace(f, is_negated=bool(f.is_negated) ^ bool(negate))
     if isinstance(f, MeasureFilter):
         eff = bool(f.is_negated) ^ bool(negate)
         if eff and f.operator in _NEGATED_COMPARISON:
@@ -264,7 +266,7 @@ def canonicalize_filter(f: FilterType, sort_operands: bool = True) -> Union[Filt
         return canonicalize_leaf_filter(f, sort_operands)
     elif isinstance(f, BranchFilter):
         return canonicalize_branch_filter(f, sort_operands)
-    elif isinstance(f, MeasureFilter):
+    elif isinstance(f, (MeasureFilter, AffiliationFilter)):
         return f
     return None
 

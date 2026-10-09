@@ -44,6 +44,7 @@ from query_translation.oqo import (
     MEASURES,
     Measure,
     MeasureFilter,
+    AffiliationFilter,
 )
 
 
@@ -719,6 +720,33 @@ class OQOValidator:
         # a leaf on the group's own fields
         from query_translation.oql_lang import _group_entity
         group_entity = _group_entity(g, oqo.get_rows)
+        if isinstance(f, AffiliationFilter):
+            # `at [UBC](I141945490) since 2022`: an author's own record (oxjob #1555)
+            errors = []
+            if group_entity != "authors":
+                errors.append(ValidationError(
+                    type="invalid_group_filter",
+                    message="An affiliation record with years belongs to authors.",
+                    location=loc))
+            if f.column_id not in ("affiliations.institution.lineage",
+                                   "affiliations.institution.country_code") or not f.value:
+                errors.append(ValidationError(
+                    type="invalid_group_filter",
+                    message="An affiliation record names an institution or a country.",
+                    location=loc))
+            for k in ("since", "through"):
+                v = getattr(f, k)
+                if v is not None and (not isinstance(v, int) or isinstance(v, bool)):
+                    errors.append(ValidationError(
+                        type="invalid_value_type",
+                        message=f"'{k}' is a year.", location=f"{loc}.{k}"))
+            if (isinstance(f.since, int) and isinstance(f.through, int)
+                    and f.since > f.through):
+                errors.append(ValidationError(
+                    type="invalid_value",
+                    message="The years run from the earlier to the later.",
+                    location=loc))
+            return errors
         if group_entity is None:
             return [ValidationError(
                 type="invalid_group_filter",

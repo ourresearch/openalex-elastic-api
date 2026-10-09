@@ -430,6 +430,25 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_BAD_RANGE", ERROR, PARSE,
               "a range needs both ends",
               "published from 2015 through 2024"),
+        # thing-first (oxjob #1555): `get authors at [UBC] since 2022 who published works where ...`
+        _spec("OQL_THING_VERB", ERROR, PARSE,
+              "a query that starts with authors, institutions ... says what they did with the works",
+              "get authors who published works where ..."),
+        _spec("OQL_THING_PLACE", ERROR, PARSE,
+              "only authors are at an institution, and only some things are in a country",
+              "get authors at [UBC](I141945490) since 2022 who published works where ..., or "
+              "get institutions in [Asia](Q48) that published works where ..."),
+        _spec("OQL_BAD_COUNT", ERROR, PARSE,
+              "a count of works is a whole number",
+              "get authors who published more than 5 works where ..."),
+        _spec("OQL_SUMMARY_SCOPE", ERROR, PARSE,
+              "the summary names something the query doesn't hold",
+              "summarize each author using ... after `get authors ... who published works where "
+              "...`; summarize all those works using ... on works"),
+        _spec("OQL_KEEP_NEEDS_THINGS", ERROR, PARSE,
+              "`keep` narrows the authors, institutions ... a query starts with",
+              "get authors who published works where ...; then, keep those authors where "
+              "count of those works is above 5"),
         _spec("OQL_COMPARE_NEEDS_TWO", ERROR, PARSE,
               "a comparison needs two or more things, separated by versus",
               "compare institution A versus B"),

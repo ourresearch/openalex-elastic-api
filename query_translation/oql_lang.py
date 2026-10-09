@@ -31,7 +31,7 @@ from typing import Dict, List, Optional, Tuple
 from query_translation.oqo import (  # noqa: E402
     OQO, LeafFilter, BranchFilter, FilterType, GroupBy, CURLY_DQUOTE_MAP,
     canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE,
-    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES, Walk)
+    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES, Walk, AffiliationFilter)
 
 
 # ---------------------------------------------------------------------------
@@ -1957,6 +1957,9 @@ class _Parser:
         self._directive = None    # "group" when inside a directive
         self._in_condition_list = False   # a comma ends a condition (`into (A, B)`)
         self._compare_mode = False        # inside `compare A versus B` (oxjob #1555)
+        self._thing_head = False          # in `get authors where ... who published` (#1555)
+        self._summary_scope = None        # `summarize each author` (#1555)
+        self._start_entity = None
         self._compare_prev = None         # (field, Field, op) a bare value reuses
         self._labels = []         # (column, ID, name as typed) for `Name [ID]` values
                                   # (oxjob #1555): advice only, never meaning
@@ -2044,6 +2047,7 @@ class _Parser:
         else:
             entity = self._parse_entity()
         self._entity = entity
+        self._start_entity = entity
         # Optional corpus selector parenthetical right after the entity (#481),
         # e.g. `works (all corpora) where ...`. Default "core" when absent.
         corpus = self._parse_corpus_opt()
@@ -2055,6 +2059,15 @@ class _Parser:
         sample = None
         seed = None
         self._skip_annot()
+        self._thing = None
+        if (not start_each and entity in THING_COLUMNS and not self._ctx_mode
+                and self._thing_first_ahead()):
+            # `get authors at [UBC](I141945490) since 2022 who published works where ...`
+            # (oxjob #1555): a split of works by the thing, the thing's own record first
+            group_by.append(self._parse_thing_head(entity))
+            self._thing = entity
+            entity = self._entity = "works"
+            self._skip_annot()
         if (start_each or entity == "works") and self.word_is("in") \
                 and self._set_words(1) is not None:
             # `get works in (col_mylist)` too: a saved list of works (Haiku's cow path)
@@ -2190,6 +2203,22 @@ class _Parser:
                             t.pos)
                 elif kind == "calculate":
                     calculate = val
+                    scope, self._summary_scope = self._summary_scope, None
+                    if self._check_summary_scope(scope, cur, cur_each, group_by, walks,
+                                                 self._start_entity, start_each) == "walk":
+                        # `summarize all those authors using ...` after a thing-first
+                        # start: the combined set of authors (a walk), not one row each
+                        g0 = group_by.pop(0)
+                        walks.append(Walk(column_id=g0.column_id, each=False, where=g0.where))
+                        cur = THING_BY_COLUMN[g0.column_id]
+                        self._entity = cur
+                elif kind == "keep":
+                    g0 = group_by[0]
+                    parts = [p for f in (g0.where, val) if f is not None
+                             for p in (_flatten_and(f) if isinstance(f, BranchFilter)
+                                       and f.join == "and" and not f.is_negated else [f])]
+                    group_by[0] = replace(g0, where=parts[0] if len(parts) == 1
+                                          else BranchFilter("and", parts))
                 else:  # sample
                     if walks:
                         raise oql_error("OQL_SAMPLE_AFTER_WALK",
@@ -2438,6 +2467,8 @@ class _Parser:
                 break
             if self._compare_mode and t.kind == "WORD" and t.val.lower() in _COMPARE_STOPS:
                 break   # `versus`, `by`, `on`, `using` end a compared item
+            if self._thing_head and self._at_thing_verb():
+                break   # `get authors where h-index is above 20 who published works ...`
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES and self.word_is("by", k=1):
                 break   # `... and by year`: the next split, not a condition
             if t.kind == "WORD" and t.val.lower() == "not":
@@ -3108,6 +3139,8 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() in ("group", "sample", "then"):
             return False
         if self._compare_mode and t.kind == "WORD" and t.val.lower() in _COMPARE_STOPS:
+            return False
+        if self._thing_head and self._at_thing_verb():
             return False
         if self._compare_mode and t.kind == "WORD" and t.val.lower() in _CONNECTIVES \
                 and (self._compare_value_start(1) or self._at_known_field(self.i + 1)
@@ -3853,10 +3886,25 @@ class _Parser:
         if w == "summarize":
             # `summarize using count, mean FWCI` (oxjob #1555); `with`, `by` and
             # nothing are accepted too. `calculate` is gone (Jason 2026-10-08): it
-            # fails like any other word that doesn't start a step
+            # fails like any other word that doesn't start a step. The summary may
+            # name what it summarizes (Jason 2026-10-09): `summarize each author
+            # using`, `summarize all those works using`
             self.next()
+            scope = self._summary_scope = self._parse_summary_scope()
             if self.word_is("using") or self.word_is("with") or self.word_is("by"):
                 self.next()
+            if (scope is not None and scope[0] == "all" and splits and len(splits) == 1
+                    and THING_BY_COLUMN.get(splits[0].column_id) == (scope[1] or
+                                                                   THING_BY_COLUMN.get(splits[0].column_id))
+                    and scope[1] != "works"):
+                # `summarize all those authors using mean works count`: the authors' own
+                # fields, over the combined set (oxjob #1555)
+                ent = THING_BY_COLUMN[splits[0].column_id]
+                saved, self._entity = self._entity, ent
+                try:
+                    return "calculate", self._parse_measures(ent, [])
+                finally:
+                    self._entity = saved
             return "calculate", self._parse_measures(entity, splits or [])
         if w == "sample":
             self.next()
@@ -3864,6 +3912,11 @@ class _Parser:
         if w == "compare":
             self.next()
             return "compare", self._parse_compare(entity)
+        if w == "keep":
+            # `then, keep those authors where count of those works is above 5` (oxjob
+            # #1555): more conditions on the things a thing-first query started with
+            self.next()
+            return "keep", self._parse_keep(splits or [])
         raise oql_error("OQL_UNKNOWN_STEP", f'"{t.val}" doesn\'t start a step', None,
                         t.pos)
 
@@ -4248,7 +4301,8 @@ class _Parser:
         t = self.peek()
         return (t is None or t.kind in ("RP", "SEMI", "COMMA")
                 or (t.kind == "WORD" and t.val.lower() in (_CONNECTIVES | _COMPARE_STOPS
-                                                           | {"then", "group", "sample"})))
+                                                           | {"then", "group", "sample"}))
+                or (self._thing_head and self._at_thing_verb()))
 
     def _compare_value_start(self, k: int) -> bool:
         """Does a bare value (not a field) start at offset k? A link, a quoted
@@ -4375,9 +4429,358 @@ class _Parser:
                             start.pos if start else None)
         return GroupBy(column_id=fld.column, values=values)
 
+    # -- thing-first (oxjob #1555, Jason 2026-10-09) ---------------------------------
+    # `get authors at [UBC](I141945490) since 2022 where h-index is above 20 who
+    # published more than 5 works where ...`: the place and the thing's own conditions,
+    # the verb, an optional count, `works`, then the works conditions as for `get works`.
+
+    def _parse_summary_scope(self):
+        """`each author`, `all those authors`, `all the works`, `them all`, `all` after
+        `summarize`: ("each" | "all", entity or None), or None when unsaid."""
+        from query_translation.walks import noun_entity
+        t = self.peek()
+        if self.word_is("each"):
+            nt = self.peek(1)
+            got = noun_entity(nt.val) if nt is not None and nt.kind == "WORD" else None
+            if got is None:
+                raise oql_error("OQL_SUMMARY_SCOPE", "expected what each row is after `summarize each`",
+                                "e.g. summarize each author using count", t.pos)
+            self.i += 2
+            return "each", got[0], t.pos
+        if self.word_is("them") and self.word_is("all", k=1):
+            self.i += 2
+            return "all", None, t.pos
+        if self.word_is("all"):
+            self.next()
+            if self.word_is("those", "the", "these"):
+                self.next()
+            nt = self.peek()
+            if nt is not None and nt.kind == "WORD" and nt.val.lower() in ("works", "work"):
+                self.next()
+                return "all", "works", t.pos
+            from query_translation.walks import noun_entity
+            got = noun_entity(nt.val) if nt is not None and nt.kind == "WORD" else None
+            if got is not None:
+                self.next()
+                return "all", got[0], t.pos
+            return "all", None, t.pos
+        return None
+
+    def _check_summary_scope(self, scope, cur: str, cur_each: bool, group_by, walks,
+                             start: str, start_each: bool):
+        """A named summary must name what the query holds: `each author` after a
+        thing-first start or `get each author`; `all those works` on works with no
+        split; `all those authors` on a set of authors. Returns "walk" when a
+        thing-first start is summarized as one set (a walk to the combined set)."""
+        from query_translation.walks import plural, singular
+        if scope is None:
+            return None
+        kind, ent, pos = scope
+        first = THING_BY_COLUMN.get(group_by[0].column_id) if group_by else None
+        if kind == "each":
+            if (first == ent and len(group_by) == 1) or (cur_each and cur == ent) \
+                    or any(w.each and w.to is None and _walk_entity(w) == ent for w in walks) \
+                    or (start_each and start == ent):
+                return None
+            fix = (f"summarize each {singular(first)} using ..." if first
+                   else "summarize using ..." if group_by
+                   else f"summarize all those {_plural_noun(cur)} using ...")
+            raise oql_error("OQL_SUMMARY_SCOPE",
+                            f"this query has no row per {singular(ent)} to summarize",
+                            fix, pos)
+        # all
+        if ent is None:
+            ent = first if first else cur
+        if not group_by and (ent == cur or (ent == "works" and cur == "works")) and not cur_each:
+            return None
+        if first == ent and len(group_by) == 1 and not walks:
+            if _has_measure_filter(group_by[0].where):
+                raise oql_error(
+                    "OQL_SUMMARY_SCOPE",
+                    f"a count of works per {singular(ent)} can't filter the whole set of "
+                    f"{plural(ent)} yet",
+                    f"summarize each {singular(ent)} using ..., or drop the count", pos)
+            return "walk"
+        raise oql_error("OQL_SUMMARY_SCOPE",
+                        f"this query doesn't hold one set of {_plural_noun(ent)} here",
+                        (f"summarize each {singular(first)} using ..." if first and len(group_by) == 1
+                         else "summarize using ... (after a split, the split says per what)")
+                        if group_by else f"summarize all those {_plural_noun(cur)} using ...",
+                        pos)
+
+    def _parse_keep(self, splits) -> FilterType:
+        """`keep those authors where <condition>` after a thing-first start."""
+        from query_translation.walks import plural
+        t = self.peek()
+        first = THING_BY_COLUMN.get(splits[0].column_id) if splits else None
+        if first is None:
+            raise oql_error("OQL_KEEP_NEEDS_THINGS",
+                            "`keep` narrows the authors, institutions ... a query starts with",
+                            "start with them: get authors who published works where ...",
+                            t.pos if t is not None else None)
+        if self.word_is("those", "the", "these", "only"):
+            self.next()
+            nt = self.peek()
+            if nt is not None and nt.kind == "WORD" and nt.val.lower() in (
+                    plural(first).lower(), first):
+                self.next()
+        if not self.word_is("where"):
+            nt = self.peek()
+            raise oql_error("OQL_KEEP_NEEDS_THINGS", 'expected "where" after "keep those ..."',
+                            f"keep those {plural(first)} where count of those works is above 5",
+                            nt.pos if nt is not None else None)
+        self.next()
+        return self._parse_group_where("works", splits[0])
+
+    def _at_thing_verb(self, k: int = 0) -> bool:
+        """`who published`, `that funded`, `with works`, `of works` at offset k: where
+        the thing's own conditions end and the works begin."""
+        w = _word_at(self.toks, self.i + k)
+        if w in ("who", "that", "which"):
+            j = k + 1
+            while _word_at(self.toks, self.i + j) in ("ever", "have", "has", "also", "all"):
+                j += 1
+            return _word_at(self.toks, self.i + j) in _THING_VERBS
+        if w in ("with", "of"):
+            return self._works_word_ahead(k + 1)
+        return False
+
+    def _works_word_ahead(self, k: int) -> bool:
+        """`works` at offset k, or after a count (`more than 5 works`)."""
+        nw = _number_word_op(self.toks, self.i + k)
+        if nw is not None:
+            k += nw[1] + 1
+        return _word_at(self.toks, self.i + k) in ("works", "work")
+
+    def _thing_first_ahead(self) -> bool:
+        """Does this start read `get <things> ... who published works where ...`? A
+        top-level `works` (before any `;`) right after a verb, `with`, `of` or a count."""
+        depth, prev = 0, None
+        for j in range(self.i, len(self.toks)):
+            t = self.toks[j]
+            if t.kind == "SEMI" and depth == 0:
+                return False
+            if t.kind == "LP":
+                depth += 1
+            elif t.kind == "RP":
+                depth -= 1
+            if t.kind == "ANNOT":
+                continue
+            if depth == 0 and t.kind == "WORD" and t.val.lower() in ("works", "work") \
+                    and prev is not None:
+                nxt = _word_at(self.toks, j + 1)
+                lead = prev.val.lower() if prev.kind == "WORD" else ""
+                if (lead in _THING_LEAD or _NUMBER_RE.match(lead)) and (
+                        nxt in (None, "where", "anywhere", "at", "in", "from", "ever")
+                        or (j + 1 < len(self.toks)
+                            and self.toks[j + 1].kind in ("SEMI", "LP"))):
+                    return True
+            prev = t
+        return False
+
+    def _parse_thing_head(self, entity: str) -> GroupBy:
+        """The start of a thing-first query, up to `where` (the works conditions):
+        GroupBy(the thing's column, where=its own conditions, ANDed)."""
+        from query_translation.walks import plural, singular
+        col = THING_COLUMNS[entity]
+        g0 = GroupBy(column_id=col)
+        parts: List = []
+        while True:
+            self._skip_annot()
+            if self.word_is("ever") and self.word_is("at", "in", k=1):
+                self.next()
+                parts.append(self._parse_thing_place(entity, ever=True))
+                continue
+            if self.word_is("at", "in") and not self._works_filler_ahead():
+                parts.append(self._parse_thing_place(entity))
+                continue
+            if self.word_is("where"):
+                self.next()
+                was, self._thing_head = self._thing_head, True
+                try:
+                    parts.append(self._parse_group_where("works", g0))
+                finally:
+                    self._thing_head = was
+                continue
+            break
+        t = self.peek()
+        verb = THING_VERBS[entity]
+        if self.word_is("who", "that", "which"):
+            self.next()
+            while self.word_is("ever", "have", "has", "also", "all"):
+                self.next()
+            if not (self.peek() is not None and self.peek().kind == "WORD"
+                    and self.peek().val.lower() in _THING_VERBS):
+                nt = self.peek()
+                raise oql_error("OQL_THING_VERB",
+                                f"expected what the {plural(entity)} did with the works",
+                                f"get {plural(entity)} {verb} works where ...",
+                                nt.pos if nt is not None else t.pos)
+            self.next()
+        elif self.word_is("with", "of"):
+            self.next()
+        else:
+            raise oql_error("OQL_THING_VERB",
+                            f'expected "{verb} works where ..." after the {plural(entity)}',
+                            f"get {plural(entity)} {verb} works where ...",
+                            t.pos if t is not None else None)
+        nw = _number_word_op(self.toks, self.i)
+        if nw is not None:
+            # `who published more than 5 works where ...`: a count of the matching works
+            op, n = nw
+            self.i += n
+            num = self.next()
+            if not num.val.isdigit():
+                raise oql_error("OQL_BAD_COUNT", "a count of works is a whole number",
+                                f"get {plural(entity)} {verb} more than 5 works where ...",
+                                num.pos)
+            parts.append(MeasureFilter("count", op, int(num.val)))
+        if not self.word_is("works", "work"):
+            nt = self.peek()
+            raise oql_error("OQL_THING_VERB", 'expected "works"',
+                            f"get {plural(entity)} {verb} works where ...",
+                            nt.pos if nt is not None else None)
+        self.next()
+        self._skip_works_filler()
+        flat: List = []
+        for p in parts:
+            flat.extend(_flatten_and(p) if isinstance(p, BranchFilter) and p.join == "and"
+                        and not p.is_negated else [p])
+        where = None if not flat else flat[0] if len(flat) == 1 else BranchFilter("and", flat)
+        return GroupBy(column_id=col, where=where)
+
+    def _works_filler_ahead(self) -> bool:
+        """`at any institution`, `in any year`: words that say the works may come from
+        anywhere, not a place."""
+        return self.word_is("any", k=1)
+
+    def _skip_works_filler(self):
+        """`works anywhere where`, `works at any institution in any year where`, `works
+        (at any institution, in any year) where`: the works may come from anywhere
+        and any year, as they always do (accepted, never needed)."""
+        while True:
+            self._skip_annot()
+            if self.word_is("anywhere"):
+                self.next()
+            elif self.word_is("at", "in", "from") and self.word_is("any", k=1) \
+                    and self.word_is("institution", "year", "time", "place", k=2):
+                self.i += 3
+            elif self.peek() is not None and self.peek().kind == "COMMA" \
+                    and self.word_is("in", "at", k=1) and self.word_is("any", k=2):
+                self.next()
+            elif self.peek() is not None and self.peek().kind == "LP" \
+                    and self.word_is("at", "in", k=1) and self.word_is("any", k=2):
+                depth, j = 0, self.i
+                while j < len(self.toks):
+                    if self.toks[j].kind == "LP":
+                        depth += 1
+                    elif self.toks[j].kind == "RP":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    j += 1
+                self.i = j + 1
+            else:
+                return
+
+    def _parse_thing_place(self, entity: str, ever: bool = False):
+        """`at [UBC](I141945490) since 2022`, `at ([A](I1) or [B](I2)) now`, `ever at
+        [UBC]`, `in [Brazil](BR) since 2022` (authors: their own record); `in
+        [Asia](Q48)` (institutions, sources, funders, publishers: where they are)."""
+        from query_translation.walks import plural
+        t = self.next()
+        word = t.val.lower()
+        if entity == "authors":
+            fld = _BY_COLUMN["authorships.institutions.lineage" if word == "at"
+                             else "authorships.countries"]
+        elif word == "in" and entity in _THING_IN:
+            fld = _BY_COLUMN["authorships.countries"]
+            nt = self.peek(2) if self.peek() is not None and self.peek().kind == "ANNOT" \
+                else self.peek(1) if self.peek() is not None and self.peek().kind == "LP" \
+                else self.peek()
+            if nt is not None and re.fullmatch(r"(?i)(continents/)?Q\d+", nt.val or "") \
+                    and _THING_IN[entity][1]:
+                fld = _BY_COLUMN["authorships.institutions.continent"]
+        else:
+            raise oql_error(
+                "OQL_THING_PLACE",
+                f"{plural(entity)} have no place of their own to be {word}",
+                ("authors are `at` an institution or `in` a country; institutions, sources, "
+                 "funders and publishers are `in` a country"), t.pos)
+        tree = self._parse_value_operand(fld)
+        since, through, mode = self._parse_place_years(entity, word, ever)
+
+        def leaf(f):
+            if isinstance(f, BranchFilter):
+                return replace(f, filters=[leaf(c) for c in f.filters])
+            v = f.value
+            if entity != "authors":
+                cc, cont = _THING_IN[entity]
+                column = cont if fld.column.endswith("continent") else cc
+                return replace(f, column_id=column)
+            if mode == "now":
+                return replace(f, column_id=_AT_NOW[word])
+            if mode == "ever":
+                return replace(f, column_id=_AT_EVER[word])
+            return AffiliationFilter(_AT_YEARS[word],
+                                     str(v).upper() if word == "in" else str(v),
+                                     since=since, through=through, is_negated=f.is_negated)
+        return leaf(tree)
+
+    def _parse_place_years(self, entity: str, word: str, ever: bool):
+        """The years after a place: (since, through, mode); mode "now" (the last known
+        institution), "ever" (any year), or "years" (default: the last five years)."""
+        import datetime
+        if ever or self.word_is("ever"):
+            if not ever:
+                self.next()
+            return None, None, "ever"
+        if entity != "authors":
+            return None, None, "place"
+        if self.word_is("now", "currently"):
+            self.next()
+            return None, None, "now"
+        y1, y2, y3 = (_year_word(self.peek(k)) for k in (1, 2, 3))
+        if self.word_is("since") and y1:
+            self.i += 2
+            return y1, None, "years"
+        if self.word_is("from") and y1 and self.word_is("through", "to", "until", k=2) \
+                and _year_word(self.peek(3)):
+            self.i += 4
+            return y1, y3, "years"
+        if self.word_is("through", "until") and y1:
+            self.i += 2
+            return None, y1, "years"
+        if self.word_is("in") and y1:
+            self.i += 2
+            return y1, y1, "years"
+        if self.word_is("before") and y1:
+            self.i += 2
+            return None, y1 - 1, "years"
+        if self.word_is("after") and y1:
+            self.i += 2
+            return y1 + 1, None, "years"
+        if self.word_is("in") and self.word_is("the", k=1) and self.word_is("last", k=2) \
+                and self.peek(3) is not None and self.peek(3).val.isdigit() \
+                and self.word_is("years", "year", k=4):
+            n = int(self.peek(3).val)
+            self.i += 5
+            return datetime.date.today().year - n + 1, None, "years"
+        return datetime.date.today().year - AT_DEFAULT_YEARS + 1, None, "years"
+
     def _parse_split(self, entity: str, n_splits: int) -> GroupBy:
         self._skip_annot()
-        self._parse_those(entity)
+        if n_splits and self.word_is("each"):
+            # `group each institution's works by year` after a thing-first start
+            # (oxjob #1555): the thing's works, split further
+            self.next()
+            nt = self.peek()
+            if nt is not None and nt.kind == "WORD" and re.search(r"(['’]s?)$", nt.val):
+                self.next()
+            if self.word_is("works", "work"):
+                self.next()
+        else:
+            self._parse_those(entity)
         if self.word_is("again"):
             self.next()
         noun = _plural_noun(entity)
@@ -5000,6 +5403,58 @@ _MEASURE_WORDS = {
     "min": "min", "minimum": "min", "max": "max", "maximum": "max",
     "percent": "percent",
 }
+
+
+# -- thing-first (oxjob #1555, Jason 2026-10-09) -----------------------------------
+# `get authors at [UBC](I141945490) since 2022 who published works where ...`: a split of
+# works by the thing, with a filter on the thing's own record, written thing first.
+# Every split by one of these things echoes this way ("it's important to be
+# consistent"); the column each one splits works by, as `group those works by <noun>`:
+THING_COLUMNS = {"authors": "authorships.author.id",
+                 "institutions": "authorships.institutions.lineage",
+                 "sources": "primary_location.source.id",
+                 "publishers": "primary_location.source.host_organization_lineage",
+                 "funders": "funders.id",
+                 "countries": "authorships.countries",
+                 "topics": "primary_topic.id"}
+THING_BY_COLUMN = {c: e for e, c in THING_COLUMNS.items()}
+# the echo's verb per thing (any of _THING_VERBS, `with` or `of` reads the same)
+THING_VERBS = {"authors": "who published", "institutions": "that published",
+               "sources": "that published", "publishers": "that published",
+               "funders": "that funded", "countries": "that published", "topics": "of"}
+_THING_VERBS = {"published", "publish", "publishes", "wrote", "write", "writes", "authored",
+                "author", "authors", "funded", "fund", "funds", "have", "has", "had",
+                "produced", "produce", "produces", "cover", "covers", "covered", "include",
+                "includes", "included", "hold", "holds", "contributed", "co-authored"}
+_THING_LEAD = _THING_VERBS | {"with", "of"}
+# `at [UBC]` with no years: the record in the last five years (Jason 2026-10-09, "up to
+# you"); the echo writes the year (`since 2022`) so the query stays exact
+AT_DEFAULT_YEARS = 5
+# the author's record (`at` institutions, `in` countries): with years, now, ever
+_AT_NOW = {"at": "last_known_institutions.lineage", "in": "last_known_institutions.country_code"}
+_AT_EVER = {"at": "affiliations.institution.lineage", "in": "affiliations.institution.country_code"}
+_AT_YEARS = _AT_EVER
+# a place in a thing's own record: (country column, continent column)
+_THING_IN = {"institutions": ("country_code", "continent"),
+             "sources": ("country_code", None), "funders": ("country_code", None),
+             "publishers": ("country_codes", None)}
+
+
+def _walk_entity(w) -> Optional[str]:
+    from query_translation.walks import entity_for_link
+    return entity_for_link(w.column_id) if w.column_id else None
+
+
+def _has_measure_filter(node) -> bool:
+    if isinstance(node, MeasureFilter):
+        return True
+    if isinstance(node, BranchFilter):
+        return any(_has_measure_filter(c) for c in node.filters)
+    return False
+
+
+def _year_word(t) -> Optional[int]:
+    return int(t.val) if t is not None and t.kind == "WORD" and re.fullmatch(r"\d{4}", t.val) else None
 
 
 def _is_column_of(column: str, entity: str) -> bool:

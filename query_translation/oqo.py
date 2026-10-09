@@ -127,15 +127,71 @@ class MeasureFilter:
         )
 
 
+@dataclass
+class AffiliationFilter:
+    """An author's own record of an institution, or of a country, in given years
+    (oxjob #1555, thing-first): `get authors at [UBC](I141945490) since 2022 who
+    published works where ...`. The record lists each institution an author put on
+    their papers, with the years; `column_id` is
+    `affiliations.institution.lineage` (sub-units count) or
+    `affiliations.institution.country_code`. `since` / `through` bound the years,
+    both included. The index holds the years apart from the institutions (a flat
+    object), so the engine checks the pair in each candidate's record.
+
+    Only valid inside a `GroupBy.where` tree on author groups."""
+    column_id: str
+    value: str
+    since: Optional[int] = None
+    through: Optional[int] = None
+    is_negated: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"affiliation": self.column_id, "value": self.value}
+        if self.since is not None:
+            result["since"] = self.since
+        if self.through is not None:
+            result["through"] = self.through
+        if self.is_negated:
+            result["is_negated"] = True
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "AffiliationFilter":
+        return cls(column_id=data["affiliation"], value=data["value"],
+                   since=data.get("since"), through=data.get("through"),
+                   is_negated=data.get("is_negated", False))
+
+    def matches(self, affiliations: List[dict]) -> bool:
+        """Does an author's record (`_source.affiliations`) list the place in the
+        years? Polarity is the caller's."""
+        from core.utils import get_full_openalex_id
+        want = (str(self.value).upper() if self.column_id.endswith("country_code")
+                else get_full_openalex_id(self.value))
+        for a in affiliations or []:
+            inst = a.get("institution") or {}
+            if self.column_id.endswith("country_code"):
+                hit = (inst.get("country_code") or "").upper() == want
+            else:
+                hit = want in (inst.get("lineage") or [inst.get("id")])
+            if hit and any((self.since is None or y >= self.since)
+                           and (self.through is None or y <= self.through)
+                           for y in a.get("years") or []):
+                return True
+        return False
+
+
 FilterType = Union[LeafFilter, BranchFilter]
 
 
 def filter_from_dict(data: Dict[str, Any]) -> FilterType:
-    """Convert a dict to a LeafFilter, BranchFilter or (group filters only) MeasureFilter."""
+    """Convert a dict to a LeafFilter, BranchFilter or (group filters only) a
+    MeasureFilter or an AffiliationFilter."""
     if "join" in data:
         return BranchFilter.from_dict(data)
     if "measure" in data:
         return MeasureFilter.from_dict(data)
+    if "affiliation" in data:
+        return AffiliationFilter.from_dict(data)
     return LeafFilter.from_dict(data)
 
 
@@ -249,6 +305,8 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
             return f
         if isinstance(f, MeasureFilter):  # measured column is a column of the main entity
             return replace(f, column_id=_canon(f.column_id))
+        if isinstance(f, AffiliationFilter):  # an author's record: its own fixed columns
+            return f
         if isinstance(f.value, OQO):  # a nested query (oxjob #1535)
             return replace(f, column_id=canonicalize_column_id(f.column_id, ent),
                            value=canonicalize_oqo_column_ids(f.value))

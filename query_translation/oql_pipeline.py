@@ -21,12 +21,12 @@ the head reads `get works`, and each step is a `StepDirective` joined by `; then
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple
 
 from query_translation import oql_lang as L
 from query_translation.oqo import (
-    OQO, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
+    OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, Walk)
 from query_translation.oql_render_tree import (
     ClauseMeta, ClauseNode, EntityHead, GroupMeta, GroupNode, OQLRenderTree,
     Segment, _stringify_expr)
@@ -778,6 +778,219 @@ def _search_item_text(tree) -> str:
     return text
 
 
+# ---------------------------------------------------------------------------
+# Thing-first (oxjob #1555, Jason 2026-10-09): every split by a thing reads
+# `get authors at [UBC](I141945490) since 2022 who published works where ...`
+# ---------------------------------------------------------------------------
+# After `at [UBC] since 2022`, words that say the works may come from anywhere (pending
+# Jason's call on the reading test; accepted on input either way)
+ANY_WORKS = ""
+
+_COUNT_WORDS = {">": "more than", ">=": "at least", "<": "fewer than", "<=": "at most"}
+_PLACE_COLUMNS = {
+    # author's record: (word, when)
+    "last_known_institutions.lineage": ("at", "now"),
+    "affiliations.institution.lineage": ("at", "ever"),
+    "last_known_institutions.country_code": ("in", "now"),
+    "affiliations.institution.country_code": ("in", "ever"),
+}
+_OWN_PLACE_COLUMNS = {"country_code", "continent", "country_codes"}
+
+
+def thing_first(oqo: OQO) -> Optional[Tuple[str, bool]]:
+    """(the thing, whole set?) when the echo starts with the thing: a works query whose
+    first split is by a thing (one row each), or a walk to the things' combined set
+    that is summarized (`then, summarize all those authors using ...`)."""
+    if oqo.get_rows != "works" or oqo.each or oqo.sample:
+        return None
+    if oqo.walks:
+        w = oqo.walks[0]
+        if (len(oqo.walks) == 1 and w.to is None and not w.each and not oqo.group_by
+                and oqo.calculate and w.column_id in L.THING_BY_COLUMN
+                and not _has_measure(w.where)):
+            return L.THING_BY_COLUMN[w.column_id], True
+        return None
+    if not oqo.group_by:
+        return None
+    g = oqo.group_by[0]
+    if g.values is not None or g.bins is not None or g.conditions is not None:
+        return None
+    ent = L.THING_BY_COLUMN.get(g.column_id)
+    return (ent, False) if ent else None
+
+
+def _has_measure(node) -> bool:
+    if isinstance(node, MeasureFilter):
+        return True
+    if isinstance(node, BranchFilter):
+        return any(_has_measure(c) for c in node.filters)
+    return False
+
+
+def _and_parts(node) -> List:
+    if node is None:
+        return []
+    if isinstance(node, BranchFilter) and node.join == "and" and not node.is_negated:
+        return list(node.filters)
+    return [node]
+
+
+def _place_leaves(node, thing: str) -> Optional[List]:
+    """The leaves of a place part (`at [UBC] since 2022`, `at ([A] or [B]) now`, `in
+    [Asia]`): one kind, one set of years, all positive, joined by `or`; else None."""
+    leaves = [node] if not isinstance(node, BranchFilter) else (
+        node.filters if node.join == "or" and not node.is_negated else [])
+    if not leaves:
+        return None
+    kinds = set()
+    for x in leaves:
+        if isinstance(x, AffiliationFilter) and not x.is_negated and thing == "authors":
+            kinds.add((x.column_id, x.since, x.through))
+        elif (isinstance(x, LeafFilter) and not x.is_negated and x.operator == "is"
+              and not isinstance(x.value, OQO)
+              and ((thing == "authors" and x.column_id in _PLACE_COLUMNS)
+                   or (thing != "authors" and x.column_id in _OWN_PLACE_COLUMNS))):
+            kinds.add((x.column_id,))
+        else:
+            return None
+    return leaves if len(kinds) == 1 else None
+
+
+def _years_text(since, through) -> str:
+    if since is not None and through is not None:
+        return f"in {since}" if since == through else f"from {since} through {through}"
+    if since is not None:
+        return f"since {since}"
+    if through is not None:
+        return f"through {through}"
+    return ""
+
+
+def _place_text(leaves: List, resolver=None) -> str:
+    x = leaves[0]
+    col = x.column_id
+    if isinstance(x, AffiliationFilter):
+        word, when = ("in" if col.endswith("country_code") else "at"), _years_text(x.since, x.through)
+    elif col in _PLACE_COLUMNS:
+        word, when = _PLACE_COLUMNS[col]
+    else:
+        word, when = "in", ""
+    ns = ("countries" if "country" in col else "continents" if col == "continent"
+          else "institutions")
+    vals = [link_text(v.value, ns, resolver, in_list=len(leaves) > 1) for v in leaves]
+    vals_text = vals[0] if len(vals) == 1 else "(" + " or ".join(vals) + ")"
+    if when == "ever":
+        return f"ever {word} {vals_text}"
+    return f"{word} {vals_text}" + (f" {when}" if when else "")
+
+
+def _thing_head(where, thing: str, resolver=None):
+    """(the start up to `works`, the `keep` condition or None) for a thing's own
+    conditions: places first, then `where <own fields>`, the verb, a count."""
+    from query_translation.walks import plural, singular
+    places, own, measures = [], [], []
+    for p in _and_parts(where):
+        leaves = _place_leaves(p, thing)
+        if leaves is not None:
+            places.append(leaves)
+        elif _has_measure(p):
+            measures.append(p)
+        else:
+            own.append(p)
+    count = None
+    if (len(measures) == 1 and isinstance(measures[0], MeasureFilter)
+            and measures[0].measure == "count" and not measures[0].is_negated
+            and measures[0].operator in _COUNT_WORDS):
+        count = measures.pop()
+    ctx = {"noun": "works", "group_entity": thing, "singular": singular(thing)}
+    head = f"get {plural(thing)}"
+    for leaves in places:
+        head += " " + _place_text(leaves, resolver)
+    if own:
+        tree = own[0] if len(own) == 1 else BranchFilter("and", own)
+        head += " where " + _group_where_text(tree, ctx, resolver)
+    head += f" {L.THING_VERBS[thing]} "
+    if count is not None:
+        head += f"{_COUNT_WORDS[count.operator]} {_number(count.value)} "
+    head += "works"
+    if places and ANY_WORKS:
+        head += f" {ANY_WORKS}"
+    keep = None
+    if measures:
+        keep = measures[0] if len(measures) == 1 else BranchFilter("and", measures)
+    return head, keep, ctx
+
+
+def _build_thing_first(oqo: OQO, thing: str, whole_set: bool, resolver=None) -> OQLRenderTree:
+    from query_translation.walks import plural, singular
+    where = oqo.walks[0].where if whole_set else oqo.group_by[0].where
+    head_text, keep, ctx = _thing_head(where, thing, resolver)
+    head = EntityHead(id="works", text=head_text)
+    where_keyword, wnode = "", None
+    if oqo.filter_rows:
+        where_keyword = " where "
+        wnode = where_node(list(oqo.filter_rows), resolver, top=True)
+    steps: List[StepDirective] = []
+    if keep is not None:
+        steps.append(StepDirective(
+            prefix=f"keep those {plural(thing)} where ",
+            segments=[_text(_group_where_text(keep, ctx, resolver))],
+            meta=StepMeta("keep", index=0, data={"where": keep.to_dict()})))
+    rest = [] if whole_set else oqo.group_by[1:]
+    if rest:
+        # each thing's works split further: `group each institution's works by year`
+        sub = replace(oqo, group_by=rest, calculate=[])
+        n0 = len(steps)
+        _later_steps(sub, steps, "works", "works", resolver)
+        first = steps[n0]
+        first.prefix = first.prefix.replace("group those works by ",
+                                            f"group each {singular(thing)}'s works by ", 1)
+        for d in steps[n0:]:
+            if d.meta.index is not None:
+                d.meta.index += 1
+    if oqo.calculate:
+        if whole_set:
+            prefix = f"summarize all those {plural(thing)} using "
+        elif rest:
+            prefix = SUMMARIZE
+        else:
+            prefix = f"summarize each {singular(thing)} using "
+        text = english_list([measure_text(m, "works") for m in oqo.calculate])
+        steps.append(StepDirective(
+            prefix=prefix, segments=[_text(text)],
+            meta=StepMeta("calculate", data={
+                "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
+    for d, word in zip(steps, transitions(len(steps))):
+        d.joiner = f"; {word}, "
+    return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
+                         where=wnode, directives=steps, corpus_phrase=_corpus_phrase(oqo))
+
+
+def _corpus_phrase(oqo: OQO) -> str:
+    if getattr(oqo, "corpus", "core") and oqo.corpus != "core":
+        return f" ({L.CORPUS_CANONICAL_PHRASE.get(oqo.corpus, oqo.corpus)})"
+    return ""
+
+
+def _summary_prefix(oqo: OQO) -> str:
+    """The summary names what it summarizes (Jason 2026-10-09): `summarize all those
+    works using`, `summarize all those authors using`, `summarize each author using`
+    (one row per thing); after a split, `summarize using` (the split says per what)."""
+    from query_translation.walks import entity_for_link, plural, singular
+    if oqo.group_by:
+        return SUMMARIZE
+    if oqo.walks:
+        out = oqo.walks[0]
+        ent = entity_for_link(out.column_id) or "works"
+        if out.each:
+            return f"summarize each {singular(ent)} using "
+        last = oqo.walks[-1]
+        return f"summarize all those {'works' if last.to is not None else plural(ent)} using "
+    if oqo.each:
+        return f"summarize each {singular(oqo.get_rows)} using "
+    return f"summarize all those {L._plural_noun(oqo.get_rows)} using "
+
+
 def build_pipeline_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     tok = L._RENDER_ENTITY.set(oqo.get_rows)
     try:
@@ -838,6 +1051,9 @@ def _walk_steps(oqo: OQO, resolver=None) -> Tuple[List[StepDirective], str]:
 
 def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
     from query_translation.walks import singular
+    tf = thing_first(oqo)
+    if tf is not None:
+        return _build_thing_first(oqo, *tf, resolver=resolver)
     entity = oqo.get_rows
     noun = L._plural_noun(entity)
     head_text = f"get {entity.lower()}"
@@ -949,7 +1165,7 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
     if oqo.calculate:
         text = english_list([measure_text(m, noun) for m in oqo.calculate])
         steps.append(StepDirective(
-            prefix=SUMMARIZE, segments=[_text(text)],
+            prefix=_summary_prefix(oqo), segments=[_text(text)],
             meta=StepMeta("calculate", data={
                 "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]})))
 
