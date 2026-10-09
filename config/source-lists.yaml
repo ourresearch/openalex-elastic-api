@@ -120,3 +120,11 @@ values:
   display_name: Publindex (Colombia), C
 - id: source-lists/publindex-recognized
   display_name: Publindex (Colombia), recognized
+- id: source-lists/dongbi-a
+  display_name: Dongbi Index (China), A
+- id: source-lists/dongbi-b
+  display_name: Dongbi Index (China), B
+- id: source-lists/dongbi-c
+  display_name: Dongbi Index (China), C
+- id: source-lists/dongbi-d
+  display_name: Dongbi Index (China), D
