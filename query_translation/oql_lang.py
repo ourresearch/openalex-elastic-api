@@ -2166,8 +2166,14 @@ class _Parser:
                         f"walk back to their works first: then get all "
                         f"{possessive(cur, cur_each)} works; then group those works by ...",
                         t.pos)
-                if (self.word_is("summarize") and len(walks) == 1 and walks[0].to is None
-                        and walks[0].each and not group_by
+                each_thing = self._summarize_each_thing()
+                if (each_thing and not group_by and not walks and cur == "works"):
+                    # `get works where ...; then, summarize each topic using count`: one row
+                    # per topic, the thing-first split (#1494's log, oxjob #1555)
+                    group_by.append(GroupBy(column_id=THING_COLUMNS[each_thing]))
+                elif (self.word_is("summarize") and len(walks) == 1 and walks[0].to is None
+                        and (walks[0].each or each_thing == _walk_entity(walks[0]))
+                        and not group_by
                         and walks[0].column_id in THING_BY_COLUMN):
                     # `get each author of those works where ...; then, summarize using count`
                     # (#1494's cow path, oxjob #1555): one row per author over those works,
@@ -2706,11 +2712,28 @@ class _Parser:
         if fld.kind == "search":
             if op == "similar":
                 return self._parse_semantic(fld)
+            k = 1 if self.peek() is not None and self.peek().kind == "LP" else 0
+            if op == "is" and self.peek(k) is not None and self.peek(k).kind == "STRING" \
+                    and (not k or (self.peek(2) is not None and self.peek(2).kind == "RP")):
+                # `title is "Bottles Up"`: a paper by its title (#1494's log, 13 refusals,
+                # oxjob #1555) is the exact phrase; the echo writes `title has ("...")`
+                op = "has"
             if op not in ("has", "nhas"):
                 raise oql_error("OQL_BAD_OPERATOR_FOR_FIELD",
                                f'search field "{field}" needs "has" (not "{op}")',
                                'use: <field> has <terms>')
             tree = self._parse_search_value(fld.column)
+            # `has ("a" OR "b") AND (teacher* OR ...)`: a search that goes on past its
+            # parentheses with a capital AND / OR / NOT reads as one search (#1494's log,
+            # oxjob #1555); a clause after it (`AND year ...`, `AND (type is ...)`) doesn't
+            operands, conns = [tree], []
+            while self._search_goes_on():
+                w = self.next().val
+                rhs = self._parse_search_value(fld.column)
+                operands.append(_negate(rhs) if w == "NOT" else rhs)
+                conns.append("or" if w == "OR" else "and")
+            if conns:
+                tree = _precedence_tree(operands, conns)
             if op == "nhas":
                 tree = _negate(tree)
             return tree
@@ -4435,6 +4458,36 @@ class _Parser:
     # `get authors at [UBC](I141945490) since 2022 where h-index is above 20 who
     # published more than 5 works where ...`: the place and the thing's own conditions,
     # the verb, an optional count, `works`, then the works conditions as for `get works`.
+
+    def _search_goes_on(self) -> bool:
+        """A capital AND / OR / NOT right after a search's value, followed by more search
+        (a `(...)` group of search words, a quoted phrase, a word that isn't a field)."""
+        t = self.peek()
+        if t is None or t.kind != "WORD" or t.val not in ("AND", "OR", "NOT"):
+            return False
+        j = self.i + 1
+        if t.val != "NOT" and _word_at(self.toks, j) == "not":
+            j += 1                                    # `AND NOT (salmon)`
+        n = self.toks[j] if j < len(self.toks) else None
+        if n is None:
+            return False
+        if n.kind == "STRING":
+            return True
+        if n.kind == "LP":
+            k = j + 1
+            while k < len(self.toks) and self.toks[k].kind == "LP":
+                k += 1
+            return not (self._at_known_field(k) or _word_at(self.toks, k) in ("it", "it's", "not"))
+        return n.kind == "WORD" and not self._at_known_field(j) \
+            and n.val.lower() not in ("it", "it's", "published", "added", "updated", "not")
+
+    def _summarize_each_thing(self) -> Optional[str]:
+        """The thing in `summarize each <thing>` at the cursor, when it is one."""
+        from query_translation.walks import noun_entity
+        if not (self.word_is("summarize") and self.word_is("each", k=1)):
+            return None
+        got = noun_entity(_word_at(self.toks, self.i + 2) or "")
+        return got[0] if got and got[0] in THING_COLUMNS else None
 
     def _parse_summary_scope(self):
         """`each author`, `all those authors`, `all the works`, `them all`, `all` after

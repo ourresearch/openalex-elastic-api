@@ -177,7 +177,7 @@ def test_keep_is_gone():
 
 @pytest.mark.parametrize("q,code", [
     ("get topics at (I141945490) of works where title has kelp", "OQL_THING_PLACE"),
-    ("get works where title has kelp; then, summarize each author using count", "OQL_SUMMARY_SCOPE"),
+    ("get works where title has kelp; then, summarize each year using count", "OQL_SUMMARY_SCOPE"),
     ("get authors who published works where title has kelp; then, summarize all those works "
      "using count", "OQL_SUMMARY_SCOPE"),
     ("get authors who published more than 5 works where title has kelp; then, summarize all "
@@ -244,3 +244,27 @@ def test_years_counted_across_the_record():
     ubc = {"id": "https://openalex.org/I141945490", "lineage": ["https://openalex.org/I141945490"]}
     assert not a.matches([{"institution": ubc, "years": [2015, 2023]}])
     assert a.matches([{"institution": ubc, "years": [2023, 2025]}])
+
+
+# #1494's second log (guide v6, 2026-10-09): what the models reached for
+@pytest.mark.parametrize("q,echo", [
+    ("get works where country is [Kenya](KE); then, summarize each topic using count",
+     "get topics of works where country is [Kenya](KE); then, summarize each topic using count"),
+    ("get works where title has kelp; then, get countries of those works; finally, summarize each "
+     "country using count",
+     "get countries that published works where title has (kelp); then, summarize each country using count"),
+    ('get works where title is "Bottles Up"', 'get works where title has ("Bottles Up")'),
+    ('get works where title-abstract has ("school culture" OR "organizational culture") AND (teacher* AND '
+     '(behavior* OR commitment))',
+     'get works where title-abstract has (("school culture" OR "organizational culture") AND teacher* AND '
+     '(behavior* OR commitment))'),
+    ("get works where title has (kelp) AND NOT (salmon)", "get works where title has (kelp NOT salmon)"),
+    # a clause after a search stays a clause
+    ("get works where title has kelp AND published since 2020",
+     "get works where title has (kelp) and published since 2020"),
+    ("get works where title has kelp AND (type is [article](article) OR type is [review](review))",
+     "get works where title has (kelp) and type is ([article](article) or [review](review))"),
+])
+def test_cow_paths_from_the_sidebar(q, echo):
+    assert _echo(q) == echo
+    assert _same(q, echo)
