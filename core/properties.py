@@ -393,7 +393,15 @@ CAP_COLUMN = "column"
 # (Jason, 07:05 CT: "volume number just drops support completely"): no OQL word, no GUI facet, not documented; it
 # stays in the work record and the REST filter is unlisted (#498), still executing for legacy callers. A property
 # removed = MAJOR per classify_properties_diff.py.
-PROPERTIES_VERSION = "17.1.0"
+# 17.2.0 (oxjob #1570, prepared 2026-10-09 as 15.3.0, renumbered 2026-10-14 on rebase over 17.1.0 on branch af1570-funding-flows; ships with the walden Nightly Grants funding-flows
+# release, not before): awards gain `amount_usd` + `amount_usd_basis` (the amount at the start-date exchange rate; `amount` and
+# `currency` unchanged), `recipient_countries` [{country_code, share, amount_usd, basis}] and `recipient_regions`
+# [{code, vocabulary, display_name, share}] (where the money lands), and `research_scope` {is_research, basis, tier}; filters
+# `amount_usd` (range, so `sort=amount_usd.sum` works in group_by), `amount_usd_basis`, `recipient_countries.country_code`,
+# `recipient_countries.continent`, `recipient_countries.basis`, `recipient_regions.code`, `has_recipient_country`,
+# `research_scope.is_research`, `research_scope.basis`. Purely additive = MINOR. Needs the awards-v4 mapping patch
+# (walden PatchAwardsV4FundingFlows) first. If another bump lands on master first, rebase and take the next MINOR.
+PROPERTIES_VERSION = "17.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

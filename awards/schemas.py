@@ -78,6 +78,35 @@ class RelatedAwardSchema(Schema):
     asserted_by = fields.Str()
 
 
+class RecipientCountrySchema(Schema):
+    country_code = fields.Str()
+    share = fields.Float(allow_none=True)
+    amount_usd = fields.Float(allow_none=True)
+    basis = fields.Str(allow_none=True)
+
+    class Meta:
+        ordered = True
+
+
+class RecipientRegionSchema(Schema):
+    code = fields.Str()
+    vocabulary = fields.Str(allow_none=True)
+    display_name = fields.Str(allow_none=True)
+    share = fields.Float(allow_none=True)
+
+    class Meta:
+        ordered = True
+
+
+class ResearchScopeSchema(Schema):
+    is_research = fields.Bool(allow_none=True)
+    basis = fields.Str(allow_none=True)
+    tier = fields.Int(allow_none=True)
+
+    class Meta:
+        ordered = True
+
+
 class AwardsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str(default=None)
@@ -96,6 +125,12 @@ class AwardsSchema(Schema):
     # Funding information (flat structure as per actual document)
     amount = fields.Float(default=None)
     currency = fields.Str(default=None)
+    # Funding-flows release (oxjob #1570): USD amount at the start-date rate, where the money lands, research flag.
+    amount_usd = fields.Float(default=None)
+    amount_usd_basis = fields.Str(default=None)
+    recipient_countries = fields.List(fields.Nested(RecipientCountrySchema), dump_default=list)
+    recipient_regions = fields.List(fields.Nested(RecipientRegionSchema), dump_default=list)
+    research_scope = fields.Nested(ResearchScopeSchema, default=None)
     funding_type = fields.Str(default=None)
     funder_scheme = fields.Str(default=None)
     
