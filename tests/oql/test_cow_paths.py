@@ -218,3 +218,70 @@ def test_that_country_is_a_valid_group_filter():
     o = canonicalize_oqo(parse("get works where year > 2020; then group those works by "
                                "country where that country is not [Iran](IR)"))
     assert validate_oqo(o).valid
+
+
+# The map's cow paths (2026-10-09): Opus 5.5 wrote one query for each of #1602's 1,457
+# map questions (oxjob #1555 EXPLORE.md, "Map fit"); these are the refusals that were ours.
+MAP_FIT = [
+    # a link right after a relation verb starts a new condition
+    ("get works where title has kelp and it cites [Attention Is All You Need](W2963403868)",
+     "get works where title has kelp and it cites (W2963403868)"),
+    ("get works where author is [Jane Smith](A5023888391) and it cites [A paper: its subtitle](W2100837269)",
+     "get works where author is (A5023888391) and it cites (W2100837269)"),
+    ("get works where it cites [Attention](W2963403868) or it's cited by [Attention](W2963403868)",
+     "get works where it cites (W2963403868) or it's cited by (W2963403868)"),
+    # `and by` after a group filter that ends in a value: the next split
+    ("get works where year > 2020; then group those works by institution where country is [Canada](CA) and by language",
+     "get works where year > 2020; then group those works by institution where country is CA and by language"),
+    ("get works where year > 2019; then group those works by author where last known institution is not "
+     "[Harvard University](I136199984) and by year",
+     "get works where year > 2019; then group those works by author where last known institution is not "
+     "(I136199984); then group those works again by year"),
+    # a set of a collection's works, the way the echo writes it
+    ("get works where it cites a work in the set (works in the collection [My seeds](col_seeds))",
+     "get works where it cites a work in the set (works where openalex id is in (col_seeds))"),
+    ("get works where topic is in the set (topics of works in the collection [Gov](col_gov))",
+     "get works where topic is in the set (topics of works where openalex id is in (col_gov))"),
+    # a relation as a compared thing
+    ("get works where year >= 2000; then compare institution [UM](I27837315) versus it's cited by a work "
+     "in the set (works where institution is (I27837315)) using count",
+     "get works where year >= 2000; then compare institution is (I27837315) versus it's cited by a work "
+     "in the set (works where institution is (I27837315)) using count"),
+    # yes/no sentences: `fulltext` as one word, `in` before an index's name
+    ("get works where it has fulltext", "get works where has full text is true"),
+    ("get works where it doesn't have fulltext", "get works where has full text is false"),
+    ("get works where it's in CWTS core or it's not in PubMed",
+     "get works where CWTS core is true or PubMed is false"),
+    # whether a field has a value: `it has a funder`, `it has no SDG`
+    ("get works where it has an SDG", "get works where SDG is not unknown"),
+    ("get works where it has no SDG and year > 2020", "get works where SDG is unknown and year > 2020"),
+    ("get works where title has kelp and it doesn't have a funder",
+     "get works where title has kelp and funder is unknown"),
+    # a code written as a link
+    ("get works where any location version is ([accepted version](acceptedVersion) or "
+     "[published version](publishedVersion))",
+     "get works where any location version is (acceptedVersion or publishedVersion)"),
+    ("get authors where past institutions type is [education](education)",
+     "get authors where past institutions type is education"),
+    # two-letter continent codes
+    ("get works where continent is ([Africa](AF) or (EU))", "get works where continent is (Q15 or Q46)"),
+]
+
+
+@pytest.mark.parametrize("cow,road", MAP_FIT)
+def test_cow_path_map_fit(cow, road):
+    assert _canon(cow) == _canon(road)
+
+
+@pytest.mark.parametrize("q", [
+    "get works where it cites a work in the set (works in the collection (col_seeds))",
+    "get works where year >= 2000; then, compare (institution is (I27837315) and year >= 2020) "
+    "versus it's cited by a work in the set (works where institution is (I27837315)) using count by source",
+])
+def test_the_echo_reads_back(q):
+    """The echo's own output parses to the same query: the set of a collection's works,
+    and a set inside a comparison (whose `is` stays: it's a query of its own)."""
+    o = canonicalize_oqo(parse(q))
+    echo = render_pipeline_line(o)
+    assert "in the set (works where institution (" not in echo
+    assert _canon(echo) == o.to_dict()

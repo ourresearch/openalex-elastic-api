@@ -52,7 +52,9 @@ _ARTICLES = {"a", "an", "the"}
 _SPLIT = {"it's": ["it", "is"], "it’s": ["it", "is"], "its": ["it", "is"],
           "isn't": ["is", "not"], "isn’t": ["is", "not"],
           "doesn't": ["does", "not"], "doesn’t": ["does", "not"],
-          "don't": ["does", "not"]}
+          "don't": ["does", "not"],
+          # `it has fulltext` (map cow path, oxjob #1555 2026-10-09)
+          "fulltext": ["full", "text"]}
 
 
 def _norm(words: List[str]) -> List[Tuple[str, int]]:
@@ -102,7 +104,9 @@ def _name_patterns():
             if name.startswith("has "):
                 pairs = ((f"it has {name[4:]}", True), (f"it does not have {name[4:]}", False))
             else:
-                pairs = ((f"it is {name}", True), (f"it is not {name}", False))
+                # `it's in CWTS core`, `it's not in PubMed` too (map cow path, 2026-10-09)
+                pairs = ((f"it is {name}", True), (f"it is not {name}", False),
+                         (f"it is in {name}", True), (f"it is not in {name}", False))
             out += [(_phrase_words(p), fld.column, val) for p, val in pairs]
     return out
 

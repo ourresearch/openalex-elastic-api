@@ -531,14 +531,38 @@ def is_compare_split(g: GroupBy) -> bool:
     return g.conditions is not None or (g.values is not None and g.bins is None)
 
 
+def _set_spans(text: str) -> List[Tuple[int, int]]:
+    """Where each `in the set (...)` query sits in `text`, parentheses included."""
+    spans = []
+    for m in re.finditer(r"\bset \(", text):
+        depth, j, quoted = 0, m.end() - 1, False
+        while j < len(text):
+            c = text[j]
+            if c == '"':
+                quoted = not quoted
+            elif not quoted and c == "(":
+                depth += 1
+            elif not quoted and c == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        spans.append((m.end() - 1, j + 1))
+    return spans
+
+
 def _drop_is(text: str) -> str:
     """`institution is [MIT](I1)` -> `institution [MIT](I1)`: in a comparison `is`
-    goes unsaid (`is not` stays). Names and quoted strings are left alone."""
+    goes unsaid (`is not` stays). Names, quoted strings and the query inside `in the
+    set (...)` (a query of its own, oxjob #1555) are left alone."""
+    keep = [(m.start(), m.end()) for m in _LINK_OR_QUOTE.finditer(text)] + _set_spans(text)
     out, last = [], 0
-    for m in _LINK_OR_QUOTE.finditer(text):
-        out.append(re.sub(r" is (?!not\b)", " ", text[last:m.start()]))
-        out.append(m.group(0))
-        last = m.end()
+    for a, b in sorted(keep):
+        if a < last:
+            continue        # inside a set already kept
+        out.append(re.sub(r" is (?!not\b)", " ", text[last:a]))
+        out.append(text[a:b])
+        last = b
     out.append(re.sub(r" is (?!not\b)", " ", text[last:]))
     return "".join(out)
 

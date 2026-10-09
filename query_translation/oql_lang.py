@@ -687,7 +687,9 @@ def _set_phrase_query(toks: List[Tok], pos: int) -> List[Tok]:
             continue
         break
     rest = toks[i:]
-    if rest and not (rest[0].kind == "WORD" and rest[0].val.lower() == "where"):
+    # `where ...`, or `in the collection [name](col_x)` as after `get works` (the
+    # echo writes a collection's works that way, oxjob #1555)
+    if rest and not (rest[0].kind == "WORD" and rest[0].val.lower() in ("where", "in")):
         raise oql_error("OQL_BAD_SET_PHRASE", f'unexpected "{rest[0].val}" in the set',
                         "e.g. in the set (works where year >= 2020)", rest[0].pos)
 
@@ -2431,6 +2433,11 @@ class _Parser:
                 self.i += bp[2]
                 fld = _entity_resolve_field(_BY_COLUMN[bp[0]], self._entity)
                 return LeafFilter(fld.column, bp[1], "is")
+            hv = self._match_has_value(self.i)
+            if hv is not None:
+                fld, has, n = hv
+                self.i += n
+                return LeafFilter(fld.column, None, "is", is_negated=has)
         if self._compare_mode and self._compare_prev is not None \
                 and self._compare_value_start(0):
             # `compare institution [MIT] versus [Stanford]`: a bare value takes the
@@ -2953,6 +2960,10 @@ class _Parser:
             # `country [US] and [CN]`: the next value reuses the field; `... and open
             # access`, `... or institution [MIT]`: a new condition (no `is` to see)
             return False
+        if t.kind == "WORD" and t.val.lower() in _CONNECTIVES and self.word_is("by", k=1):
+            # `... where country is [Canada](CA) and by language`: the next split
+            # (`_parse_expr` stops there too), not a second value (oxjob #1555)
+            return False
         if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
             # Editor context: a connective with NOTHING after it (cursor sits right
             # after `... or`/`and`) is ambiguous between an undelimited value list
@@ -2983,6 +2994,12 @@ class _Parser:
                 et = entity_type_for_column(fld.column, self._entity)
                 ns = et if et in _READABLE_SLUG_TYPES else None
         labeled = self._labeled_value(fld, ns) if ns is not None else None
+        if labeled is None and ns is None and fld.kind in ("string", "enum") \
+                and _is_link_text(self.toks, self.i):
+            # a code written as a link, the way the echo writes closed vocabularies:
+            # `any location version is [published version](publishedVersion)` (map
+            # cow path, oxjob #1555 2026-10-09); the code in parentheses decides
+            labeled = self._labeled_value(fld, "")
         if labeled is not None:
             t, val = labeled
         else:
@@ -3284,12 +3301,18 @@ class _Parser:
                 after = self.peek(mrs[1])
                 if after is not None and after.kind == "LP":
                     return True
+                # ... or by a link (`it cites [Attention Is All You Need](W2963403868)`,
+                # oxjob #1555): the name comes before the `(`
+                if after is not None and _is_link_text(self.toks, self.i + mrs[1]):
+                    return True
                 # `it cites a work in the set (...)`, `it cites works in (...)` (#1555)
                 j = mrs[1] + (1 if self.word_is("a", "any", k=mrs[1]) else 0)
                 if self.word_is("work", "works", k=j) and self.word_is("in", k=j + 1):
                     return True
             if match_negated_relation(self.toks, self.i) is not None:
                 return True   # `it doesn't cite any work in the set (...)`
+            if self._match_has_value(self.i) is not None:
+                return True   # `it has an SDG` (#1555)
             # a (known, when required) field word-run followed by an operator
             parts = []
             for j in range(0, _MAX_ALIAS_WORDS):
@@ -3990,6 +4013,44 @@ class _Parser:
     # Underneath it's a split: listed values of one field, listed searches of one
     # search field, or a list of conditions; a collection's members with `each`.
 
+    def _match_has_value(self, i: int):
+        """`it has a funder`, `it has an SDG`, `it doesn't have a license`, `it has no
+        keyword` at token ``i``: whether the field has any value (map cow path, oxjob
+        #1555 2026-10-09). -> (Field, has, tokens used) or None. The canonical form
+        stays `<field> is not unknown` / `<field> is unknown`. Yes/no flags have their
+        own sentences (`oql_bool_phrases`); searches aren't values."""
+        def w(k):
+            t = self.toks[i + k] if i + k < len(self.toks) else None
+            return t.val.lower().replace("\u2019", "'") if t is not None and t.kind == "WORD" else None
+        if w(0) != "it":
+            return None
+        if w(1) == "has" and w(2) == "no":
+            has, k = False, 3
+        elif w(1) == "has":
+            has, k = True, 2
+        elif w(1) in ("doesn't", "doesnt") and w(2) == "have":
+            has, k = False, 3
+        elif w(1) == "does" and w(2) == "not" and w(3) == "have":
+            has, k = False, 4
+        else:
+            return None
+        if w(k) in ("a", "an", "any"):
+            k += 1
+        m = match_field(self.toks, i + k)
+        em = None if self._ctx_mode else match_entity_fallback(self.toks, i + k, self._entity)
+        if em is not None and (m is None or em[2] > m[2]):
+            m = em
+        if m is None or m[1].kind in ("bool", "search", "collection"):
+            return None
+        save = self.i
+        self.i = i + k + m[2]
+        try:
+            if not self._at_condition_end():
+                return None
+        finally:
+            self.i = save
+        return _entity_resolve_field(m[1], self._entity), has, k + m[2]
+
     def _at_condition_end(self) -> bool:
         """Nothing more of this condition follows: the end, `)`, `;`, a connective or a
         step word."""
@@ -4014,6 +4075,12 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() not in _COMPARE_STOPS \
                 and t.val.lower() not in _CONNECTIVES and t.val.lower() != "not" \
                 and self._compare_prev is not None:
+            # `versus it's cited by a work in the set (...)`: a relation opens a
+            # condition of its own (oxjob #1555)
+            mrs = match_row_subject(self.toks, self.i + k)
+            if (mrs is not None and mrs[2]) or \
+                    match_negated_relation(self.toks, self.i + k) is not None:
+                return False
             return not self._at_known_field(self.i + k)
         return False
 

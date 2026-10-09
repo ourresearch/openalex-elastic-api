@@ -360,6 +360,10 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
     return value
 
 
+_CONTINENT_CODES = {"af": "Q15", "an": "Q51", "as": "Q48", "eu": "Q46", "na": "Q49",
+                    "oc": "Q55643", "sa": "Q18"}
+
+
 def _vocab_code_for_name(value: str, column_id: str) -> str:
     """A closed vocabulary's name stands for its code (oxjob #1555, Haiku's cow path):
     `continent is (Africa)`, `country is ("United Kingdom")`, `language is (English)`.
@@ -370,6 +374,10 @@ def _vocab_code_for_name(value: str, column_id: str) -> str:
     ns = CLOSED_VOCAB_NAMESPACE.get(L.entity_type_for_column(column_id) or "")
     if ns is None or is_vocab_member(ns, value):
         return value
+    if ns == "continents" and value.strip().lower() in _CONTINENT_CODES:
+        # the two-letter continent codes people reach for: `[Africa](AF)` (map cow path,
+        # 2026-10-09); our IDs are Wikidata's
+        return _CONTINENT_CODES[value.strip().lower()]
     table = _config_table(ns) or {}
     codes = [code for code, name in table.items() if name.lower() == value.strip().lower()]
     return codes[0] if len(codes) == 1 else value
