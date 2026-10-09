@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "ee4d0079e628f5c58bc67492a91d3bb192e4fae47f6a9e08062538f5982f5f9a",
-    "property_count": 899,
-    "version": "15.1.0"
+    "fingerprint": "75541fee70bb73531134d66d7f9504c57e24d1e4663b0e6c2fed13a4d92c5fe0",
+    "property_count": 904,
+    "version": "15.2.0"
   },
   "properties": {
     "authors": {
@@ -7565,6 +7565,49 @@
         "supported_by": [],
         "type": null
       },
+      "primary_topic": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "primary topic",
+        "entity_type": null,
+        "name": "primary_topic",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "primary_topic.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "topic"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "primary topic",
+        "entity_type": null,
+        "name": "primary_topic.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
+      },
       "relevance_score": {
         "actions": [
           "column"
@@ -7606,6 +7649,49 @@
         ],
         "supported_by": [],
         "type": "search"
+      },
+      "topics": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "related topics",
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "topics.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "topics"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "related topics",
+        "entity_type": null,
+        "name": "topics.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
       },
       "updated_date": {
         "actions": [
@@ -13484,12 +13570,14 @@
         "actions": [
           "column"
         ],
-        "aliases": [],
+        "aliases": [
+          "keywords"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
         "category": "other",
-        "display_name": "keywords",
+        "display_name": "characteristic keywords",
         "entity_type": null,
         "name": "keywords",
         "operators": [],
@@ -13513,6 +13601,22 @@
         ],
         "supported_by": [],
         "type": "search"
+      },
+      "legacy_keywords": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "legacy keywords",
+        "entity_type": null,
+        "name": "legacy_keywords",
+        "operators": [],
+        "supported_by": [],
+        "type": null
       },
       "relevance_score": {
         "actions": [
@@ -14545,6 +14649,7 @@
           "or"
         ],
         "supported_by": [
+          "gui",
           "oxurl"
         ],
         "type": "openalex_id"

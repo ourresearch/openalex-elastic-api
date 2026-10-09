@@ -131,9 +131,12 @@ Besides a field, you can split by:
 
 A yes/no field splits in two: `open access` and `not open access`.
 
-**Every grouped result also has a total row** for the whole starting set, with the same
-numbers and the same later splits. That's your baseline: start from the widest set you want
-to compare against (the world since 2016, a country), and read the shares against the total.
+**Every result also has a summary**: the same numbers for the whole starting set, and with
+two or more splits, for each split's groups on their own (each year across all open access
+statuses, each status across all years). Every summary number is computed from the works,
+never added up or averaged from the group rows. That's your baseline: start from the widest
+set you want to compare against (the world since 2016, a country), and read the shares
+against the summary.
 
 **Filter the groups** by adding `where` to the split. A calculation tests each group's works;
 any other field belongs to the group itself; `that <thing>` tests the group directly:
@@ -167,7 +170,9 @@ then, summarize using count, percent open access
 - `percent of those works`: each group's share of the set it came from
 - after a split by authors, institutions or sources, their own fields: `summarize using count, h-index`
 
-With splits you get one row per group plus the total row; without any, one row.
+With splits you get a flat table, one row per group with a column per split (group by year,
+then by open access status: a year column and a status column), plus the summary; without
+any split, one row.
 
 Sorting is **not** part of OQL: sort the table on the page, or with `?sort=` on the API (any
 calculated column, `sort=mean_fwci:desc`). OQL says which works and which numbers, not how to
@@ -180,11 +185,13 @@ display them.
 Up to three splits; up to 100 items in a list; at most 5 AND/OR/NOT in each listed search; a
 nested split up to 10,000 groups per split (a single split pages through any number); about
 ten seconds a query. Anything over a limit is refused before it runs, with the limit and how
-to fix it. A query with a `summarize using` step, a split by a list, bins or conditions, or a filter
-on its groups is priced from what it does: the starting set costs what a list (1 credit) or a
-search (10) costs, each listed search 10, each lookup 1. Nothing else adds to the price:
-splits by a field, counts, means and percentages are free. Any other query costs 1 credit.
-The check tells you the price for free, and a response shows what it cost in `meta.cost`.
+to fix it. A query costs what the same query costs as a URL: 1 credit for a list, 10 for a
+search, grouped or not. A query with a `summarize using` step, a split by a list, bins or
+conditions, or a filter on its groups is priced from what it does: the starting set costs
+what a list (1 credit) or a search (10) costs, each listed search 10, each lookup 1. Nothing
+else adds to the price: splits by a field, counts, means and percentages are free. The check
+tells you a calculation's price for free, and every response shows what it cost in
+`meta.cost`.
 
 ## OQL never guesses
 

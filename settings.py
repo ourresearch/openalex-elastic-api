@@ -28,8 +28,8 @@ if USERS_API_URL and not COLLECTION_RESOLVER_KEY:
     )
 
 # indexes
-AUTHORS_INDEX_WALDEN = "authors-v19"
-AUTHORS_INDEX_LEGACY = "authors-v19"
+AUTHORS_INDEX_WALDEN = "authors-v20"  # oxjob #1531: rebuilt beside v19 with the new topics
+AUTHORS_INDEX_LEGACY = "authors-v20"
 AUTHORS_INDEX_OLD = "authors-v10"
 AWARDS_INDEX = "awards-v4"
 CONCEPTS_INDEX = "concepts-v9"
@@ -53,7 +53,7 @@ SOURCE_LISTS_INDEX = "source-lists-v1"
 SOURCE_TYPES_INDEX = "source-types-v3"
 STUDY_DESIGNS_INDEX = "study-designs-v1"
 SUBFIELDS_INDEX = "subfields-v2"
-TOPICS_INDEX = "topics-v4"
+TOPICS_INDEX = "topics-v5"  # v5: keywords are keyword objects + legacy_keywords (oxjob #1307)
 WORK_TYPES_INDEX = "work-types-v1"
 WORKS_INDEX = "works"  # alias; rebuilds swap the concrete index in Elasticsearch, never here (oxjob #1456)
 WORKS_VECTOR_INDEX = "works-vectors-v2"  # Qwen3 vectors (oxjob #1275); v1 = gte, retire after a week

@@ -639,6 +639,20 @@
       "isId": false,
       "hasExport": false
     },
+    "authorships.institutions.id": {
+      "key": "authorships.institutions.id",
+      "entityToFilter": "works",
+      "entityToSelect": "institutions",
+      "displayName": "exact institution",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "raw_affiliation_strings": {
       "key": "raw_affiliation_strings",
       "entityToFilter": "works",
@@ -4464,6 +4478,38 @@
       "isId": false,
       "hasExport": false
     },
+    "primary_topic.id": {
+      "key": "primary_topic.id",
+      "entityToFilter": "keywords",
+      "entityToSelect": "topics",
+      "displayName": "primary topic",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [
+        "filter",
+        "group_by"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "keywords",
+      "entityToSelect": "topics",
+      "displayName": "related topics",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "ids.wikidata": {
       "key": "ids.wikidata",
       "entityToFilter": "keywords",
@@ -4497,6 +4543,20 @@
     }
   },
   "topics": {
+    "keywords": {
+      "key": "keywords",
+      "entityToFilter": "topics",
+      "entityToSelect": null,
+      "displayName": "characteristic keywords",
+      "displayNameVerbatim": false,
+      "type": "text",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "topics",
@@ -4557,20 +4617,6 @@
         "group_by"
       ],
       "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "keywords": {
-      "key": "keywords",
-      "entityToFilter": "topics",
-      "entityToSelect": null,
-      "displayName": "keywords",
-      "displayNameVerbatim": false,
-      "type": "text",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },

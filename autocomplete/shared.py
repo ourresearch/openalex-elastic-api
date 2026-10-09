@@ -96,7 +96,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
                 autocomplete_query = (
                     primary_query
                     | Q("match_phrase_prefix", description__autocomplete=q)
-                    | Q("match_phrase_prefix", keywords__autocomplete=q)
+                    | Q("match_phrase_prefix", keywords__display_name__autocomplete=q)
                 )
             elif index_name.startswith("keyword"):
                 # A keyword's display_name_alternatives are synonyms ("heart attack"

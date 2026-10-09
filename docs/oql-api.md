@@ -96,6 +96,9 @@ The paging parameters work alongside `oql`:
 | `cursor` | yes | deep paging; start with `cursor=*`, follow `meta.next_cursor` |
 | `sort` | yes | classic `sort=column:direction` (comma-separated for tiebreakers), e.g. `sort=cited_by_count:desc` |
 | `select` | yes | classic `select=field,field` to project a subset of fields |
+| `rerank` | yes | `rerank=true` reorders the top 100 of a relevance-sorted works search by relevance; result 101 onward is unchanged. Adds 10 credits. See [Rerank](/api/searching/#rerank) |
+| `format` | yes | `format=csv` on a query with calculations returns its groups as one flat CSV: one row per group, a column per split, a column per calculation. A single split by a field pages: add `cursor=*` and follow the `X-Next-Cursor` header (10,000 groups a page); without a cursor it holds the first 10,000. Costs the query's price for every 100 rows |
+| `table` | yes | with `format=csv`: `table=summary` returns the summary instead: `all-works.csv` (the whole set, one row), and with two or more splits a zip of it plus `by-<split>.csv` for each split's groups on their own. Default `groups` |
 | `api_key` | yes | or send `Authorization: Bearer <key>` (see Auth below) |
 
 **Sorting, field selection, and paging are view parameters, not part of the query**
@@ -158,7 +161,9 @@ curl -X POST "https://api.openalex.org/" \
 Rules of the road:
 
 - The body is a JSON object with **exactly one** of `"oql"` or `"oqo"`, plus optionally the
-  sibling view params `sort` / `select` / `page` / `per_page` / `cursor`. Any other top-level
+  sibling view params `sort` / `select` / `page` / `per_page` / `cursor`, `"rerank": true`, and
+  `"format": "csv"` with optional `"table": "summary"` (a query with calculations, as a
+  CSV). Any other top-level
   key is a **400** (`invalid_body`), and so is sending both `oql` and `oqo`. `Content-Type:
   application/json` is required (without it: 400, `invalid_body`).
 - Sibling view params use the same classic syntax as the query-string form: `sort` is a
@@ -202,12 +207,14 @@ usually ends with a concrete `Fix:`.
 ### Auth and cost
 
 No API key is required. These endpoints follow the same rules as the rest of the API: a
-free-account key raises your daily credit budget. A query with a `summarize using` step, a split by
-a list, bins or conditions, or a filter on its groups is priced from what it does: the
-starting set costs what a list (1 credit) or a search (10) costs, each listed search 10, each
-lookup 1 (see [Example costs](/access/example-costs/#what-an-oql-calculation-costs)). Every
-other query costs 1 credit, a search included. The response's `meta.cost` shows what a priced
-query cost, and `/query` is free and shows the price before you run it (`check.cost`).
+free-account key raises your daily credit budget. A query costs what the same query costs as
+a URL: 1 credit for a list, 10 for a search, grouped or not, so an OQL search costs what
+`/works?search=` costs. A query with a `summarize using` step, a split by a list, bins or
+conditions, or a filter on its groups is priced from what it does: the starting set costs
+what a list (1 credit) or a search (10) costs, each listed search 10, each lookup 1 (see
+[Example costs](/access/example-costs/#what-an-oql-calculation-costs)). The response's
+`meta.cost` shows what each call cost. `/query` is free and shows a calculation's price
+before you run it (`check.cost`).
 Authenticate with either form:
 
 ```

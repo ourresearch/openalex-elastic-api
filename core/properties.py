@@ -368,12 +368,17 @@ CAP_COLUMN = "column"
 # Aurora's tags frozen in October 2026, removed in November 2026. The removal dominates:
 # classify_properties_diff.py says MAJOR. If another bump lands on master first, rebase and
 # take the next MAJOR.
-# 15.1.0 on this branch (oxjob #1555, 2026-10-08; Jason's yes 2026-10-08 10:58 CT: "Do it and
+# 15.1.0 (oxjob #1307, 2026-10-05; Jason's "Yes" 15:46 CT to "That releases API version 15.1.0"): keywords gain
+# `primary_topic` and `topics` (related topics, a work's topic object shape; score = share of the keyword's works in
+# the topic) with filters `primary_topic.id` ("primary topic") and `topics.id` ("related topics"); topics gain
+# `legacy_keywords` (the old CWTS strings) while `keywords` becomes characteristic keyword objects, label
+# "characteristic keywords" (old words stay aliases). Additive: classify_properties_diff.py says MINOR.
+# 15.2.0 (oxjob #1555, 2026-10-08; Jason's yes 2026-10-08 10:58 CT: "Do it and
 # bump the register. Approved."): OQL input aliases from Haiku's cow paths, `id` for
 # `ids.openalex` on every entity and `institution continent` for works
-# `authorships.institutions.continent`. Alias additions = MINOR. Master reached 15.1.0 first
-# (another change): on rebase take the next MINOR, 15.2.0.
-PROPERTIES_VERSION = "15.1.0"
+# `authorships.institutions.continent`. Alias additions = MINOR. (Built as 15.1.0 on the branch; master
+# reached 15.1.0 first with #1307, so this is 15.2.0.)
+PROPERTIES_VERSION = "15.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

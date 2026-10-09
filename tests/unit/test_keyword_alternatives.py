@@ -1,3 +1,4 @@
+import json
 """Keyword display_name_alternatives in autocomplete and search (oxjob #1464).
 
 ES is mocked: single_entity_autocomplete runs against a fake Search.execute that
@@ -376,5 +377,13 @@ class TestKeywordSearch:
         assert _match_fields(query) == {"display_name", "display_name_alternatives"}
 
     def test_topics_search_unchanged(self):
-        query = full_search_query("topics-v4", "antibacterial resistance").to_dict()
-        assert _match_fields(query) == {"display_name", "description", "keywords"}
+        # oxjob #1307: topics-v5 keywords are objects; search their names
+        query = full_search_query("topics-v5", "antibacterial resistance").to_dict()
+        assert _match_fields(query) == {"display_name", "description", "keywords.display_name"}
+
+    def test_topics_keywords_search_targets_keyword_names(self):
+        # oxjob #1307: topics keywords.search searches the topic's keyword names, not the topic name
+        from topics.fields import fields_dict
+        f = fields_dict["keywords.search"]
+        f.value = "hearing aids"
+        assert "keywords.display_name" in json.dumps(f.build_query().to_dict())

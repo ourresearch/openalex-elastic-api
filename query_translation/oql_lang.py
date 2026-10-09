@@ -4401,7 +4401,7 @@ class _Parser:
                 raise oql_error(
                     "OQL_BAD_LIST",
                     "a condition group can't be empty",
-                    f"drop it: every grouped result already has a total row for the "
+                    f"drop it: every grouped result already has a summary of the "
                     f"whole starting set (start from the widest set you compare "
                     f"against), e.g. {example}", nt.pos)
             cond = self._parse_expr(top=True)

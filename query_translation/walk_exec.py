@@ -526,11 +526,12 @@ def count_things(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
         n, exact = len(keys), True
     else:
         n, exact = plan["n"], False
-    total = {"key": "total", "key_display_name": f"{plural(entity)} of those works",
+    # the summary of the whole set (#1550's shape: `total` became `summary.all`)
+    total = {"key": "all", "key_display_name": f"{plural(entity)} of those works",
              "count": n}
     meta = _meta(oqo, ctx, count=n, groups=None)
     meta["approximate"] = not exact
-    return {"meta": meta, "total": total, "group_by": [], "results": []}
+    return {"meta": meta, "summary": {"all": total}, "group_by": [], "results": []}
 
 
 def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
@@ -597,7 +598,7 @@ def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
     page_rows = rows[start:start + per_page]
     _name(page_rows, ctx)
     total_count = total_res["hits"]["total"]["value"]
-    total_row = {"key": "total", "key_display_name": f"all their works", "count": total_count}
+    total_row = {"key": "all", "key_display_name": f"all their works", "count": total_count}
     for m in measures:
         if m.measure != "count":
             total_row[m.key] = A._measure_value(m, total_res.get("aggregations", {}),
@@ -605,7 +606,7 @@ def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
     meta = _meta(oqo, ctx, count=total_count, groups=len(rows))
     meta.update(page=page, per_page=per_page, more_groups=start + per_page < len(rows),
                 measures=[A._measure_meta(m, "works") for m in measures])
-    return {"meta": meta, "total": total_row, "group_by": page_rows, "results": []}
+    return {"meta": meta, "summary": {"all": total_row}, "group_by": page_rows, "results": []}
 
 
 def _name(rows: List[dict], ctx: Ctx):

@@ -1277,7 +1277,7 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
             secondary_field="description",
-            tertiary_field="keywords",
+            tertiary_field="keywords.display_name",
         )
     elif index_name.lower().startswith("sources"):
         search_oa = SearchOpenAlex(

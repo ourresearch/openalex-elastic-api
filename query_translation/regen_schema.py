@@ -105,8 +105,9 @@ def build_schema() -> dict:
                 "type": "array",
                 "description": (
                     "OQL's final `summarize using ...` step (oxjob #1530, #1555): the measures "
-                    "computed for each group and for the total row (the whole "
-                    "starting set), or for the whole set when there is no split."
+                    "computed for each group and for the summary (the whole "
+                    "starting set, and each split on its own), or for the whole set "
+                    "when there is no split."
                 ),
                 "items": {"$ref": "#/$defs/Measure"},
                 "default": [],
