@@ -336,3 +336,19 @@ def test_a_split_after_a_walk_still_needs_the_works():
     with pytest.raises(OQLError) as e:
         parse("get works where published after 2020; then get each author of those works; then group those authors by year")
     assert e.value.code == "OQL_SPLIT_NEEDS_WORKS"
+
+
+# #1494's log (2026-10-09): models write Lucene's sloppy phrase; it reads as OQL's proximity
+@pytest.mark.parametrize("q,echo", [
+    ('get works where title has ("smart phone"~3)', "get works where title has (within 3 (smart, phone))"),
+    ('get works where title-abstract has ("smart phone"~3 AND battery)',
+     "get works where title-abstract has (within 3 (smart, phone) AND battery)"),
+])
+def test_lucene_sloppy_phrase_reads_as_proximity(q, echo):
+    assert render_pipeline_line(canonicalize_oqo(parse(q))) == echo
+    assert _canon(echo) == canonicalize_oqo(parse(q)).to_dict()
+
+
+def test_a_one_word_fuzzy_match_still_fails():
+    with pytest.raises(Exception):
+        parse('get works where title has ("smart"~2)')

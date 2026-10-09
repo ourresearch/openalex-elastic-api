@@ -54,7 +54,6 @@ def _code(oql):
     "works where title has (cancer~1)",                       # bare fuzzy
     'works where title has ("cancer~1")',                     # quoted fuzzy
     "works where title has (cancer~)",                        # bare fuzzy, default distance
-    'works where title has ("machine learning"~3)',           # typed phrase slop
     'works where title has ("machine"~3~"learning")',         # typed binary proximity
     "works where title has (deep cancer~1 learning)",         # inside a bare run
     'works where title has (deep "cancer~1" learning)',       # quoted escape inside a run
@@ -67,8 +66,16 @@ def test_tilde_is_rejected_with_no_fuzzy(oql):
     assert _code(oql) == "OQL_NO_FUZZY"
 
 
+def test_typed_phrase_slop_reads_as_within():
+    # #1494's log (oxjob #1555): Lucene's sloppy phrase is OQL's proximity; the `~`
+    # itself never reaches the engine
+    from query_translation.oql_lang import parse
+    leaf = parse('works where title has ("machine learning"~3)').filter_rows[0]
+    assert leaf.value == parse('works where title has (within 3 (machine, learning))').filter_rows[0].value
+
+
 def test_no_fuzzy_fixit_points_at_within():
-    err = _engine_error('works where title has ("machine learning"~3)')
+    err = _engine_error('works where title has (cancer~1)')
     assert "within N" in err.fixit
     assert "fuzzy" in err.fixit
 
