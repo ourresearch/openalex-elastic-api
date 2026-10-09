@@ -218,6 +218,7 @@ class SourcesSchema(Schema):
 
 class LocationSchema(Schema):
     id = fields.Method("get_id")
+    doi = fields.Str()
     is_oa = fields.Bool()
     landing_page_url = fields.Str()
     pdf_url = fields.Str()
