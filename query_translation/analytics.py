@@ -595,6 +595,20 @@ def _record_matches(node, src: dict) -> bool:
     return True
 
 
+def _both_sides_too_big(lv: Level, n_own: Optional[int], n_keys: Optional[int]) -> AnalyticsError:
+    """Loud, never a silent cap (oxjob #1555): neither side fits in the time."""
+    ent = lv.group_entity
+    keys = f"about {n_keys:,}" if n_keys is not None else "too many"
+    return AnalyticsError(
+        "query_too_slow",
+        f"This query is too big to run in time: about {n_own or 0:,} {ent} match their own "
+        f"conditions, and these works have {keys} {ent}. The engine checks up to "
+        f"{LOOKUP_LIMIT:,} {ent} from their own records or {WORKS_SIDE_LIMIT:,} from the works.",
+        f"Narrow the works (a shorter year range, a narrower search or topic) or the {ent} "
+        f"(a smaller place, fewer years); a count filter also helps: who published more than "
+        f"5 works where ...")
+
+
 def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadline) -> Optional[int]:
     """About how many distinct groups the works have (a cardinality probe)."""
     field = lv.agg["terms"]["field"]
@@ -725,14 +739,7 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
             if base_query is None or lv.kind != "terms":
                 deferred.append(p)
                 continue
-            raise AnalyticsError(
-                "query_too_slow",
-                f"Both sides are too big to check in time: about {n_own or 0:,} "
-                f"{lv.group_entity} match their own conditions, and the works have about "
-                f"{n_keys or 0:,} {lv.group_entity}; the engine lists up to "
-                f"{LOOKUP_LIMIT:,} from their own records or {WORKS_SIDE_LIMIT:,} from the works.",
-                "Narrow the works (a shorter year range, a narrower search or topic) or the "
-                f"{lv.group_entity} (a smaller institution, fewer years).")
+            raise _both_sides_too_big(lv, n_own, n_keys)
         add_include(ids)
     lv.include = include
     lv.exclude = exclude or None
@@ -1855,16 +1862,7 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                     est += 0.4 + n_keys / 36_000
                     calls += 2 + n_keys // 10_000
                 elif n > LOOKUP_LIMIT:
-                    limits.append({
-                        "error": "query_too_slow",
-                        "message": (f"The filter on the {lv.group_entity}' own fields matches "
-                                    f"{n:,} {lv.group_entity}; without a count filter every "
-                                    f"group in the set would be looked up, which takes longer "
-                                    f"than the {int(TIME_BUDGET_S)}-second budget."),
-                        "fix": ("Add a count filter so only the busiest groups are looked "
-                                "up: where count of those works > (5) and ..., or narrow "
-                                "the starting set."),
-                    })
+                    limits.append(_both_sides_too_big(lv, n, n_keys).to_dict())
                 else:
                     est += 0.2 + n / EST_IDS_PER_S
     # One probe: how many works the set holds and how many distinct values each split
