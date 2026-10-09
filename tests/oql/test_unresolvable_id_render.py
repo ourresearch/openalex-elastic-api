@@ -42,7 +42,7 @@ def test_self_id_column_stays_bare_on_miss():
     oqo = OQO(get_rows="authors",
               filter_rows=[LeafFilter("ids.openalex", "A9999999999", "is")])
     out = oql_lang.render_tree(oqo, resolver=_MISS)[0]
-    assert out == "authors where openalex id is (A9999999999)"
+    assert out == "authors where OpenAlex ID is (A9999999999)"
     assert "[" not in out
 
 

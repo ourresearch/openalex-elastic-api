@@ -693,8 +693,8 @@ rows:
     1 has ORCID is
     1.0 has ORCID
     1.1 true
-    2 author country is
-    2.0 author country
+    2 institution country is
+    2.0 institution country
     2.1 BR
   tags: [filter]
   provenance:
@@ -703,7 +703,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=has_orcid:true,last_known_institutions.country_code:BR'
   status: ok
-  oql: 'authors where has ORCID is (true) and author country is (BR [Brazil])'
+  oql: 'authors where has ORCID is (true) and institution country is (BR [Brazil])'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -716,7 +716,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=ids.openalex:A5022654839'
   status: ok
-  oql: 'authors where openalex id is (A5022654839)'
+  oql: 'authors where OpenAlex ID is (A5022654839)'
   oqo: {get_rows: authors, filter_rows: [{column_id: ids.openalex, value: A5022654839}]}
 
 - id: 42
@@ -727,7 +727,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=type:journal'
   status: ok
-  oql: 'sources where type is (journal)'
+  oql: 'sources where source type is (journal)'
   oqo: {get_rows: sources, filter_rows: [{column_id: type, value: journal}]}
 
 - id: 43
@@ -738,7 +738,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/institutions?filter=country_code:FR'
   status: ok
-  oql: 'institutions where country code is (FR [France])'
+  oql: 'institutions where country is (FR [France])'
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
 
 - id: 44
@@ -762,7 +762,7 @@ rows:
   status: ok
   oql: |-
     authors where last known institution is (I114027177 [UNC])
-      and topics is (T10895 [climate change])
+      and topic is (T10895 [climate change])
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.id, value: I114027177},
         {column_id: topics.id, value: T10895}]}
@@ -1946,7 +1946,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=subfield.id:2712'
   status: ok
-  oql: 'topics where subfield is (2712 [Endocrinology, Diabetes and Metabolism])'
+  oql: 'topics where parent subfield is (2712 [Endocrinology, Diabetes and Metabolism])'
   oqo: {get_rows: topics, filter_rows: [{column_id: subfield.id, value: '2712'}]}
   note: "#406 Part A: topics `subfield.id` registry display_name is 'parent subfield'; the friendly word 'subfield' is added as a parse alias so the topic-hierarchy word resolves on topics too."
 

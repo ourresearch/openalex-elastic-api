@@ -285,3 +285,30 @@ def test_the_echo_reads_back(q):
     echo = render_pipeline_line(o)
     assert "in the set (works where institution (" not in echo
     assert _canon(echo) == o.to_dict()
+
+
+@pytest.mark.parametrize("q,echo", [
+    # authors, institutions ... echo their own field names (oxjob #1555; were raw column
+    # ids and works words)
+    ("get authors where subfield is (1702)", "get authors where subfield is [Artificial Intelligence](1702)"),
+    ("get institutions where country is (CA)", "get institutions where country is [Canada](CA)"),
+    ("get authors where institution country is (BR)", "get authors where institution country is [Brazil](BR)"),
+    ("get keywords where related topics is (T10878)", "get keywords where related topics is (T10878)"),
+    ("get topics where parent subfield is (2712)",
+     "get topics where parent subfield is [Endocrinology, Diabetes and Metabolism](2712)"),
+])
+def test_non_works_fields_echo_their_own_names(q, echo):
+    import sys
+    sys.path.insert(0, "docs/oql")
+    from regen_corpus_oql import make_resolver
+    o = canonicalize_oqo(parse(q))
+    got = render_pipeline_line(o, make_resolver({}))
+    assert got == echo
+    assert _canon(got) == o.to_dict()
+
+
+def test_topics_parent_subfield_is_the_topics_own_column():
+    """`parent subfield` (topics' registry name) read as works' primary_topic.subfield.id
+    (on production too, 2026-10-09)."""
+    o = canonicalize_oqo(parse("get topics where parent subfield is (2712)"))
+    assert o.filter_rows[0].column_id == "subfield.id"

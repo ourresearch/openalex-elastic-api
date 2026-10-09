@@ -280,6 +280,62 @@ def test_a_groups_own_field_in_calculate():
     assert validate_oqo(oqo).valid
 
 
+@pytest.mark.parametrize("q,column,word", [
+    # a name, code or text of the groups' own (the map's cow path, oxjob #1555): never
+    # calculated, so only the group's own value fits
+    ("get works where year > (2020); then group those works by author; then summarize "
+     "using count and last known institution", "last_known_institutions.id", "last known institution"),
+    ("get works where year > (2020); then group those works by author; then summarize "
+     "using count and institution country", "last_known_institutions.country_code", "institution country"),
+    ("get works where year > (2020); then group those works by institution; then summarize "
+     "using count and country", "country_code", "country"),
+    ("get works where year > (2020); then group those works by source; then summarize "
+     "using count and ISSN", "issn", "ISSN"),
+])
+def test_a_groups_own_name_or_code_in_summarize(q, column, word):
+    from query_translation.oql_pipeline import render_pipeline_line
+    from query_translation.validator import validate_oqo
+    oqo = _canon(q)
+    assert oqo.calculate[1] == Measure("value", column)
+    assert validate_oqo(oqo).valid
+    echo = render_pipeline_line(oqo)
+    assert echo.endswith(f"summarize using count and {word}")
+    assert _canon(echo) == oqo
+
+
+@pytest.mark.parametrize("q,fix", [
+    # yes/no fields the works have too: the works' share, as before
+    ("get works where year > (2020); then group those works by source; then summarize "
+     "using count and DOAJ", "percent DOAJ"),
+    # no split by the things that have it: say which split shows it
+    ("get works where year > (2020); then summarize using count and country",
+     "group those works by institution; then, summarize using count and country"),
+])
+def test_a_groups_own_field_refusals_say_the_fix(q, fix):
+    e = _err(q)
+    assert e.code == "OQL_BAD_MEASURE" and fix in e.fixit
+
+
+def test_own_value_cells():
+    """A group's own field is one readable cell: numbers and yes/no as stored, an ID as
+    its name, a code as its name, several joined with "; "."""
+    from query_translation.analytics import own_value
+    lki = {"last_known_institutions": [
+        {"id": "https://openalex.org/I201448701", "display_name": "University of Washington",
+         "country_code": "US"},
+        {"id": "https://openalex.org/I1", "display_name": "Fred Hutch", "country_code": "US"}]}
+    assert own_value({"summary_stats": {"h_index": 41}}, "summary_stats.h_index", "authors") == 41
+    assert own_value(lki, "last_known_institutions.id", "authors") == \
+        "University of Washington; Fred Hutch"
+    assert own_value(lki, "last_known_institutions.country_code", "authors") == "United States"
+    assert own_value({"country_code": "GB"}, "country_code", "institutions") == "United Kingdom"
+    assert own_value({"issn": ["0028-0836", "1476-4687"]}, "issn", "sources") == \
+        "0028-0836; 1476-4687"
+    assert own_value({"is_oa": False}, "is_oa", "sources") is False
+    assert own_value(None, "issn", "sources") is None
+    assert own_value({"last_known_institutions": []}, "last_known_institutions.id", "authors") is None
+
+
 def test_a_field_of_both_needs_a_calculation():
     # works and authors both have a citation count: ambiguous, so it needs mean / sum
     e = _err("get works where year > (2020); then group those works by author; then "

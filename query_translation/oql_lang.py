@@ -2617,7 +2617,9 @@ class _Parser:
             if em is not None and (m is None or em[2] > m[2]):
                 spelling, efld, en = em
                 self.i += en
-                return spelling, efld
+                # a reused curated Field carries the works column: re-point it (topics'
+                # `parent subfield` read as works' primary_topic.subfield.id, #1555)
+                return spelling, _entity_resolve_field(efld, self._entity, word=spelling)
         if m is None:
             # Fallback B: a single WORD that is a raw works-registry column_id is
             # always accepted as an input alias (oxjob #363), even with no curated
@@ -4583,9 +4585,9 @@ class _Parser:
                         "OQL_BAD_MEASURE",
                         f'"{om[0]}" belongs to each {other[:-1]}, not to the {noun}, so it '
                         f"isn't calculated",
-                        f"filter the groups by it: group those {noun} by {other[:-1]} "
-                        f"where {om[0]} > (20); showing it beside the groups is a "
-                        f"display column", t.pos)
+                        f"split by {other[:-1]} to show it beside each one: group those "
+                        f"{noun} by {other[:-1]}; then, summarize using count and {om[0]}",
+                        t.pos)
         raise oql_error(
             "OQL_BAD_MEASURE",
             f'"{t.val if t is not None else ""}" isn\'t a calculation',
@@ -4610,12 +4612,19 @@ class _Parser:
                 continue
             spelling, fld, n = cand
             col = _entity_resolve_field(fld, ge).column
-            # a number of the group's own, and not also a field of the measured
-            # things (`citation count` is both: it needs `mean` / `sum`)
-            if (fld.kind == "num" and _is_column_of(col, ge)
-                    and not _is_column_of(_entity_resolve_field(fld, entity).column, entity)):
-                self.i += n
-                return Measure("value", col)
+            if not _is_column_of(col, ge) or fld.kind in ("search", "collection"):
+                continue
+            # a number or a yes/no field of the group's own, and not also a field of the
+            # measured things (`citation count` is both: it needs `mean` / `sum`; `DOAJ`
+            # beside sources needs `percent`)
+            also_measured = _is_column_of(_entity_resolve_field(fld, entity).column, entity)
+            if fld.kind in ("num", "bool") and also_measured:
+                continue
+            # a name, code or text (`last known institution` beside authors, `country`
+            # beside institutions): never calculated, so only the group's own value fits
+            # (the map's cow path, oxjob #1555 2026-10-09)
+            self.i += n
+            return Measure("value", col)
         return None
 
     def _parse_those_noun_optional(self, entity: str):
@@ -5116,6 +5125,15 @@ def _oql_field(column: str) -> Tuple[str, str]:
             w = _entity_search_word(ent, base + ".search")
             if w:
                 return w, mode
+    # Entity-aware word for every other field (oxjob #1555): on a non-works entity the
+    # registry's own name when it parses back to the same column (`subfield`, not
+    # `topics.subfield.id`, on authors; `country`, not `country code`, on institutions)
+    if base == column:
+        ent = _RENDER_ENTITY.get()
+        if ent and ent != "works":
+            w = _entity_word(ent, column)
+            if w:
+                return w, mode
     # Prefer the leaf's REAL (mode-encoded) column, then the base — and prefer a
     # search-kind Field: the bare base id may now belong to a distinct non-search
     # column (#799: `raw_affiliation_strings` -> "exact raw affiliation").
@@ -5172,6 +5190,60 @@ def _entity_search_word(entity: str, cid: str) -> Optional[str]:
             pass
         _ENTITY_SEARCH_WORD_CACHE[key] = word
     return _ENTITY_SEARCH_WORD_CACHE[key]
+
+
+# Curated words that say more than the registry's name for the same column, or say it
+# better (oxjob #1555): authors' `last_known_institutions.id` is "institution" in the
+# registry; sources' `has_issn` is "has issn"; sources' 2-year citedness "2yr ...".
+_KEEP_CURATED_WORDS = {"last known institution", "has ISSN", "2-year mean citedness"}
+_ENTITY_WORD_CACHE: Dict[Tuple[str, str], Optional[str]] = {}
+
+
+def _word_column(entity: str, word: str) -> Optional[str]:
+    """The column `word` names on `entity`, read the way `_parse_field` reads it."""
+    toks = [Tok("WORD", w, 0) for w in word.split()]
+    m = match_field(toks, 0)
+    em = match_entity_fallback(toks, 0, entity)
+    if em is not None and (m is None or em[2] > m[2]):
+        m = em
+    if m is None or m[2] != len(toks):
+        return None
+    return _entity_resolve_field(m[1], entity, word=word if m is em else None).column
+
+
+def _entity_word(entity: str, cid: str) -> Optional[str]:
+    """The registry's name for a non-search column on a non-works entity, when it reads
+    back as that column and no better curated word does; else None (the entity-blind
+    word stands)."""
+    key = (entity, cid)
+    if key not in _ENTITY_WORD_CACHE:
+        word = None
+        try:
+            from core.properties import get_entity_properties
+            prop = (get_entity_properties(entity) or {}).get(cid)
+            fld = _BY_COLUMN.get(cid)
+            if prop is not None and getattr(prop, "display_name", None) and not (
+                    fld is not None and fld.oql in _KEEP_CURATED_WORDS):
+                if _word_column(entity, prop.display_name) == cid:
+                    word = prop.display_name
+        except Exception:  # noqa: BLE001 (no registry: the entity-blind word)
+            word = None
+        _ENTITY_WORD_CACHE[key] = word
+    return _ENTITY_WORD_CACHE[key]
+
+
+def own_field_word(cid: str) -> Optional[str]:
+    """The word for a group's own field shown beside the groups (`country` beside
+    institutions), whose entity the measure doesn't carry: the name every entity that
+    has the column agrees on, else None."""
+    try:
+        from core.properties import ENTITY_PROPERTIES
+    except Exception:  # noqa: BLE001
+        return None
+    words = {_entity_word(e, cid) for e, props in ENTITY_PROPERTIES.items()
+             if e != "works" and props and cid in props}
+    words.discard(None)
+    return words.pop() if len(words) == 1 else None
 
 
 def _is_search_leaf(f) -> bool:
@@ -5730,6 +5802,11 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
 
     fld = _BY_COLUMN.get(f.column_id)
     name = fld.oql if fld else _RELATION_SUBJECTS.get(f.column_id, f.column_id)
+    # on authors, institutions ... the entity's own word (`subfield`, not
+    # `topics.subfield.id`; `country`, not `country code`; oxjob #1555)
+    ent = _RENDER_ENTITY.get()
+    if ent and ent != "works" and f.column_id not in _ROW_SUBJECT_RENDER:
+        name = _entity_word(ent, f.column_id) or name
     # date bound columns (from_*/to_*) render via the axis word + comparison op
     # (oxjob #407). The leaf carries op="is" on the bound column; we print
     # `<axis> >= <date>` / `<axis> <= <date>` (the inverse of the parse routing).

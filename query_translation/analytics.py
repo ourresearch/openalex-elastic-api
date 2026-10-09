@@ -1169,13 +1169,16 @@ def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measur
         paths = {m.key: m.column_id for m in wanted if m.column_id in g_fields}
         if not paths:
             continue
+        # an ID's name sits beside it (`last_known_institutions.display_name`)
+        source = ["id"] + list(paths.values()) + [
+            p[: -len(".id")] + ".display_name" for p in paths.values() if p.endswith(".id")]
         keys = [r["key"] for r in level_rows if isinstance(r.get("key"), str)
                 and r["key"].startswith(ID_PREFIX)]
         found: Dict[str, dict] = {}
         for start in range(0, len(keys), 1000):
             chunk = keys[start:start + 1000]
             res = get_connection().search(
-                index=g_index, body={"size": len(chunk), "_source": ["id"] + list(paths.values()),
+                index=g_index, body={"size": len(chunk), "_source": source,
                                      "query": {"terms": {"id": chunk}}},
                 request_timeout=deadline.timeout("reading the groups' own fields"))
             for h in res["hits"]["hits"]:
@@ -1183,10 +1186,46 @@ def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measur
         for r in level_rows:
             src = found.get(r.get("key"))
             for key, path in paths.items():
-                v = src
-                for part in path.split("."):
-                    v = v.get(part) if isinstance(v, dict) else None
-                r[key] = v
+                r[key] = own_value(src, path, lv.group_entity)
+
+
+def own_value(src: Optional[dict], path: str, entity: str):
+    """A group's own field as one cell (oxjob #1555): a number or a yes/no as stored
+    (an author's h-index); an ID as its name (`last known institution` -> "University
+    of Washington"), a code as its name (`country` -> "United States"); several joined
+    with "; " (an author with two last known institutions)."""
+    parts = path.split(".")
+    is_id = len(parts) > 1 and parts[-1] == "id"
+    vals = [src]
+    for part in (parts[:-1] if is_id else parts):
+        nxt = []
+        for v in vals:
+            v = v.get(part) if isinstance(v, dict) else None
+            nxt.extend(v if isinstance(v, list) else ([] if v is None else [v]))
+        vals = nxt
+    if is_id:
+        vals = [v.get("display_name") or v.get("id") for v in vals if isinstance(v, dict)
+                and (v.get("display_name") or v.get("id"))]
+    elif vals and all(isinstance(v, str) for v in vals):
+        vals = [_code_name(v, path, entity) for v in vals]
+    if not vals:
+        return None
+    if len(vals) == 1:
+        return vals[0]
+    return "; ".join(str(v) for v in dict.fromkeys(vals))
+
+
+def _code_name(code: str, column_id: str, entity: str) -> str:
+    """A closed vocabulary's code as its name (`US` -> "United States"); else the code."""
+    try:
+        from query_translation.oql_lang import entity_type_for_column
+        from query_translation.oql_renderer import _config_table
+        from query_translation.validator import CLOSED_VOCAB_NAMESPACE
+        ns = CLOSED_VOCAB_NAMESPACE.get(entity_type_for_column(column_id, entity) or "")
+        name = (_config_table(ns) or {}).get(code.lower()) if ns else None
+    except Exception:  # noqa: BLE001 (no vocabulary table: the code itself)
+        name = None
+    return name or code
 
 
 def _sort_rows(rows: List[dict], sort: Optional[Tuple[str, str]]):

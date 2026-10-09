@@ -759,11 +759,14 @@ class OQOValidator:
                 ge = _group_entity(g, oqo.get_rows)
                 ge_key = _resolve_property_entity(ge) if ge else None
                 props = get_entity_properties(ge_key) if ge_key else None
-                if props and m.column_id in props and props[m.column_id].type == "number":
+                # any field of the groups' own but a search (oxjob #1555: `last known
+                # institution` beside authors, as well as `h-index`)
+                if props and m.column_id in props and \
+                        "search" not in (props[m.column_id].operators or []):
                     return []
             return [ValidationError(
                 type="invalid_measure",
-                message=(f"'{m.column_id}' isn't a number field of any split's groups; a "
+                message=(f"'{m.column_id}' isn't a field of any split's groups; a "
                          f"group's own field needs a split by things that have it."),
                 location=f"{loc}.column_id")]
         if m.measure in ("count", "percent_of_those"):
