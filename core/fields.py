@@ -1386,6 +1386,10 @@ class TermField(Field):
 
             scopus = normalize_scopus(self.value)
             q = Q("match", **{"ids.scopus": scopus})
+        elif self.value.startswith("!") and self.param == "doi":
+            # Same DOI forms as the positive path; the plain term below matched only the short form, which is
+            # never stored, so `doi:!10.x/y` excluded nothing (oxjob #1573)
+            q = ~self._doi_query(self.value[1:])
         elif self.value.startswith("!"):
             query = self.value[1:]
             if (
@@ -1519,23 +1523,7 @@ class TermField(Field):
             kwargs = {self.es_field(): formatted_version}
             q = Q("term", **kwargs)
         elif self.param == "doi":
-            # Special handling for DOI to support both data versions:
-            # v1: stores full URL like "https://doi.org/10.1590/..."
-            # v2: stores short form like "10.1590/..."
-            # DOIs are stored lowercase, so we must lowercase the query value
-            if "doi.org" in self.value:
-                # Already a full URL, extract the short form
-                short_doi = self.value.replace("https://doi.org/", "").lower()
-                full_doi = self.value.lower()
-            else:
-                # Short form, create the full URL
-                short_doi = self.value.lower()
-                full_doi = f"https://doi.org/{self.value}".lower()
-
-            # Query both formats with OR; works also match any location's DOI (always the full URL form, oxjob #1573)
-            q = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
-            if self.alias == "ids.doi":
-                q |= Q("term", locations__doi__lower=full_doi)
+            q = self._doi_query(self.value)
         elif self.param in id_params:
             formatted_id = self.format_id()
             if formatted_id is None:
@@ -1547,6 +1535,22 @@ class TermField(Field):
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
+        return q
+
+    def _doi_query(self, value):
+        # Special handling for DOI to support both data versions:
+        # v1: stores full URL like "https://doi.org/10.1590/..."
+        # v2: stores short form like "10.1590/..."
+        # DOIs are stored lowercase, so we must lowercase the query value
+        if "doi.org" in value:
+            short_doi = value.replace("https://doi.org/", "").lower()
+            full_doi = value.lower()
+        else:
+            short_doi = value.lower()
+            full_doi = f"https://doi.org/{value}".lower()
+        q = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
+        if self.alias == "ids.doi":  # works also match any location's DOI (always the full URL form, oxjob #1573)
+            q |= Q("term", locations__doi__lower=full_doi)
         return q
 
     def es_field(self) -> str:
