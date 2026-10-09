@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "75541fee70bb73531134d66d7f9504c57e24d1e4663b0e6c2fed13a4d92c5fe0",
+    "fingerprint": "d4f56788a6b2844bfca813c20ed8d51633470e10fc8154f6f280c4184683735a",
     "property_count": 904,
-    "version": "15.2.0"
+    "version": "15.3.0"
   },
   "properties": {
     "authors": {
@@ -492,7 +492,11 @@
           "group_by",
           "sort"
         ],
-        "aliases": [],
+        "aliases": [
+          "country",
+          "last known country",
+          "last known institution country"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,

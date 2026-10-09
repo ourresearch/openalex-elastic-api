@@ -378,7 +378,11 @@ CAP_COLUMN = "column"
 # `ids.openalex` on every entity and `institution continent` for works
 # `authorships.institutions.continent`. Alias additions = MINOR. (Built as 15.1.0 on the branch; master
 # reached 15.1.0 first with #1307, so this is 15.2.0.)
-PROPERTIES_VERSION = "15.2.0"
+# 15.3.0 (oxjob #1555, 2026-10-09; Jason's "Yes" 18:14 CT to adding "last known institution country" and
+# "country" as words on author queries, which bumps the properties version): authors
+# `last_known_institutions.country_code` gains the OQL input aliases `last known institution country`, `last known
+# country` and `country` (#1494's log: 8 refusals). Alias additions = MINOR.
+PROPERTIES_VERSION = "15.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
