@@ -4591,6 +4591,28 @@ class _Parser:
                 self.next()
                 parts.append(self._parse_thing_place(entity, ever=True))
                 continue
+            neg = 1 if self.word_is("not") else 0
+            if self.word_is("in", k=neg) and self.word_is("the", k=neg + 1) \
+                    and self.word_is("collection", k=neg + 2):
+                # `not in the collection [Our lab](col_x)`: the things' own ids
+                self.i += neg + 3
+                t0 = self.peek()
+                if t0 is not None and t0.kind == "ANNOT":
+                    self.next()          # the link's name: a label
+                    t0 = self.peek()
+                if t0 is not None and t0.kind == "LP":
+                    self.next()
+                    t0 = self.next()
+                    if self.peek() is not None and self.peek().kind == "RP":
+                        self.next()
+                else:
+                    self.next()
+                if t0 is None or not str(t0.val).startswith("col_"):
+                    raise oql_error("OQL_THING_PLACE", "a collection is named by its id",
+                                    "in the collection [Our lab](col_x)",
+                                    t0.pos if t0 is not None else None)
+                parts.append(LeafFilter("collection", t0.val, "in collection", is_negated=bool(neg)))
+                continue
             if self.word_is("at", "in") and not self._works_filler_ahead():
                 parts.append(self._parse_thing_place(entity))
                 continue

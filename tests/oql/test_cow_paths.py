@@ -55,13 +55,14 @@ def test_a_saved_list_of_works_echoes_as_a_start():
 # `and by` after a group filter or bins; the Oxford comma for three. Either is accepted.
 ECHOES = [
     ("get works where published after 2015; then group by author; then group again by year; then summarize using count",
-     "get works where published after 2015; then, group those works by author and year; finally, summarize using count"),
+     "get authors who published works where published after 2015; then, group each author's works by year; "
+     "finally, summarize using count"),
     ("get works where published after 2015; then group those works by year and by type and by country",
      "get works where published after 2015; then, group those works by year, type, and country"),
     ("get works where title-abstract has kelp; then group by author where count of those works is above 10; "
      "then group again by year",
-     "get works where title-abstract has (kelp); then, group those works by author where count of those "
-     "works is above 10 and by year"),
+     "get authors who published more than 10 works where title-abstract has (kelp); then, group each "
+     "author's works by year"),
     ("get works where published after 2015; then group those works into citation count bins at (1, 10); then group again by year",
      "get works where published after 2015; then, group those works into citation count bins at (1, 10) and by year"),
     ("get works where published after 2020; then compare type article versus review by year and by country",

@@ -33,7 +33,7 @@ R = make_engine_resolver(_lookup)
      "get works where topic is in the collection (col_unknown)"),
     ("get each author in (col_auth9); then get all that author's works; then summarize using count",
      "get each author in the collection [Our lab](col_auth9); then, get all that author's works; "
-     "finally, summarize using count"),
+     "finally, summarize each author using count"),
     ("get each institution in (I63966007, I97018004); then get all that institution's works",
      "get each institution in ([Massachusetts Institute of Technology](I63966007), "
      "[Stanford University](I97018004)); then, get all that institution's works"),
@@ -41,9 +41,9 @@ R = make_engine_resolver(_lookup)
      "get authors where co-author is ([Jane Smith](A1) or [Stephen Hawking](A5066175077))"),
     ("get works where published after 2020; then group those works by author where that author is "
      "not in (col_auth9) and co-author is not (A1); then summarize using count",
-     "get works where published after 2020; then, group those works by author where co-author is "
-     "not [Jane Smith](A1) and that author is not in the collection [Our lab](col_auth9); "
-     "finally, summarize using count"),
+     "get authors not in the collection [Our lab](col_auth9) where co-author is not "
+     "[Jane Smith](A1) who published works where published after 2020; then, summarize each "
+     "author using count"),
     ("get works where published since 2016; then group those works into ((institution is "
      "(I99464096)), (country is (BE))); then summarize using count",
      "get works where published since 2016; then, compare institution [KU Leuven](I99464096) "

@@ -254,7 +254,42 @@ def number_words(text):
                   r"\1 \2 ", text)
 
 
+# Thing-first (oxjob #1555, Jason 2026-10-09): a split by a thing echoes `get authors ... who
+# published works where ...`, and the summary names what it summarizes. The launch-form
+# examples whose echo that changes, with today's echo.
+THING_FIRST_ECHO = {
+    'get works where institution is (I63966007); then group those works by author; then summarize using mean FWCI':
+        'get authors who published works where institution is (I63966007); then, summarize each author using mean FWCI',
+    'get works where title-abstract has (kelp); then group those works by author where count of those works > (10) and co-author is not (A5023888391)':
+        'get authors where co-author is not (A5023888391) who published more than 10 works where title-abstract has (kelp)',
+    'get works where country is (KE) and year >= (2015); then group those works by funder; then summarize using count, mean citation count':
+        'get funders that funded works where country is [Kenya](KE) and published since 2015; then, summarize each funder using count and mean citation count',
+    'get works where topic is in (col_abc123); then group those works by institution where collaborator is not (I63966007); then summarize using count':
+        'get institutions where collaborator is not (I63966007) that published works where topic is in the collection (col_abc123); then, summarize each institution using count',
+    'get works where year > (2020); then group those works by author where that author is not in (col_abc)':
+        'get authors not in the collection (col_abc) who published works where published after 2020',
+    'get works where year >= (1976); then group those works by topic; then group those works again by year':
+        "get topics of works where published since 1976; then, group each topic's works by year",
+    'get works where source is (S137773608); then group those works by author; then summarize using count, h-index, works count':
+        'get authors who published works where source is (S137773608); then, summarize each author using count, h-index, and works count',
+    'get works where year > (2020); then group those works by publisher; then summarize using count, max date, min date':
+        'get publishers that published works where published after 2020; then, summarize each publisher using count, max date, and min date',
+    'get works where topic is (T10878); then get authors of those works; then summarize using count':
+        'get authors who published works where topic is (T10878); then, summarize all those authors using count',
+    "get works where year >= (2020); then get each funder of those works; then get all that funder's works; then summarize using mean citation count":
+        "get works where published since 2020; then, get each funder of those works; then, get all that funder's works; finally, summarize each funder using mean citation count",
+    "get works where year >= (2020); then get each SDG of those works; then get all that SDG's works where year >= (2024); then summarize using count":
+        "get works where published since 2020; then, get each SDG of those works; then, get all that SDG's works where published since 2024; finally, summarize each SDG using count",
+    "get authors where h-index > (50); then get all those authors' works; then summarize using count":
+        "get authors where h-index is above 50; then, get all those authors' works; finally, summarize all those works using count",
+    "get works where title has (kelp); then get each author of those works where co-author is not (A5026692680); then get all that author's works; then summarize using count":
+        "get works where title has (kelp); then, get each author of those works where co-author is not (A5026692680); then, get all that author's works; finally, summarize each author using count",
+}
+
+
 def modern(text):
+    if text in THING_FIRST_ECHO:
+        return THING_FIRST_ECHO[text]
     text = number_words(year_words(named_sets(set_words(bare_values(text)))))
     head, *steps = _top_level_parts(_inner(text, _modern_inner))
     steps = merge_splits([_bare(s) for s in steps])

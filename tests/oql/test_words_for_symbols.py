@@ -174,8 +174,7 @@ NUMBER_ECHOES = [
      "get works where citation count is below 10 and FWCI is above 1.5"),
     ("get works where title has kelp; then group those works by author where count of those works > 5 "
      "and h-index >= 30",
-     "get works where title has (kelp); then, group those works by author where count of those works "
-     "is above 5 and h-index is at least 30"),
+     "get authors where h-index is at least 30 who published more than 5 works where title has (kelp)"),
     ("get works where not h-index > 30", "get works where not h-index is above 30"),
     ("get works where year > 2000; then compare citation count > 100 versus citation count <= 10",
      "get works where published after 2000; then, compare citation count above 100 versus citation "

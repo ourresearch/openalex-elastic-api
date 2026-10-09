@@ -280,6 +280,12 @@ def test_a_groups_own_field_in_calculate():
     assert validate_oqo(oqo).valid
 
 
+def oqo_thing(oqo):
+    from query_translation.oql_lang import THING_BY_COLUMN
+    from query_translation.walks import singular
+    return singular(THING_BY_COLUMN[oqo.group_by[0].column_id])
+
+
 @pytest.mark.parametrize("q,column,word", [
     # a name, code or text of the groups' own (the map's cow path, oxjob #1555): never
     # calculated, so only the group's own value fits
@@ -299,7 +305,7 @@ def test_a_groups_own_name_or_code_in_summarize(q, column, word):
     assert oqo.calculate[1] == Measure("value", column)
     assert validate_oqo(oqo).valid
     echo = render_pipeline_line(oqo)
-    assert echo.endswith(f"summarize using count and {word}")
+    assert echo.endswith(f"summarize each {oqo_thing(oqo)} using count and {word}")
     assert _canon(echo) == oqo
 
 

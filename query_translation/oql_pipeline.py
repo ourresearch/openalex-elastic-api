@@ -797,6 +797,10 @@ _PLACE_COLUMNS = {
 _OWN_PLACE_COLUMNS = {"country_code", "continent", "country_codes"}
 
 
+_THING_VERB_AT = re.compile(r" (?:who published|that published|that funded|of) "
+                            r"(?=(?:more than |at least |fewer than |at most )?\d* ?works\b)")
+
+
 def thing_first(oqo: OQO) -> Optional[Tuple[str, bool]]:
     """(the thing, whole set?) when the echo starts with the thing: a works query whose
     first split is by a thing (one row each), or a walk to the things' combined set
@@ -893,6 +897,8 @@ def _thing_head(where, thing: str, resolver=None):
         leaves = _place_leaves(p, thing)
         if leaves is not None:
             places.append(leaves)
+        elif isinstance(p, LeafFilter) and p.column_id == "collection":
+            places.append(p)          # `not in the collection [Our lab](col_x)`
         elif _has_measure(p):
             measures.append(p)
         else:
@@ -905,6 +911,10 @@ def _thing_head(where, thing: str, resolver=None):
     ctx = {"noun": "works", "group_entity": thing, "singular": singular(thing)}
     head = f"get {plural(thing)}"
     for leaves in places:
+        if isinstance(leaves, LeafFilter):
+            head += (" not" if leaves.is_negated else "") + " in the collection " + \
+                link_text(leaves.value, "collections", resolver)
+            continue
         head += " " + _place_text(leaves, resolver)
     if own:
         tree = own[0] if len(own) == 1 else BranchFilter("and", own)
@@ -979,16 +989,16 @@ def _summary_prefix(oqo: OQO) -> str:
     from query_translation.walks import entity_for_link, plural, singular
     if oqo.group_by:
         return SUMMARIZE
-    if oqo.walks:
-        out = oqo.walks[0]
-        ent = entity_for_link(out.column_id) or "works"
-        if out.each:
-            return f"summarize each {singular(ent)} using "
-        last = oqo.walks[-1]
-        return f"summarize all those {'works' if last.to is not None else plural(ent)} using "
-    if oqo.each:
-        return f"summarize each {singular(oqo.get_rows)} using "
-    return f"summarize all those {L._plural_noun(oqo.get_rows)} using "
+    cur, each = oqo.get_rows, bool(oqo.each)
+    for w in oqo.walks:
+        if w.to is None:
+            cur, each = entity_for_link(w.column_id) or "works", w.each
+        elif not each:
+            cur = w.to
+    if each:
+        # one row per thing: `get each author ...` (with or without the walk back)
+        return f"summarize each {singular(cur)} using "
+    return f"summarize all those {L._plural_noun(cur)} using "
 
 
 def build_pipeline_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
@@ -1187,8 +1197,17 @@ def format_pipeline(tree: OQLRenderTree, width: int = None) -> str:
     if len(flat) <= width:
         return flat
     head = f"{tree.entity.text}{tree.corpus_phrase}{tree.where_keyword}"
+    m = _THING_VERB_AT.search(tree.entity.text)
+    if m is not None and len(tree.entity.text[:m.start()].split()) > 2:
+        # a long thing-first start breaks before its verb (oxjob #1555):
+        #   get authors where h-index is above 20
+        #     who published more than 10 works where title-abstract has kelp
+        text = tree.entity.text
+        head = (text[:m.start()] + "\n" + " " * L._INDENT + text[m.start() + 1:]
+                + tree.corpus_phrase + tree.where_keyword)
     if tree.where is not None:
-        head += L._fmt_expr(tree.where, L._INDENT, len(head), width)
+        col = len(head) - head.rfind("\n") - 1
+        head += L._fmt_expr(tree.where, L._INDENT, col, width)
     lines = [head]
     for d in tree.directives:
         lines[-1] += ";"
@@ -1237,6 +1256,11 @@ def _wrap_step(line: str, width: int) -> List[str]:
     per line (`  where ...` / `  and ...`), split only at top-level connectives."""
     if len(line) <= width:
         return [line]
+    m = re.match(r"((?:then|finally|first|next), summarize (?:each \S+|all those [^ ]+(?: [^ ]+)??) )"
+                 r"(using .*)$", line)
+    if m is not None:
+        # `then, summarize all those works` / `  using count, mean FWCI, ...` (oxjob #1555)
+        return [m.group(1).rstrip(), "  " + m.group(2)]
     i = line.find(" where ")
     if i < 0:
         return [line]
