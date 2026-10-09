@@ -19,7 +19,7 @@ from core.exceptions import APIQueryParamsError
 
 # Databricks embedding model config (oxjob #1275: Qwen3-Embedding-0.6B, multilingual,
 # pay-per-token Foundation Model endpoint; corpus vectors live in
-# openalex.vector_search.work_embeddings_qwen3 and are served from works-vectors-v2).
+# openalex.vector_search.work_embeddings_qwen3 and are served from the works-vectors alias).
 EMBEDDING_MODEL = "databricks-qwen3-embedding-0-6b"
 EMBEDDING_DIMENSION = 1024
 VECTOR_FIELD = "vector_embedding"

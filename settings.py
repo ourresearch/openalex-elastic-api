@@ -56,7 +56,9 @@ SUBFIELDS_INDEX = "subfields-v2"
 TOPICS_INDEX = "topics-v5"  # v5: keywords are keyword objects + legacy_keywords (oxjob #1307)
 WORK_TYPES_INDEX = "work-types-v1"
 WORKS_INDEX = "works"  # alias; rebuilds swap the concrete index in Elasticsearch, never here (oxjob #1456)
-WORKS_VECTOR_INDEX = "works-vectors-v2"  # Qwen3 vectors (oxjob #1275); v1 = gte, retire after a week
+# Alias, not an index (oxjob #1433 Fix 4): it points at works-vectors-v2 (int8_hnsw) on the old vector deployment and
+# at works-vectors-v3 (bbq_disk) on the new one, so moving ES_VECTOR_SEARCH_URL is the whole switch.
+WORKS_VECTOR_INDEX = "works-vectors"
 USE_VECTOR_INDEX = os.environ.get("USE_VECTOR_INDEX", "false").lower() == "true"
 SEMANTIC_TEXT_BOOST = os.environ.get("SEMANTIC_TEXT_BOOST", "true").lower() == "true"
 
