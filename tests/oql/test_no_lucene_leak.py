@@ -76,7 +76,7 @@ def test_typed_phrase_slop_reads_as_within():
 
 def test_no_fuzzy_fixit_points_at_within():
     err = _engine_error('works where title has (cancer~1)')
-    assert "within N" in err.fixit
+    assert "within 3 words of each other" in err.fixit
     assert "fuzzy" in err.fixit
 
 

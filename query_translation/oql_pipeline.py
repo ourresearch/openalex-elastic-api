@@ -106,12 +106,27 @@ def _segs_text(segs: List[Segment]) -> str:
 # ---------------------------------------------------------------------------
 # Clauses in the pipeline style
 # ---------------------------------------------------------------------------
+_WITHIN = re.compile(r"^within (\d+) \((.*)\)$")
+
+
+def proximity_words(text: str, alone: bool = True) -> str:
+    """`within 3 (smart, phone)` -> `smart and phone within 3 words of each other`
+    (Jason 2026-10-09: "Englishify that"); in parentheses unless it is the whole search."""
+    m = _WITHIN.match(text or "")
+    if m is None:
+        return text
+    items = re.findall(r'"[^"]*"|[^,\s][^,]*', m.group(2))
+    words = english_list([x.strip() for x in items])
+    out = f"{words} within {m.group(1)} words of each other"
+    return out if alone else f"({out})"
+
+
 def _search_vtree_text(vt: dict) -> str:
     """A search value tree as a portable string: capital AND / OR, and the
     negated members of an AND written as a trailing `NOT (...)` (`(a OR b) NOT
     (c OR d)`, De Morgan of the canonical NNF `... and not c and not d`)."""
     if vt["node"] == "vleaf":
-        text = vt["display"]
+        text = proximity_words(vt["display"], alone=False)
         return f"NOT {text}" if vt["negated"] else text
 
     def child(c):
@@ -125,8 +140,9 @@ def _search_vtree_text(vt: dict) -> str:
         if pos and neg:
             left = " AND ".join(child(c) for c in pos)
             negs = [dict(c, negated=False) for c in neg]
-            right = (negs[0]["display"] if len(negs) == 1
-                     else "(" + " OR ".join(c["display"] for c in negs) + ")")
+            right = (proximity_words(negs[0]["display"], alone=False) if len(negs) == 1
+                     else "(" + " OR ".join(proximity_words(c["display"], alone=False)
+                                            for c in negs) + ")")
             return f"{left} NOT {right}"
         return " AND ".join(child(c) for c in kids)
     return " OR ".join(child(c) for c in kids)
@@ -155,7 +171,8 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
                 # a one-word stemmed search for a reserved word reads bare inside
                 # the parentheses; quoted it would come back an EXACT search (#1555)
                 term = str(leaf.value)
-            inner = f"NOT {term}" if leaf.is_negated else term
+            inner = (f"NOT {proximity_words(term, alone=False)}" if leaf.is_negated
+                     else proximity_words(term))
         else:
             return cn
         new = [col, L._seg("operator", " has "), _text("("),
@@ -788,9 +805,9 @@ ANY_WORKS = ""
 _COUNT_WORDS = {">": "more than", ">=": "at least", "<": "fewer than", "<=": "at most"}
 _PLACE_COLUMNS = {
     # author's record: (word, when)
-    "last_known_institutions.lineage": ("at", "now"),
+    # `at [X] now` reads as the field it is, `last known institution is [X]`: our guess
+    # from the same record, not foregrounded (Jason 2026-10-09 18:27 CT)
     "affiliations.institution.lineage": ("at", "ever"),
-    "last_known_institutions.country_code": ("in", "now"),
     "affiliations.institution.country_code": ("in", "ever"),
 }
 _OWN_PLACE_COLUMNS = {"country_code", "continent", "country_codes"}

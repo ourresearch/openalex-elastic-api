@@ -39,8 +39,9 @@ ECHOES = [
     # a bare summary after a thing-first start is per thing
     (f"get authors at {UBC} now who published works where title-abstract has kelp; "
      "then, summarize using count and h-index",
-     "get authors at (I141945490) now who published works where title-abstract has (kelp); "
-     "then, summarize each author using count and h-index"),
+     # `now` is our guess from the record: it reads as the field it is (Jason 2026-10-09)
+     "get authors where last known institution is (I141945490) who published works where "
+     "title-abstract has (kelp); then, summarize each author using count and h-index"),
     (f"get authors ever at {UBC} who published works where title-abstract has kelp",
      "get authors ever at (I141945490) who published works where title-abstract has (kelp)"),
     (f"get authors at ({UBC} or [University of Victoria](I212119943)) from 2020 through 2024 "
@@ -132,6 +133,8 @@ def test_authors_in_a_country_read_their_record():
                                                     since=2020)
     o = parse("get authors in [Brazil](BR) now who published works where topic is (T10166)")
     assert o.group_by[0].where.column_id == "last_known_institutions.country_code"
+    o = parse(f"get authors at {UBC} now who published works where topic is (T10166)")
+    assert o.group_by[0].where.column_id == "last_known_institutions.id"
 
 
 @pytest.mark.parametrize("q", [

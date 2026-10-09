@@ -1939,7 +1939,7 @@ class _CtxFound(Exception):
 # ---------------------------------------------------------------------------
 class _Parser:
     def __init__(self, toks: List[Tok]):
-        self.toks = _lucene_slop(toks)
+        self.toks = _english_proximity(_lucene_slop(toks))
         self.i = 0
         # --- dual-mode (editor-context) state (oxjob #363, decision 15) ---
         # `_ctx_mode` is False for all production parsing, so every `_want(...)`
@@ -3570,14 +3570,14 @@ class _Parser:
         nt = self.peek()
         if not nt or nt.kind != "WORD" or not nt.val.isdigit():
             raise oql_error("OQL_BAD_PROXIMITY", 'expected a number after "within"',
-                           'e.g. within 3 ("smart", "phone")', nt.pos if nt else wt.pos)
+                           'e.g. (smart and phone within 3 words of each other)', nt.pos if nt else wt.pos)
         n = int(nt.val)
         self.next()
         lp = self.peek()
         if not lp or lp.kind != "LP":
             raise oql_error("OQL_BAD_PROXIMITY",
                            'proximity needs a parenthesized operand list',
-                           'e.g. within 3 ("smart", "phone")', lp.pos if lp else wt.pos)
+                           'e.g. (smart and phone within 3 words of each other)', lp.pos if lp else wt.pos)
         self.next()                            # (
         operands: List[Tuple[str, bool]] = []  # (text, quoted)
         while True:
@@ -3586,7 +3586,7 @@ class _Parser:
             if ot is None:
                 raise oql_error("OQL_BAD_PROXIMITY",
                                'unterminated proximity list — expected ")"',
-                               'e.g. within 3 ("smart", "phone")', wt.pos)
+                               'e.g. (smart and phone within 3 words of each other)', wt.pos)
             if ot.kind == "RP":
                 break
             if ot.kind == "STRING":
@@ -3599,7 +3599,7 @@ class _Parser:
                 raise oql_error("OQL_BAD_PROXIMITY",
                                f'unexpected "{ot.val}" in a proximity operand list',
                                'list bare words or quoted phrases, '
-                               'e.g. within 3 ("smart", "phone")', ot.pos)
+                               'e.g. (smart and phone within 3 words of each other)', ot.pos)
             self._skip_annot()
             sep = self.peek()
             if sep is not None and sep.kind == "COMMA":
@@ -3609,17 +3609,17 @@ class _Parser:
                 continue                        # loop breaks on the RP next pass
             raise oql_error("OQL_BAD_PROXIMITY",
                            'proximity operands must be separated by commas',
-                           'e.g. within 3 ("smart", "phone")', sep.pos if sep else wt.pos)
+                           'e.g. (smart and phone within 3 words of each other)', sep.pos if sep else wt.pos)
         self.next()                            # )
         if len(operands) < 2:
             raise oql_error("OQL_PROXIMITY_NEEDS_OPERANDS",
                            'proximity needs at least two operands',
-                           'e.g. within 3 ("smart", "phone")', wt.pos)
+                           'e.g. (smart and phone within 3 words of each other)', wt.pos)
         if len({q for _, q in operands}) > 1:
             raise oql_error("OQL_PROXIMITY_MIXED_OPERANDS",
                            'proximity operands must be all bare (stemmed) or all quoted '
                            '(exact), not a mix',
-                           'quote every operand or none, e.g. within 3 ("smart", "phone")',
+                           'quote every operand or none, e.g. ("smart phone" and "battery" within 5 words of each other)',
                            wt.pos)
         quoted = operands[0][1]
         for op_text, _ in operands:
@@ -3790,9 +3790,8 @@ class _Parser:
         # surface. (The OXURL `~` notation is unaffected; this is the OQL surface only.)
         if self.word_is("within"):
             raise oql_error("OQL_PROXIMITY_SUFFIX_REMOVED",
-                           'proximity is written `within N (a, b, ...)` BEFORE the terms, '
-                           'not after them',
-                           'e.g. within 3 ("smart", "phone")',
+                           'proximity names the words and the distance',
+                           'e.g. (smart and phone within 3 words of each other)',
                            self.peek().pos)
         # #364: outside a proximity phrase, a wildcard must run on exact (no-stem)
         # text — stemming at index time removes the literal prefix, so a wildcard
@@ -5477,7 +5476,7 @@ _THING_VERB_FILLER = ("ever", "have", "has", "also", "all")   # `who have also p
 # you"); the echo writes the year (`since 2022`) so the query stays exact
 AT_DEFAULT_YEARS = 5
 # the author's record (`at` institutions, `in` countries): with years, now, ever
-_AT_NOW = {"at": "last_known_institutions.lineage", "in": "last_known_institutions.country_code"}
+_AT_NOW = {"at": "last_known_institutions.id", "in": "last_known_institutions.country_code"}
 _AT_EVER = {"at": "affiliations.institution.lineage", "in": "affiliations.institution.country_code"}
 _AT_YEARS = _AT_EVER
 # a place in a thing's own record: (country column, continent column)
@@ -6013,12 +6012,83 @@ def _lucene_slop(toks: List[Tok]) -> List[Tok]:
     return out
 
 
+_PROX_STOP = {"and", "or", "not", "has", "where", "within", "&"}
+
+
+def _english_proximity(toks: List[Tok]) -> List[Tok]:
+    """`smart and phone within 3 words of each other` (the echo, Jason 2026-10-09) and
+    `smart within 3 words of phone` read as `within 3 (smart, phone)`; operands are
+    words or quoted phrases, joined by commas and `and`."""
+    def term(t):
+        return t is not None and (t.kind == "STRING" or (
+            t.kind == "WORD" and t.val.lower() not in _PROX_STOP
+            and not re.fullmatch(r"\d+", t.val)))
+    out = list(toks)
+    i = 0
+    while i < len(out):
+        t = out[i]
+        w = [x.val.lower() if x.kind == "WORD" else None for x in out[i:i + 6]]
+        if not (t.kind == "WORD" and w[0] == "within" and len(w) >= 4 and w[1] and w[1].isdigit()
+                and w[2] in ("words", "word") and w[3] == "of"):
+            i += 1
+            continue
+        n, end = w[1], i + 4
+        ops: List[Tok] = []
+        if len(w) >= 6 and w[4] == "each" and w[5] == "other":
+            end = i + 6
+        elif i + 4 < len(out) and term(out[i + 4]):
+            ops_after = [out[i + 4]]
+            end = i + 5
+        else:
+            i += 1
+            continue
+        # the operands before `within`: term ((`,` | `and` | `, and`) term)*
+        j = i - 1
+        if not term(out[j] if j >= 0 else None):
+            i += 1
+            continue
+        start = j
+        ops = [out[j]]
+        j -= 1
+        while j >= 1:
+            k = j
+            if out[k].kind == "WORD" and out[k].val == "and":
+                k -= 1
+                if out[k].kind == "COMMA":
+                    k -= 1
+            elif out[k].kind == "COMMA":
+                k -= 1
+            else:
+                break
+            if k < 0 or not term(out[k]) or k == j:
+                break
+            ops.insert(0, out[k])
+            start = k
+            j = k - 1
+        if end == i + 5:
+            ops = ops[-1:] + ops_after          # `smart within 3 words of phone`
+            start = i - 1
+        if len(ops) < 2:
+            i += 1
+            continue
+        p = out[start].pos
+        new = [Tok("WORD", "within", p), Tok("WORD", n, p), Tok("LP", "(", p)]
+        for k, op in enumerate(ops):
+            if k:
+                new.append(Tok("COMMA", ",", p))
+            new.append(op)
+        new.append(Tok("RP", ")", p))
+        out[start:end] = new
+        i = start + len(new)
+    return out
+
+
 def _reject_engine_chars(text: str, pos) -> None:
     if "~" in text:
         raise oql_error("OQL_NO_FUZZY",
                        f"`~` is not an OQL operator: {text}",
-                       'for words near each other use within N (…), e.g. within 3 '
-                       '("smart", "phone"); fuzzy matching is not available in OQL '
+                       'for words near each other write (smart and phone within 3 words '
+                       'of each other); fuzzy matching is not available in OQL '
                        'yet — remove the ~', pos)
     if "|" in text:
         raise oql_error("OQL_CHAR_NOT_OPERATOR",

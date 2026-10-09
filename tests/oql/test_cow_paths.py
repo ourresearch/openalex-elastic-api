@@ -340,9 +340,19 @@ def test_a_split_after_a_walk_still_needs_the_works():
 
 # #1494's log (2026-10-09): models write Lucene's sloppy phrase; it reads as OQL's proximity
 @pytest.mark.parametrize("q,echo", [
-    ('get works where title has ("smart phone"~3)', "get works where title has (within 3 (smart, phone))"),
+    ('get works where title has ("smart phone"~3)',
+     "get works where title has (smart and phone within 3 words of each other)"),
     ('get works where title-abstract has ("smart phone"~3 AND battery)',
-     "get works where title-abstract has (within 3 (smart, phone) AND battery)"),
+     "get works where title-abstract has ((smart and phone within 3 words of each other) AND battery)"),
+    # the echo's proximity in words (Jason 2026-10-09), and the list form, both accepted
+    ("get works where title has within 3 (smart, phone)",
+     "get works where title has (smart and phone within 3 words of each other)"),
+    ("get works where title has (smart within 3 words of phone)",
+     "get works where title has (smart and phone within 3 words of each other)"),
+    ("get works where title has (smart, phone, and battery within 5 words of each other)",
+     "get works where title has (smart, phone, and battery within 5 words of each other)"),
+    ('get works where title has ("machine learning" and "edge" within 5 words of each other)',
+     'get works where title has ("machine learning" and "edge" within 5 words of each other)'),
 ])
 def test_lucene_sloppy_phrase_reads_as_proximity(q, echo):
     assert render_pipeline_line(canonicalize_oqo(parse(q))) == echo
