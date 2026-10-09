@@ -203,10 +203,14 @@ def test_every_linked_value_reads_back():
         assert _canon(echo) == o.to_dict()
 
 
-def test_not_in_front_of_a_compared_condition():
+def test_a_compared_negation_reads_is_not():
+    """Jason 2026-10-09: `country is not [India](IN)` reads better than `not country
+    [India](IN)` (which Haiku wrote 4 times in round 3; accepted, never echoed)."""
     echo = render_pipeline_line(canonicalize_oqo(parse(
-        "get works where year > 2020; then compare country IN versus country is not IN")))
-    assert echo.endswith("compare country [India](IN) versus not country [India](IN)")
+        "get works where year > 2020; then compare country IN versus not country IN")))
+    assert echo.endswith("compare country [India](IN) versus country is not [India](IN)")
+    assert _canon(echo) == _canon("get works where year > 2020; then compare country IN "
+                                  "versus not country IN")
 
 
 def test_that_country_is_a_valid_group_filter():
