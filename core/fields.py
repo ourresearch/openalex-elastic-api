@@ -1047,6 +1047,8 @@ class TermField(Field):
         if values:
             kwargs = {self.es_field(): formatted_values}
             terms_query = Q("terms", **kwargs)
+            if self.alias == "ids.doi":  # works: any location's DOI, not just the work's own (oxjob #1573)
+                terms_query |= Q("terms", locations__doi__lower=formatted_values)
 
         # Combine the literal-value terms clause with the null/missing clause.
         if terms_query is not None and null_query is not None:
@@ -1530,8 +1532,10 @@ class TermField(Field):
                 short_doi = self.value.lower()
                 full_doi = f"https://doi.org/{self.value}".lower()
 
-            # Query both formats with OR
+            # Query both formats with OR; works also match any location's DOI (always the full URL form, oxjob #1573)
             q = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
+            if self.alias == "ids.doi":
+                q |= Q("term", locations__doi__lower=full_doi)
         elif self.param in id_params:
             formatted_id = self.format_id()
             if formatted_id is None:
