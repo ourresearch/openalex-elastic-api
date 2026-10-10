@@ -757,7 +757,19 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
         # calls, 2.9 s for kelp authors); without one, list the matching groups in
         # their own index first and pass them as `include`.
         if has_measure_filter:
-            deferred.append(p)
+            # a count floor first (`who published at least 5 works where ...`): the groups
+            # that pass it, checked in their own records side by side before the main
+            # request (oxjob #1555: KU's 18,902 authors with 5+ KU works ran past the
+            # 20,000 candidates the after-the-fact check takes); else after the request
+            floor = _min_doc_count(lv.split.where)
+            keys = (_count_floor_keys(lv, works_index, connection, base_query, deadline, floor)
+                    if floor > 1 and base_query is not None and lv.kind == "terms" else None)
+            if keys is None:
+                deferred.append(p)
+                continue
+            from query_translation import walk_exec as WX
+            add_include(set(WX.narrow(WX.Ctx(connection, deadline), lv.group_entity,
+                                      sorted(keys), p)))
             continue
         # The smaller side (oxjob #1555): list the groups whose own fields match (UBC's
         # authors), or the groups the works have, checked in their own records (the
@@ -934,6 +946,20 @@ def guard_nested(levels: List[Level], cards: Dict[int, int], index, connection,
             "(field instead of topic), or drop a split: one split pages through any "
             "number of groups.")
     return n
+
+
+def _count_floor_keys(lv: Level, index, connection, base_query, deadline: Deadline,
+                      floor: int) -> Optional[List[str]]:
+    """The keys of a split with at least `floor` works (one terms request, no
+    sub-aggregations); None when more than WORKS_SIDE_LIMIT, or more than one request
+    can list (65,000)."""
+    limit = min(WORKS_SIDE_LIMIT, 65_000)
+    terms = {"field": lv.agg["terms"]["field"], "size": limit + 1, "min_doc_count": floor,
+             "shard_size": limit + 1}
+    res = _search(index, connection, {"size": 0, "query": base_query, "aggs": {"k": {"terms": terms}}},
+                  deadline, "finding the groups that pass the count")
+    keys = [str(b["key"]) for b in res["aggregations"]["k"]["buckets"]]
+    return keys if len(keys) <= limit else None
 
 
 def _count_survivors(lv: Level, index, connection, base_query, deadline) -> set:
