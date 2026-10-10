@@ -34,6 +34,12 @@ WALK_LINKS: Dict[str, str] = {
 LINK_ENTITY: Dict[str, str] = {col: ent for ent, col in WALK_LINKS.items()}
 # column aliases that mean the same link (the registry's canonical spellings)
 LINK_ENTITY.update({"domain.id": "domains"})
+# a role on the works (oxjob #1555): `get each corresponding author of those works`
+ROLE_LINKS: Dict[str, Tuple[str, str]] = {
+    "corresponding_author_ids": ("authors", "corresponding author"),
+    "corresponding_institution_ids": ("institutions", "corresponding institution"),
+}
+LINK_ENTITY.update({col: ent for col, (ent, _w) in ROLE_LINKS.items()})
 
 # (singular, plural) as written after `get each` / `get`; matched case-insensitively
 NOUNS: Dict[str, Tuple[str, str]] = {

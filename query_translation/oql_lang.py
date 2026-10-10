@@ -3960,8 +3960,17 @@ class _Parser:
 
     def _walk_noun(self, want_plural: Optional[bool]):
         """The thing a walk goes to: (entity, plural?) from the next word."""
-        from query_translation.walks import NOUNS, noun_entity
+        from query_translation.walks import NOUNS, ROLE_LINKS, noun_entity
         t = self.peek()
+        self._walk_link = None
+        if t is not None and t.kind == "WORD" and t.val.lower() == "corresponding":
+            # `get each corresponding author of those works` (#1494's log, oxjob #1555)
+            nxt = noun_entity(_word_at(self.toks, self.i + 1) or "")
+            role = next((c for c, (e, _w) in ROLE_LINKS.items() if nxt and e == nxt[0]), None)
+            if role is not None:
+                self.next()
+                t = self.peek()
+                self._walk_link = role
         got = noun_entity(t.val) if t is not None and t.kind == "WORD" else None
         start = getattr(self, "_walk_start", None)
         if got is None and t is not None and t.kind == "WORD" \
@@ -4089,7 +4098,7 @@ class _Parser:
                                 f"{plural(ent)} have no fields of their own to filter on here",
                                 "filter the works instead, before the walk", nt.pos)
             where = self._parse_walk_where(ent)
-        return Walk(column_id=WALK_LINKS[ent], each=each, where=where)
+        return Walk(column_id=self._walk_link or WALK_LINKS[ent], each=each, where=where)
 
     def _parse_walk_where(self, entity: str) -> Optional[FilterType]:
         """`where ...` after a walk: the walked things' own fields."""
@@ -4570,9 +4579,28 @@ class _Parser:
                         if group_by else f"summarize all those {_plural_noun(cur)} using ...",
                         pos)
 
+    def _role_ahead(self, entity: str, k: int = 0):
+        """`who were (the) corresponding authors of` at offset k: (the role's column, the
+        words it takes), or None."""
+        if not self.word_is("who", "that", "which", k=k) or not self.word_is("were", "was", "are", "is", k=k + 1):
+            return None
+        j = k + 2 + (1 if self.word_is("the", k=k + 2) else 0)
+        if not self.word_is("corresponding", k=j):
+            return None
+        noun = _word_at(self.toks, self.i + j + 1) or ""
+        col = {"author": "corresponding_author_ids", "authors": "corresponding_author_ids",
+               "institution": "corresponding_institution_ids",
+               "institutions": "corresponding_institution_ids"}.get(noun)
+        if col is None or THING_BY_COLUMN[col] != entity or not self.word_is("of", "on", "for", k=j + 2):
+            return None
+        return col, j + 3 - k
+
     def _at_thing_verb(self, k: int = 0) -> bool:
         """`who published`, `that funded`, `with works`, `of works` at offset k: where
         the thing's own conditions end and the works begin."""
+        if self._role_ahead("authors", k) is not None \
+                or self._role_ahead("institutions", k) is not None:
+            return True
         w = _word_at(self.toks, self.i + k)
         if w in ("who", "that", "which"):
             j = k + 1
@@ -4664,7 +4692,13 @@ class _Parser:
             break
         t = self.peek()
         verb = THING_VERBS[entity]
-        if self.word_is("who", "that", "which"):
+        role = self._role_ahead(entity)
+        if role is not None:
+            # `who were corresponding authors of works where ...` (#1494's log)
+            col, n = role
+            self.i += n
+            g0 = GroupBy(column_id=col)
+        elif self.word_is("who", "that", "which"):
             self.next()
             while _word_at(self.toks, self.i) in _THING_VERB_FILLER:
                 self.next()
@@ -5520,6 +5554,12 @@ THING_COLUMNS = {"authors": "authorships.author.id",
                  "countries": "authorships.countries",
                  "topics": "primary_topic.id"}
 THING_BY_COLUMN = {c: e for e, c in THING_COLUMNS.items()}
+# a role on the works splits by the same things (`group those works by corresponding
+# author`): `get authors who were corresponding authors of works where ...`
+THING_ROLE_VERBS = {"corresponding_author_ids": "who were corresponding authors of",
+                    "corresponding_institution_ids": "that were corresponding institutions of"}
+THING_BY_COLUMN.update({"corresponding_author_ids": "authors",
+                        "corresponding_institution_ids": "institutions"})
 # the echo's verb per thing (any of _THING_VERBS, `with` or `of` reads the same)
 THING_VERBS = {"authors": "who published", "institutions": "that published",
                "sources": "that published", "publishers": "that published",

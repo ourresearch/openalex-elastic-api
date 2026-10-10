@@ -918,7 +918,7 @@ def _place_text(leaves: List, resolver=None) -> str:
     return f"{word} {vals_text}" + (f" {when}" if when else "")
 
 
-def _thing_head(where, thing: str, resolver=None) -> str:
+def _thing_head(where, thing: str, resolver=None, column: Optional[str] = None) -> str:
     """The start up to `works` for a thing's own conditions: places first, then `where
     <own fields>`, the verb, a count (`thing_first` checked the head can say them)."""
     from query_translation.walks import plural, singular
@@ -945,7 +945,7 @@ def _thing_head(where, thing: str, resolver=None) -> str:
     if own:
         tree = own[0] if len(own) == 1 else BranchFilter("and", own)
         head += " where " + _group_where_text(tree, ctx, resolver)
-    head += f" {L.THING_VERBS[thing]} "
+    head += f" {L.THING_ROLE_VERBS.get(column, L.THING_VERBS[thing])} "
     if count is not None:
         head += f"{_COUNT_WORDS[count.operator]} {_number(count.value)} "
     head += "works"
@@ -957,7 +957,8 @@ def _thing_head(where, thing: str, resolver=None) -> str:
 def _build_thing_first(oqo: OQO, thing: str, whole_set: bool, resolver=None) -> OQLRenderTree:
     from query_translation.walks import plural, singular
     where = oqo.walks[0].where if whole_set else oqo.group_by[0].where
-    head_text = _thing_head(where, thing, resolver)
+    column = oqo.walks[0].column_id if whole_set else oqo.group_by[0].column_id
+    head_text = _thing_head(where, thing, resolver, column)
     head = EntityHead(id="works", text=head_text)
     where_keyword, wnode = "", None
     if oqo.filter_rows:
@@ -1058,8 +1059,12 @@ def _walk_steps(oqo: OQO, resolver=None) -> Tuple[List[StepDirective], str]:
         here = L._plural_noun(cur)
         if w.to is None:
             ent = entity_for_link(w.column_id) or "works"
-            text = (f"get each {singular(ent)} of those {here}" if w.each
-                    else f"get {plural(ent)} of those {here}")
+            from query_translation.walks import ROLE_LINKS
+            role = ROLE_LINKS.get(w.column_id, (None, None))[1]
+            text = ((f"get each {role} of those {here}" if role else
+                     f"get each {singular(ent)} of those {here}") if w.each
+                    else (f"get {role}s of those {here}" if role else
+                          f"get {plural(ent)} of those {here}"))
             if w.where is not None:
                 text += " where " + _expr_text_in(ent, w.where, resolver)
             cur, each = ent, w.each

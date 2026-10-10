@@ -288,3 +288,26 @@ def test_lists_by_place(q, echo):
     assert _echo(q) == echo
     assert _same(q, echo)
     assert validate_oqo(parse(q)).valid
+
+
+@pytest.mark.parametrize("q,echo", [
+    # a role on the works (#1494's second log: 7 refusals)
+    ("get authors who were corresponding authors of works where author is (A5027603422); then, "
+     "summarize each author using count",
+     "get authors who were corresponding authors of works where author is (A5027603422); then, "
+     "summarize each author using count"),
+    ("get works where author is (A5027603422); then, get each corresponding author of those works; "
+     "finally, summarize each author using count",
+     "get authors who were corresponding authors of works where author is (A5027603422); then, "
+     "summarize each author using count"),
+    ("get works where author is (A5027603422); then, group those works by corresponding author",
+     "get authors who were corresponding authors of works where author is (A5027603422)"),
+    ("get institutions that were corresponding institutions of works where institution is (I135117807)",
+     "get institutions that were corresponding institutions of works where institution is (I135117807)"),
+    ("get works where title has kelp; then, get each corresponding author of those works",
+     "get works where title has (kelp); then, get each corresponding author of those works"),
+])
+def test_roles(q, echo):
+    assert _echo(q) == echo
+    assert _same(q, echo)
+    assert validate_oqo(parse(q)).valid
