@@ -216,17 +216,18 @@ def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
 
     Mirrors legacy `core.search.check_is_search_query`: a search query is present
     when a `?search=` (now mapped to a `default.search` filter row, #323 2a) or
-    any `*.search` / `*.search.exact` filter is present. In canonical OQO form
-    `.search.exact` is rewritten to `.search`, so `endswith(".search")` over all
-    leaves catches every legacy search key (default/title/abstract/fulltext/
-    semantic/keyword/display_name/title_and_abstract/raw_*).
+    any `*.search` / `*.search.exact` filter is present (a quoted phrase and the
+    keywords searches run on `.search.exact`; oxjob #1555 found relevance sort refused
+    on them), across every legacy search key (default/title/abstract/fulltext/keyword/
+    display_name/title_and_abstract/raw_*).
     """
     for f in filter_rows:
         if isinstance(f, BranchFilter):
             if _has_search_clause(f.filters):
                 return True
         elif isinstance(f, LeafFilter):
-            if isinstance(f.column_id, str) and f.column_id.endswith(".search"):
+            # `.search.exact` too: a quoted phrase, title-abstract-keywords (oxjob #1555)
+            if isinstance(f.column_id, str) and f.column_id.endswith((".search", ".search.exact")):
                 return True
     return False
 

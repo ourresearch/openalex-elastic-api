@@ -61,12 +61,27 @@ def _is_scoring_search_leaf(f: FilterType) -> bool:
     branches are NOT lifted — they stay in filter context (correct recall,
     no scoring contribution), which is rare in the real corpus.
     """
+    if isinstance(f, BranchFilter):
+        # a group made only of searches (`("a" OR "b") AND c`) scores as a whole; its
+        # negated members are must_not either way (oxjob #1555: #1494 found relevance
+        # sort refused on phrase searches, and their scores were all tied)
+        return not f.is_negated and _all_search_leaves(f)
     return (
         isinstance(f, LeafFilter)
         and not f.is_negated
-        and isinstance(f.column_id, str)
-        and f.column_id.endswith(".search")
+        and _is_search_column(f.column_id)
     )
+
+
+def _is_search_column(column_id) -> bool:
+    """A free-text search column, stemmed (`.search`) or exact (`.search.exact`)."""
+    return isinstance(column_id, str) and column_id.endswith((".search", ".search.exact"))
+
+
+def _all_search_leaves(node) -> bool:
+    if isinstance(node, BranchFilter):
+        return bool(node.filters) and all(_all_search_leaves(c) for c in node.filters)
+    return isinstance(node, LeafFilter) and _is_search_column(node.column_id)
 
 
 def oqo_to_search_and_filter_q(oqo: OQO, fields_dict, scoring: bool = True):

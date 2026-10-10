@@ -338,3 +338,18 @@ def test_not_at(q, echo):
     assert _echo(q) == echo
     assert _same(q, echo)
     assert validate_oqo(parse(q)).valid
+
+
+@pytest.mark.parametrize("q", [
+    'get works where title-abstract has ("machine learning")',
+    'get works where title-abstract-keywords has ("workplace spirituality" AND leader*)',
+    'get works where title-abstract has (("kelp forest" OR "kelp bed") AND otter*)',
+])
+def test_phrase_searches_count_as_searches(q):
+    # #1494 (2026-10-10): relevance sort was refused on phrase / keywords searches, and
+    # their scores were all tied (`.search.exact` wasn't counted or scored)
+    from query_translation.oqo_to_es import _is_scoring_search_leaf
+    from query_translation.validator import _has_search_clause
+    o = canonicalize_oqo(parse(q))
+    assert _has_search_clause(o.filter_rows)
+    assert any(_is_scoring_search_leaf(f) for f in o.filter_rows)
