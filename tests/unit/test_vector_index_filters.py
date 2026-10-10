@@ -297,3 +297,49 @@ def test_id_filters_stay_pre_filtered(monkeypatch):
     es = _PoolES(per_1000=50)
     _run_semantic(monkeypatch, es, [{"authorships.author.id": "A1"}])
     assert es.calls == ["pre"]
+
+
+class _CountES:
+    """Answers the pre-filter's capped count with `matches`, then returns one hit."""
+
+    def __init__(self, matches):
+        self.matches, self.bodies = matches, []
+
+    def search(self, index, body):
+        self.bodies.append(body)
+        if body.get("size") == 0:
+            return {"hits": {"total": {"value": min(self.matches, body["track_total_hits"]), "relation": "eq"}, "hits": []}}
+        return {"hits": {"hits": [{"_id": "https://openalex.org/W1", "_score": 0.8}]}}
+
+
+def _pre_filter(monkeypatch, matches, exact_max, visit):
+    es = _CountES(matches)
+    monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
+    monkeypatch.setattr(vector_index.settings, "VECTOR_EXACT_MAX_MATCHES", exact_max)
+    monkeypatch.setattr(vector_index.settings, "VECTOR_PREFILTER_VISIT_PERCENTAGE", visit)
+    fd = build_vector_filter({"filters": [{"authorships.institutions.lineage": "I1"}, {"publication_year": "2024"}]})
+    assert vector_index.execute_vector_search([0.1] * 4, fd, k=50, num_candidates=300) == [
+        ("https://openalex.org/W1", 0.8, 0)]
+    return es.bodies, fd
+
+
+def test_unset_tuning_keeps_the_plain_pre_filtered_knn(monkeypatch):
+    bodies, fd = _pre_filter(monkeypatch, matches=14_000, exact_max=0, visit=0)
+    assert len(bodies) == 1 and bodies[0]["knn"]["filter"] == fd and "visit_percentage" not in bodies[0]["knn"]
+
+
+def test_restrictive_filter_is_scored_exactly(monkeypatch):
+    bodies, fd = _pre_filter(monkeypatch, matches=14_000, exact_max=500_000, visit=1.0)
+    count, search = bodies
+    assert count["query"] == {"bool": {"filter": fd}} and count["track_total_hits"] == 500_001
+    assert "knn" not in search
+    script_score = search["query"]["script_score"]
+    assert script_score["query"] == {"bool": {"filter": fd}}
+    assert script_score["min_score"] == 0.75  # (1 + 0.5) / 2: the kNN similarity floor in _score units
+    assert "cosineSimilarity" in script_score["script"]["source"] and search["size"] == 50
+
+
+def test_broad_pre_filter_stays_knn_with_a_visit_cap(monkeypatch):
+    bodies, fd = _pre_filter(monkeypatch, matches=800_000, exact_max=500_000, visit=1.0)
+    knn = bodies[1]["knn"]
+    assert knn["filter"] == fd and knn["visit_percentage"] == 1.0 and knn["num_candidates"] == 300

@@ -59,6 +59,16 @@ WORKS_INDEX = "works"  # alias; rebuilds swap the concrete index in Elasticsearc
 # Alias, not an index (oxjob #1433 Fix 4): it points at works-vectors-v2 (int8_hnsw) on the old vector deployment and
 # at works-vectors-v3 (bbq_disk) on the new one, so moving ES_VECTOR_SEARCH_URL is the whole switch.
 WORKS_VECTOR_INDEX = "works-vectors"
+# Semantic search kNN tuning for works-vectors-v3 (bbq_disk), oxjob #1433 Fix 4. Unset (0) = today's behavior, right for
+# v2 (int8_hnsw); all three are set in Heroku config together with the ES_VECTOR_SEARCH_URL switch, never ahead of it
+# (num_candidates 1,000 on v2 took 6.5 s p50).
+# num_candidates: on bbq_disk it sets how much of the index each query visits; 300 lifts recall@50 from 0.80 to 0.86 on
+# real queries (p95 1.2 s). 0 keeps max(2k, 75).
+VECTOR_NUM_CANDIDATES = int(os.environ.get("VECTOR_NUM_CANDIDATES", "0"))
+# Pre-filter kNN (id filters, and the fallback after the post-filter pools): a filter matching at most this many works
+# is scored exactly (script_score) instead of by kNN, and larger ones visit this percentage of each shard's vectors.
+VECTOR_EXACT_MAX_MATCHES = int(os.environ.get("VECTOR_EXACT_MAX_MATCHES", "0"))
+VECTOR_PREFILTER_VISIT_PERCENTAGE = float(os.environ.get("VECTOR_PREFILTER_VISIT_PERCENTAGE", "0"))
 USE_VECTOR_INDEX = os.environ.get("USE_VECTOR_INDEX", "false").lower() == "true"
 SEMANTIC_TEXT_BOOST = os.environ.get("SEMANTIC_TEXT_BOOST", "true").lower() == "true"
 

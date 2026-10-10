@@ -337,6 +337,23 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, po
         body["aggs"] = {"pool": {"value_count": {"field": "id"}}}  # aggs see the kNN pool before post_filter
     elif filter_dict:
         knn_body["filter"] = filter_dict
+        if settings.VECTOR_PREFILTER_VISIT_PERCENTAGE:
+            knn_body["visit_percentage"] = settings.VECTOR_PREFILTER_VISIT_PERCENTAGE
+        exact_max = settings.VECTOR_EXACT_MAX_MATCHES
+        if exact_max:
+            # bbq_disk (IVF) walks thousands of whole clusters to find the few matches of a restrictive filter
+            # (an institution + a year: ~16 s), so score those matches exactly instead (oxjob #1433 Fix 4).
+            count = es.search(index=settings.WORKS_VECTOR_INDEX, body={
+                "query": {"bool": {"filter": filter_dict}}, "size": 0, "track_total_hits": exact_max + 1})
+            if count["hits"]["total"]["value"] <= exact_max:
+                body.pop("knn")
+                body["query"] = {"script_score": {
+                    "query": {"bool": {"filter": filter_dict}},
+                    # kNN's cosine _score is (1 + cos) / 2, and its similarity floor 0.5 is cos >= 0.5
+                    "script": {"source": "(1.0 + cosineSimilarity(params.q, '%s')) / 2.0" % VECTOR_FIELD,
+                               "params": {"q": query_vector}},
+                    "min_score": (1.0 + knn_body["similarity"]) / 2.0,
+                }}
 
     response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body)
 
@@ -609,7 +626,7 @@ def vector_semantic_search(params, index_name, connection):
 
     # Execute kNN on vector index
     k = MAX_SEMANTIC_RESULTS
-    num_candidates = max(k * 2, 75)
+    num_candidates = max(k * 2, 75, settings.VECTOR_NUM_CANDIDATES)
     try:
         vector_results = None
         if filter_dict and not _has_id_filter(params):
