@@ -628,13 +628,19 @@ class OQO:
     @property
     def uses_pipeline(self) -> bool:
         """True when the OQO uses anything only the pipeline language (oxjob
-        #1530) can say: a calculation, a split beyond a plain column, a walk, or a
-        nested query (oxjob #1535)."""
+        #1530) can say: a calculation, a split beyond a plain column, a walk, a
+        nested query (oxjob #1535), or an author's record by place and years (#1555)."""
+        return self.runs_as_analytics or any(isinstance(f, AffiliationFilter)
+                                             for f in self.filter_rows)
+
+    @property
+    def runs_as_analytics(self) -> bool:
+        """True when the OQO runs in analytics.py: what the pipeline language says,
+        except an author's record by place and years, which is one filter on a plain
+        list (oxjob #1617: `get authors in [Brazil](BR) since 2022 where ...`)."""
         return (bool(self.calculate) or any(not g.is_plain for g in self.group_by)
                 or bool(self.walks) or self.each
-                or any(has_query_value(f) or has_relation_leaf(f)
-                       or isinstance(f, AffiliationFilter)       # an author's record (#1555)
-                       for f in self.filter_rows))
+                or any(has_query_value(f) or has_relation_leaf(f) for f in self.filter_rows))
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}

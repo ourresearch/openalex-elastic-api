@@ -228,7 +228,7 @@ def _build_params_from_oqo(oqo: OQO, request):
     # and build/format nested buckets. This is the execution half of corpus case
     # 48 ("top topics each year") — render already worked; this makes it run.
     group_by = None
-    if oqo.group_by and not oqo.uses_pipeline:  # pipeline splits run in analytics.py
+    if oqo.group_by and not oqo.runs_as_analytics:  # pipeline splits run in analytics.py
         group_by = ",".join(g.column_id for g in oqo.group_by)
 
     # OQO value wins; request arg is the back-compat fallback.
@@ -516,13 +516,13 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         semantic_value, _ = _extract_semantic(oqo.filter_rows)
     except URLRenderError as e:
         return _error_response(str(e), "translation_error", status=400)
-    if oqo.uses_pipeline and (semantic_value is not None or oqo.sample):
+    if oqo.runs_as_analytics and (semantic_value is not None or oqo.sample):
         return _error_response(
             "Calculations and the new splits don't combine with "
             + ("semantic search" if semantic_value is not None else "sample")
             + " yet. Drop it, or run the calculation on the whole set.",
             "invalid_params", status=400)
-    if analytics_mod.PRICE_ALL_OQL and not oqo.uses_pipeline:
+    if analytics_mod.PRICE_ALL_OQL and not oqo.runs_as_analytics:
         # priced like the same query as a URL (Jason, 2026-10-03); refuse up front
         # when it doesn't fit (rerank counted when asked; it's charged only if it runs)
         refused = _credit_refusal(
@@ -592,7 +592,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     # searches, bins or conditions, group filters, calculations. One ES request
     # (plus a lookup for group filters on a group's own fields), its own response
     # shape: group rows with measures and a summary (the whole set, each split alone).
-    if oqo.uses_pipeline:
+    if oqo.runs_as_analytics:
         return _execute_analytics(oqo, index_name, connection, fields_dict,
                                   search_q, filter_q, extra_qs, params)
 
@@ -954,7 +954,7 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
         from query_translation import walk_exec
         deadline = getattr(g, "oql_deadline", None)
         cost = walk_exec.walk_price(_echo_oqo(oqo), (deadline.calls + 1) if deadline else None)
-    elif analytics_mod.PRICE_ALL_OQL and not oqo.uses_pipeline:
+    elif analytics_mod.PRICE_ALL_OQL and not oqo.runs_as_analytics:
         # priced like the same query as a URL; the proxy settles against this header
         cost = analytics_mod.plain_price(
             oqo, reranked=serialized["meta"].get("reranked") is True,
