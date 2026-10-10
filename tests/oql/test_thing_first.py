@@ -268,3 +268,23 @@ def test_years_counted_across_the_record():
 def test_cow_paths_from_the_sidebar(q, echo):
     assert _echo(q) == echo
     assert _same(q, echo)
+
+
+@pytest.mark.parametrize("q,echo", [
+    # a list of authors by their record (#1494's second log: 11 refusals)
+    ("get authors in [Brazil](BR) where it has an ORCID",
+     f"get authors in [Brazil](BR) since {DEFAULT_SINCE} where it has an ORCID"),
+    ("get authors ever at (I141945490) where h-index is above 50",
+     "get authors ever at (I141945490) where h-index is above 50"),
+    ("get authors at (I4200000001) now", "get authors where last known institution is (I4200000001)"),
+    ("get authors now at (I1292875679) who published works where title has kelp",
+     "get authors where last known institution is (I1292875679) who published works where title has (kelp)"),
+    ("get works where author is in the set (authors at (I4210092744) since 2023) and published in 2024",
+     "get works where author is in the set (authors at (I4210092744) since 2023) and published in 2024"),
+    ("get institutions in [China](CN) where type is [other](other)",
+     "get institutions where country is [China](CN) and institution type is [other](other)"),
+])
+def test_lists_by_place(q, echo):
+    assert _echo(q) == echo
+    assert _same(q, echo)
+    assert validate_oqo(parse(q)).valid

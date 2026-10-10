@@ -690,7 +690,9 @@ def _set_phrase_query(toks: List[Tok], pos: int) -> List[Tok]:
     rest = toks[i:]
     # `where ...`, or `in the collection [name](col_x)` as after `get works` (the
     # echo writes a collection's works that way, oxjob #1555)
-    if rest and not (rest[0].kind == "WORD" and rest[0].val.lower() in ("where", "in")):
+    if rest and not (rest[0].kind == "WORD" and rest[0].val.lower() in (
+            ("where", "in", "at", "ever", "now", "currently") if chain == ["authors"]
+            else ("where", "in"))):
         raise oql_error("OQL_BAD_SET_PHRASE", f'unexpected "{rest[0].val}" in the set',
                         "e.g. in the set (works where year >= 2020)", rest[0].pos)
 
@@ -2064,6 +2066,12 @@ class _Parser:
             group_by.append(self._parse_thing_head(entity))
             entity = self._entity = "works"
             self._skip_annot()
+        elif not start_each and not self._ctx_mode and self._place_ahead(entity):
+            # `get authors in [Brazil](BR) since 2022 where it has an ORCID` (#1494's log,
+            # oxjob #1555): a list of the things by their own record
+            while self._place_ahead(entity):
+                filters.append(self._parse_place_phrase(entity))
+                self._skip_annot()
         if (start_each or entity == "works") and self.word_is("in") \
                 and self._set_words(1) is not None:
             # `get works in (col_mylist)` too: a saved list of works (Haiku's cow path)
@@ -4617,9 +4625,8 @@ class _Parser:
         parts: List = []
         while True:
             self._skip_annot()
-            if self.word_is("ever") and self.word_is("at", "in", k=1):
-                self.next()
-                parts.append(self._parse_thing_place(entity, ever=True))
+            if self.word_is("ever", "now", "currently") and self.word_is("at", "in", k=1):
+                parts.append(self._parse_place_phrase(entity))
                 continue
             neg = 1 if self.word_is("not") else 0
             if self.word_is("in", k=neg) and self.word_is("the", k=neg + 1) \
@@ -4695,6 +4702,24 @@ class _Parser:
         self._skip_works_filler()
         return GroupBy(column_id=col, where=_and_all(parts))
 
+    def _place_ahead(self, entity: str) -> bool:
+        """`at [X]`, `in [X]`, `ever at`, `now at` starting a list of things by their own
+        record (authors: their affiliations; institutions ...: where they are)."""
+        if entity != "authors" and entity not in _THING_IN:
+            return False
+        k = 1 if self.word_is("ever", "now", "currently") else 0
+        if not self.word_is("at", "in", k=k) or self.word_is("any", k=k + 1) \
+                or self.word_is("the", k=k + 1):
+            return False
+        return entity == "authors" or self.word_is("in", k=k)
+
+    def _parse_place_phrase(self, entity: str):
+        """One place, with `ever` / `now` before it when written."""
+        mode = None
+        if self.word_is("ever", "now", "currently"):
+            mode = "ever" if self.next().val.lower() == "ever" else "now"
+        return self._parse_thing_place(entity, ever=mode == "ever", now=mode == "now")
+
     def _works_filler_ahead(self) -> bool:
         """`at any institution`, `in any year`: words that say the works may come from
         anywhere, not a place."""
@@ -4729,7 +4754,7 @@ class _Parser:
             else:
                 return
 
-    def _parse_thing_place(self, entity: str, ever: bool = False):
+    def _parse_thing_place(self, entity: str, ever: bool = False, now: bool = False):
         """`at [UBC](I141945490) since 2022`, `at ([A](I1) or [B](I2)) now`, `ever at
         [UBC]`, `in [Brazil](BR) since 2022` (authors: their own record); `in
         [Asia](Q48)` (institutions, sources, funders, publishers: where they are)."""
@@ -4755,7 +4780,8 @@ class _Parser:
                  "funders and publishers are `in` a country"), t.pos)
         tree = self._parse_value_operand(fld)
         min_years = self._parse_min_years() if entity == "authors" else None
-        since, through, mode = self._parse_place_years(entity, word, ever)
+        since, through, mode = ((None, None, "now") if now and entity == "authors"
+                                else self._parse_place_years(entity, word, ever))
         if min_years is not None and mode == "now":
             raise oql_error("OQL_THING_PLACE",
                             "`now` is one place; a number of years goes with a period",
@@ -6393,6 +6419,8 @@ def _uniform_search_base(f: FilterType):
             if rep[0] is None:
                 rep[0] = node.column_id
             return True
+        if not isinstance(node, BranchFilter):
+            return False          # a calculation or an author's record (oxjob #1555)
         return all(walk(c) for c in node.filters)
 
     if not walk(f) or len(bases) != 1:
@@ -6418,6 +6446,8 @@ def _uniform_eq_column(f: FilterType):
                 return False  # bools/dates are exactly-one-atom surfaces
             cols.add(node.column_id)
             return True
+        if not isinstance(node, BranchFilter):
+            return False          # a calculation or an author's record (oxjob #1555)
         return all(walk(c) for c in node.filters)
 
     if not walk(f) or len(cols) != 1:

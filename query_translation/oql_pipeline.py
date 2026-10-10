@@ -1101,6 +1101,17 @@ def _build(oqo: OQO, resolver=None) -> OQLRenderTree:
                           else " in " + items[0] if len(ids) == 1
                           else " in (" + ", ".join(items) + ")")
             filters = filters[1:]
+    if entity == "authors" and not oqo.each:
+        # `get authors in [Brazil](BR) since 2022 where ...`: the record's places lead,
+        # as in a thing-first start (oxjob #1555)
+        rest = []
+        for f in filters:
+            leaves = _place_leaves(f, "authors")
+            if leaves is not None:
+                head_text += " " + _place_text(leaves, resolver)
+            else:
+                rest.append(f)
+        filters = rest
     head = EntityHead(id=entity, text=head_text)
     where_keyword, where = "", None
     if filters:

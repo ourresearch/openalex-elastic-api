@@ -651,7 +651,9 @@ class OQO:
         nested query (oxjob #1535)."""
         return (bool(self.calculate) or any(not g.is_plain for g in self.group_by)
                 or bool(self.walks) or self.each
-                or any(has_query_value(f) or has_relation_leaf(f) for f in self.filter_rows))
+                or any(has_query_value(f) or has_relation_leaf(f)
+                       or isinstance(f, AffiliationFilter)       # an author's record (#1555)
+                       for f in self.filter_rows))
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}

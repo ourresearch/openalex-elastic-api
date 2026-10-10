@@ -54,6 +54,10 @@ LOOKUP_LIMIT = 60_000          # own-field lookups list at most this many ids
 # the works side of a group filter (oxjob #1555): the groups the works have, listed and
 # checked in their records side by side at about 36,000 a second (walk_exec's measure)
 WORKS_SIDE_LIMIT = 250_000
+# an author's record with years is checked in its _source; prolific authors' records are
+# long (9,401 UBC authors with h-index > 50: 45-68 MB, 5-10 s), so the own side checks at
+# most this many candidates (the works side checks only those that have the place)
+RECORD_CHECK_LIMIT = 5_000
 DEFAULT_PER_PAGE = 200
 MAX_PAGE_DEPTH = 10_000        # page x per_page on a single split
 CSV_PAGE_GROUPS = 10_000       # groups in one page of an export (format=csv with a cursor, #1550)
@@ -639,17 +643,41 @@ def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadli
     return res["aggregations"]["n"]["value"]
 
 
-def _own_side_ids(lv: Level, part, n: Optional[int], deadline: Deadline) -> Optional[set]:
+def record_ids(node, deadline: Optional[Deadline] = None, extra: Optional[dict] = None) -> set:
+    """The authors whose own record matches an affiliation with years, for a list of
+    authors (`get authors in [Brazil](BR) since 2022 where ...`, a set of them): the
+    candidates are the authors with the place in their record who also match `extra`
+    (the list's other conditions, an ES query); at most LOOKUP_LIMIT; loud past that."""
+    lv = Level(0, GroupBy(column_id="authorships.author.id"), "terms", group_entity="authors")
+    deadline = deadline or Deadline()
+    positive = replace(node, is_negated=False)
+    n = _count_entity_matches(lv, _es_tree(positive), deadline, extra)
+    ids = _own_side_ids(lv, positive, n, deadline, extra)
+    if ids is None:
+        # a plain 400 (the list path's handler reads an AnalyticsError's code as a status)
+        place = "that country" if node.column_id.endswith("country_code") else "that institution"
+        raise APIQueryParamsError(
+            f"About {n or 0:,} authors have {place} in their record and match the rest; a list "
+            f"of authors by a place checks up to {RECORD_CHECK_LIMIT:,} records for the years. "
+            "Fix: add the works they published (get authors in [Brazil](BR) who published works "
+            "where ...), narrow the list (where h-index is above 50), name a smaller place, or "
+            "drop the years: ever in [Brazil](BR) (anyone with it in their record).")
+    return ids
+
+
+def _own_side_ids(lv: Level, part, n: Optional[int], deadline: Deadline,
+                  extra: Optional[dict] = None) -> Optional[set]:
     """The groups whose own record matches an affiliation-with-years part, listed from
-    their own index when at most LOOKUP_LIMIT (`n`, counted by the caller) match the
-    institution; None when more."""
+    their own index when at most RECORD_CHECK_LIMIT (`n`, counted by the caller) match
+    the place; None when more."""
     from query_translation.oqo_to_es import _translate
     from core.join_resolver import entity_index
     from elasticsearch_dsl.connections import get_connection
-    if n is None or n > LOOKUP_LIMIT:
+    if n is None or n > RECORD_CHECK_LIMIT:
         return None
     g_fields, g_index = entity_index(lv.group_entity)
-    q = {"bool": {"filter": [_translate(_es_tree(part), g_fields).to_dict()]}}
+    q = {"bool": {"filter": [_translate(_es_tree(part), g_fields).to_dict()]
+                  + ([extra] if extra else [])}}
     keep, after, es = set(), None, get_connection()
     while True:
         body = {"size": 10_000, "_source": ["id", "affiliations"], "query": q,
@@ -1936,7 +1964,8 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     return {"valid": not limits, "limits": limits, "estimate": estimate, "cost": price(oqo)}
 
 
-def _count_entity_matches(lv: Level, part, deadline: Deadline) -> Optional[int]:
+def _count_entity_matches(lv: Level, part, deadline: Deadline,
+                          extra: Optional[dict] = None) -> Optional[int]:
     from query_translation.oqo_to_es import _translate
     from core.join_resolver import entity_index
     from elasticsearch_dsl.connections import get_connection
@@ -1946,7 +1975,7 @@ def _count_entity_matches(lv: Level, part, deadline: Deadline) -> Optional[int]:
     except Exception:
         return None
     filters = [q] + ([{"range": {"works_count": {"gt": 0}}}]
-                     if lv.group_entity == "authors" else [])
+                     if lv.group_entity == "authors" else []) + ([extra] if extra else [])
     body = {"size": 0, "track_total_hits": True,
             "query": {"bool": {"filter": filters}}}
     try:
