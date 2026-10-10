@@ -22,19 +22,18 @@ How each shape runs:
   budget, approximately (within 0.5%) past it, and says which.
 """
 import math
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
 from elasticsearch_dsl import Q
 
 from query_translation import analytics as A
+from query_translation.id_split import INFLIGHT, PIECE_KEYS, _pmap, _terms, piece_full
 from query_translation.oqo import (
     OQO, RELATION_COLUMNS, BranchFilter, GroupBy, LeafFilter, Measure, has_query_value,
     has_relation_leaf, result_entity)
 from query_translation.walks import entity_for_link, link_for, plural, singular
 
-INFLIGHT = 8                 # calls in flight (measured safe on production, 2026-10-03)
 PART_THINGS = 25_000         # things per aggregation call in a per-thing walk
 LIST_PART = 50_000           # keys per listing call (under the 65,536-bucket cap)
 MAX_SET_IDS = 450_000        # ids in one filter: about 16 MB of request, about 5 s
@@ -74,14 +73,6 @@ def needs_walk(oqo: OQO) -> bool:
     return (bool(oqo.walks) or oqo.each
             or any(has_query_value(f) or has_relation_leaf(f) for f in oqo.filter_rows)
             or any(has_query_value(t) for g in oqo.group_by for t in _split_trees(g)))
-
-
-def _pmap(fn, items, inflight=INFLIGHT):
-    items = list(items)
-    if len(items) <= 1:
-        return [fn(x) for x in items]
-    with ThreadPoolExecutor(min(inflight, len(items))) as ex:
-        return list(ex.map(fn, items))
 
 
 def _too_big(what: str, n: int, limit: int, fix: str) -> A.AnalyticsError:
@@ -140,18 +131,6 @@ def _and(*queries) -> dict:
     return {"bool": {"filter": qs}}
 
 
-def _terms(field: str, ids: List) -> dict:
-    """`field` holds any of `ids`, chunked under the 65,536-terms clause cap."""
-    from core.fields import TERMS_CHUNK
-    if not ids:
-        return {"bool": {"must_not": [{"match_all": {}}]}}
-    chunks = [ids[i:i + TERMS_CHUNK] for i in range(0, len(ids), TERMS_CHUNK)]
-    if len(chunks) == 1:
-        return {"terms": {field: chunks[0]}}
-    return {"bool": {"should": [{"terms": {field: c}} for c in chunks],
-                     "minimum_should_match": 1}}
-
-
 def count_distinct(ctx: Ctx, query: dict, field: str, what: str) -> int:
     r = ctx.search({"size": 0, "query": query, "aggs": {"n": {"cardinality": {
         "field": field, "precision_threshold": 40000}}}}, what)
@@ -165,13 +144,13 @@ def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
     parts = max(1, math.ceil(est * 1.15 / LIST_PART))
 
     def one(i):
-        terms = {"field": field, "size": 65_000,
+        terms = {"field": field, "size": PIECE_KEYS,
                  "include": {"partition": i, "num_partitions": parts}}
         if map_hint:
             terms["execution_hint"] = "map"   # referenced_works: 10 s per call without it
         r = ctx.search({"size": 0, "query": query, "aggs": {"k": {"terms": terms}}}, what)
         agg = r["aggregations"]["k"]
-        if agg.get("sum_other_doc_count") or len(agg["buckets"]) >= 65_000:
+        if piece_full(agg):
             raise A.AnalyticsError("query_too_slow",
                                    "A partition of this walk came back full; it can't be "
                                    "listed exactly.", "Narrow the starting set.")

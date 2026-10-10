@@ -351,6 +351,7 @@ class Level:
     composite: bool = False                    # cursor paging (a single terms split)
     by_count: bool = False                     # filters: biggest first, empty ones dropped
     paged_floor: bool = False                  # a count floor sorted and paged by ES
+    works_filters: List[dict] = field(default_factory=list)  # own fields pushed down (#1617)
 
 
 def _label_bool(column_id: str, value: bool) -> str:
@@ -696,9 +697,48 @@ def _own_side_ids(lv: Level, part, n: Optional[int], deadline: Deadline,
         after = hits[-1]["sort"]
 
 
+# A split by a link each work has at most once (its primary source, its primary
+# topic): a condition on the group's own fields is a condition on the works' copy of
+# them, so it runs as a works filter and the groups need no lookup (#1617: journals
+# cited by KU's 2024+ works listed, checked and filtered 25,000 sources, 6 s of 10).
+# Only fields whose works copy matches the group's own value: measured on 3,000
+# sources and their 4.56M works (2026-10-10), type, is_in_doaj, is_core and
+# host_organization matched exactly; is_oa did not (181 sources: the works' value
+# varies by work) nor did listed_in (177: the works' copy lags, #1615); a topic's
+# place in the taxonomy is fixed.
+_PUSHDOWN = {
+    "primary_location.source.id": {"type", "is_in_doaj", "is_core", "host_organization"},
+    "primary_topic.id": {"field.id", "subfield.id", "domain.id"},
+}
+
+
+def _pushdown(lv: Level, part, fields_dict) -> Optional[dict]:
+    """`part` (a condition on the groups' own fields) as a filter on the works, when
+    the split is by a single-valued link and every field in it has a works copy.
+    The caller makes sure it's the only split."""
+    from query_translation.oqo_to_es import _translate
+    link = lv.agg.get("terms", {}).get("field")
+    allowed = _PUSHDOWN.get(link)
+    if allowed is None:
+        return None
+    prefix = link[:-len("id")]
+
+    def move(node):
+        if isinstance(node, LeafFilter) and node.column_id in allowed \
+                and isinstance(node.value, (str, int, float, bool)):
+            return replace(node, column_id=prefix + node.column_id)
+        if isinstance(node, BranchFilter):
+            kids = [move(c) for c in node.filters]
+            return None if None in kids else replace(node, filters=kids)
+        return None
+    moved = move(part)
+    q = _translate(moved, fields_dict) if moved is not None else None
+    return q.to_dict() if q is not None else None
+
+
 def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connection,
                     deadline: Deadline, has_measure_filter: bool,
-                    base_query: Optional[dict] = None) -> List:
+                    base_query: Optional[dict] = None, works_fields=None) -> List:
     """Turn the key-set parts of a group filter into lv.include / lv.exclude. Returns
     the parts that need the survivors lookup (own fields with too many matches)."""
     from query_translation.oqo_to_es import _translate
@@ -751,6 +791,10 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
                 exclude |= keys
             else:
                 add_include(keys)
+            continue
+        pushed = _pushdown(lv, p, works_fields) if len(oqo.group_by) == 1 else None
+        if pushed is not None:
+            lv.works_filters.append(pushed)
             continue
         # The group's own fields. With a calculation in the filter (a count filter),
         # look up only the groups that pass it, after the main request (#1512: 2
@@ -839,10 +883,14 @@ def survivors_lookup(lv: Level, parts: List, keys: List[str], deadline: Deadline
 # ---------------------------------------------------------------------------
 def _search(index, connection, body, deadline: Deadline, what: str, **params) -> dict:
     from elasticsearch_dsl.connections import get_connection
+    from query_translation import id_split
     es = get_connection(connection)
+
+    def one(b):
+        return es.search(index=index, body=b, request_timeout=deadline.timeout(what), **params)
     try:
-        return es.search(index=index, body=body, request_timeout=deadline.timeout(what),
-                         **params)
+        # a big id filter (a set in parentheses) runs in pieces side by side (#1617)
+        return id_split.search(one, body) or one(body)
     except ConnectionTimeout:
         raise too_slow(what)
     except TransportError as e:
@@ -1469,7 +1517,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     "These groups have no fields of their own to filter on.",
                     f"Filter by a calculation, e.g. {count_fix(lv)}.")
             rest = resolve_keysets(lv, k_parts, oqo, index_name, connection, deadline,
-                                   bool(m_parts), base_query=base_query)
+                                   bool(m_parts), base_query=base_query,
+                                   works_fields=fields_dict)
             if rest:
                 if lv.kind != "terms" and lv.kind != "filters":
                     raise AnalyticsError("group_filter_not_available",
@@ -1575,12 +1624,22 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                                       "shard_size") if k in t}
             cand["size"] = FILTERED_CANDIDATES + 1
             body["aggs"]["n_candidates"] = {"terms": cand}
+    pushed = levels[0].works_filters if levels else []
+    if pushed:
+        # the split and its group counts see only the works the pushed-down own fields
+        # keep; the whole-set row (the root measures) still counts every work
+        moved = {k: body["aggs"].pop(k) for k in list(body["aggs"]) if k not in m_aggs}
+        body["aggs"]["pushed"] = {"filter": {"bool": {"filter": pushed}}, "aggs": moved}
     # same shards for the same query, so approximate counts repeat exactly
     pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
     res = _search(index_name, connection, body, deadline, "calculating the groups",
                   preference=pref)
     total_count = res["hits"]["total"]["value"]
     aggs = res.get("aggregations", {})
+    if pushed:
+        lifted = aggs.pop("pushed")
+        lifted.pop("doc_count")
+        aggs.update(lifted)
     check_truncated(levels, aggs)
 
     all_row = {"key": "all", "key_display_name": f"all {oqo.get_rows.replace('-', ' ')}",
