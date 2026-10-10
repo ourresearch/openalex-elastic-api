@@ -4656,6 +4656,9 @@ class _Parser:
             if self.word_is("ever", "now", "currently") and self.word_is("at", "in", k=1):
                 parts.append(self._parse_place_phrase(entity))
                 continue
+            if self.word_is("not", "never") and self._place_ahead(entity):
+                parts.append(self._parse_place_phrase(entity))   # `not at [X] since 2022`
+                continue
             neg = 1 if self.word_is("not") else 0
             if self.word_is("in", k=neg) and self.word_is("the", k=neg + 1) \
                     and self.word_is("collection", k=neg + 2):
@@ -4741,18 +4744,29 @@ class _Parser:
         record (authors: their affiliations; institutions ...: where they are)."""
         if entity != "authors" and entity not in _THING_IN:
             return False
-        k = 1 if self.word_is("ever", "now", "currently") else 0
+        k = 1 if self.word_is("ever", "now", "currently", "never") else 0
+        if self.word_is("not") and not self.word_is("in", k=1) or (
+                self.word_is("not") and self.word_is("in", k=1) and not self.word_is("the", k=2)):
+            k = 1 + (1 if self.word_is("ever", "now", "currently", k=1) else 0)
         if not self.word_is("at", "in", k=k) or self.word_is("any", k=k + 1) \
                 or self.word_is("the", k=k + 1):
             return False
         return entity == "authors" or self.word_is("in", k=k)
 
     def _parse_place_phrase(self, entity: str):
-        """One place, with `ever` / `now` before it when written."""
-        mode = None
+        """One place, with `ever` / `now` before it when written; `not at`, `never at`
+        (`not ever at`) for the authors whose record doesn't list it (oxjob #1555)."""
+        mode, neg = None, False
+        if self.word_is("not"):
+            self.next()
+            neg = True
+        if self.word_is("never"):
+            self.next()
+            neg, mode = True, "ever"
         if self.word_is("ever", "now", "currently"):
             mode = "ever" if self.next().val.lower() == "ever" else "now"
-        return self._parse_thing_place(entity, ever=mode == "ever", now=mode == "now")
+        tree = self._parse_thing_place(entity, ever=mode == "ever", now=mode == "now")
+        return _negate(tree) if neg else tree
 
     def _works_filler_ahead(self) -> bool:
         """`at any institution`, `in any year`: words that say the works may come from
@@ -5695,7 +5709,7 @@ def _flatten_and(branch: BranchFilter) -> List[FilterType]:
 def _negate(f: FilterType) -> FilterType:
     if isinstance(f, LeafFilter):
         return LeafFilter(f.column_id, f.value, f.operator, is_negated=not f.is_negated)
-    if isinstance(f, MeasureFilter):
+    if isinstance(f, (MeasureFilter, AffiliationFilter)):
         return replace(f, is_negated=not f.is_negated)
     return BranchFilter(f.join, f.filters, is_negated=not f.is_negated)
 

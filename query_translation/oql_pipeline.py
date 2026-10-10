@@ -865,21 +865,24 @@ def _and_parts(node) -> List:
 
 
 def _place_leaves(node, thing: str) -> Optional[List]:
-    """The leaves of a place part (`at [UBC] since 2022`, `at ([A] or [B]) now`, `in
-    [Asia]`): one kind, one set of years, all positive, joined by `or`; else None."""
+    """The leaves of a place part (`at [UBC] since 2022`, `at ([A] or [B]) since 2022`,
+    `in [Asia]`, `not at [X] since 2022`): one kind, one set of years, joined by `or`
+    (positive) or alone (negated); else None."""
     leaves = [node] if not isinstance(node, BranchFilter) else (
         node.filters if node.join == "or" and not node.is_negated else [])
     if not leaves:
         return None
     kinds = set()
     for x in leaves:
-        if isinstance(x, AffiliationFilter) and not x.is_negated and thing == "authors":
-            kinds.add((x.column_id, x.since, x.through, x.min_years))
-        elif (isinstance(x, LeafFilter) and not x.is_negated and x.operator == "is"
+        if x.is_negated and len(leaves) > 1:
+            return None
+        if isinstance(x, AffiliationFilter) and thing == "authors":
+            kinds.add((x.column_id, x.since, x.through, x.min_years, x.is_negated))
+        elif (isinstance(x, LeafFilter) and x.operator == "is"
               and not isinstance(x.value, OQO)
               and ((thing == "authors" and x.column_id in _PLACE_COLUMNS)
                    or (thing != "authors" and x.column_id in _OWN_PLACE_COLUMNS))):
-            kinds.add((x.column_id,))
+            kinds.add((x.column_id, x.is_negated))
         else:
             return None
     return leaves if len(kinds) == 1 else None
@@ -908,14 +911,15 @@ def _place_text(leaves: List, resolver=None) -> str:
           else "institutions")
     vals = [link_text(v.value, ns, resolver, in_list=len(leaves) > 1) for v in leaves]
     vals_text = vals[0] if len(vals) == 1 else "(" + " or ".join(vals) + ")"
+    neg = x.is_negated
     if isinstance(x, AffiliationFilter):
-        # `at [UBC] in 2+ years since 2022`; no years at all reads `ever at`
-        lead = "" if when else "ever "
+        # `at [UBC] in 2+ years since 2022`; no years at all reads `ever at` (`never at`)
+        lead = ("not " if neg else "") if when else ("never " if neg else "ever ")
         mid = f" in {x.min_years}+ years" if x.min_years else ""
         return f"{lead}{word} {vals_text}{mid}" + (f" {when}" if when else "")
     if when == "ever":
-        return f"ever {word} {vals_text}"
-    return f"{word} {vals_text}" + (f" {when}" if when else "")
+        return f"{'never' if neg else 'ever'} {word} {vals_text}"
+    return f"{'not ' if neg else ''}{word} {vals_text}" + (f" {when}" if when else "")
 
 
 def _thing_head(where, thing: str, resolver=None, column: Optional[str] = None) -> str:

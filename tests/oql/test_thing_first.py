@@ -319,3 +319,22 @@ def test_roles(q, echo):
     assert _echo(q) == echo
     assert _same(q, echo)
     assert validate_oqo(parse(q)).valid
+
+
+@pytest.mark.parametrize("q,echo", [
+    # a place an author's record doesn't list (#1617 made it runnable; 2026-10-10)
+    ("get authors not at (I141945490) since 2022 who published works where title has kelp",
+     "get authors not at (I141945490) since 2022 who published works where title has (kelp)"),
+    ("get authors at (I141945490) since 2022 not at (I212119943) since 2022 who published works where title has kelp",
+     "get authors at (I141945490) since 2022 not at (I212119943) since 2022 who published works where title has (kelp)"),
+    ("get authors never at (I141945490) who published works where title has kelp",
+     "get authors never at (I141945490) who published works where title has (kelp)"),
+    ("get authors in [Canada](CA) since 2022 not in [United States](US) since 2022 where h-index is above 50",
+     "get authors in [Canada](CA) since 2022 not in [United States](US) since 2022 where h-index is above 50"),
+    ("get institutions not in [China](CN) that published works where title has kelp",
+     "get institutions not in [China](CN) that published works where title has (kelp)"),
+])
+def test_not_at(q, echo):
+    assert _echo(q) == echo
+    assert _same(q, echo)
+    assert validate_oqo(parse(q)).valid
