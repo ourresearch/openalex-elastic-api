@@ -135,8 +135,8 @@ class AffiliationFilter:
     their papers, with the years; `column_id` is
     `affiliations.institution.lineage` (sub-units count) or
     `affiliations.institution.country_code`. `since` / `through` bound the years,
-    both included. The index holds the years apart from the institutions (a flat
-    object), so the engine checks the pair in each candidate's record.
+    both included. The authors index holds a key per institution-year and
+    country-year (#1617), so this is one ES query (oqo_to_es.affiliation_query).
 
     Only valid inside a `GroupBy.where` tree on author groups."""
     column_id: str
@@ -165,25 +165,6 @@ class AffiliationFilter:
         return cls(column_id=data["affiliation"], value=data["value"],
                    since=data.get("since"), through=data.get("through"),
                    is_negated=data.get("is_negated", False), min_years=data.get("min_years"))
-
-    def matches(self, affiliations: List[dict]) -> bool:
-        """Does an author's record (`_source.affiliations`) list the place in the
-        years? Polarity is the caller's."""
-        from core.utils import get_full_openalex_id
-        want = (str(self.value).upper() if self.column_id.endswith("country_code")
-                else get_full_openalex_id(self.value))
-        years = set()
-        for a in affiliations or []:
-            inst = a.get("institution") or {}
-            if self.column_id.endswith("country_code"):
-                hit = (inst.get("country_code") or "").upper() == want
-            else:
-                hit = want in (inst.get("lineage") or [inst.get("id")])
-            if hit:
-                years.update(y for y in a.get("years") or []
-                             if (self.since is None or y >= self.since)
-                             and (self.through is None or y <= self.through))
-        return len(years) >= (self.min_years or 1)
 
 
 FilterType = Union[LeafFilter, BranchFilter]

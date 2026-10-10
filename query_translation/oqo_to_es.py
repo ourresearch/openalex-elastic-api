@@ -86,24 +86,6 @@ def oqo_to_search_and_filter_q(oqo: OQO, fields_dict, scoring: bool = True):
     `sample` is set), every row goes to `filter_q`, reproducing legacy exactly.
     """
     _check_collection_leaves(oqo.filter_rows)
-    from query_translation.oqo import AffiliationFilter
-    if any(isinstance(f, AffiliationFilter) for f in oqo.filter_rows):
-        # `get authors at [UBC](I141945490) since 2022 where h-index is above 50` (oxjob
-        # #1555): the list's other conditions narrow the records checked for the years
-        from dataclasses import replace
-        from query_translation.analytics import record_ids
-        from query_translation.walk_exec import IdSet
-        others = [f for f in oqo.filter_rows if not isinstance(f, AffiliationFilter)]
-        qs = [q for q in (_translate(f, fields_dict) for f in others) if q is not None]
-        extra = Q("bool", filter=qs).to_dict() if qs else None
-        rows = []
-        for f in oqo.filter_rows:
-            if isinstance(f, AffiliationFilter):
-                ids = record_ids(f, extra=extra)
-                f = LeafFilter("ids.openalex", IdSet(sorted(ids), "an author's record"), "in",
-                               is_negated=f.is_negated)
-            rows.append(f)
-        oqo = replace(oqo, filter_rows=rows)
     if scoring:
         search_rows = [f for f in oqo.filter_rows if _is_scoring_search_leaf(f)]
         filter_rows = [f for f in oqo.filter_rows if not _is_scoring_search_leaf(f)]
@@ -140,6 +122,32 @@ def _check_collection_leaves(rows):
         raise OQOTranslationError(str(e))
 
 
+# An author's record by place and year (oxjob #1617): the authors index holds a key
+# for each institution-year ("I141945490:2022", every institution in the lineage, so
+# sub-units count) and each country-year ("BR:2022"), built in walden's
+# notebooks/elastic/sync_authors.py. Years are listed out (never a keyword range:
+# "10000", a placeholder year in some records, sorts before "2022").
+AFFILIATION_FIRST_YEAR = 1800
+
+
+def affiliation_query(node) -> dict:
+    """`at [UBC](I141945490) since 2022` (or `in [Brazil](BR) ...`, `in 2+ years`) as one
+    ES query on the authors index, ignoring the node's polarity."""
+    import datetime
+    country = node.column_id.endswith("country_code")
+    field = "country_years" if country else "institution_years"
+    place = str(node.value).rsplit("/", 1)[-1].upper()
+    first = node.since if node.since is not None else AFFILIATION_FIRST_YEAR
+    last = node.through if node.through is not None else datetime.date.today().year + 1
+    keys = [f"{place}:{y}" for y in range(first, last + 1)]
+    n = node.min_years or 1
+    if n <= 1:
+        return {"terms": {field: keys}}
+    # distinct years: each key is one year, so n matching keys = n years
+    return {"terms_set": {field: {"terms": keys, "minimum_should_match_script": {
+        "source": "params.n", "params": {"n": n}}}}}
+
+
 def _translate(node: FilterType, fields_dict) -> Optional[Q]:
     if isinstance(node, LeafFilter):
         return _translate_leaf(node, fields_dict)
@@ -147,12 +155,7 @@ def _translate(node: FilterType, fields_dict) -> Optional[Q]:
         return _translate_branch(node, fields_dict)
     from query_translation.oqo import AffiliationFilter
     if isinstance(node, AffiliationFilter):
-        # `get authors in [Brazil](BR) since 2022 where ...` (oxjob #1555): the years
-        # sit apart from the institutions in the index, so the authors whose record
-        # matches are listed first (loud when there are too many) and matched by id
-        from core.join_resolver import terms_query
-        from query_translation.analytics import record_ids
-        q = terms_query("id", sorted(record_ids(node)))
+        q = Q(affiliation_query(node))
         return ~q if node.is_negated else q
     raise OQOTranslationError(
         f"Unknown filter node type: {type(node).__name__}"

@@ -239,11 +239,19 @@ def test_ever_at_a_place_for_some_years():
     assert _echo(q) == "get authors ever at (I141945490) in 3+ years who published works where title has (kelp)"
 
 
-def test_years_counted_across_the_record():
-    a = AffiliationFilter("affiliations.institution.lineage", "I141945490", since=2022, min_years=2)
-    ubc = {"id": "https://openalex.org/I141945490", "lineage": ["https://openalex.org/I141945490"]}
-    assert not a.matches([{"institution": ubc, "years": [2015, 2023]}])
-    assert a.matches([{"institution": ubc, "years": [2023, 2025]}])
+def test_years_are_keys_in_the_record():
+    # #1617: one query on the authors' institution-year / country-year keys
+    from query_translation.oqo_to_es import affiliation_query
+    q = affiliation_query(AffiliationFilter("affiliations.institution.lineage",
+                                            "https://openalex.org/I141945490",
+                                            since=2022, through=2024))
+    assert q == {"terms": {"institution_years": ["I141945490:2022", "I141945490:2023",
+                                                 "I141945490:2024"]}}
+    q = affiliation_query(AffiliationFilter("affiliations.institution.country_code", "br",
+                                            since=2022, through=2023, min_years=2))
+    assert q == {"terms_set": {"country_years": {
+        "terms": ["BR:2022", "BR:2023"],
+        "minimum_should_match_script": {"source": "params.n", "params": {"n": 2}}}}}
 
 
 # #1494's second log (guide v6, 2026-10-09): what the models reached for
