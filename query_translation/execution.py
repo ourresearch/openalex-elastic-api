@@ -310,6 +310,36 @@ def execute_oql_string(oql_str, view_params=None):
     return _execute_oqo(oqo, view_params=view_params)
 
 
+def _sort_column(col: str, word: str, oqo: OQO) -> str:
+    """A sort key as written: a column id (`cited_by_count`), or the OQL words for a
+    column (`h-index`, `citation count`) or for a calculation the query makes
+    (`percent open access`, `mean FWCI`): what agents write (#1494's log: 63 of 119
+    run-stage failures, oxjob #1555). Returns the column id or calculation key; an
+    unknown word comes back as typed, for the validator to refuse."""
+    from core.properties import get_entity_capabilities
+    from query_translation import oql_lang as L
+    from query_translation.oqo import result_entity
+    entity = result_entity(oqo)
+    caps = get_entity_capabilities(entity) or {}
+    if col in caps or not word:
+        return col
+    text = " ".join(word.split()).lower()
+    if oqo.calculate:
+        from query_translation.oql_pipeline import measure_text
+        for m in oqo.calculate:
+            if text in (measure_text(m, "works").lower(), m.key.lower()):
+                return m.key
+        if text in ("count", "works", "count of those works"):
+            return "count"
+    toks = L.lex(word)
+    m = L.match_entity_fallback(toks, 0, entity) if entity != "works" else None
+    if m is None:
+        m = L.match_field(toks, 0)
+    if m is not None and m[2] == len(toks):
+        return L._entity_resolve_field(m[1], entity).column
+    return col
+
+
 def _merge_view_params(oqo: OQO, request, body_params=None) -> OQO:
     """Fold the sibling VIEW params into the OQO's internal view fields (#661).
 
@@ -348,9 +378,10 @@ def _merge_view_params(oqo: OQO, request, body_params=None) -> OQO:
     if sort_map:
         # Insertion order preserved (Py3.7+ dict) → multi-column tiebreaker
         # priority survives, exactly like the legacy URL path.
+        words = [p.split(":")[0].strip() for p in raw_sort.split(",")]
         updates["sort_by"] = [
-            SortBy(column_id=col, direction=direction)
-            for col, direction in sort_map.items()
+            SortBy(column_id=_sort_column(col, word, oqo), direction=direction)
+            for (col, direction), word in zip(sort_map.items(), words)
         ]
 
     raw_select = body.get("select")
