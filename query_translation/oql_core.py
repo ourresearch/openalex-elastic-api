@@ -43,6 +43,9 @@ ADJECTIVES = {"open_access.is_oa": "open access", "is_retracted": "retracted",
               "citation_normalized_percentile.is_in_top_1_percent": "top 1% cited",
               "citation_normalized_percentile.is_in_top_10_percent": "top 10% cited"}
 
+# negative yes/no words before the noun (cow paths, writing test 2026-10-11)
+NEG_ADJECTIVES = {"is_retracted": "non-retracted", "open_access.is_oa": "closed access"}
+
 # search bases: `about` (title, abstract, keywords) or `with ... in the <place>`
 SEARCH_PLACES = {"title_abstract_keywords": None, "display_name": "the title",
                  "abstract": "the abstract", "fulltext": "the full text",
@@ -111,6 +114,8 @@ MEASURE_NAMES = {("count", None): "count of works",
                  ("percent_of_those", None): "share of the total",
                  ("value", "summary_stats.h_index"): "h-index",
                  ("value", "works_count"): "works count"}
+for _col, _adj in ADJECTIVES.items():
+    MEASURE_NAMES.setdefault(("percent", _col), f"percent {_adj}")
 NAME_MEASURES = {v: k for k, v in MEASURE_NAMES.items()}
 # the preposition a rank measure takes before its works phrase
 MEASURE_JOIN = {"sum of citations": "to", "sum of APCs paid": "for"}
@@ -313,11 +318,17 @@ class _Works:
                         continue
                 self.where.append(f)
                 continue
+            if isinstance(f, LeafFilter) and f.is_negated and f.value is True \
+                    and f.column_id in NEG_ADJECTIVES and f.operator == "is":
+                self.adjectives.append(NEG_ADJECTIVES[f.column_id])
+                continue
             if not isinstance(f, LeafFilter) or f.is_negated:
                 self.where.append(f)
                 continue
             col, val, op = f.column_id, f.value, f.operator
-            if col in ADJECTIVES and val is True and op == "is":
+            if col in NEG_ADJECTIVES and val is False and op == "is":
+                self.adjectives.append(NEG_ADJECTIVES[col])
+            elif col in ADJECTIVES and val is True and op == "is":
                 self.adjectives.append(ADJECTIVES[col])
             elif col == "type" and op == "is" and val in TYPE_NOUNS and self.type_noun == "works":
                 self.type_noun = TYPE_NOUNS[val]
@@ -576,7 +587,10 @@ def _things_list(oqo, resolver):
     noun = oqo.get_rows
     parts, left = [], []
     for f in oqo.filter_rows:
-        if isinstance(f, AffiliationFilter) and not f.is_negated:
+        if isinstance(f, LeafFilter) and f.column_id == "type" and not f.is_negated \
+                and (noun, f.value) in THING_TYPE_NOUNS and noun == oqo.get_rows:
+            noun = THING_TYPE_NOUNS[(noun, f.value)]
+        elif isinstance(f, AffiliationFilter) and not f.is_negated:
             parts.append(_affiliation_text(f, resolver))
         elif isinstance(f, LeafFilter) and not f.is_negated and f.column_id in (
                 "subfield.id", "field.id", "domain.id") and f.operator == "is":
@@ -638,6 +652,11 @@ def _rank(oqo, resolver):
             ranked = hit[0]
     rest = [m for m in measures if m is not ranked]
     name = _measure_name(ranked)
+    if count is not None and name == "count of works":
+        text = f"rank {' '.join([noun] + parts)}"    # ranked by that count
+        if sort is not None and sort.direction == "asc":
+            text += ", lowest first"
+        return text + (". " + _show(rest) if rest else "")
     if count is not None and name != "count of works":
         by = name
     elif name == "count of works":
@@ -879,6 +898,14 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
     # adjectives
     while True:
         hit = None
+        for col, adj in NEG_ADJECTIVES.items():
+            if ws.at(*adj.split()):
+                rows.append(LeafFilter(col, False))
+                ws.take(len(adj.split()))
+                hit = True
+                break
+        if hit:
+            continue
         for col, adj in ADJECTIVES.items():
             parts = adj.split()
             if ws.at(*parts):
@@ -892,6 +919,8 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
     if ws.at("all", "works"):
         ws.take(2)
     else:
+        if ws.at("all"):
+            ws.take()
         for noun in sorted(NOUN_TYPES, key=lambda n: -len(n.split())):
             if ws.at(*noun.split()):
                 rows.append(LeafFilter("type", NOUN_TYPES[noun]))
@@ -954,6 +983,12 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
                 if ws.at("and") or ws.at(","):
                     ws.take()
             rows += [LeafFilter("authorships.author.id", i) for i in ids]
+            continue
+        if ws.at("from", "the", "collection") or (ws.at("from") and (t.link_id(ws.peek(1) or "") or "")
+                                                  .startswith("col_")):
+            ws.take(3 if ws.at("from", "the") else 1)
+            rows.append(LeafFilter("authorships.institutions.lineage", t.link_id(ws.take()[0]),
+                                   "in collection"))
             continue
         if ws.at("from"):
             ws.take()
@@ -1086,6 +1121,10 @@ def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
 def _parse_get(t, s, collection_type):
     body, sort = _order(s)
     first = body.split()[0].lower() if body.split() else ""
+    if (first in NOUN_THINGS or first in NOUN_THING_TYPES) and re.search(
+            r" with (?:more than|at least|fewer than|at most|works|articles|\w+ works)\b", body):
+        oqo = _parse_rank(t, body, collection_type, [])  # things with works: ranked by count
+        return oqo
     if first in NOUN_THINGS or first in NOUN_THING_TYPES or first in THING_ENTITIES:
         oqo = _parse_things_list(t, body)
     else:
@@ -1152,6 +1191,12 @@ def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
             else:
                 items.append(LeafFilter("country_code", id_))
             continue
+        if ws.at("with", "works") or ws.at("with", "articles") or (ws.at("with") and (ws.peek(1) or "").lower()
+                                                                in NOUN_TYPES):
+            ws.take()
+            items.append(("count", ">=", 1, ws.rest()))
+            ws.i = len(ws.w)
+            continue
         if ws.at("with") and " ".join(w for w in (ws.peek(1), ws.peek(2)) if w).lower() in WORD_COMPARATORS:
             ws.take()
             word = " ".join(ws.take(2)).lower()
@@ -1181,11 +1226,20 @@ def _num(s: str):
 def _parse_things_list(t, s) -> OQO:
     ws = _Words(t, s)
     noun = ws.peek().lower()
+    if noun in NOUN_THING_TYPES:
+        base, typ = NOUN_THING_TYPES[noun]
+        inner = _parse_things_list(t, base + s[len(noun):])
+        inner.filter_rows.insert(0, LeafFilter("type", typ))
+        return inner
     entity = THING_ENTITIES.get(noun)
     if entity is None:
         raise NotCore(f"a list of {noun}")
     rows: List = []
     rest = " ".join(s.split()[1:])
+    if rest.startswith("where "):
+        return OQO(get_rows=entity, filter_rows=_old_filters(entity, t.restore(rest[len("where "):])))
+    if rest == "":
+        return OQO(get_rows=entity)
     m = re.match(r"in (the subfield|the field|the domain) (⟦L\d+⟧)$", rest)
     if m:
         col = {"the subfield": "subfield.id", "the field": "field.id", "the domain": "domain.id"}[m.group(1)]
@@ -1205,9 +1259,12 @@ _MEASURE_START = re.compile(r" by (count of|count\b|sum of|mean |median |percent
 def _parse_rank(t, s, collection_type, only):
     body, low = (s[: -len(", lowest first")], True) if s.endswith(", lowest first") else (s, False)
     m = _MEASURE_START.search(body)
-    if not m:
+    if m:
+        things, measure = body[: m.start()], body[m.start() + len(" by "):]
+    elif re.search(r" with (?:more than|at least|fewer than|at most|\w+ works|works) ", " " + body + " "):
+        things, measure = body, "count of works"     # `rank authors with at least 5 works about X`
+    else:
         raise NotCore("`rank <things> by <measure>`")
-    things, measure = body[: m.start()], body[m.start() + len(" by "):]
     direction = "asc" if low else "desc"
     noun = things.split()[0].lower()
     # rank by an own field: a sorted list of things
@@ -1228,7 +1285,8 @@ def _parse_rank(t, s, collection_type, only):
     for it in items:
         if isinstance(it, tuple):
             _, op, n, phrase = it
-            where.append(MeasureFilter("count", op, n))
+            if not (op == ">=" and n == 1):
+                where.append(MeasureFilter("count", op, n))
             works_rows += _parse_works(t, phrase, collection_type, thing=noun)
         else:
             where.append(it)
@@ -1240,7 +1298,9 @@ def _parse_rank(t, s, collection_type, only):
         if measure == name or measure.startswith(name + " "):
             ranked = name
             break
-    if measure.startswith("count of "):
+    if measure == "count of works":
+        ranked, phrase = "count of works", ""
+    elif measure.startswith("count of "):
         ranked = "count of works"
         phrase = measure[len("count of "):]
     elif ranked is None:
