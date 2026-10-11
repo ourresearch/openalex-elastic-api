@@ -1050,6 +1050,12 @@ def _order(s: str) -> Tuple[str, List[SortBy]]:
     return s, []
 
 
+def core_first(text: str) -> bool:
+    """Sentences only core v3 has: try its parser before today's."""
+    low = " ".join(text.split()).lower()
+    return low.startswith(("rank ", "break down ", "get the "))
+
+
 def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     """A core v3 statement -> OQO. Raises NotCore when the text isn't a core sentence."""
     t = _Text(text)
@@ -1303,3 +1309,33 @@ def _parse_breakdown(t, s, collection_type):
         groups.append(g)
     return OQO(get_rows="works", filter_rows=rows, group_by=groups,
                calculate=[Measure("count"), Measure("percent_of_those")])
+
+
+# ===========================================================================
+# The automatic baseline (Jason, 2026-10-11 17:45 CT)
+# ===========================================================================
+BASELINE_COLUMNS = ("authorships.institutions.lineage", "authorships.countries",
+                    "authorships.author.id", "primary_location.source.id", "funders.id")
+
+
+def baseline_oqo(oqo: OQO) -> Optional[Tuple[OQO, LeafFilter]]:
+    """For a breakdown narrowed by one named thing (an institution, country, person,
+    journal or funder): the same breakdown with that thing removed and every other
+    condition kept, measured as shares, and the filter it dropped. None otherwise
+    (a rank, a plain list, two named things, or a split by that same thing)."""
+    from dataclasses import replace
+    if oqo.get_rows != "works" or not oqo.group_by or oqo.sort_by or oqo.walks or oqo.each:
+        return None
+    if any(g.where is not None or g.conditions is not None for g in oqo.group_by):
+        return None
+    named = [f for f in oqo.filter_rows
+             if isinstance(f, LeafFilter) and f.column_id in BASELINE_COLUMNS]
+    if len(named) != 1:
+        return None
+    star = named[0]
+    if star.is_negated or star.operator != "is" or not isinstance(star.value, str) \
+            or any(g.column_id == star.column_id for g in oqo.group_by):
+        return None
+    rest = [f for f in oqo.filter_rows if f is not star]
+    return replace(oqo, filter_rows=rest, cursor=None,
+                   calculate=[Measure("count"), Measure("percent_of_those")]), star

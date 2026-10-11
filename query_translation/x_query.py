@@ -106,11 +106,12 @@ def _components_to_oxurl(entity_type: str, components: dict) -> str:
 
 def requested_style() -> Optional[str]:
     """`?oql_style=pipeline` previews the launch's echo on one request, so the website
-    and the MCP server can test against it before the flip (oxjob #1530). None
+    and the MCP server can test against it before the flip (oxjob #1530);
+    `?oql_style=core` previews OQL core v3 (oxjob #1555, 2026-10-11) the same way. None
     otherwise (the configured CANONICAL_STYLE applies)."""
     try:
         from flask import has_request_context, request
-        if has_request_context() and request.args.get("oql_style") in ("pipeline", "classic"):
+        if has_request_context() and request.args.get("oql_style") in ("pipeline", "classic", "core"):
             return request.args.get("oql_style")
     except Exception:
         pass
@@ -181,7 +182,13 @@ def build_x_query(
     oql_form = None
     oql_unavailable = None
     try:
-        if entity_resolver is not None:
+        core_form = None
+        if requested_style() == "core":
+            from query_translation.oql_core import render_core
+            core_form = render_core(canonical)
+        if core_form is not None:
+            oql_form = core_form
+        elif entity_resolver is not None:
             oql_form = render_oqo_to_oql(canonical, entity_resolver=entity_resolver)
         else:
             # Executed-query path (decision 14): bare-ID canonical OQL, no resolver

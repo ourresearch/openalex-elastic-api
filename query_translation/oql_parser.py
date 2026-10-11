@@ -54,9 +54,24 @@ def parse_oql_to_oqo(oql: str) -> OQO:
     Raises:
         OQLParseError: If parsing fails
     """
+    from query_translation.oql_core import NotCore, core_first, parse_core
+    if core_first(oql):
+        # OQL core v3 sentences (oxjob #1555): `rank ...`, `break down ...`, `get the ...`
+        try:
+            return parse_core(oql, _collection_type)
+        except NotCore:
+            pass
+        except _OQLError:
+            pass
     try:
         return _engine_parse(oql)
     except _OQLError as e:
+        # anything today's grammar refuses may be a core v3 sentence
+        # (`get [UBC]'s articles since 2020, most cited first`)
+        try:
+            return parse_core(oql, _collection_type)
+        except (NotCore, _OQLError, ValueError, IndexError, KeyError, TypeError):
+            pass
         message = f"{e.message}  Fix: {e.fixit}" if e.fixit else e.message
         perr = ParseError(
             message=message,
@@ -64,6 +79,15 @@ def parse_oql_to_oqo(oql: str) -> OQO:
             context=_error_context(oql, e.position),
         )
         raise OQLParseError(message, errors=[perr]) from e
+
+
+def _collection_type(collection_id: str) -> Optional[str]:
+    """A collection's entity type, for `works in the collection [X]` (oxjob #1555)."""
+    try:
+        from core.collection_resolver import resolve_collection
+        return resolve_collection(collection_id)[0]
+    except Exception:  # noqa: BLE001 (no users-api here: read it as a works collection)
+        return None
 
 
 def _error_context(oql: str, position: Optional[int], window: int = 24) -> Optional[str]:

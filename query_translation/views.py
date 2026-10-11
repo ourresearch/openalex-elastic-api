@@ -407,6 +407,27 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     from query_translation.x_query import requested_style
     style = requested_style() or _oql_lang.CANONICAL_STYLE
     from query_translation.oql_pipeline import render_pipeline_tree, stringify_pipeline
+    core_text = None
+    if style == "core":
+        # OQL core v3 (oxjob #1555), previewed per request with ?oql_style=core
+        from query_translation.oql_core import render_core
+        core_text = render_core(canonical_oqo, resolver)
+    if core_text is not None:
+        out = {
+            "oxurl": oxurl_output, "oql": core_text, "oql_oneline": core_text,
+            "oql_render_v2": None, "oqo": canonical_oqo.to_dict(),
+            "validation": {"valid": True, "errors": [], "warnings": [
+                {"type": w.type, "message": w.message, "location": w.location}
+                for w in warnings if w.type != "url_not_representable"]},
+        }
+        if canonical_oqo.uses_pipeline:
+            out["check"] = _pipeline_check(canonical_oqo)
+            if not out["check"]["valid"]:
+                out["validation"]["valid"] = False
+                out["validation"]["errors"] = [
+                    {"type": x["error"], "message": f'{x["message"]} {x["fix"]}'.strip(),
+                     "location": None} for x in out["check"]["limits"]]
+        return out
     if canonical_oqo.uses_pipeline:
         # The pipeline language (oxjob #1530): its own renderer; the builder tree
         # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
