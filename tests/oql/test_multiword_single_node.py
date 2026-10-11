@@ -116,3 +116,23 @@ def test_wildcard_on_exact_column_keeps_metachars():
     fr = _rows('works where title has "bar*"')
     assert fr[0]["column_id"] == "display_name.search.exact"
     assert "*" in fr[0]["value"]
+
+
+# --- a quoted phrase after bare words stays a phrase (#1494's report, oxjob #1555) --- #
+
+@pytest.mark.parametrize("a,b", [
+    ('works where title-abstract-keywords has (survey "coverage path planning")',
+     'works where title-abstract-keywords has ("coverage path planning" survey)'),
+    ('works where title has (kelp "forest decline")',
+     'works where title has ("forest decline" kelp)'),
+])
+def test_phrase_after_bare_words_is_not_swallowed(a, b):
+    fr = _rows(a)
+    assert fr == _rows(b)
+    assert any(r["column_id"].endswith(".search.exact") for r in fr)
+
+
+def test_lone_quoted_reserved_word_still_folds():
+    assert _rows('works where title-abstract has (road traffic safety "and" Ghana)') == [
+        {"column_id": "title_and_abstract.search", "value": "road traffic safety and Ghana",
+         "operator": "has"}]

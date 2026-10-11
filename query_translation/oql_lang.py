@@ -3782,8 +3782,12 @@ class _Parser:
                         words.append(nt.val)
                         self.next()
                         continue
-                    if nt.kind == "STRING":  # quoted escape -> literal stemmed word(s)
-                        _reject_engine_chars(nt.val, nt.pos)
+                    # quoted escape -> a literal stemmed word, but ONLY a lone reserved
+                    # word (the render's `"and"` escape). Any other quoted token is a
+                    # phrase and ends the run, so `survey "coverage path planning"`
+                    # reads as survey AND the exact phrase, the same as the other
+                    # order (#1494's report, oxjob #1555, 2026-10-11).
+                    if nt.kind == "STRING" and nt.val.lower() in _SEARCH_RUN_RESERVED:
                         words.append(nt.val)
                         self.next()
                         continue
