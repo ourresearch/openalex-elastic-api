@@ -30,3 +30,28 @@ def _id(c):
 @pytest.mark.parametrize("c", CASES, ids=[_id(c) for c in CASES])
 def test_renders(c):
     assert render_core(OQO.from_dict(c["oqo"]), resolver) == c["new"]
+
+
+from query_translation.oql_core import parse_core  # noqa: E402
+from query_translation.oqo_canonicalizer import canonicalize_oqo  # noqa: E402
+
+COLLECTION_TYPES = {"col_cat": "institutions", "col_peers": "institutions", "col_jmir": "works"}
+
+
+def _canon(oqo):
+    d = canonicalize_oqo(oqo).to_dict()
+    d.pop("sort_by", None)
+    return d
+
+
+@pytest.mark.parametrize("c", CASES, ids=[_id(c) for c in CASES])
+def test_parses_back(c):
+    got = parse_core(c["new"], COLLECTION_TYPES.get)
+    want = OQO.from_dict(c["oqo"])
+    assert _canon(got) == _canon(want)
+    assert [s.to_dict() for s in got.sort_by] == [s.to_dict() for s in want.sort_by]
+
+
+@pytest.mark.parametrize("c", CASES, ids=[_id(c) for c in CASES])
+def test_round_trips(c):
+    assert render_core(parse_core(c["new"], COLLECTION_TYPES.get), resolver) == c["new"]

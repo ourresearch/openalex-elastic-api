@@ -679,3 +679,627 @@ def _breakdown(oqo, resolver):
     if oqo.calculate and keys not in (DEFAULT_BREAKDOWN, [("count", None)]):
         text += ". " + _show(oqo.calculate)
     return text
+
+
+# ===========================================================================
+# Parsing: text -> OQO
+# ===========================================================================
+_LINK = re.compile(r"\[([^\[\]]*)\]\(([^()\s]+)\)")
+_QUOTE = re.compile(r'"[^"]*"')
+
+
+class _Text:
+    """The statement with links, quoted strings and parenthesized groups held aside as
+    single tokens (⟦L0⟧, ⟦Q0⟧, ⟦P0⟧), so the phrase grammar reads plain words."""
+
+    def __init__(self, text: str):
+        self.links: List[Tuple[str, str]] = []
+        self.chunks: List[str] = []
+        text = " ".join(text.split())
+        text = _LINK.sub(self._keep_link, text)
+        text = _QUOTE.sub(self._keep, text)
+        self.text = self._groups(text)
+
+    def _keep_link(self, m):
+        self.links.append((m.group(1), m.group(2)))
+        return f"⟦L{len(self.links) - 1}⟧"
+
+    def _keep(self, m):
+        self.chunks.append(m.group(0))
+        return f"⟦Q{len(self.chunks) - 1}⟧"
+
+    def _groups(self, text: str) -> str:
+        out, depth, start = [], 0, 0
+        for i, ch in enumerate(text):
+            if ch == "(":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth < 0:
+                    raise NotCore("unbalanced parentheses")
+                if depth == 0:
+                    self.chunks.append(text[start:i + 1])
+                    out.append(f"⟦Q{len(self.chunks) - 1}⟧")
+                continue
+            if depth == 0:
+                out.append(ch)
+        if depth:
+            raise NotCore("unbalanced parentheses")
+        return "".join(out)
+
+    def restore(self, s: str) -> str:
+        """The original text of a held-aside span (links back as `[name](ID)`)."""
+        for _ in range(3):
+            s = re.sub(r"⟦Q(\d+)⟧", lambda m: self.chunks[int(m.group(1))], s)
+        return re.sub(r"⟦L(\d+)⟧", lambda m: "[%s](%s)" % self.links[int(m.group(1))], s)
+
+    def link_id(self, tok: str) -> Optional[str]:
+        m = re.fullmatch(r"⟦L(\d+)⟧(?:'s)?", tok)
+        return self.links[int(m.group(1))][1] if m else None
+
+
+def _kind_of(id_: str) -> Optional[str]:
+    """The entity an ID's shape names: I.. institution, A.. author, S.. source, ..."""
+    if id_.startswith("col_"):
+        return "collection"
+    m = re.fullmatch(r"([A-Za-z])(\d+)", id_)
+    if m:
+        return {"I": "institution", "A": "author", "S": "source", "F": "funder", "P": "publisher",
+                "T": "topic", "W": "work"}.get(m.group(1).upper())
+    if re.fullmatch(r"[A-Z]{2}", id_):
+        return "country"
+    if re.fullmatch(r"Q\d+", id_):
+        return "continent"
+    return None
+
+
+_YEAR = r"(\d{4})"
+_RANGE = re.compile(r"(\d{4})\s*[–-]\s*(\d{4})$")
+_DATE = r"(\d{4}-\d{2}-\d{2})"
+
+
+def _old_filters(entity: str, condition: str) -> List:
+    """Today's parser on one key-value condition list: its filter_rows."""
+    from query_translation.oql_lang import parse
+    oqo = parse(f"get {entity} where {condition}")
+    return list(oqo.filter_rows)
+
+
+class _Words:
+    """A cursor over the protected text's words."""
+
+    def __init__(self, t: _Text, s: str):
+        self.t = t
+        self.w = s.split()
+        self.i = 0
+
+    def peek(self, n=0) -> Optional[str]:
+        j = self.i + n
+        return self.w[j] if j < len(self.w) else None
+
+    def at(self, *words) -> bool:
+        return all(self.peek(k) is not None and self.peek(k).lower() == w.lower()
+                   for k, w in enumerate(words))
+
+    def take(self, n=1) -> List[str]:
+        out = self.w[self.i:self.i + n]
+        self.i += n
+        return out
+
+    def done(self) -> bool:
+        return self.i >= len(self.w)
+
+    def rest(self) -> str:
+        return " ".join(self.w[self.i:])
+
+
+def _years_from(ws: _Words, col: str = "publication_year") -> Optional[List[LeafFilter]]:
+    """since 2020 | from 2022 | from 2018–2025 | before 2010 | through 2024 |
+    published ... | dates: since 2021-06-01, from D through D."""
+    if ws.at("published"):
+        save = ws.i
+        ws.take()
+        got = _years_from(ws, col)
+        if got is None:
+            ws.i = save
+        return got
+    a, b = ws.peek(), ws.peek(1)
+    if a is None or b is None:
+        return None
+    a = a.lower()
+    if a == "from" and re.fullmatch(_DATE, b) and ws.at("from", b, "through") and ws.peek(3) \
+            and re.fullmatch(_DATE, ws.peek(3)):
+        d1, d2 = b, ws.peek(3)
+        ws.take(4)
+        return [LeafFilter("from_publication_date", d1), LeafFilter("to_publication_date", d2)]
+    if a in ("since", "through") and re.fullmatch(_DATE, b):
+        ws.take(2)
+        return [LeafFilter("from_publication_date" if a == "since" else "to_publication_date", b)]
+    if a == "from" and _RANGE.match(b):
+        m = _RANGE.match(b)
+        ws.take(2)
+        return [LeafFilter(col, int(m.group(1)), ">="), LeafFilter(col, int(m.group(2)), "<=")]
+    if a == "from" and re.fullmatch(_YEAR, b) and ws.at("from", b, "through") and ws.peek(3) \
+            and re.fullmatch(_YEAR, ws.peek(3)):
+        y1, y2 = int(b), int(ws.peek(3))
+        ws.take(4)
+        return [LeafFilter(col, y1, ">="), LeafFilter(col, y2, "<=")]
+    if re.fullmatch(_YEAR, b) and a in ("since", "from", "in", "before", "through"):
+        ws.take(2)
+        op = {"since": ">=", "from": "is", "in": "is", "before": "<", "through": "<="}[a]
+        return [LeafFilter(col, int(b), op)]
+    return None
+
+
+def _links_list(ws: _Words, sep: str = "or") -> List[str]:
+    """⟦L0⟧ [or ⟦L1⟧ ...] -> IDs."""
+    ids = []
+    while True:
+        id_ = ws.t.link_id(ws.peek() or "")
+        if id_ is None:
+            break
+        ws.take()
+        ids.append(id_)
+        if ws.at(sep) and ws.t.link_id(ws.peek(1) or ""):
+            ws.take()
+            continue
+        if sep == "and" and (ws.peek() or "").endswith(",") is False and ws.at(",") is False:
+            pass
+        break
+    return ids
+
+
+def _any_of(col: str, ids: List[str]):
+    leaves = [LeafFilter(col, i) for i in ids]
+    return leaves[0] if len(leaves) == 1 else BranchFilter(join="or", filters=leaves)
+
+
+_SEARCH_FIELD_FOR = {"the title": "title", "the abstract": "abstract", "the full text": "full text",
+                     "the title or abstract": "title-abstract"}
+
+
+def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
+                 thing: Optional[str] = None) -> List:
+    """A works phrase -> its filters (an AND list)."""
+    ws = _Words(t, s)
+    rows: List = []
+    # possessive star
+    tok = ws.peek() or ""
+    if tok.endswith("'s") and t.link_id(tok):
+        id_ = t.link_id(tok)
+        kind = _kind_of(id_)
+        col = {"institution": "authorships.institutions.lineage", "country": "authorships.countries",
+               "author": "authorships.author.id"}.get(kind)
+        if col is None:
+            raise NotCore(f"a possessive on {id_}")
+        rows.append(LeafFilter(col, id_))
+        ws.take()
+    # adjectives
+    while True:
+        hit = None
+        for col, adj in ADJECTIVES.items():
+            parts = adj.split()
+            if ws.at(*parts):
+                hit = (col, len(parts))
+                break
+        if not hit:
+            break
+        rows.append(LeafFilter(hit[0], True))
+        ws.take(hit[1])
+    # the type noun
+    if ws.at("all", "works"):
+        ws.take(2)
+    else:
+        for noun in sorted(NOUN_TYPES, key=lambda n: -len(n.split())):
+            if ws.at(*noun.split()):
+                rows.append(LeafFilter("type", NOUN_TYPES[noun]))
+                ws.take(len(noun.split()))
+                break
+        else:
+            if ws.at("works"):
+                ws.take()
+            else:
+                raise NotCore(f"expected works or a type of work, got {ws.peek()!r}")
+    # the slots, in any order
+    while not ws.done():
+        yrs = _years_from(ws)
+        if yrs is not None:
+            rows += yrs
+            continue
+        if ws.at("about"):
+            ws.take()
+            s_tok = ws.take()[0]
+            rows += _old_filters("works", f"title-abstract-keywords has {t.restore(s_tok)}")
+            continue
+        if ws.at("with") and not ws.at("with", "an") and t.link_id(ws.peek(1) or "") is None:
+            # with <search> in the title / abstract / full text / title or abstract
+            save = ws.i
+            ws.take()
+            s_tok = ws.take()[0]
+            place = None
+            for words in sorted(_SEARCH_FIELD_FOR, key=lambda w: -len(w.split())):
+                if ws.at("in", *words.split()):
+                    place = words
+                    ws.take(1 + len(words.split()))
+                    break
+            if place is None:
+                ws.i = save
+                raise NotCore("`with` needs `in the title` (or abstract, full text)")
+            rows += _old_filters("works", f"{_SEARCH_FIELD_FOR[place]} has {t.restore(s_tok)}")
+            continue
+        if ws.at("with") and t.link_id(ws.peek(1) or "") and ws.at("with", ws.peek(1), "as",
+                                                                   "corresponding", "author"):
+            rows.append(LeafFilter("corresponding_author_ids", t.link_id(ws.peek(1))))
+            ws.take(5)
+            continue
+        if ws.at("citing", "works", "in", "the", "collection"):
+            ws.take(5)
+            rows.append(LeafFilter("referenced_works", t.link_id(ws.take()[0]), "in collection"))
+            continue
+        if ws.at("citing"):
+            ws.take()
+            rows.append(_any_of("referenced_works", _links_list(ws)))
+            continue
+        if ws.at("co-authored", "with"):
+            ws.take(2)
+            rows.append(_any_of("authorships.institutions.lineage", _links_list(ws)))
+            continue
+        if ws.at("co-authored", "by"):
+            ws.take(2)
+            ids = []
+            while t.link_id(ws.peek() or ""):
+                ids.append(t.link_id(ws.take()[0].rstrip(",")))
+                if ws.at("and") or ws.at(","):
+                    ws.take()
+            rows += [LeafFilter("authorships.author.id", i) for i in ids]
+            continue
+        if ws.at("from"):
+            ws.take()
+            ids = _links_list(ws)
+            if not ids:
+                raise NotCore("`from` needs a place")
+            kind = _kind_of(ids[0])
+            col = {"institution": "authorships.institutions.lineage",
+                   "country": "authorships.countries",
+                   "continent": "authorships.institutions.continent"}.get(kind)
+            if col is None:
+                raise NotCore(f"`from` {ids[0]}")
+            rows.append(_any_of(col, ids))
+            continue
+        if ws.at("by") and t.link_id(ws.peek(1) or ""):
+            ws.take()
+            rows.append(_any_of("authorships.author.id", _links_list(ws)))
+            continue
+        if ws.at("in", "the", "collection"):
+            ws.take(3)
+            cid = t.link_id(ws.take()[0])
+            ctype = collection_type(cid) if collection_type else "works"
+            col = {"institutions": "authorships.institutions.lineage", "authors": "authorships.author.id",
+                   "sources": "primary_location.source.id", "works": "id",
+                   "funders": "funders.id", "topics": "primary_topic.id"}.get(ctype or "works", "id")
+            rows.append(LeafFilter(col, cid, "in collection"))
+            continue
+        key_hit = None
+        for col, key in IN_KEYS.items():
+            if col.startswith("topics."):
+                continue
+            if ws.at("in", *key.split()) and t.link_id(ws.peek(1 + len(key.split())) or ""):
+                key_hit = (col, len(key.split()))
+                break
+        if key_hit:
+            ws.take(1 + key_hit[1])
+            rows.append(_any_of(key_hit[0], _links_list(ws)))
+            continue
+        if ws.at("in") and t.link_id(ws.peek(1) or ""):
+            ws.take()
+            ids = _links_list(ws)
+            if _kind_of(ids[0]) != "source":
+                raise NotCore(f"`in` {ids[0]}: name its kind (the topic, SDG, the collection)")
+            rows.append(_any_of("primary_location.source.id", ids))
+            continue
+        if ws.at("published", "by"):
+            ws.take(2)
+            rows.append(_any_of("primary_location.source.host_organization_lineage", _links_list(ws)))
+            continue
+        if ws.at("funded", "by"):
+            ws.take(2)
+            rows.append(_any_of("funders.id", _links_list(ws)))
+            continue
+        if ws.at("under", "the") and t.link_id(ws.peek(2) or "") and ws.at("under", "the", ws.peek(2), "license"):
+            rows.append(LeafFilter("primary_location.license", t.link_id(ws.peek(2))))
+            ws.take(4)
+            continue
+        if ws.at("where"):
+            ws.take()
+            rest = t.restore(ws.rest())
+            ws.i = len(ws.w)
+            rows += _old_filters("works", rest)
+            continue
+        raise NotCore(f"unexpected {ws.peek()!r} in a works phrase")
+    return rows
+
+
+def _split_sentences(t: _Text) -> List[str]:
+    parts = [p.strip() for p in re.split(r"\.\s+(?=(?:Show|Only)\b)", t.text.strip())]
+    return [p[:-1] if p.endswith(".") else p for p in parts]
+
+
+def _parse_measures(t: _Text, s: str) -> List[Measure]:
+    names = [n.strip() for n in re.split(r",\s*|\s+and\s+", s) if n.strip()]
+    out = []
+    for n in names:
+        if n == "count":
+            n = "count of works"
+        if n not in NAME_MEASURES:
+            raise NotCore(f"unknown measure {n!r}")
+        m, col = NAME_MEASURES[n]
+        out.append(Measure(m, col))
+    return out
+
+
+def _order(s: str) -> Tuple[str, List[SortBy]]:
+    for phrase, (col, d) in ORDER_PHRASES.items():
+        if s.endswith(", " + phrase):
+            return s[: -len(phrase) - 2], [SortBy(col, d)]
+    m = re.search(r", (highest|lowest) ([\w\- ]+?) first$", s)
+    if m and m.group(2) in OWN_FIELD_BY_WORD:
+        return s[: m.start()], [SortBy(OWN_FIELD_BY_WORD[m.group(2)],
+                                       "desc" if m.group(1) == "highest" else "asc")]
+    return s, []
+
+
+def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
+    """A core v3 statement -> OQO. Raises NotCore when the text isn't a core sentence."""
+    t = _Text(text)
+    sentences = _split_sentences(t)
+    main, extras = sentences[0], sentences[1:]
+    show = [e[len("Show "):] for e in extras if e.startswith("Show ")]
+    only = [e[len("Only "):] for e in extras if e.startswith("Only ")]
+    low = main.lower()
+    if low.startswith("break down "):
+        oqo = _parse_breakdown(t, main[len("break down "):], collection_type)
+    elif low.startswith("rank "):
+        oqo = _parse_rank(t, main[len("rank "):], collection_type, only)
+    elif low.startswith("get the "):
+        oqo = _parse_number(t, main[len("get the "):], collection_type)
+    elif low.startswith("get "):
+        oqo = _parse_get(t, main[len("get "):], collection_type)
+    else:
+        raise NotCore("not a core sentence")
+    if show:
+        extra = _parse_measures(t, show[0])
+        if oqo.group_by and oqo.get_rows == "works" and not oqo.sort_by:
+            oqo.calculate = extra                       # a breakdown's columns
+        else:
+            oqo.calculate = list(oqo.calculate) + extra
+    return oqo
+
+
+def _parse_get(t, s, collection_type):
+    body, sort = _order(s)
+    first = body.split()[0].lower() if body.split() else ""
+    if first in NOUN_THINGS or first in NOUN_THING_TYPES or first in THING_ENTITIES:
+        oqo = _parse_things_list(t, body)
+    else:
+        oqo = OQO(get_rows="works", filter_rows=_parse_works(t, body, collection_type))
+    oqo.sort_by = sort
+    return oqo
+
+
+def _parse_number(t, s, collection_type):
+    m = re.match(r"(.+?) (of|for) (.+)$", s)
+    if not m:
+        raise NotCore("`get the <measure> of <works>`")
+    # the measures end where a works phrase begins
+    head, rest = s, None
+    for mm in re.finditer(r" (of|for) ", s):
+        cand = s[: mm.start()]
+        try:
+            measures = _parse_measures(t, cand)
+        except NotCore:
+            continue
+        rest = s[mm.end():]
+        head = cand
+        break
+    if rest is None:
+        raise NotCore("unknown measures")
+    return OQO(get_rows="works", filter_rows=_parse_works(t, rest, collection_type),
+               calculate=measures)
+
+
+def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
+    """noun [type] and the things' own conditions -> (group column, type, where items)."""
+    ws = _Words(t, s)
+    noun = ws.take()[0].lower()
+    typ = None
+    if noun in NOUN_THING_TYPES:
+        base, typ = NOUN_THING_TYPES[noun]
+        noun = base
+    if noun not in NOUN_THINGS:
+        raise NotCore(f"unknown things {noun!r}")
+    items: List = []
+    while not ws.done():
+        if ws.at("ever", "at") or ws.at("at"):
+            ever = ws.at("ever")
+            ws.take(2 if ever else 1)
+            id_ = t.link_id(ws.take()[0])
+            since = through = None
+            yrs = None if ever else _years_from(ws, "years")
+            for y in yrs or []:
+                if y.operator == ">=":
+                    since = y.value
+                elif y.operator == "<=":
+                    through = y.value
+                elif y.operator == "is":
+                    since = through = y.value
+            items.append(AffiliationFilter("affiliations.institution.lineage", id_, since, through))
+            continue
+        if ws.at("in") and t.link_id(ws.peek(1) or "") and _kind_of(t.link_id(ws.peek(1))) == "country":
+            ws.take()
+            id_ = t.link_id(ws.take()[0])
+            if noun == "authors":
+                yrs = _years_from(ws, "years") or []
+                since = next((y.value for y in yrs if y.operator == ">="), None)
+                items.append(AffiliationFilter("affiliations.institution.country_code", id_, since, None))
+            else:
+                items.append(LeafFilter("country_code", id_))
+            continue
+        if ws.at("with") and " ".join(w for w in (ws.peek(1), ws.peek(2)) if w).lower() in WORD_COMPARATORS:
+            ws.take()
+            word = " ".join(ws.take(2)).lower()
+            if word not in WORD_COMPARATORS:
+                raise NotCore(f"`with {word}`")
+            n = int(ws.take()[0].replace(",", ""))
+            items.append(("count", WORD_COMPARATORS[word], n, ws.rest()))
+            ws.i = len(ws.w)
+            continue
+        if ws.at("with"):
+            m = re.match(r"with (an?) ([\w\-]+(?: count)?) (above|at least|below|at most) ([\d,.]+)",
+                         ws.rest())
+            if m and m.group(2) in OWN_FIELD_BY_WORD:
+                op = {v: k for k, v in ABOVE_WORDS.items()}[m.group(3)]
+                items.append(LeafFilter(OWN_FIELD_BY_WORD[m.group(2)], _num(m.group(4)), op))
+                ws.take(len(m.group(0).split()))
+                continue
+        raise NotCore(f"unexpected {ws.peek()!r} in a things phrase")
+    return noun, typ, items
+
+
+def _num(s: str):
+    s = s.replace(",", "")
+    return float(s) if "." in s else int(s)
+
+
+def _parse_things_list(t, s) -> OQO:
+    ws = _Words(t, s)
+    noun = ws.peek().lower()
+    entity = THING_ENTITIES.get(noun)
+    if entity is None:
+        raise NotCore(f"a list of {noun}")
+    rows: List = []
+    rest = " ".join(s.split()[1:])
+    m = re.match(r"in (the subfield|the field|the domain) (⟦L\d+⟧)$", rest)
+    if m:
+        col = {"the subfield": "subfield.id", "the field": "field.id", "the domain": "domain.id"}[m.group(1)]
+        return OQO(get_rows=entity, filter_rows=[LeafFilter(col, t.link_id(m.group(2)))])
+    _, _, items = _parse_things(t, s)
+    for it in items:
+        if isinstance(it, tuple):
+            raise NotCore("a count of works on a plain list")
+        rows.append(it)
+    return OQO(get_rows=entity, filter_rows=rows)
+
+
+_MEASURE_START = re.compile(r" by (count of|count\b|sum of|mean |median |percent |share of the total|"
+                            r"h-index|i10-index|works count|citation count)")
+
+
+def _parse_rank(t, s, collection_type, only):
+    body, low = (s[: -len(", lowest first")], True) if s.endswith(", lowest first") else (s, False)
+    m = _MEASURE_START.search(body)
+    if not m:
+        raise NotCore("`rank <things> by <measure>`")
+    things, measure = body[: m.start()], body[m.start() + len(" by "):]
+    direction = "asc" if low else "desc"
+    noun = things.split()[0].lower()
+    # rank by an own field: a sorted list of things
+    if measure in OWN_FIELD_BY_WORD:
+        oqo = _parse_things_list(t, things)
+        col = OWN_FIELD_BY_WORD[measure]
+        for o in only:
+            mm = re.match(r"\w+ with (an?) ([\w\-]+(?: count)?) (above|at least|below|at most) ([\d,.]+)$", o)
+            if not mm:
+                raise NotCore("`Only <things> with an <field> above N`")
+            op = {v: k for k, v in ABOVE_WORDS.items()}[mm.group(3)]
+            oqo.filter_rows.append(LeafFilter(OWN_FIELD_BY_WORD[mm.group(2)], _num(mm.group(4)), op))
+        oqo.sort_by = [SortBy(col, direction)]
+        return oqo
+    noun, typ, items = _parse_things(t, things)
+    where: List = []
+    works_rows: List = []
+    for it in items:
+        if isinstance(it, tuple):
+            _, op, n, phrase = it
+            where.append(MeasureFilter("count", op, n))
+            works_rows += _parse_works(t, phrase, collection_type, thing=noun)
+        else:
+            where.append(it)
+    if typ:
+        where.append(LeafFilter("type", typ))
+    # the measure, and the works it covers
+    ranked = None
+    for name in sorted(NAME_MEASURES, key=len, reverse=True):
+        if measure == name or measure.startswith(name + " "):
+            ranked = name
+            break
+    if measure.startswith("count of "):
+        ranked = "count of works"
+        phrase = measure[len("count of "):]
+    elif ranked is None:
+        raise NotCore(f"unknown measure in {measure!r}")
+    else:
+        tail = measure[len(ranked):].strip()
+        join = MEASURE_JOIN.get(ranked, "of")
+        if tail.startswith(join + " "):
+            phrase = tail[len(join) + 1:]
+        elif tail == "":
+            phrase = ""
+        else:
+            raise NotCore(f"`{ranked} {join} <works>`")
+    if phrase:
+        works_rows += _parse_works(t, phrase, collection_type, thing=noun)
+    mm, col = NAME_MEASURES[ranked]
+    meas = Measure(mm, col)
+    g = GroupBy(column_id=NOUN_THINGS[noun],
+                where=(where[0] if len(where) == 1 else BranchFilter(join="and", filters=where))
+                if where else None)
+    return OQO(get_rows="works", filter_rows=works_rows, group_by=[g], calculate=[meas],
+               sort_by=[SortBy(meas.key, direction)])
+
+
+def _parse_breakdown(t, s, collection_type):
+    # the works phrase ends at the ` by ` that opens the dimensions
+    cut = None
+    for mm in re.finditer(r" by ", s):
+        nxt = s[mm.end():]
+        if any(nxt == w or nxt.startswith(w + " ") for w in DIM_COLUMNS):
+            cut = mm
+            break
+    if cut is None:
+        raise NotCore("`break down <works> by <dimension>`")
+    phrase, dims_text = s[: cut.start()], s[cut.end():]
+    rows = _parse_works(t, phrase, collection_type)
+    groups: List[GroupBy] = []
+    for part in re.split(r"\s+and\s+(?=(?:%s)\b)" % "|".join(
+            re.escape(w) for w in sorted(DIM_COLUMNS, key=len, reverse=True)), dims_text):
+        word = next((w for w in sorted(DIM_COLUMNS, key=len, reverse=True)
+                     if part == w or part.startswith(w + " ")), None)
+        if word is None:
+            raise NotCore(f"unknown dimension {part!r}")
+        col = DIM_COLUMNS[word]
+        rest = part[len(word):].strip()
+        g = GroupBy(column_id=col)
+        if rest:
+            ws = _Words(t, rest)
+            if col == "publication_year":
+                yrs = _years_from(ws)
+                if yrs is None:
+                    raise NotCore(f"after `by year`: {rest!r}")
+                rows += yrs
+            if ws.at("in", "the", "collection"):
+                ws.take(3)
+                g.values = [t.link_id(ws.take()[0])]
+            elif ws.at("in"):
+                ws.take()
+                inner = t.restore(ws.take()[0])
+                if not (inner.startswith("(") and inner.endswith(")")):
+                    raise NotCore("a list of values in parentheses")
+                g.values = [lk[1] for lk in _LINK.findall(inner)] or \
+                    [v.strip() for v in inner[1:-1].split(",")]
+            if not ws.done():
+                raise NotCore(f"unexpected {ws.peek()!r} after a dimension")
+        groups.append(g)
+    return OQO(get_rows="works", filter_rows=rows, group_by=groups,
+               calculate=[Measure("count"), Measure("percent_of_those")])
