@@ -1,0 +1,1493 @@
+{
+ "names": {
+  "I98677209": "University of Edinburgh",
+  "article": "article",
+  "W4399795944": "Progress in battery thermal management systems technologies for electric vehicles",
+  "S59604973": "IEEE Transactions on Smart Grid",
+  "S110785341": "Nutrients",
+  "13": "Climate action",
+  "public-domain": "public domain (CC0)",
+  "conference-paper": "conference-paper",
+  "T10033": "Concrete and Cement Materials Research",
+  "review": "review",
+  "A5067184382": "Jennifer A. Doudna",
+  "A5074743574": "Emmanuelle Charpentier",
+  "NG": "Nigeria",
+  "I141945490": "University of British Columbia",
+  "SE": "Sweden",
+  "I188538660": "University of Colorado Boulder",
+  "I146416000": "University of Kansas",
+  "company": "company",
+  "I32021983": "Kiel University",
+  "journal": "journal",
+  "F4320324099": "Russian Science Foundation",
+  "F4320321079": "Russian Foundation for Basic Research",
+  "col_jmir": "JMIR articles",
+  "1702": "Artificial Intelligence",
+  "17": "Computer Science",
+  "A5047110566": "Dolph Schluter",
+  "S2738950867": "Cureus",
+  "I33213144": "University of Florida",
+  "F4320311904": "Wellcome Trust",
+  "S2898612692": "Heliyon",
+  "CA": "Canada",
+  "CN": "China",
+  "IN": "India",
+  "BR": "Brazil",
+  "TR": "Turkey",
+  "US": "United States",
+  "col_cat": "Catalan institutions",
+  "col_peers": "My peers"
+ },
+ "cases": [
+  {
+   "case": 19,
+   "label": null,
+   "shape": "find",
+   "new": "get [University of Edinburgh](I98677209)'s articles since 2020, most cited first",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I98677209"
+     },
+     {
+      "column_id": "type",
+      "value": "article"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2020,
+      "operator": ">="
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "cited_by_count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 129,
+   "label": null,
+   "shape": "find",
+   "new": "get works since 2024 citing [Progress in battery thermal management systems…](W4399795944), most cited first",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "referenced_works",
+      "value": "W4399795944"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2024,
+      "operator": ">="
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "cited_by_count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 258,
+   "label": null,
+   "shape": "find",
+   "new": "get works about (\"smart grid\" AND security) in [IEEE Transactions on Smart Grid](S59604973)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "primary_location.source.id",
+      "value": "S59604973"
+     },
+     {
+      "column_id": "title_abstract_keywords.search.exact",
+      "value": "\"smart grid\"",
+      "operator": "has"
+     },
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "security",
+      "operator": "has"
+     }
+    ]
+   }
+  },
+  {
+   "case": 267,
+   "label": null,
+   "shape": "find",
+   "new": "get articles from 2022 in [Nutrients](S110785341)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "primary_location.source.id",
+      "value": "S110785341"
+     },
+     {
+      "column_id": "type",
+      "value": "article"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2022
+     }
+    ]
+   }
+  },
+  {
+   "case": 265,
+   "label": null,
+   "shape": "find",
+   "new": "get works in SDG [Climate action](13) under the [public domain (CC0)](public-domain) license",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "sustainable_development_goals.id",
+      "value": "13"
+     },
+     {
+      "column_id": "primary_location.license",
+      "value": "public-domain"
+     }
+    ]
+   }
+  },
+  {
+   "case": 495,
+   "label": null,
+   "shape": "find",
+   "new": "get works with conjugal in the title, newest first",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "display_name.search",
+      "value": "conjugal",
+      "operator": "has"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "publication_date",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 333,
+   "label": null,
+   "shape": "find",
+   "new": "get conference papers from 2018–2025 about cement in the topic [Concrete and Cement Materials Research](T10033)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "type",
+      "value": "conference-paper"
+     },
+     {
+      "column_id": "primary_topic.id",
+      "value": "T10033"
+     },
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "cement",
+      "operator": "has"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2018,
+      "operator": ">="
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2025,
+      "operator": "<="
+     }
+    ]
+   }
+  },
+  {
+   "case": 589,
+   "label": null,
+   "shape": "find",
+   "new": "get reviews since 2016 about (biosynthesis AND \"silver nanoparticles\"), newest first",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "type",
+      "value": "review"
+     },
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "biosynthesis",
+      "operator": "has"
+     },
+     {
+      "column_id": "title_abstract_keywords.search.exact",
+      "value": "\"silver nanoparticles\"",
+      "operator": "has"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2016,
+      "operator": ">="
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "publication_date",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 1370,
+   "label": null,
+   "shape": "find",
+   "new": "get works about ((\"deep learning\" OR \"neural network\") AND (navigation OR localisation) AND robot), newest first",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "title_abstract_keywords.search.exact",
+        "value": "\"deep learning\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_abstract_keywords.search.exact",
+        "value": "\"neural network\"",
+        "operator": "has"
+       }
+      ]
+     },
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "title_abstract_keywords.search",
+        "value": "navigation",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_abstract_keywords.search",
+        "value": "localisation",
+        "operator": "has"
+       }
+      ]
+     },
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "robot",
+      "operator": "has"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "publication_date",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 723,
+   "label": null,
+   "shape": "find",
+   "new": "get works with ((\"global warming\" OR \"climate change\") AND (\"human health\" OR \"public health\" OR disease OR mortality OR \"mental health\" OR \"food security\" OR \"heat stress\")) in the title or abstract",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"global warming\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"climate change\"",
+        "operator": "has"
+       }
+      ]
+     },
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"human health\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"public health\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search",
+        "value": "disease",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search",
+        "value": "mortality",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"mental health\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"food security\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "title_and_abstract.search.exact",
+        "value": "\"heat stress\"",
+        "operator": "has"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": 1512,
+   "label": null,
+   "shape": "find",
+   "new": "get works since 2023 with (\"as an AI language model\" OR \"regenerate response\") in the full text",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "fulltext.search.exact",
+        "value": "\"as an AI language model\"",
+        "operator": "has"
+       },
+       {
+        "column_id": "fulltext.search.exact",
+        "value": "\"regenerate response\"",
+        "operator": "has"
+       }
+      ]
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2023,
+      "operator": ">="
+     }
+    ]
+   }
+  },
+  {
+   "case": 758,
+   "label": null,
+   "shape": "find",
+   "new": "get works co-authored by [Jennifer A. Doudna](A5067184382) and [Emmanuelle Charpentier](A5074743574)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.author.id",
+      "value": "A5067184382"
+     },
+     {
+      "column_id": "authorships.author.id",
+      "value": "A5074743574"
+     }
+    ]
+   }
+  },
+  {
+   "case": 272,
+   "label": null,
+   "shape": "find",
+   "new": "get works about \"antimicrobial resistance\" where country is [Nigeria](NG) or raw affiliation has Nigeria",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search.exact",
+      "value": "\"antimicrobial resistance\"",
+      "operator": "has"
+     },
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "authorships.countries",
+        "value": "NG"
+       },
+       {
+        "column_id": "raw_affiliation_strings.search",
+        "value": "Nigeria",
+        "operator": "has"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": 66,
+   "label": null,
+   "shape": "rank",
+   "new": "rank authors at [University of British Columbia](I141945490) since 2022 by count of works about kelp",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "kelp",
+      "operator": "has"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.author.id",
+      "where": {
+       "affiliation": "affiliations.institution.lineage",
+       "value": "I141945490",
+       "since": 2022
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 0,
+   "label": "Jason's example",
+   "shape": "rank",
+   "new": "rank institutions in [Sweden](SE) with at least 10 works about kelp by mean FWCI",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "kelp",
+      "operator": "has"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "where": {
+       "join": "and",
+       "filters": [
+        {
+         "column_id": "country_code",
+         "value": "SE"
+        },
+        {
+         "measure": "count",
+         "operator": ">=",
+         "value": 10
+        }
+       ]
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "mean",
+      "column_id": "fwci"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "mean_fwci",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 29,
+   "label": null,
+   "shape": "rank",
+   "new": "rank authors by count of works about \"latent dirichlet allocation\". Show sum of citations, mean FWCI and h-index.",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search.exact",
+      "value": "\"latent dirichlet allocation\"",
+      "operator": "has"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.author.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "sum",
+      "column_id": "cited_by_count"
+     },
+     {
+      "measure": "mean",
+      "column_id": "fwci"
+     },
+     {
+      "measure": "value",
+      "column_id": "summary_stats.h_index"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 361,
+   "label": null,
+   "shape": "rank",
+   "new": "rank authors by sum of citations to works since 2018 about oleogel*",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search.exact",
+      "value": "oleogel*",
+      "operator": "has"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2018,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.author.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "sum",
+      "column_id": "cited_by_count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "sum_cited_by_count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 78,
+   "label": null,
+   "shape": "rank",
+   "new": "rank authors at [University of Colorado Boulder](I188538660) since 2022 by count of works in SDG [Climate action](13)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "sustainable_development_goals.id",
+      "value": "13"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.author.id",
+      "where": {
+       "affiliation": "affiliations.institution.lineage",
+       "value": "I188538660",
+       "since": 2022
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 87,
+   "label": null,
+   "shape": "rank",
+   "new": "rank authors at [University of Kansas](I146416000) since 2022 by count of works about biodiversity",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "biodiversity",
+      "operator": "has"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.author.id",
+      "where": {
+       "affiliation": "affiliations.institution.lineage",
+       "value": "I146416000",
+       "since": 2022
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 569,
+   "label": null,
+   "shape": "rank",
+   "new": "rank companies by count of works co-authored with [Kiel University](I32021983)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I32021983"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "where": {
+       "column_id": "type",
+       "value": "company"
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 473,
+   "label": null,
+   "shape": "rank",
+   "new": "rank countries with more than 100,000 works since 2006 by percent retracted",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "publication_year",
+      "value": 2006,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.countries",
+      "where": {
+       "measure": "count",
+       "operator": ">",
+       "value": 100000
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "percent",
+      "column_id": "is_retracted"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "percent_is_retracted",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 428,
+   "label": null,
+   "shape": "rank",
+   "new": "rank journals by count of works since 2020 about (archaeology AND \"deep learning\")",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "archaeology",
+      "operator": "has"
+     },
+     {
+      "column_id": "title_abstract_keywords.search.exact",
+      "value": "\"deep learning\"",
+      "operator": "has"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2020,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "primary_location.source.id",
+      "where": {
+       "column_id": "type",
+       "value": "journal"
+      }
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 837,
+   "label": null,
+   "shape": "rank",
+   "new": "rank topics by count of works funded by [Russian Science Foundation](F4320324099) or [Russian Foundation for Basic Research](F4320321079)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "join": "or",
+      "filters": [
+       {
+        "column_id": "funders.id",
+        "value": "F4320324099"
+       },
+       {
+        "column_id": "funders.id",
+        "value": "F4320321079"
+       }
+      ]
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "primary_topic.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 684,
+   "label": null,
+   "shape": "rank",
+   "new": "rank institutions by count of works citing works in the collection [JMIR articles](col_jmir)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "referenced_works",
+      "value": "col_jmir",
+      "operator": "in collection"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.institutions.lineage"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 0,
+   "label": "from the logs",
+   "shape": "lookup",
+   "new": "rank authors at [University of British Columbia](I141945490) since 2022 by h-index. Only authors with an h-index above 50.",
+   "oqo": {
+    "get_rows": "authors",
+    "filter_rows": [
+     {
+      "affiliation": "affiliations.institution.lineage",
+      "value": "I141945490",
+      "since": 2022
+     },
+     {
+      "column_id": "summary_stats.h_index",
+      "value": 50,
+      "operator": ">"
+     }
+    ],
+    "sort_by": [
+     {
+      "column_id": "summary_stats.h_index",
+      "direction": "desc"
+     }
+    ]
+   }
+  },
+  {
+   "case": 95,
+   "label": null,
+   "shape": "lookup",
+   "new": "get topics in the subfield [Artificial Intelligence](1702)",
+   "oqo": {
+    "get_rows": "topics",
+    "filter_rows": [
+     {
+      "column_id": "subfield.id",
+      "value": "1702"
+     }
+    ]
+   }
+  },
+  {
+   "case": 625,
+   "label": null,
+   "shape": "number",
+   "new": "get the count of [University of Kansas](I146416000)'s works",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I146416000"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     }
+    ]
+   }
+  },
+  {
+   "case": 465,
+   "label": null,
+   "shape": "number",
+   "new": "get the sum of APCs paid for [University of Kansas](I146416000)'s works",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I146416000"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "sum",
+      "column_id": "apc_paid.value"
+     }
+    ]
+   }
+  },
+  {
+   "case": 175,
+   "label": null,
+   "shape": "number",
+   "new": "get the count and mean citations of works from 2022 in the field [Computer Science](17)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "primary_topic.field.id",
+      "value": "17"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2022
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "mean",
+      "column_id": "cited_by_count"
+     }
+    ]
+   }
+  },
+  {
+   "case": 185,
+   "label": null,
+   "shape": "number",
+   "new": "break down [Dolph Schluter](A5047110566)'s works by corresponding author",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.author.id",
+      "value": "A5047110566"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "corresponding_author_ids"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 105,
+   "label": null,
+   "shape": "breakdown",
+   "new": "break down all works by SDG",
+   "oqo": {
+    "get_rows": "works",
+    "group_by": [
+     {
+      "column_id": "sustainable_development_goals.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 100,
+   "label": null,
+   "shape": "breakdown",
+   "new": "break down [University of Kansas](I146416000)'s works by SDG",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I146416000"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "sustainable_development_goals.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 1073,
+   "label": null,
+   "shape": "breakdown",
+   "new": "break down works since 2020 in [Cureus](S2738950867) by country",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "primary_location.source.id",
+      "value": "S2738950867"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2020,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "authorships.countries"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 25,
+   "label": null,
+   "shape": "breakdown",
+   "new": "break down [University of Florida](I33213144)'s works by open access. Show count of works, mean citations, median citations and mean FWCI.",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I33213144"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "open_access.is_oa"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "mean",
+      "column_id": "cited_by_count"
+     },
+     {
+      "measure": "median",
+      "column_id": "cited_by_count"
+     },
+     {
+      "measure": "mean",
+      "column_id": "fwci"
+     }
+    ]
+   }
+  },
+  {
+   "case": 461,
+   "label": null,
+   "shape": "breakdown",
+   "new": "break down works from 2020-10-01 through 2021-09-30 funded by [Wellcome Trust](F4320311904) by publisher. Show sum of APCs paid and count of works.",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "funders.id",
+      "value": "F4320311904"
+     },
+     {
+      "column_id": "from_publication_date",
+      "value": "2020-10-01"
+     },
+     {
+      "column_id": "to_publication_date",
+      "value": "2021-09-30"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "primary_location.source.host_organization_lineage"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "sum",
+      "column_id": "apc_paid.value"
+     },
+     {
+      "measure": "count"
+     }
+    ]
+   }
+  },
+  {
+   "case": 629,
+   "label": null,
+   "shape": "trend",
+   "new": "break down [University of Florida](I33213144)'s works by year since 2004",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I33213144"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2004,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 934,
+   "label": null,
+   "shape": "trend",
+   "new": "break down all works by year. Show count of works and percent with an abstract.",
+   "oqo": {
+    "get_rows": "works",
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent",
+      "column_id": "has_abstract"
+     }
+    ]
+   }
+  },
+  {
+   "case": 173,
+   "label": null,
+   "shape": "trend",
+   "new": "break down [University of Kansas](I146416000)'s works by year from 2015–2024 and field. Show mean FWCI.",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "I146416000"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2015,
+      "operator": ">="
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2024,
+      "operator": "<="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "primary_topic.field.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "mean",
+      "column_id": "fwci"
+     }
+    ]
+   }
+  },
+  {
+   "case": 621,
+   "label": null,
+   "shape": "trend",
+   "new": "break down works funded by [Wellcome Trust](F4320311904) by year and type",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "funders.id",
+      "value": "F4320311904"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "type"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 1061,
+   "label": null,
+   "shape": "trend",
+   "new": "break down works in [Heliyon](S2898612692) by year and field. Show count of works and percent retracted.",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "primary_location.source.id",
+      "value": "S2898612692"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "primary_topic.field.id"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent",
+      "column_id": "is_retracted"
+     }
+    ]
+   }
+  },
+  {
+   "case": 665,
+   "label": null,
+   "shape": "trend",
+   "new": "break down works by year since 2000 and country in ([Canada](CA), [China](CN), [India](IN), [Brazil](BR), [Turkey](TR)). Show count of works and mean FWCI.",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "publication_year",
+      "value": 2000,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "authorships.countries",
+      "values": [
+       "CA",
+       "CN",
+       "IN",
+       "BR",
+       "TR"
+      ]
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "mean",
+      "column_id": "fwci"
+     }
+    ]
+   }
+  },
+  {
+   "case": 169,
+   "label": null,
+   "shape": "trend",
+   "new": "break down top 1% cited articles by year and country in ([United States](US), [China](CN))",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "citation_normalized_percentile.is_in_top_1_percent",
+      "value": true
+     },
+     {
+      "column_id": "type",
+      "value": "article"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "authorships.countries",
+      "values": [
+       "US",
+       "CN"
+      ]
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 511,
+   "label": null,
+   "shape": "trend",
+   "new": "break down works in the collection [Catalan institutions](col_cat) by year since 2015 and open access status",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "authorships.institutions.lineage",
+      "value": "col_cat",
+      "operator": "in collection"
+     },
+     {
+      "column_id": "publication_year",
+      "value": 2015,
+      "operator": ">="
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "open_access.oa_status"
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   }
+  },
+  {
+   "case": 0,
+   "label": "Jason's example",
+   "shape": "trend",
+   "new": "break down works about kelp by year and institution in the collection [My peers](col_peers)",
+   "oqo": {
+    "get_rows": "works",
+    "filter_rows": [
+     {
+      "column_id": "title_abstract_keywords.search",
+      "value": "kelp",
+      "operator": "has"
+     }
+    ],
+    "group_by": [
+     {
+      "column_id": "publication_year"
+     },
+     {
+      "column_id": "authorships.institutions.lineage",
+      "values": [
+       "col_peers"
+      ]
+     }
+    ],
+    "calculate": [
+     {
+      "measure": "count"
+     },
+     {
+      "measure": "percent_of_those"
+     }
+    ]
+   },
+   "note": "new engine work: one group per member of a collection"
+  }
+ ]
+}
