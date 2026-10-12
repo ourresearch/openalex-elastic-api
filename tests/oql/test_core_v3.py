@@ -207,7 +207,8 @@ def test_a_listed_value_is_named_like_the_plain_split():
 
 
 @pytest.mark.parametrize("args,style,want", [
-    ("", "pipeline", False), ("?oql_style=core", "pipeline", True), ("", "core", True),
+    # held (Jason 2026-10-12): never automatic, in any style; only when asked
+    ("", "pipeline", False), ("?oql_style=core", "pipeline", False), ("", "core", False),
     ("?baseline=false", "core", False), ("?baseline=true", "pipeline", True),
 ])
 def test_baseline_switch(monkeypatch, args, style, want):

@@ -131,10 +131,10 @@ def effective_style() -> str:
 
 
 def baseline_wanted() -> bool:
-    """`?baseline=true|false` decides; else the automatic baseline comes with the core
-    style (oxjob #1555, Jason 2026-10-11)."""
-    asked = _request_arg("baseline", ("true", "false"))
-    return asked == "true" if asked is not None else effective_style() == "core"
+    """Only `?baseline=true` adds the all-works baseline. Held, off for users (Jason
+    2026-10-12: "users shouldn't get a magic extra summary row with their query. They
+    should just get the thing they asked for"); an option to decide later (charter OQLO)."""
+    return _request_arg("baseline", ("true",)) == "true"
 
 
 def build_x_query(

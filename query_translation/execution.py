@@ -799,13 +799,13 @@ BASELINE_MIN_SECONDS = 3.0   # skip the baseline when less of the answer's budge
 
 
 def _add_baseline(body, oqo, index_name, connection, fields_dict, per_page, deadline):
-    """OQL core v3's automatic baseline (oxjob #1555, Jason 2026-10-11): a breakdown
+    """OQL core v3's all-works baseline (oxjob #1555, Jason 2026-10-11): a breakdown
     narrowed by one named thing also gets `baseline`, the same breakdown over all works
-    (that one filter removed, every other condition kept), as shares. With the core
-    style, or `?baseline=true` (`false` turns it off). Free: not priced, one aggregation
-    the search engine's request cache mostly answers (0.2-0.4 s measured 2026-10-12).
-    Best effort, inside the answer's own deadline: skipped when little
-    of it is left, and on any error the key is simply absent."""
+    (that one filter removed, every other condition kept), as shares. Held: only with
+    `?baseline=true` (Jason 2026-10-12: off for users until he decides). Free: not
+    priced, one aggregation the search engine's request cache mostly answers (0.1-0.75 s
+    measured 2026-10-12). Best effort, inside the answer's own deadline: skipped when
+    little of it is left, and on any error the key is simply absent."""
     from query_translation.x_query import baseline_wanted
     if not baseline_wanted():
         return
