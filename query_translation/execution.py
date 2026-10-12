@@ -765,12 +765,14 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
             oqo = replace(oqo, cursor=None)
             per_page, page = analytics.MAX_PAGE_DEPTH, 1
     from flask import g
+    # a walk's one deadline covers its lookups and this request (oxjob #1535); the
+    # baseline (oxjob #1555) shares it too, so it never stretches the answer's budget
+    deadline = getattr(g, "oql_deadline", None) or analytics.Deadline()
     try:
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
             base_query=base_query, per_page=per_page, page=page, sort=sort,
-            # a walk's one deadline covers its lookups and this request (oxjob #1535)
-            deadline=getattr(g, "oql_deadline", None))
+            deadline=deadline)
     except analytics.AnalyticsError as e:
         return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
                         "oqo": _echo_oqo(oqo).to_dict()}), e.status
@@ -783,8 +785,7 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
         body["meta"]["cost"] = cost
     if csv_export:
         return _csv_response(oqo, body, cost, paging)
-    _add_baseline(body, _echo_oqo(oqo), index_name, connection, fields_dict, search_q,
-                  filter_q, extra_qs, per_page)
+    _add_baseline(body, _echo_oqo(oqo), index_name, connection, fields_dict, per_page, deadline)
     body["meta"]["x_query"] = build_x_query(_echo_oqo(oqo), sort_operands=False)
     body["meta"]["cost_usd"] = cost["usd"]
     response = jsonify(body)
@@ -794,31 +795,32 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     return response, 200
 
 
-def _add_baseline(body, oqo, index_name, connection, fields_dict, search_q, filter_q,
-                  extra_qs, per_page):
+BASELINE_MIN_SECONDS = 3.0   # skip the baseline when less of the answer's budget is left
+
+
+def _add_baseline(body, oqo, index_name, connection, fields_dict, per_page, deadline):
     """OQL core v3's automatic baseline (oxjob #1555, Jason 2026-10-11): a breakdown
     narrowed by one named thing also gets `baseline`, the same breakdown over all works
     (that one filter removed, every other condition kept), as shares. Previewed with
-    ?oql_style=core. Best effort: it never fails or slows the main answer past its
-    deadline; on any error the key is simply absent."""
+    ?oql_style=core. Best effort, inside the answer's own deadline: skipped when little
+    of it is left, and on any error the key is simply absent."""
     from query_translation.x_query import requested_style
     if requested_style() != "core":
         return
     from query_translation import analytics
     from query_translation.oql_core import baseline_oqo
+    b = baseline_oqo(oqo)
+    if b is None:
+        return
+    if deadline.remaining() < BASELINE_MIN_SECONDS:
+        body.setdefault("meta", {})["baseline_unavailable"] = "no time left"
+        return
+    boqo, star = b
     try:
-        b = baseline_oqo(oqo)
-        if b is None:
-            return
-        boqo, star = b
-        bsearch, bfilter = oqo_to_search_and_filter_q(boqo, fields_dict, scoring=False)
-        filters = [q for q in [bsearch, bfilter] + list(extra_qs) if q is not None]
-        base_query = Q("bool", filter=filters).to_dict() if filters else {"match_all": {}}
-        from flask import g
         bbody = analytics.run(boqo, index_name=index_name, connection=connection,
-                              fields_dict=fields_dict, base_query=base_query,
-                              per_page=per_page, page=1, sort=None,
-                              deadline=getattr(g, "oql_deadline", None))
+                              fields_dict=fields_dict,
+                              base_query=_base_query_for(boqo, fields_dict, connection),
+                              per_page=per_page, page=1, sort=None, deadline=deadline)
         body["baseline"] = {"label": "all works", "without": star.to_dict(),
                             "summary": bbody.get("summary"), "group_by": bbody.get("group_by")}
     except Exception as e:  # noqa: BLE001 (best effort; the main answer stands)

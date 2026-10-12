@@ -182,18 +182,19 @@ def build_x_query(
     oql_form = None
     oql_unavailable = None
     try:
-        core_form = None
-        if requested_style() == "core":
+        style = requested_style()
+        if style == "core":
             from query_translation.oql_core import render_core
-            core_form = render_core(canonical)
-        if core_form is not None:
-            oql_form = core_form
+            oql_form = render_core(canonical)
+        if oql_form is not None:
+            pass
         elif entity_resolver is not None:
             oql_form = render_oqo_to_oql(canonical, entity_resolver=entity_resolver)
         else:
             # Executed-query path (decision 14): bare-ID canonical OQL, no resolver
             # object at all — see the docstring for why wrapping None is a bug.
-            oql_form = oql_lang.render(canonical, resolver=None, style=requested_style())
+            oql_form = oql_lang.render(canonical, resolver=None,
+                                       style=None if style == "core" else style)
     except OQLError as e:
         # No honest OQL form for this query (classic fuzzy `term~N`, oxjob #865).
         # Mirror the url leg: omit rather than echo OQL that means something

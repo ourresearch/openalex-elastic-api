@@ -412,9 +412,17 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
         # OQL core v3 (oxjob #1555), previewed per request with ?oql_style=core
         from query_translation.oql_core import render_core
         core_text = render_core(canonical_oqo, resolver)
-    if core_text is not None:
+    if core_text is not None or canonical_oqo.uses_pipeline:
+        if core_text is not None:
+            oql_output, oneline, oxurl = core_text, core_text, oxurl_output
+        else:
+            # The pipeline language (oxjob #1530): its own renderer; the builder tree
+            # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
+            # the text. Plus the free check: limits, time estimate, price.
+            oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
+            oneline, oxurl = stringify_pipeline(tree), None
         out = {
-            "oxurl": oxurl_output, "oql": core_text, "oql_oneline": core_text,
+            "oxurl": oxurl, "oql": oql_output, "oql_oneline": oneline,
             "oql_render_v2": None, "oqo": canonical_oqo.to_dict(),
             "validation": {"valid": True, "errors": [], "warnings": [
                 {"type": w.type, "message": w.message, "location": w.location}
@@ -427,25 +435,6 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
                 out["validation"]["errors"] = [
                     {"type": x["error"], "message": f'{x["message"]} {x["fix"]}'.strip(),
                      "location": None} for x in out["check"]["limits"]]
-        return out
-    if canonical_oqo.uses_pipeline:
-        # The pipeline language (oxjob #1530): its own renderer; the builder tree
-        # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
-        # the text. Plus the free check: limits, time estimate, price.
-        oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
-        out = {
-            "oxurl": None, "oql": oql_output, "oql_oneline": stringify_pipeline(tree),
-            "oql_render_v2": None, "oqo": canonical_oqo.to_dict(),
-            "validation": {"valid": True, "errors": [], "warnings": [
-                {"type": w.type, "message": w.message, "location": w.location}
-                for w in warnings if w.type != "url_not_representable"]},
-        }
-        out["check"] = _pipeline_check(canonical_oqo)
-        if not out["check"]["valid"]:
-            out["validation"]["valid"] = False
-            out["validation"]["errors"] = [
-                {"type": x["error"], "message": f'{x["message"]} {x["fix"]}'.strip(),
-                 "location": None} for x in out["check"]["limits"]]
         return out
 
     # ONE render walk (#566): oql_render v2 (oxjob #428) — OQO-faithful,

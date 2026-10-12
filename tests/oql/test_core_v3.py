@@ -105,3 +105,47 @@ def test_entry_point_reads_core(c):
 def test_entry_point_keeps_todays_meaning(old):
     from query_translation.oql_lang import parse
     assert canonicalize_oqo(parse_oql_to_oqo(old)).to_dict() == canonicalize_oqo(parse(old)).to_dict()
+
+
+# --- behaviors pinned by the /simplify review (2026-10-11) ----------------------
+
+from query_translation.oql_lang import parse as _old_parse  # noqa: E402
+from query_translation.oqo import Measure, GroupBy  # noqa: E402
+
+_R = {"I141945490": "UBC", "Q48": "Asia", "BR": "Brazil"}.get
+
+
+def _rt(text):
+    return render_core(parse_core(text), lambda v, c=None: _R(str(v)))
+
+
+@pytest.mark.parametrize("text", [
+    "get works since 2020 from [Asia](Q48)",
+    "rank authors ever at [UBC](I141945490) by count of works about kelp",
+    "rank authors in [Brazil](BR) since 2022 by count of works about kelp",
+    "get authors at [UBC](I141945490) in 2+ years since 2022 with an h-index above 50",
+])
+def test_review_round_trips(text):
+    assert _rt(text) == text
+
+
+def test_bare_at_means_what_todays_parser_means():
+    # `at [UBC]` is the last five years in today's grammar, written out on echo
+    core = parse_core("rank authors at [UBC](I141945490) by count of works about kelp")
+    old = _old_parse("get authors at [UBC](I141945490) who published works where "
+                     "title-abstract-keywords has kelp; then, summarize each author using count")
+    assert core.group_by[0].where == old.group_by[0].where
+    assert "since" in _rt("rank authors at [UBC](I141945490) by count of works about kelp")
+
+
+def test_unnamed_measure_keeps_todays_echo():
+    oqo = OQO(get_rows="works", group_by=[GroupBy(column_id="publication_year")],
+              calculate=[Measure("max", "cited_by_count")])
+    assert render_core(oqo) is None
+
+
+def test_core_sentence_error_is_cores():
+    from query_translation.oql_parser import OQLParseError
+    with pytest.raises(OQLParseError) as e:
+        parse_oql_to_oqo("rank authors by count of works about")
+    assert "ends too soon" in str(e.value)

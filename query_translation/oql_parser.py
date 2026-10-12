@@ -55,37 +55,45 @@ def parse_oql_to_oqo(oql: str) -> OQO:
         OQLParseError: If parsing fails
     """
     from query_translation.oql_core import NotCore, core_first, parse_core
+    core_error = None
     if core_first(oql):
         # OQL core v3 sentences (oxjob #1555): `rank ...`, `break down ...`, `get the ...`
         try:
             return parse_core(oql, _collection_type)
-        except NotCore:
-            pass
-        except _OQLError:
-            pass
+        except NotCore as ce:
+            core_error = ce          # reported if today's grammar can't read it either
+        except _OQLError as oe:      # a search or `where` part of a core sentence
+            raise _parse_error(oql, oe) from oe
     try:
         return _engine_parse(oql)
     except _OQLError as e:
-        # anything today's grammar refuses may be a core v3 sentence
-        # (`get [UBC]'s articles since 2020, most cited first`)
-        try:
-            return parse_core(oql, _collection_type)
-        except (NotCore, _OQLError, ValueError, IndexError, KeyError, TypeError):
-            pass
-        message = f"{e.message}  Fix: {e.fixit}" if e.fixit else e.message
-        perr = ParseError(
-            message=message,
-            position=e.position,
-            context=_error_context(oql, e.position),
-        )
-        raise OQLParseError(message, errors=[perr]) from e
+        if core_error is not None:
+            message = str(core_error)
+            raise OQLParseError(message, errors=[ParseError(message=message, position=None,
+                                                            context=None)]) from e
+        if oql.lstrip()[:4].lower() == "get ":
+            # a core `get` sentence today's grammar refuses (`get [UBC]'s articles since 2020`)
+            try:
+                return parse_core(oql, _collection_type)
+            except (NotCore, _OQLError):
+                pass
+        raise _parse_error(oql, e) from e
+
+
+def _parse_error(oql: str, e) -> "OQLParseError":
+    """The prod-facing error for the engine's OQLError (message + fix-it + position)."""
+    message = f"{e.message}  Fix: {e.fixit}" if e.fixit else e.message
+    perr = ParseError(message=message, position=e.position,
+                      context=_error_context(oql, e.position))
+    return OQLParseError(message, errors=[perr])
 
 
 def _collection_type(collection_id: str) -> Optional[str]:
-    """A collection's entity type, for `works in the collection [X]` (oxjob #1555)."""
+    """A collection's entity type, for `works in the collection [X]` (oxjob #1555): the
+    same `GET /collections/{id}` and per-request memo as its name in the echo."""
     try:
-        from core.collection_resolver import resolve_collection
-        return resolve_collection(collection_id)[0]
+        from core.collection_resolver import collection_entity_type
+        return collection_entity_type(collection_id)
     except Exception:  # noqa: BLE001 (no users-api here: read it as a works collection)
         return None
 

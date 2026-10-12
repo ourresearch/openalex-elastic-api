@@ -234,11 +234,26 @@ def collection_display_name(collection_id):
             headers=headers, timeout=NAME_TIMEOUT,
         )
         if resp.status_code == 200:
-            name = (resp.json() or {}).get("display_name") or None
+            body = resp.json() or {}
+            name = body.get("display_name") or None
+            if state is not None:
+                state.setdefault("types", {})[collection_id] = body.get("entity_type")
     except Exception as e:  # noqa: BLE001
         logger.info("collection name lookup failed for %s: %s", collection_id, e)
     names[collection_id] = name
     return name
+
+
+def collection_entity_type(collection_id):
+    """A collection's entity type (`institutions`, `works`, ...), read from the same
+    `GET /collections/{id}` reply and per-request memo as its name (oxjob #1555), or
+    None (no request context, no users-api, or no access)."""
+    state = _request_state()
+    if state is None:
+        return None
+    if collection_id not in state.get("types", {}):
+        collection_display_name(collection_id)
+    return state.get("types", {}).get(collection_id)
 
 
 def _request_state():
