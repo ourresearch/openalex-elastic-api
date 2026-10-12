@@ -540,7 +540,7 @@
    "case": 29,
    "label": null,
    "shape": "rank",
-   "new": "rank authors by count of works about \"latent dirichlet allocation\". Show sum of citations, mean FWCI and h-index.",
+   "new": "rank authors by count of works about \"latent dirichlet allocation\". Show sum of citations, mean FWCI, and h-index.",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1105,7 +1105,7 @@
    "case": 25,
    "label": null,
    "shape": "breakdown",
-   "new": "break down [University of Florida](I33213144)'s works by open access. Show count of works, mean citations, median citations and mean FWCI.",
+   "new": "break down [University of Florida](I33213144)'s works by open access. Show count of works, mean citations, median citations, and mean FWCI.",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [

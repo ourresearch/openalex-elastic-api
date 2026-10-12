@@ -151,3 +151,16 @@ def test_core_sentence_error_is_cores():
     with pytest.raises(OQLParseError) as e:
         parse_oql_to_oqo("rank authors by count of works about")
     assert "ends too soon" in str(e.value)
+
+
+@pytest.mark.parametrize("oxford,plain", [
+    ("rank authors by count of works about kelp. Show sum of citations, mean FWCI, and h-index.",
+     "rank authors by count of works about kelp. Show sum of citations, mean FWCI and h-index."),
+    ("get works co-authored by [A](A5067184382), [B](A5074743574), and [C](A5047110566)",
+     "get works co-authored by [A](A5067184382), [B](A5074743574) and [C](A5047110566)"),
+])
+def test_oxford_comma_canonical_both_read(oxford, plain):
+    # the Oxford comma in the echo (Jason 2026-10-12); the list without it reads the same
+    assert parse_core(oxford).to_dict() == parse_core(plain).to_dict()
+    assert render_core(parse_core(plain), lambda v, c=None: {"A5067184382": "A", "A5074743574": "B",
+                                                            "A5047110566": "C"}.get(str(v))) == oxford

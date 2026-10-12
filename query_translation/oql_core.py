@@ -24,7 +24,7 @@ import re
 from typing import Callable, Dict, List, Optional, Tuple
 
 from query_translation import oql_lang as L
-from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_text, link_text
+from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_text, english_list, link_text
 from query_translation.oqo import (OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter,
                                    Measure, MeasureFilter, SortBy)
 from query_translation.walks import link_for
@@ -179,12 +179,6 @@ def _short_title(link: str, limit: int = 48) -> str:
         return link
     cut = m.group(1)[:limit].rsplit(" ", 1)[0].rstrip(" ,;:")
     return f"[{cut}…]({m.group(2)})"
-
-
-def _and_list(items: List[str]) -> str:
-    if len(items) <= 1:
-        return "".join(items)
-    return ", ".join(items[:-1]) + " and " + items[-1]
 
 
 def _number(v) -> str:
@@ -369,7 +363,7 @@ class _Works:
         if len(self.authors) == 1:
             words.append(f"by {_link(self.authors[0], 'authorships.author.id', r)}")
         elif self.authors:
-            words.append("co-authored by " + _and_list(
+            words.append("co-authored by " + english_list(
                 [_link(a, "authorships.author.id", r) for a in self.authors]))
         words += self.parts.get("role", [])
         for slot in ("in", "published", "funded", "license"):
@@ -399,7 +393,7 @@ def _measure_name(m: Measure) -> str:
 
 
 def _show(measures: List[Measure]) -> str:
-    return "Show " + _and_list([_measure_name(m) for m in measures]) + "."
+    return "Show " + english_list([_measure_name(m) for m in measures]) + "."
 
 
 # ---------------------------------------------------------------------------
@@ -527,7 +521,7 @@ def _number_sentence(oqo, resolver):
         n = _measure_name(m)
         names.append("count" if n == "count of works" else n)
     join = "for" if names[-1] == "sum of APCs paid" else "of"
-    return f"get the {_and_list(names)} {join} {w.text()}"
+    return f"get the {english_list(names)} {join} {w.text()}"
 
 
 def _things_list(oqo, resolver):
@@ -887,7 +881,7 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
         if ws.at("co-authored", "by"):
             ws.take(2)
             ids = []
-            while t.link_id(ws.peek() or ""):
+            while t.link_id((ws.peek() or "").rstrip(",")):   # `A, B, and C` or `A, B and C`
                 ids.append(t.link_id(ws.take()[0].rstrip(",")))
                 if ws.at("and") or ws.at(","):
                     ws.take()
@@ -967,7 +961,8 @@ def _split_sentences(t: _Text) -> List[str]:
 
 
 def _parse_measures(t: _Text, s: str) -> List[Measure]:
-    names = [n.strip() for n in re.split(r",\s*|\s+and\s+", s) if n.strip()]
+    # `a, b, and c` (the Oxford comma, canonical) or `a, b and c`
+    names = [n.strip() for n in re.split(r",\s*(?:and\s+)?|\s+and\s+", s) if n.strip()]
     out = []
     for n in names:
         if n == "count":
