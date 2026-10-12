@@ -565,8 +565,9 @@ class OQO:
     """OpenAlex Query Object - the canonical query representation.
 
     Query/view split (#661): the PUBLIC OQO describes WHICH ROWS a query
-    matches — `get_rows`, `corpus`, `filter_rows`, `group_by`, `sample`/`seed`
-    — and nothing else. View/presentation parameters (`sort_by`, `select`,
+    matches, in what order — `get_rows`, `corpus`, `filter_rows`, `sort_by`
+    (back in the public object since v1.6, oxjob #1555), `group_by`, `calculate`,
+    `sample`/`seed` — and nothing else. View/presentation parameters (`select`,
     `per_page`/`page`/`cursor`) are NOT part of the public object (they're gone
     from docs/oqo-schema.json v1.4): they travel as SIBLING request params on
     the execute surface, classic URL syntax (`?sort=…&select=…&page=…`, or
@@ -597,10 +598,10 @@ class OQO:
     sample: Optional[int] = None
     group_by: List[GroupBy] = field(default_factory=list)
     # --- view layer (#318 "logistics"; INTERNAL since the #661 split) -----
-    # sort_by (above) + select/per_page/page/cursor (below) are view state,
-    # populated from sibling request params (or, transitionally, embedded
-    # input-dict keys). Not in the public schema; still echoed in x_query
-    # until the GUI stops rehydrating sort from it (#661 slice 2).
+    # select/per_page/page/cursor are view state, populated from sibling request
+    # params (or, transitionally, embedded input-dict keys); not in the public
+    # schema, stripped from the x_query echo. (sort_by, above, is part of the
+    # query again since v1.6: oxjob #1555, Jason 2026-10-12.)
     # `select` is a list of registry column_ids carrying the `column`
     # capability (#450), e.g. ["id", "display_name", "cited_by_count"];
     # absent ⇒ full object. Order is meaningful (display order) and preserved.

@@ -10,17 +10,21 @@ work doesn't relitigate them.
 Scope: **Stage A (filter / sample) + Stage B (group_by)**. Stage C
 (filtering on groups / HAVING) and embedding-as-query are out of scope.
 
-**Query/view split (oxjob #661, schema v1.4):** the OQO describes **which rows
-a query matches** — nothing else. View/presentation parameters — sort order,
-column projection, pagination — are *not* part of the OQO. They travel as
-**sibling request params** on the execute surface, in the classic URL syntax:
-`sort=<col>[:asc|desc][,…]`, `select=<col>,[…]`, `page`, `per_page`, `cursor` —
-query-string params on `GET /?oql=…` / `GET /?oqo=…`, or top-level sibling body
-keys on `POST /` (`{"oqo": …, "sort": "cited_by_count:desc", "per_page": 5}`).
-`sample`/`seed` stay on the OQO (a sampled corpus is a different row set).
-Transitionally the executor still accepts the pre-#661 embedded keys
-(`sort_by`/`select`/`page`/`per_page`/`cursor` inside the OQO dict), but a
-sibling always wins over an embedded value; don't build new callers on them.
+**Query/view split (oxjob #661, schema v1.4; sort rejoined the query in v1.6):** the OQO
+describes **which rows a query matches, and in what order** — nothing else. Sort is
+part of the query (Jason, 2026-10-12, oxjob #1555): OQL says it (`, most cited first`,
+`rank authors by h-index`), the website's sort control and the OQL text are two views
+of the same `sort_by`, and with a split by a thing a sort makes it a rank. View /
+presentation parameters — column projection and pagination — are *not* part of the
+OQO. They travel as **sibling request params** on the execute surface, in the classic
+URL syntax: `select=<col>,[…]`, `page`, `per_page`, `cursor` — query-string params on
+`GET /?oql=…` / `GET /?oqo=…`, or top-level sibling body keys on `POST /`
+(`{"oqo": …, "per_page": 5}`). A sibling `sort=<col>[:asc|desc][,…]` is still accepted
+and writes the order into the query (it wins over an embedded `sort_by`); the echo
+(`meta.x_query`) carries it in the OQO and the URL form. `sample`/`seed` stay on the
+OQO (a sampled corpus is a different row set). Transitionally the executor still
+accepts the embedded view keys (`select`/`page`/`per_page`/`cursor` inside the OQO
+dict), but a sibling always wins over an embedded value; don't build new callers on them.
 
 > Provenance: this spec and schema are the deliverable of oxjob **#284**. The
 > worked-examples corpus that pressure-tested it (43 real queries spanning WoS /

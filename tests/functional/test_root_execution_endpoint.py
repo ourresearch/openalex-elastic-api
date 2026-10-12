@@ -527,10 +527,11 @@ class TestClassicSortSelectHonored:
                 "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=cited_by_count:asc"
             )
         assert res.status_code == 200, res.get_json()
-        # #661: the echo sheds view keys, so honoring is observed on the ES
-        # query. ES renders an ascending sort as the bare field name (asc is
-        # its default); desc becomes {field:{order}}.
-        assert "sort_by" not in res.get_json()["meta"]["x_query"]["oqo"]
+        # the sort is part of the query (oxjob #1555): the echo carries it, and the
+        # ES query honors it. ES renders an ascending sort as the bare field name
+        # (asc is its default); desc becomes {field:{order}}.
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "cited_by_count", "direction": "asc"}]
         es_sort = captured[0].get("sort")
         assert es_sort and es_sort[0] == "cited_by_count"
 
@@ -677,10 +678,12 @@ class TestClassicSortSelectHonored:
         ]
         assert merged[0].select == ["id", "display_name"]
         assert merged[0].per_page == 7
-        # …but the echo conforms to the public spec: no view keys (#661).
+        # …but the echo conforms to the public spec: no view keys (#661); the sort is part of
+        # the query (oxjob #1555), so it stays.
         echo = res.get_json()["meta"]["x_query"]["oqo"]
-        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+        for view_key in ("select", "page", "per_page", "cursor"):
             assert view_key not in echo
+        assert echo["sort_by"]
 
 
 class TestBodyViewParams:
@@ -715,10 +718,12 @@ class TestBodyViewParams:
         assert merged[0].select == ["id", "display_name"]
         # per_page actually shaped the ES query (size = per_page).
         assert captured[0].get("size") == 7
-        # The echo conforms to the public spec: no view keys (#661).
+        # The echo conforms to the public spec: no view keys (#661); the sort is part of
+        # the query (oxjob #1555), so it stays.
         echo = res.get_json()["meta"]["x_query"]["oqo"]
-        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+        for view_key in ("select", "page", "per_page", "cursor"):
             assert view_key not in echo
+        assert echo["sort_by"]
 
     def test_body_select_accepts_json_list(self, client):
         captured = []
@@ -878,9 +883,11 @@ class TestXQueryEchoShedsViewState:
             )
         assert res.status_code == 200, res.get_json()
         x_query = res.get_json()["meta"]["x_query"]
-        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+        for view_key in ("select", "page", "per_page", "cursor"):
             assert view_key not in x_query["oqo"]
-        assert "sort=" not in (x_query["url"] or "")
+        # the sort is part of the query (oxjob #1555): echoed in the OQO and the URL
+        assert x_query["oqo"]["sort_by"] == [{"column_id": "cited_by_count", "direction": "desc"}]
+        assert "sort=cited_by_count:desc" in (x_query["url"] or "")
         assert "select=" not in (x_query["url"] or "")
 
     def test_post_embedded_view_keys_echo_is_pure(self, client):
@@ -900,9 +907,11 @@ class TestXQueryEchoShedsViewState:
             )
         assert res.status_code == 200, res.get_json()
         x_query = res.get_json()["meta"]["x_query"]
-        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+        for view_key in ("select", "page", "per_page", "cursor"):
             assert view_key not in x_query["oqo"]
-        assert "sort=" not in (x_query["url"] or "")
+        # the sort is part of the query (oxjob #1555): echoed in the OQO and the URL
+        assert x_query["oqo"]["sort_by"] == [{"column_id": "cited_by_count", "direction": "desc"}]
+        assert "sort=cited_by_count:desc" in (x_query["url"] or "")
         assert "select=" not in (x_query["url"] or "")
 
     def test_unknown_select_column_is_structured_400(self, client):

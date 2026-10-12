@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openalex.org/schemas/oqo/v1.5",
+  "$id": "https://openalex.org/schemas/oqo/v1.6",
   "name": "OpenAlex_Query_Object",
-  "description": "The canonical JSON representation for OpenAlex queries. OQO is the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access. GENERATED from query_translation/oqo.py by query_translation/regen_schema.py — do not hand-edit. Entity values are BARE (the namespace is the column_id, resolved via the column registry): 'I136199984', 'de', 'article', '13' — never 'institutions/I136199984'. Negation is the per-node 'is_negated' polarity bit; the canonical form is NNF (negation on leaves only). JSON is the normative serialization; YAML is display-only and MUST round-trip to identical JSON (quote every string value on emit). The OQO describes WHICH ROWS a query matches — nothing else (#661 query/view split, v1.4). View/presentation parameters (sort, column projection, pagination) are NOT part of the OQO; they travel as sibling request parameters on the execute surface, in the classic URL syntax: `sort=<col>[:asc|desc][,…]`, `select=<col>,[…]`, `page`, `per_page`, `cursor` — as query-string params on `GET /?oqo=…` / `GET /?oql=…`, or as sibling top-level body keys on `POST / {\"oqo\": …, \"sort\": …}`.",
+  "description": "The canonical JSON representation for OpenAlex queries. OQO is the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access. GENERATED from query_translation/oqo.py by query_translation/regen_schema.py — do not hand-edit. Entity values are BARE (the namespace is the column_id, resolved via the column registry): 'I136199984', 'de', 'article', '13' — never 'institutions/I136199984'. Negation is the per-node 'is_negated' polarity bit; the canonical form is NNF (negation on leaves only). JSON is the normative serialization; YAML is display-only and MUST round-trip to identical JSON (quote every string value on emit). The OQO describes WHICH ROWS a query matches and IN WHAT ORDER (`sort_by` is part of the query since v1.6, oxjob #1555; the #661 query/view split, v1.4, had made it view state). View/presentation parameters (column projection, pagination) are NOT part of the OQO; they travel as sibling request parameters on the execute surface, in the classic URL syntax: `select=<col>,[…]`, `page`, `per_page`, `cursor` — as query-string params on `GET /?oqo=…` / `GET /?oql=…`, or as sibling top-level body keys on `POST / {\"oqo\": …}`. A sibling `sort=<col>[:asc|desc][,…]` is still accepted and writes the order into the query.",
   "type": "object",
   "required": [
     "get_rows"
@@ -28,6 +28,14 @@
       "description": "Filters applied to the retrieved rows. Top-level items are implicitly AND-joined.",
       "items": {
         "$ref": "#/$defs/Filter"
+      },
+      "default": []
+    },
+    "sort_by": {
+      "type": "array",
+      "description": "The order, primary key first (oxjob #1555, v1.6): a list's order phrase (`most cited first`) or a rank's measure (`rank authors by h-index`). Absent ⇒ the entity's default order. With a split by a thing, a sort makes it a rank; without one, a breakdown.",
+      "items": {
+        "$ref": "#/$defs/SortBy"
       },
       "default": []
     },
@@ -379,6 +387,36 @@
         },
         "column_id": {
           "type": "string"
+        }
+      }
+    },
+    "SortBy": {
+      "type": "object",
+      "description": "One sort key: a column (or `relevance_score`; with a split, `count`, `key` or a measure's key such as `mean_fwci`) and a direction. `aggregate` orders groups by a metric of a number column.",
+      "required": [
+        "column_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "column_id": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "asc"
+        },
+        "aggregate": {
+          "type": "string",
+          "enum": [
+            "mean",
+            "sum",
+            "min",
+            "max"
+          ]
         }
       }
     },
