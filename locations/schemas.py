@@ -40,6 +40,7 @@ class LocationsSchema(Schema):
     native_id = fields.Str()
     native_id_namespace = fields.Str()
     provenance = fields.Str(default=None)
+    doi = fields.Str(default=None)
     endpoint_id = fields.Str(default=None)
     title = fields.Str()
     type = fields.Str()

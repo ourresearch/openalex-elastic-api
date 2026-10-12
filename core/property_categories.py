@@ -264,6 +264,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "locations": {
         "work_id": "other",
+        "doi": "other",
         "landing_page_url": "other",
         "pdf_url": "other",
         "native_id": "other",

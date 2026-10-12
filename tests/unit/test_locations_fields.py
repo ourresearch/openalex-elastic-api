@@ -82,3 +82,24 @@ def test_locations_title_search_targets_analyzed_title():
     q = str(f.build_query().to_dict())
     assert "title.text" in q, q
     assert "function_score" not in q, q
+
+
+def test_locations_doi_accepts_short_url_and_mixed_case():
+    """oxjob #1651: locations-v3 stores `doi` in the https://doi.org/ form; filter on `doi.lower`."""
+    f = locations_fields["doi"]
+    for given in ("10.2307/30035900", "https://doi.org/10.2307/30035900", "10.2307/30035900".upper()):
+        f.value = given
+        q = f.build_query().to_dict()
+        terms = [t["term"]["doi.lower"] for t in q["bool"]["should"]]
+        assert "https://doi.org/10.2307/30035900" in terms, (given, q)
+        assert "locations.doi.lower" not in str(q), q
+
+
+def test_locations_doi_negation_and_or_list():
+    f = locations_fields["doi"]
+    f.value = "!10.2307/30035900"
+    q = f.build_query().to_dict()
+    assert "must_not" in str(q) and "https://doi.org/10.2307/30035900" in str(q), q
+    q = str(f.build_terms_query(["10.2307/30035900", "https://doi.org/10.1/ABC"]).to_dict())
+    assert "https://doi.org/10.2307/30035900" in q and "https://doi.org/10.1/abc" in q, q
+    assert "locations.doi.lower" not in q, q

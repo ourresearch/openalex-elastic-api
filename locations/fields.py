@@ -38,6 +38,8 @@ fields = [
         index="locations",
     ),
     TermField(param="id", custom_es_field="id"),
+    # Crossref/DataCite locations only, https://doi.org/ form (oxjob #1651); accepts short, URL and mixed-case input.
+    TermField(param="doi", custom_es_field="doi.lower", docstring="The DOI of this location's Crossref or DataCite record"),
     TermField(param="native_id", custom_es_field="native_id"),
     TermField(param="native_id_namespace", custom_es_field="native_id_namespace"),
     TermField(param='provenance', custom_es_field='provenance'),

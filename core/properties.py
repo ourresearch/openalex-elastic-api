@@ -393,7 +393,7 @@ CAP_COLUMN = "column"
 # (Jason, 07:05 CT: "volume number just drops support completely"): no OQL word, no GUI facet, not documented; it
 # stays in the work record and the REST filter is unlisted (#498), still executing for legacy callers. A property
 # removed = MAJOR per classify_properties_diff.py.
-PROPERTIES_VERSION = "17.0.0"
+PROPERTIES_VERSION = "17.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

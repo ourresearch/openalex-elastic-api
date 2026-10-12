@@ -228,6 +228,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'display_name': {"display_name": 'name'},
     },
     'locations': {
+        'doi': {"display_name": 'DOI'},
         'id': {"display_name": 'location ID'},
         'is_oa': {"display_name": 'is open access'},
         'landing_page_url': {"display_name": 'landing page URL'},

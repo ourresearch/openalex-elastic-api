@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "a2aa32d93693d7a88e19439442474a931ad7f1abd221871716131894593a280a",
-    "property_count": 905,
-    "version": "17.0.0"
+    "fingerprint": "128ab8e812c48eb5567f7fb4a9bd8a48adca2f20c1324214cd434a366e220b05",
+    "property_count": 906,
+    "version": "17.1.0"
   },
   "properties": {
     "authors": {
@@ -8363,6 +8363,29 @@
         ],
         "supported_by": [],
         "type": "collection"
+      },
+      "doi": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "DOI",
+        "entity_type": null,
+        "name": "doi",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
       },
       "endpoint_id": {
         "actions": [
