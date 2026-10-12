@@ -175,3 +175,59 @@ def test_any_topic_never_reads_as_the_primary_topic(col):
     text = render_core(oqo, lambda v, c=None: "X")
     assert " in the " not in text
     assert parse_core(text).filter_rows[0].column_id == col
+
+
+# --- the baseline over the page's groups, its switch, and the flip by config (2026-10-12) ---
+
+def test_baseline_lists_the_groups_on_the_page():
+    from query_translation.execution import _baseline_on_page_groups
+    boqo = OQO(get_rows="works", group_by=[GroupBy(column_id="authorships.countries"),
+                                          GroupBy(column_id="open_access.is_oa")])
+    page = [{"key": "https://openalex.org/countries/CA",
+             "groups": [{"key": "true"}, {"key": "false"}]},
+            {"key": "https://openalex.org/countries/US", "groups": [{"key": "true"}]}]
+    out = _baseline_on_page_groups(boqo, page)
+    assert out.group_by[0].values == ["CA", "US"]
+    assert out.group_by[1].values == ["true", "false"]
+
+
+def test_baseline_leaves_a_level_open_when_a_group_cant_be_named_again():
+    from query_translation.execution import _baseline_on_page_groups
+    boqo = OQO(get_rows="works", group_by=[GroupBy(column_id="sustainable_development_goals.id")])
+    out = _baseline_on_page_groups(boqo, [{"key": "https://openalex.org/sdgs/3"}, {"key": "unknown"}])
+    assert out.group_by[0].values is None
+
+
+def test_a_listed_value_is_named_like_the_plain_split():
+    # `13` from a listed split reads `https://openalex.org/fields/13`, as a split by field writes it
+    from query_translation.analytics import Level, _row_key
+    lv = Level(0, GroupBy(column_id="primary_topic.field.id"), "filters",
+               column_id="primary_topic.field.id", group_entity="fields")
+    assert _row_key("13", lv, "works") == _row_key(13, lv, "works") == "https://openalex.org/fields/13"
+
+
+@pytest.mark.parametrize("args,style,want", [
+    ("", "pipeline", False), ("?oql_style=core", "pipeline", True), ("", "core", True),
+    ("?baseline=false", "core", False), ("?baseline=true", "pipeline", True),
+])
+def test_baseline_switch(monkeypatch, args, style, want):
+    from flask import Flask
+    from query_translation import oql_lang
+    from query_translation.x_query import baseline_wanted
+    monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", style)
+    with Flask(__name__).test_request_context("/" + args):
+        assert baseline_wanted() is want
+
+
+def test_the_core_flip_is_a_config_change(monkeypatch):
+    # OQL_CANONICAL_STYLE=core: the echo is core where core can say it, else today's pipeline text
+    from flask import Flask
+    from query_translation import oql_lang
+    from query_translation.x_query import build_x_query
+    monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "core")
+    core = parse_core("break down works about kelp by year")
+    piped = OQO(get_rows="works", group_by=[GroupBy(column_id="publication_year")],
+                calculate=[Measure("max", "cited_by_count")])     # no core name for max
+    with Flask(__name__).test_request_context("/"):
+        assert build_x_query(core, sort_operands=False)["oql"] == "break down works about kelp by year"
+        assert build_x_query(piped, sort_operands=False)["oql"].startswith("get works;\nthen, group")

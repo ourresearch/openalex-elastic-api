@@ -118,6 +118,25 @@ def requested_style() -> Optional[str]:
     return None
 
 
+def effective_style() -> str:
+    """The echo style for this request: `?oql_style=` when given, else the configured
+    CANONICAL_STYLE (so the core flip is one config change, oxjob #1555)."""
+    from query_translation import oql_lang
+    return requested_style() or oql_lang.CANONICAL_STYLE
+
+
+def baseline_wanted() -> bool:
+    """`?baseline=true|false` decides; else the automatic baseline comes with the core
+    style (oxjob #1555, Jason 2026-10-11)."""
+    try:
+        from flask import has_request_context, request
+        if has_request_context() and request.args.get("baseline") in ("true", "false"):
+            return request.args.get("baseline") == "true"
+    except Exception:
+        pass
+    return effective_style() == "core"
+
+
 def build_x_query(
     oqo: OQO,
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
@@ -182,7 +201,7 @@ def build_x_query(
     oql_form = None
     oql_unavailable = None
     try:
-        style = requested_style()
+        style = effective_style()
         if style == "core":
             from query_translation.oql_core import render_core
             oql_form = render_core(canonical)

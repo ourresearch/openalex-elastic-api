@@ -7234,8 +7234,9 @@ CANONICAL_STYLE = _os.environ.get("OQL_CANONICAL_STYLE", "classic")
 
 
 def _pipeline_style(oqo: OQO, style: Optional[str]) -> bool:
+    # core (oxjob #1555) falls back to the pipeline text for what it can't say
     style = style or CANONICAL_STYLE
-    return style == "pipeline" or oqo.uses_pipeline
+    return style in ("pipeline", "core") or oqo.uses_pipeline
 
 
 def render_tree(oqo: OQO, resolver=None, style: Optional[str] = None):

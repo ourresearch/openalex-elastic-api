@@ -403,9 +403,8 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     resolver = make_engine_resolver(safe_get_display_name,
                                     entity=canonical_oqo.get_rows)
 
-    from query_translation import oql_lang as _oql_lang
-    from query_translation.x_query import requested_style
-    style = requested_style() or _oql_lang.CANONICAL_STYLE
+    from query_translation.x_query import effective_style
+    style = effective_style()
     from query_translation.oql_pipeline import render_pipeline_tree, stringify_pipeline
     core_text = None
     if style == "core":
@@ -450,8 +449,8 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
         warnings.append(ValidationError(
             type="oql_not_representable", message=e.message
         ))
-    if style == "pipeline" and oql_output is not None:
-        # A plain query in the pipeline style: only the text changes. It keeps its
+    if style in ("pipeline", "core") and oql_output is not None:
+        # A plain query in the pipeline style (or core's fallback): only the text changes. It keeps its
         # URL, the builder tree (which is about the where-clause, not the text
         # style) and today's executor, so no pipeline check.
         try:

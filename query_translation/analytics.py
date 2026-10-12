@@ -398,6 +398,18 @@ def _value_key(column_id: str, v) -> str:
     return str(v)
 
 
+def _row_key(k, lv: "Level", index_name: str) -> str:
+    """A group row's key, the same whether the split came from the terms or from listed
+    values (`13` -> `https://openalex.org/fields/13`, as a plain split by field writes it)."""
+    from core.group_by.results import format_key
+    key = format_key(k, lv.column_id, index_name) if isinstance(k, str) else str(k)
+    if (isinstance(k, (int, float)) or (isinstance(k, str) and k.isdigit())) \
+            and "openalex.org" not in key and lv.column_id \
+            and lv.column_id.endswith(".id") and lv.group_entity:
+        key = f"{ID_PREFIX}{lv.group_entity}/{k}"
+    return key
+
+
 def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> Level:
     import copy
     from core.utils import get_field
@@ -1204,17 +1216,14 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 if lv.composite and ((lv.include is not None and k not in lv.include)
                                      or (lv.exclude and k in lv.exclude)):
                     continue   # composite has no include/exclude
-                key = format_key(k, lv.column_id, index_name) if isinstance(k, str) else str(k)
-                if isinstance(k, (int, float)) and "openalex.org" not in str(k) and lv.column_id \
-                        and lv.column_id.endswith(".id") and lv.group_entity:
-                    key = f"{ID_PREFIX}{lv.group_entity}/{k}"
+                key = _row_key(k, lv, index_name)
                 label, raw = None, k
             elif lv.kind == "filters":
                 key, label = lv.labels[k]
                 raw = None
                 if label is None:
                     raw = key
-                    key = format_key(raw, lv.column_id, index_name)
+                    key = _row_key(raw, lv, index_name)
                 if lv.post_keep is not None and key not in lv.post_keep:
                     continue
                 if lv.include is not None and key not in lv.include:

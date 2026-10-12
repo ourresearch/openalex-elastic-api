@@ -801,11 +801,13 @@ BASELINE_MIN_SECONDS = 3.0   # skip the baseline when less of the answer's budge
 def _add_baseline(body, oqo, index_name, connection, fields_dict, per_page, deadline):
     """OQL core v3's automatic baseline (oxjob #1555, Jason 2026-10-11): a breakdown
     narrowed by one named thing also gets `baseline`, the same breakdown over all works
-    (that one filter removed, every other condition kept), as shares. Previewed with
-    ?oql_style=core. Best effort, inside the answer's own deadline: skipped when little
+    (that one filter removed, every other condition kept), as shares. With the core
+    style, or `?baseline=true` (`false` turns it off). Free: not priced, one aggregation
+    the search engine's request cache mostly answers (0.2-0.4 s measured 2026-10-12).
+    Best effort, inside the answer's own deadline: skipped when little
     of it is left, and on any error the key is simply absent."""
-    from query_translation.x_query import requested_style
-    if requested_style() != "core":
+    from query_translation.x_query import baseline_wanted
+    if not baseline_wanted():
         return
     from query_translation import analytics
     from query_translation.oql_core import baseline_oqo
@@ -816,6 +818,7 @@ def _add_baseline(body, oqo, index_name, connection, fields_dict, per_page, dead
         body.setdefault("meta", {})["baseline_unavailable"] = "no time left"
         return
     boqo, star = b
+    boqo = _baseline_on_page_groups(boqo, body.get("group_by") or [])
     try:
         bbody = analytics.run(boqo, index_name=index_name, connection=connection,
                               fields_dict=fields_dict,
@@ -825,6 +828,32 @@ def _add_baseline(body, oqo, index_name, connection, fields_dict, per_page, dead
                             "summary": bbody.get("summary"), "group_by": bbody.get("group_by")}
     except Exception as e:  # noqa: BLE001 (best effort; the main answer stands)
         body.setdefault("meta", {})["baseline_unavailable"] = type(e).__name__
+
+
+BASELINE_MAX_VALUES = 100    # analytics' cap on a split by listed values
+
+
+def _baseline_on_page_groups(boqo, groups):
+    """The baseline split by the groups the answer shows, level by level, so every row
+    on the page has its all-works share beside it (the baseline's own top groups can
+    miss most of them: kelp in Nature by year, 22 of 25 years). A level with a group
+    the parser can't name again (no key, `unknown`) or more than the cap stays open."""
+    from dataclasses import replace
+    levels, frontier = [], groups
+    for _ in boqo.group_by:
+        keys = [g.get("key") for g in frontier]
+        levels.append(keys)
+        frontier = [c for g in frontier for c in (g.get("groups") or [])]
+    group_by = []
+    for g, keys in zip(boqo.group_by, levels):
+        # a page key is a full URL for entities (`https://openalex.org/countries/CA`): list the short ID
+        keys = list(dict.fromkeys(k.rsplit("/", 1)[-1] if isinstance(k, str) and k.startswith("https://")
+                                  else k for k in keys))
+        if keys and len(keys) <= BASELINE_MAX_VALUES and g.values is None \
+                and all(isinstance(k, str) and k and k != "unknown" for k in keys):
+            g = replace(g, values=keys)
+        group_by.append(g)
+    return replace(boqo, group_by=group_by)
 
 
 def _credit_refusal(cost: dict, narrow: str):
