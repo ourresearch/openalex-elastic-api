@@ -1203,7 +1203,6 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                   total_count: int, index_name: str) -> Tuple[List[dict], Dict[int, List[dict]]]:
     """Rows for every level, unnamed (`name_rows` names the ones that are returned),
     and each inner split's groups on their own over the whole set (for the summary)."""
-    from core.group_by.results import format_key
 
     def rows(level_i: int, agg: dict, parent_count: int) -> List[dict]:
         lv = levels[level_i]

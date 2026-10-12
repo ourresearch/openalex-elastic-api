@@ -405,8 +405,8 @@ def _thing_parts(where, noun: str, resolver=None) -> Tuple[str, List[str], List,
     left: List = []
     count = None
     for f in (_and_items(where) if where is not None else []):
-        if isinstance(f, AffiliationFilter) and not f.is_negated:
-            parts.append(_affiliation_text(f, resolver))
+        if (text := _record_text(f, resolver)) is not None:
+            parts.append(text)
         elif isinstance(f, MeasureFilter) and f.measure == "count" and not f.is_negated \
                 and f.operator in COMPARATOR_WORDS:
             count = f
@@ -417,8 +417,6 @@ def _thing_parts(where, noun: str, resolver=None) -> Tuple[str, List[str], List,
             parts.append(f"in {_link(f.value, 'authorships.countries', resolver)}")
         elif _is_own_threshold(f):
             parts.append(_own_threshold_text(f))
-        elif _ever_text(f, resolver):
-            parts.append(_ever_text(f, resolver))
         else:
             left.append(f)
     return noun, parts, left, count
@@ -440,29 +438,24 @@ def _own_threshold_text(f: LeafFilter) -> str:
     return f"with {OWN_FIELDS[f.column_id][0]} {ABOVE_WORDS[f.operator]} {_number(f.value)}"
 
 
-def _ever_text(f, resolver=None) -> Optional[str]:
-    """`at [UBC]` / `in [Brazil]` with no years: any year in the record (Jason 2026-10-12);
-    today's parser keeps it as a plain leaf on the record's column."""
-    if isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
-            and f.column_id in L._AT_EVER.values():
-        country = f.column_id.endswith("country_code")
-        link = _link(f.value, "authorships.countries" if country else
-                     "authorships.institutions.lineage", resolver)
-        return f"{'in' if country else 'at'} {link}"
-    return None
-
-
-def _affiliation_text(f: AffiliationFilter, resolver=None) -> str:
+def _record_text(f, resolver=None) -> Optional[str]:
+    """An author's record as words, or None: `at [UBC](I141945490) in 2+ years since 2022`,
+    as today's parser reads it. No years is any year, plain `at` / `in` (Jason 2026-10-12);
+    today's parser keeps that as a plain leaf on the record's column."""
+    if f.is_negated:
+        return None
+    if isinstance(f, AffiliationFilter):
+        since, through, min_years = f.since, f.through, f.min_years
+    elif isinstance(f, LeafFilter) and f.operator == "is" and f.column_id in L._AT_EVER.values():
+        since = through = min_years = None
+    else:
+        return None
     country = f.column_id.endswith("country_code")
     link = _link(f.value, "authorships.countries" if country else "authorships.institutions.lineage",
                  resolver)
-    head = f"in {link}" if country else f"at {link}"
-    if f.since is None and f.through is None:
-        years = ""
-    else:
-        years = " " + _years_text({k: v for k, v in ((">=", f.since), ("<=", f.through)) if v is not None})
-    extra = f" in {f.min_years}+ years" if f.min_years else ""
-    return head + extra + years      # `at [UBC] in 2+ years since 2022`, as today's parser reads it
+    years = {k: v for k, v in ((">=", since), ("<=", through)) if v is not None}
+    return (f"in {link}" if country else f"at {link}") \
+        + (f" in {min_years}+ years" if min_years else "") + (" " + _years_text(years) if years else "")
 
 
 # ---------------------------------------------------------------------------
@@ -533,10 +526,8 @@ def _things_list(oqo, resolver):
         if isinstance(f, LeafFilter) and f.column_id == "type" and not f.is_negated \
                 and (noun, f.value) in THING_TYPE_NOUNS and noun == oqo.get_rows:
             noun = THING_TYPE_NOUNS[(noun, f.value)]
-        elif isinstance(f, AffiliationFilter) and not f.is_negated:
-            parts.append(_affiliation_text(f, resolver))
-        elif _ever_text(f, resolver):
-            parts.append(_ever_text(f, resolver))
+        elif (text := _record_text(f, resolver)) is not None:
+            parts.append(text)
         elif isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
                 and f.column_id in THING_IN_KEYS:
             parts.append(f"in {THING_IN_KEYS[f.column_id]} {_link(f.value, f.column_id, resolver)}")
@@ -709,7 +700,8 @@ class _Words:
 
     def __init__(self, t: _Text, s: str):
         self.t = t
-        self.w = s.split()
+        # a list's comma is its own word (`[A], [B], and [C]`); `1,000` stays whole
+        self.w = re.sub(r",(?!\d)", " , ", s).split()
         self.i = 0
 
     def peek(self, n=0) -> Optional[str]:
@@ -881,9 +873,11 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
         if ws.at("co-authored", "by"):
             ws.take(2)
             ids = []
-            while t.link_id((ws.peek() or "").rstrip(",")):   # `A, B, and C` or `A, B and C`
-                ids.append(t.link_id(ws.take()[0].rstrip(",")))
-                if ws.at("and") or ws.at(","):
+            while t.link_id(ws.peek() or ""):   # `A, B, and C` or `A, B and C`
+                ids.append(t.link_id(ws.take()[0]))
+                if ws.at(","):
+                    ws.take()
+                if ws.at("and"):
                     ws.take()
             rows += [LeafFilter("authorships.author.id", i) for i in ids]
             continue

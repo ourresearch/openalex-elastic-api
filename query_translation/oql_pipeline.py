@@ -804,11 +804,11 @@ ANY_WORKS = ""
 
 _COUNT_WORDS = {">": "more than", ">=": "at least", "<": "fewer than", "<=": "at most"}
 _PLACE_COLUMNS = {
-    # author's record: (word, when)
-    # `at [X] now` reads as the field it is, `last known institution is [X]`: our guess
-    # from the same record, not foregrounded (Jason 2026-10-09 18:27 CT)
-    "affiliations.institution.lineage": ("at", "ever"),
-    "affiliations.institution.country_code": ("in", "ever"),
+    # author's record, any year: its word (`at [X] now` reads as the field it is, `last
+    # known institution is [X]`: our guess from the same record, not foregrounded, Jason
+    # 2026-10-09 18:27 CT)
+    "affiliations.institution.lineage": "at",
+    "affiliations.institution.country_code": "in",
 }
 _OWN_PLACE_COLUMNS = {"country_code", "continent", "country_codes"}
 
@@ -901,26 +901,20 @@ def _years_text(since, through) -> str:
 def _place_text(leaves: List, resolver=None) -> str:
     x = leaves[0]
     col = x.column_id
+    record = isinstance(x, AffiliationFilter) or col in _PLACE_COLUMNS
     if isinstance(x, AffiliationFilter):
         word, when = ("in" if col.endswith("country_code") else "at"), _years_text(x.since, x.through)
-    elif col in _PLACE_COLUMNS:
-        word, when = _PLACE_COLUMNS[col]
     else:
-        word, when = "in", ""
+        word, when = _PLACE_COLUMNS.get(col, "in"), ""
     ns = ("countries" if "country" in col else "continents" if col == "continent"
           else "institutions")
     vals = [link_text(v.value, ns, resolver, in_list=len(leaves) > 1) for v in leaves]
     vals_text = vals[0] if len(vals) == 1 else "(" + " or ".join(vals) + ")"
-    neg = x.is_negated
-    if isinstance(x, AffiliationFilter):
-        # `at [UBC] in 2+ years since 2022`; no years at all is any year: `at` (`never at`)
-        lead = ("not " if neg else "") if when else ("never " if neg else "")
-        mid = f" in {x.min_years}+ years" if x.min_years else ""
-        return f"{lead}{word} {vals_text}{mid}" + (f" {when}" if when else "")
-    if when == "ever":
-        # bare `at [UBC]` is any year (Jason 2026-10-12); `never at` says the negation plainly
-        return f"{'never ' if neg else ''}{word} {vals_text}"
-    return f"{'not ' if neg else ''}{word} {vals_text}" + (f" {when}" if when else "")
+    # `at [UBC] in 2+ years since 2022`; a record with no years is any year, plain `at`
+    # (Jason 2026-10-12), and its negation says it plainly: `never at`
+    lead = ("never " if record and not when else "not ") if x.is_negated else ""
+    mid = f" in {x.min_years}+ years" if getattr(x, "min_years", None) else ""
+    return f"{lead}{word} {vals_text}{mid}" + (f" {when}" if when else "")
 
 
 def _thing_head(where, thing: str, resolver=None, column: Optional[str] = None) -> str:

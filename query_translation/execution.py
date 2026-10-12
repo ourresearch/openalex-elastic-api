@@ -830,28 +830,26 @@ def _add_baseline(body, oqo, index_name, connection, fields_dict, per_page, dead
         body.setdefault("meta", {})["baseline_unavailable"] = type(e).__name__
 
 
-BASELINE_MAX_VALUES = 100    # analytics' cap on a split by listed values
-
-
 def _baseline_on_page_groups(boqo, groups):
     """The baseline split by the groups the answer shows, level by level, so every row
     on the page has its all-works share beside it (the baseline's own top groups can
     miss most of them: kelp in Nature by year, 22 of 25 years). A level with a group
-    the parser can't name again (no key, `unknown`) or more than the cap stays open."""
+    the parser can't name again (no key, `unknown`) or more than a list holds stays open.
+    Keys go sorted, so the same groups make the same request (the search engine's cache).
+    shortcut: listed values run as a `filters` aggregation, which costs more per document
+    than `terms` when nested (all works by year x 25 countries: +0.4-0.75 s cold, measured
+    2026-10-12); a `terms` split with `include` is the upgrade if that grows."""
     from dataclasses import replace
-    levels, frontier = [], groups
-    for _ in boqo.group_by:
-        keys = [g.get("key") for g in frontier]
-        levels.append(keys)
-        frontier = [c for g in frontier for c in (g.get("groups") or [])]
-    group_by = []
-    for g, keys in zip(boqo.group_by, levels):
-        # a page key is a full URL for entities (`https://openalex.org/countries/CA`): list the short ID
-        keys = list(dict.fromkeys(k.rsplit("/", 1)[-1] if isinstance(k, str) and k.startswith("https://")
-                                  else k for k in keys))
-        if keys and len(keys) <= BASELINE_MAX_VALUES and g.values is None \
-                and all(isinstance(k, str) and k and k != "unknown" for k in keys):
-            g = replace(g, values=keys)
+    from query_translation.oql_lang import MAX_LIST_ITEMS
+    from query_translation.oqo_canonicalizer import _short_entity_id
+    group_by, frontier = [], groups
+    for g in boqo.group_by:
+        keys = [r.get("key") for r in frontier]
+        frontier = [c for r in frontier for c in (r.get("groups") or [])]
+        if g.values is None and keys and all(isinstance(k, str) and k and k != "unknown" for k in keys):
+            keys = sorted({_short_entity_id(k, g.column_id) for k in keys})
+            if len(keys) <= MAX_LIST_ITEMS:
+                g = replace(g, values=keys)
         group_by.append(g)
     return replace(boqo, group_by=group_by)
 

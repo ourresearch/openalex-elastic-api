@@ -188,7 +188,7 @@ def test_baseline_lists_the_groups_on_the_page():
             {"key": "https://openalex.org/countries/US", "groups": [{"key": "true"}]}]
     out = _baseline_on_page_groups(boqo, page)
     assert out.group_by[0].values == ["CA", "US"]
-    assert out.group_by[1].values == ["true", "false"]
+    assert out.group_by[1].values == ["false", "true"]     # sorted: same groups, same request
 
 
 def test_baseline_leaves_a_level_open_when_a_group_cant_be_named_again():

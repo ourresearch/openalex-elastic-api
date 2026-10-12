@@ -104,18 +104,23 @@ def _components_to_oxurl(entity_type: str, components: dict) -> str:
     return base + ("?" + "&".join(pairs) if pairs else "")
 
 
+def _request_arg(name: str, allowed) -> Optional[str]:
+    """`?name=` when it's one of `allowed`, else None (also outside a request)."""
+    try:
+        from flask import has_request_context, request
+        if has_request_context() and request.args.get(name) in allowed:
+            return request.args.get(name)
+    except Exception:
+        pass
+    return None
+
+
 def requested_style() -> Optional[str]:
     """`?oql_style=pipeline` previews the launch's echo on one request, so the website
     and the MCP server can test against it before the flip (oxjob #1530);
     `?oql_style=core` previews OQL core v3 (oxjob #1555, 2026-10-11) the same way. None
     otherwise (the configured CANONICAL_STYLE applies)."""
-    try:
-        from flask import has_request_context, request
-        if has_request_context() and request.args.get("oql_style") in ("pipeline", "classic", "core"):
-            return request.args.get("oql_style")
-    except Exception:
-        pass
-    return None
+    return _request_arg("oql_style", ("pipeline", "classic", "core"))
 
 
 def effective_style() -> str:
@@ -128,13 +133,8 @@ def effective_style() -> str:
 def baseline_wanted() -> bool:
     """`?baseline=true|false` decides; else the automatic baseline comes with the core
     style (oxjob #1555, Jason 2026-10-11)."""
-    try:
-        from flask import has_request_context, request
-        if has_request_context() and request.args.get("baseline") in ("true", "false"):
-            return request.args.get("baseline") == "true"
-    except Exception:
-        pass
-    return effective_style() == "core"
+    asked = _request_arg("baseline", ("true", "false"))
+    return asked == "true" if asked is not None else effective_style() == "core"
 
 
 def build_x_query(
@@ -212,8 +212,8 @@ def build_x_query(
         else:
             # Executed-query path (decision 14): bare-ID canonical OQL, no resolver
             # object at all — see the docstring for why wrapping None is a bug.
-            oql_form = oql_lang.render(canonical, resolver=None,
-                                       style=None if style == "core" else style)
+            # core's fallback is the pipeline text (oql_lang._pipeline_style)
+            oql_form = oql_lang.render(canonical, resolver=None, style=style)
     except OQLError as e:
         # No honest OQL form for this query (classic fuzzy `term~N`, oxjob #865).
         # Mirror the url leg: omit rather than echo OQL that means something
