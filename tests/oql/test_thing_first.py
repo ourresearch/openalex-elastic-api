@@ -14,12 +14,11 @@ import pytest
 from query_translation.diagnostics import OQLError
 from query_translation.oql_lang import parse
 from query_translation.oql_pipeline import render_pipeline_line
-from query_translation.oqo import AffiliationFilter, MeasureFilter, OQO
+from query_translation.oqo import AffiliationFilter, LeafFilter, MeasureFilter, OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.validator import validate_oqo
 
 UBC = "[University of British Columbia](I141945490)"
-DEFAULT_SINCE = datetime.date.today().year - 4     # the last five years
 
 
 def _echo(q):
@@ -42,8 +41,9 @@ ECHOES = [
      # `now` is our guess from the record: it reads as the field it is (Jason 2026-10-09)
      "get authors where last known institution is (I141945490) who published works where "
      "title-abstract has (kelp); then, summarize each author using count and h-index"),
+    # bare `at` is any year (Jason 2026-10-12); `ever at` stays accepted
     (f"get authors ever at {UBC} who published works where title-abstract has kelp",
-     "get authors ever at (I141945490) who published works where title-abstract has (kelp)"),
+     "get authors at (I141945490) who published works where title-abstract has (kelp)"),
     (f"get authors at ({UBC} or [University of Victoria](I212119943)) from 2020 through 2024 "
      "who published works where title-abstract has kelp",
      "get authors at (I141945490 or I212119943) from 2020 through 2024 who published works "
@@ -113,9 +113,14 @@ def test_the_thing_first_oqo_is_a_split_with_the_things_own_record():
         is False
 
 
-def test_at_with_no_years_is_the_last_five_years_written_out():
-    echo = _echo(f"get authors at {UBC} who published works where title has kelp")
-    assert f"at (I141945490) since {DEFAULT_SINCE} who published" in echo
+def test_at_with_no_years_is_any_year():
+    # OQL hides no assumptions (Jason 2026-10-12): no window behind a bare `at`
+    q = f"get authors at {UBC} who published works where title has kelp"
+    assert parse(q).group_by[0].where == LeafFilter("affiliations.institution.lineage", "I141945490")
+    assert _echo(q) == "get authors at (I141945490) who published works where title has (kelp)"
+    assert _same(q, f"get authors ever at {UBC} who published works where title has kelp")
+    assert _echo(f"get authors not at {UBC} who published works where title has kelp") == \
+        "get authors never at (I141945490) who published works where title has (kelp)"
 
 
 @pytest.mark.parametrize("words,since,through", [
@@ -236,7 +241,8 @@ def test_ever_at_a_place_for_some_years():
     o = parse(q)
     assert o.group_by[0].where == AffiliationFilter("affiliations.institution.lineage", "I141945490",
                                                     min_years=3)
-    assert _echo(q) == "get authors ever at (I141945490) in 3+ years who published works where title has (kelp)"
+    assert _echo(q) == "get authors at (I141945490) in 3+ years who published works where title has (kelp)"
+    assert _same(q, f"get authors at {UBC} in 3+ years who published works where title has kelp")
 
 
 def test_years_are_keys_in_the_record():
@@ -281,9 +287,9 @@ def test_cow_paths_from_the_sidebar(q, echo):
 @pytest.mark.parametrize("q,echo", [
     # a list of authors by their record (#1494's second log: 11 refusals)
     ("get authors in [Brazil](BR) where it has an ORCID",
-     f"get authors in [Brazil](BR) since {DEFAULT_SINCE} where it has an ORCID"),
+     "get authors in [Brazil](BR) where it has an ORCID"),
     ("get authors ever at (I141945490) where h-index is above 50",
-     "get authors ever at (I141945490) where h-index is above 50"),
+     "get authors at (I141945490) where h-index is above 50"),
     ("get authors at (I4200000001) now", "get authors where last known institution is (I4200000001)"),
     ("get authors now at (I1292875679) who published works where title has kelp",
      "get authors where last known institution is (I1292875679) who published works where title has (kelp)"),

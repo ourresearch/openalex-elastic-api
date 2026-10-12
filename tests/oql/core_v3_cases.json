@@ -457,7 +457,7 @@
    "case": 66,
    "label": null,
    "shape": "rank",
-   "new": "rank authors at [University of British Columbia](I141945490) since 2022 by count of works about kelp",
+   "new": "rank authors at [University of British Columbia](I141945490) by count of works about kelp",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -467,25 +467,24 @@
       "operator": "has"
      }
     ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ],
     "group_by": [
      {
       "column_id": "authorships.author.id",
       "where": {
-       "affiliation": "affiliations.institution.lineage",
-       "value": "I141945490",
-       "since": 2022
+       "column_id": "affiliations.institution.lineage",
+       "value": "I141945490"
       }
      }
     ],
     "calculate": [
      {
       "measure": "count"
-     }
-    ],
-    "sort_by": [
-     {
-      "column_id": "count",
-      "direction": "desc"
      }
     ]
    }
@@ -623,7 +622,7 @@
    "case": 78,
    "label": null,
    "shape": "rank",
-   "new": "rank authors at [University of Colorado Boulder](I188538660) since 2022 by count of works in SDG [Climate action](13)",
+   "new": "rank authors at [University of Colorado Boulder](I188538660) by count of works in SDG [Climate action](13)",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -632,25 +631,24 @@
       "value": "13"
      }
     ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ],
     "group_by": [
      {
       "column_id": "authorships.author.id",
       "where": {
-       "affiliation": "affiliations.institution.lineage",
-       "value": "I188538660",
-       "since": 2022
+       "column_id": "affiliations.institution.lineage",
+       "value": "I188538660"
       }
      }
     ],
     "calculate": [
      {
       "measure": "count"
-     }
-    ],
-    "sort_by": [
-     {
-      "column_id": "count",
-      "direction": "desc"
      }
     ]
    }
@@ -659,7 +657,7 @@
    "case": 87,
    "label": null,
    "shape": "rank",
-   "new": "rank authors at [University of Kansas](I146416000) since 2022 by count of works about biodiversity",
+   "new": "rank authors at [University of Kansas](I146416000) by count of works about biodiversity",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -669,25 +667,24 @@
       "operator": "has"
      }
     ],
+    "sort_by": [
+     {
+      "column_id": "count",
+      "direction": "desc"
+     }
+    ],
     "group_by": [
      {
       "column_id": "authorships.author.id",
       "where": {
-       "affiliation": "affiliations.institution.lineage",
-       "value": "I146416000",
-       "since": 2022
+       "column_id": "affiliations.institution.lineage",
+       "value": "I146416000"
       }
      }
     ],
     "calculate": [
      {
       "measure": "count"
-     }
-    ],
-    "sort_by": [
-     {
-      "column_id": "count",
-      "direction": "desc"
      }
     ]
    }
@@ -887,14 +884,13 @@
    "case": 0,
    "label": "from the logs",
    "shape": "lookup",
-   "new": "rank authors at [University of British Columbia](I141945490) since 2022 by h-index. Only authors with an h-index above 50.",
+   "new": "rank authors at [University of British Columbia](I141945490) by h-index. Only authors with an h-index above 50.",
    "oqo": {
     "get_rows": "authors",
     "filter_rows": [
      {
-      "affiliation": "affiliations.institution.lineage",
-      "value": "I141945490",
-      "since": 2022
+      "column_id": "affiliations.institution.lineage",
+      "value": "I141945490"
      },
      {
       "column_id": "summary_stats.h_index",

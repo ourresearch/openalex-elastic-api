@@ -913,12 +913,13 @@ def _place_text(leaves: List, resolver=None) -> str:
     vals_text = vals[0] if len(vals) == 1 else "(" + " or ".join(vals) + ")"
     neg = x.is_negated
     if isinstance(x, AffiliationFilter):
-        # `at [UBC] in 2+ years since 2022`; no years at all reads `ever at` (`never at`)
-        lead = ("not " if neg else "") if when else ("never " if neg else "ever ")
+        # `at [UBC] in 2+ years since 2022`; no years at all is any year: `at` (`never at`)
+        lead = ("not " if neg else "") if when else ("never " if neg else "")
         mid = f" in {x.min_years}+ years" if x.min_years else ""
         return f"{lead}{word} {vals_text}{mid}" + (f" {when}" if when else "")
     if when == "ever":
-        return f"{'never' if neg else 'ever'} {word} {vals_text}"
+        # bare `at [UBC]` is any year (Jason 2026-10-12); `never at` says the negation plainly
+        return f"{'never ' if neg else ''}{word} {vals_text}"
     return f"{'not ' if neg else ''}{word} {vals_text}" + (f" {when}" if when else "")
 
 

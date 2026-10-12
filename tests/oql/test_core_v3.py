@@ -121,7 +121,7 @@ def _rt(text):
 
 @pytest.mark.parametrize("text", [
     "get works since 2020 from [Asia](Q48)",
-    "rank authors ever at [UBC](I141945490) by count of works about kelp",
+    "rank authors at [UBC](I141945490) by count of works about kelp",
     "rank authors in [Brazil](BR) since 2022 by count of works about kelp",
     "get authors at [UBC](I141945490) in 2+ years since 2022 with an h-index above 50",
 ])
@@ -130,12 +130,14 @@ def test_review_round_trips(text):
 
 
 def test_bare_at_means_what_todays_parser_means():
-    # `at [UBC]` is the last five years in today's grammar, written out on echo
+    # `at [UBC]` is any year in both grammars (Jason 2026-10-12: OQL hides no assumptions)
     core = parse_core("rank authors at [UBC](I141945490) by count of works about kelp")
     old = _old_parse("get authors at [UBC](I141945490) who published works where "
                      "title-abstract-keywords has kelp; then, summarize each author using count")
     assert core.group_by[0].where == old.group_by[0].where
-    assert "since" in _rt("rank authors at [UBC](I141945490) by count of works about kelp")
+    assert core.group_by[0].where == parse_core(
+        "rank authors ever at [UBC](I141945490) by count of works about kelp").group_by[0].where
+    assert "since" not in _rt("rank authors at [UBC](I141945490) by count of works about kelp")
 
 
 def test_unnamed_measure_keeps_todays_echo():

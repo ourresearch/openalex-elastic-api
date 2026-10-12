@@ -447,14 +447,14 @@ def _own_threshold_text(f: LeafFilter) -> str:
 
 
 def _ever_text(f, resolver=None) -> Optional[str]:
-    """`ever at [UBC]` / `ever in [Brazil]`: today's parser keeps an any-year record as a
-    plain leaf on the record's column."""
+    """`at [UBC]` / `in [Brazil]` with no years: any year in the record (Jason 2026-10-12);
+    today's parser keeps it as a plain leaf on the record's column."""
     if isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
             and f.column_id in L._AT_EVER.values():
         country = f.column_id.endswith("country_code")
         link = _link(f.value, "authorships.countries" if country else
                      "authorships.institutions.lineage", resolver)
-        return f"ever {'in' if country else 'at'} {link}"
+        return f"{'in' if country else 'at'} {link}"
     return None
 
 
@@ -464,7 +464,7 @@ def _affiliation_text(f: AffiliationFilter, resolver=None) -> str:
                  resolver)
     head = f"in {link}" if country else f"at {link}"
     if f.since is None and f.through is None:
-        head, years = "ever " + head, ""
+        years = ""
     else:
         years = " " + _years_text({k: v for k, v in ((">=", f.since), ("<=", f.through)) if v is not None})
     extra = f" in {f.min_years}+ years" if f.min_years else ""
@@ -1072,7 +1072,7 @@ def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
         if noun == "authors" and (ws.at("ever", "at") or ws.at("at") or ws.at("ever", "in") or (
                 ws.at("in") and _kind_of(t.link_id(ws.peek(1) or "") or "") == "countries")):
             # an author's record: today's parser reads the place and its years, so `at [UBC]`
-            # means what it means there (the last five years, written out on echo)
+            # means what it means there (any year)
             start = ws.i
             ws.take(2 if ws.at("ever") else 1)
             ws.take()

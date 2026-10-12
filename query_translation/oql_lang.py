@@ -4883,7 +4883,8 @@ class _Parser:
 
     def _parse_place_years(self, entity: str, word: str, ever: bool):
         """The years after a place: (since, through, mode); mode "now" (the last known
-        institution), "ever" (any year), or "years" (default: the last five years)."""
+        institution), "ever" (any year: the default, so bare `at [X]` hides no window), or
+        "years"."""
         import datetime
         if ever or self.word_is("ever"):
             if not ever:
@@ -4919,7 +4920,7 @@ class _Parser:
             n = int(self.peek(3).val)
             self.i += 5
             return datetime.date.today().year - n + 1, None, "years"
-        return datetime.date.today().year - AT_DEFAULT_YEARS + 1, None, "years"
+        return None, None, "ever"
 
     def _parse_split(self, entity: str, n_splits: int) -> GroupBy:
         self._skip_annot()
@@ -5593,9 +5594,8 @@ _THING_VERBS = {"published", "publish", "publishes", "wrote", "write", "writes",
                 "includes", "included", "hold", "holds", "contributed", "co-authored"}
 _THING_LEAD = _THING_VERBS | {"with", "of"}
 _THING_VERB_FILLER = ("ever", "have", "has", "also", "all")   # `who have also published`
-# `at [UBC]` with no years: the record in the last five years (Jason 2026-10-09, "up to
-# you"); the echo writes the year (`since 2022`) so the query stays exact
-AT_DEFAULT_YEARS = 5
+# `at [UBC]` with no years: any year in the record. OQL hides no assumptions (Jason
+# 2026-10-12, reversing the five-year default of 2026-10-09); `ever at` stays accepted
 # the author's record (`at` institutions, `in` countries): with years, now, ever
 _AT_NOW = {"at": "last_known_institutions.id", "in": "last_known_institutions.country_code"}
 _AT_EVER = {"at": "affiliations.institution.lineage", "in": "affiliations.institution.country_code"}
