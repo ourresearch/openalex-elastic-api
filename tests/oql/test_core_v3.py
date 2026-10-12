@@ -164,3 +164,14 @@ def test_oxford_comma_canonical_both_read(oxford, plain):
     assert parse_core(oxford).to_dict() == parse_core(plain).to_dict()
     assert render_core(parse_core(plain), lambda v, c=None: {"A5067184382": "A", "A5074743574": "B",
                                                             "A5047110566": "C"}.get(str(v))) == oxford
+
+
+@pytest.mark.parametrize("col", ["topics.id", "topics.subfield.id", "topics.field.id", "topics.domain.id"])
+def test_any_topic_never_reads_as_the_primary_topic(col):
+    # the echo must not cover a key (Jason 2026-10-12): `in the topic [X]` is the primary
+    # topic, so any of a work's topics stays in the `where` form and reads back as itself
+    from query_translation.oqo import LeafFilter
+    oqo = OQO(get_rows="works", filter_rows=[LeafFilter(col, "T10033" if col == "topics.id" else "17")])
+    text = render_core(oqo, lambda v, c=None: "X")
+    assert " in the " not in text
+    assert parse_core(text).filter_rows[0].column_id == col

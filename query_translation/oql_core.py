@@ -60,12 +60,12 @@ SEARCH_PLACES = {"title_abstract_keywords": None, "display_name": "the title",
 SEARCH_FIELD_FOR = {place: L._search_word_of(base) for base, place in SEARCH_PLACES.items() if place}
 _PLACES_LONGEST = sorted(SEARCH_FIELD_FOR, key=lambda w: -len(w.split()))
 
-# `in <key> [X]`: classification values that don't say their kind (Jason's #95 rule)
+# `in <key> [X]`: classification values that don't say their kind (Jason's #95 rule). Only
+# the primary topic's columns: any of a work's topics (`topics.id`) reads in the `where`
+# fallback, so the echo never covers which one it is (Jason 2026-10-12, no hidden keys)
 IN_KEYS = {"sustainable_development_goals.id": "SDG",
-           "primary_topic.id": "the topic", "topics.id": "the topic",
-           "primary_topic.subfield.id": "the subfield", "topics.subfield.id": "the subfield",
-           "primary_topic.field.id": "the field", "topics.field.id": "the field",
-           "primary_topic.domain.id": "the domain", "topics.domain.id": "the domain"}
+           "primary_topic.id": "the topic", "primary_topic.subfield.id": "the subfield",
+           "primary_topic.field.id": "the field", "primary_topic.domain.id": "the domain"}
 
 # a list of things in a classification (`topics in the subfield [AI]`), both ways
 THING_IN_KEYS = {"subfield.id": "the subfield", "field.id": "the field", "domain.id": "the domain"}
