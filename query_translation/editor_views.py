@@ -20,7 +20,7 @@ from query_translation.diagnostics import (
 )
 from query_translation.oql_context import parse_context as _parse_context
 from query_translation.oql_lang import (
-    parse as _engine_parse, parse_collecting as _engine_parse_collecting,
+    parse_collecting as _engine_parse_collecting,
     entity_type_for_column,
 )
 from query_translation.oql_renderer import config_vocab_items
@@ -123,12 +123,17 @@ def validate_oql_route():
     just the first), so the editor can squiggle the whole document at once.
     """
     oql = request.args.get("q", "")
-    # Parse with the engine directly (preserves code + fixit + position that
-    # oql_parser.parse_oql_to_oqo flattens away). The happy path stays on strict
-    # `parse()` so a valid query is byte-identical to production parsing.
+    # Parse as production does (oql_parser.parse_either), keeping the engine's OQLError
+    # (code + fixit + position) that parse_oql_to_oqo flattens away.
     try:
-        oqo = _engine_parse(oql)
-    except _OQLError:
+        # a core v3 sentence or today's grammar, as the execute path reads it (oxjob #1555:
+        # the site's new-OQL flag puts the new form in the editor)
+        from query_translation.oql_parser import parse_either
+        oqo = parse_either(oql)
+    except _OQLError as e:
+        if getattr(e, "core_error", None) is not None:
+            return jsonify(_parse_error_body(
+                [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e.core_error)))])), 200
         # The query is broken — re-run in recover mode to collect EVERY clause-level
         # parse error, so the editor squiggles the whole doc instead of just the first
         # error (oxjob #363, multi-error /validate). Always 200; verdict in the body.

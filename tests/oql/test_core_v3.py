@@ -267,3 +267,35 @@ def test_query_endpoint_formats_carry_both_forms(monkeypatch):
                                      sort_operands=False)
             assert out["oql"] and out["x_new_oql"] and out["oql"] != out["x_new_oql"]
             assert out["x_new_oql"].startswith(("get works since 2020 about kelp", "break down works about kelp"))
+
+
+def test_things_with_key_value_where_round_trip():
+    # the echo writes the things' own fields it can't say as `where` (live check, 2026-10-13)
+    text = "get authors with an h-index above 50 where last known institution is [UBC](I141945490)"
+    assert _rt(text) == text
+
+
+@pytest.mark.parametrize("c", DATA["cases"], ids=lambda c: str(c["case"]))
+def test_x_new_oql_is_a_fixed_point(c):
+    # the website's OQL tab reseeds with x_new_oql after each validate, so it must read back
+    # to itself, or the tab would flip between two texts (oxjob #1555, 2026-10-13)
+    from query_translation.oql_parser import parse_either
+    from query_translation.x_query import new_oql
+    first = new_oql(OQO.from_dict(c["oqo"]))
+    if first is None or "collection" in first:     # collections need the users API
+        pytest.skip("no text, or a collection")
+    assert new_oql(parse_either(first)) == first
+
+
+def test_validate_reads_core_sentences():
+    # the editor's /validate reads what execute reads, so the new form isn't flagged invalid
+    from flask import Flask
+    from query_translation.editor_views import blueprint
+    app = Flask(__name__)
+    app.register_blueprint(blueprint)
+    with app.test_client() as client:
+        ok = client.get("/validate", query_string={"q": "break down works about kelp by year"}).get_json()
+        assert ok["valid"] and ok["x_new_oql"] == "break down works about kelp by year"
+        assert ok["oql"].startswith("get works where title-abstract-keywords has")
+        bad = client.get("/validate", query_string={"q": "rank authors by count of works about"}).get_json()
+        assert bad["valid"] is False and bad["diagnostics"]

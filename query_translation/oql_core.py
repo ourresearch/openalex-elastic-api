@@ -609,6 +609,10 @@ def _breakdown(oqo, resolver):
 # Parsing: text -> OQO
 # ===========================================================================
 _LINK = re.compile(r"\[([^\[\]]*)\]\(([^()\s]+)\)")
+# a link with no name, `(I141945490)`: the echo on executed queries carries bare IDs (no
+# lookups), and the name is optional (2026-10-08), so it reads as a link too
+_BARE_LINK = re.compile(r"(?<![\]\w])\(([WAISFPTQ]\d+|col_\w+)\)")
+_ANY_LINK = re.compile(_LINK.pattern + "|" + _BARE_LINK.pattern)
 _QUOTE = re.compile(r'"[^"]*"')
 
 
@@ -621,11 +625,15 @@ class _Text:
         self.chunks: List[str] = []
         text = " ".join(text.split())
         text = _LINK.sub(self._keep_link, text)
+        text = _BARE_LINK.sub(lambda m: self._keep_link_parts("", m.group(1)), text)
         text = _QUOTE.sub(self._keep, text)
         self.text = self._groups(text)
 
     def _keep_link(self, m):
-        self.links.append((m.group(1), m.group(2)))
+        return self._keep_link_parts(m.group(1), m.group(2))
+
+    def _keep_link_parts(self, name: str, id_: str) -> str:
+        self.links.append((name, id_))
         return f"⟦L{len(self.links) - 1}⟧"
 
     def _keep(self, m):
@@ -657,7 +665,10 @@ class _Text:
         """The original text of a held-aside span (links back as `[name](ID)`)."""
         while "⟦Q" in s:
             s = re.sub(r"⟦Q(\d+)⟧", lambda m: self.chunks[int(m.group(1))], s)
-        return re.sub(r"⟦L(\d+)⟧", lambda m: "[%s](%s)" % self.links[int(m.group(1))], s)
+        def link(m):
+            name, id_ = self.links[int(m.group(1))]
+            return f"[{name}]({id_})" if name else f"({id_})"
+        return re.sub(r"⟦L(\d+)⟧", link, s)
 
     def link_id(self, tok: str) -> Optional[str]:
         m = re.fullmatch(r"⟦L(\d+)⟧(?:'s)?", tok)
@@ -1095,6 +1106,13 @@ def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
                 items.append(got[0])
                 ws.take(len(got[1].split()))
                 continue
+        if ws.at("where"):
+            # the things' own fields the phrase can't say, key-value, as the echo writes them
+            # (`get authors with an h-index above 50 where last known institution is [X]`)
+            ws.take()
+            items += _old_filters(noun, t.restore(ws.rest()))
+            ws.i = len(ws.w)
+            continue
         raise NotCore(f"unexpected {ws.peek()!r} in a things phrase")
     return noun, typ, items
 
@@ -1245,7 +1263,8 @@ def _parse_breakdown(t, s, collection_type):
                 inner = t.restore(ws.take()[0])
                 if not (inner.startswith("(") and inner.endswith(")")):
                     raise NotCore("a list of values in parentheses")
-                g.values = [lk[1] for lk in _LINK.findall(inner)] or \
+                # links named or bare (`[Canada](CA)`, `(I141945490)`), in order; else plain values
+                g.values = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner[1:-1])] or \
                     [v.strip() for v in inner[1:-1].split(",")]
             if not ws.done():
                 raise NotCore(f"unexpected {ws.peek()!r} after a dimension")
