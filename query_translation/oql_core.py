@@ -133,12 +133,27 @@ OWN_FIELDS = {"summary_stats.h_index": ("an h-index", "h-index"),
               "cited_by_count": ("a citation count", "citation count")}
 OWN_FIELD_BY_WORD = {v[1]: k for k, v in OWN_FIELDS.items()}
 
-# order phrases for a list: (column, direction) -> words
-ORDERS = {("cited_by_count", "desc"): "most cited first", ("cited_by_count", "asc"): "least cited first",
-          ("publication_date", "desc"): "newest first", ("publication_date", "asc"): "oldest first",
-          ("relevance_score", "desc"): "best matches first", ("fwci", "desc"): "highest FWCI first",
-          ("fwci", "asc"): "lowest FWCI first", ("display_name", "asc"): "alphabetical by title"}
-ORDER_PHRASES = {v: k for k, v in ORDERS.items()}
+# order phrases for a list: (column, direction) -> words. Any other sortable column has
+# words too, from its OQL name (`_sort_words`: Jason 2026-10-13 via #1658, "words for
+# every order the API can do": `highest reference count first`, `alphabetical by type`)
+ORDER_PHRASES = {"most cited first": ("cited_by_count", "desc"),
+                 "least cited first": ("cited_by_count", "asc"),
+                 "newest first": ("publication_date", "desc"),
+                 "oldest first": ("publication_date", "asc"),
+                 "best matches first": ("relevance_score", "desc"),
+                 "highest FWCI first": ("fwci", "desc"), "lowest FWCI first": ("fwci", "asc"),
+                 "alphabetical by title": ("display_name", "asc"),
+                 "reverse alphabetical by title": ("display_name", "desc")}
+ORDERS = {v: k for k, v in ORDER_PHRASES.items()}
+ORDERS.update({("publication_year", "desc"): "newest first",       # the engine sorts years
+               ("publication_year", "asc"): "oldest first"})        # by date
+# The works default, "most cited (age-adjusted)" (Jason 2026-10-13 via #1658): the engine's
+# ensemble. Never written when it's the default; with a search the default is best
+# matches, so choosing it then is written. The other two phrasings read the same.
+AGE_ADJUSTED = (SortBy("cited_by_percentile_year.max", "desc"), SortBy("cited_by_count", "desc"))
+AGE_ADJUSTED_WORDS = "most cited (age-adjusted) first"
+_AGE_ADJUSTED_RE = re.compile(r", (?:most cited (⟦Q\d+⟧)|most cited for their year|"
+                              r"highest citation percentile by year) first$")
 
 COMPARATOR_WORDS = _COUNT_WORDS        # `with more than 10 works ...`
 WORD_COMPARATORS = {v: k for k, v in COMPARATOR_WORDS.items()}
@@ -483,28 +498,87 @@ def _render(oqo: OQO, resolver: Resolver) -> str:
             return _number_sentence(oqo, resolver)
         return _works_list(oqo, resolver)
     first = oqo.group_by[0]
+    by_key = bool(oqo.sort_by) and oqo.sort_by[0].column_id == "key"
     if len(oqo.group_by) == 1 and first.column_id in THING_NOUNS and first.values is None \
-            and (oqo.sort_by or first.where is not None):
+            and not by_key and (oqo.sort_by or first.where is not None):
         return _rank(oqo, resolver)
     return _breakdown(oqo, resolver)
 
 
-def _order_text(sort_by: List[SortBy]) -> str:
-    if not sort_by:
+def _is_age_adjusted(sort_by) -> bool:
+    keys = [(x.column_id, x.direction) for x in sort_by]
+    ensemble = [(x.column_id, x.direction) for x in AGE_ADJUSTED]
+    return bool(keys) and keys[0] == ensemble[0] and all(
+        k in ensemble or k == ("id", "asc") for k in keys)
+
+
+def _is_default_order(sort_by, entity: str, has_search: bool) -> bool:
+    """The entity's default order (best matches with a search; else works: most cited
+    (age-adjusted), things: most works), which the text never writes (Jason 2026-10-13)."""
+    first = (sort_by[0].column_id, sort_by[0].direction)
+    if has_search:
+        return first == ("relevance_score", "desc")
+    if entity == "works":
+        return _is_age_adjusted(sort_by)
+    return first == ("works_count", "desc") and len(sort_by) == 1
+
+
+def _column_word(entity: str, cid: str) -> Optional[str]:
+    """A column's OQL name on `entity`, only when it reads back as that column."""
+    if entity != "works":
+        w = L._entity_word(entity, cid)
+        if w:
+            return w
+    fld = L._BY_COLUMN.get(cid)
+    if fld is not None and L._word_column(entity, fld.oql) == cid:
+        return fld.oql
+    return None
+
+
+def _sort_words(entity: str, s: SortBy) -> Optional[str]:
+    """Words for one sort key: a named order, or the general pattern by the column's kind
+    (`highest reference count first`, `latest created date first`, `open access first`,
+    `alphabetical by type`, `in source ID order`: an ID column sorts by the ID, not the name)."""
+    desc = s.direction == "desc"
+    if (s.column_id, s.direction) in ORDERS:
+        return ORDERS[(s.column_id, s.direction)]
+    if s.column_id in OWN_FIELDS:
+        return f"{'highest' if desc else 'lowest'} {OWN_FIELDS[s.column_id][1]} first"
+    word, fld = _column_word(entity, s.column_id), L._BY_COLUMN.get(s.column_id)
+    if word is None or fld is None:
+        return None
+    if fld.kind == "num":
+        return f"{'highest' if desc else 'lowest'} {word} first"
+    if fld.kind == "date":
+        return f"{'latest' if desc else 'earliest'} {word} first"
+    if fld.kind == "bool":
+        return f"{word} {'first' if desc else 'last'}"
+    if fld.kind in ("string", "enum"):
+        return f"{'reverse ' if desc else ''}alphabetical by {word}"
+    if fld.kind == "id":
+        return f"in {'reverse ' if desc else ''}{word} ID order"
+    return None
+
+
+def _order_text(sort_by: List[SortBy], entity: str = "works", has_search: bool = False) -> str:
+    if not sort_by or _is_default_order(sort_by, entity, has_search):
         return ""
-    s = sort_by[0]
-    key = (s.column_id, s.direction)
-    if key in ORDERS:
-        return ", " + ORDERS[key]
-    if s.column_id not in OWN_FIELDS:
-        raise NotCore(f"no core words for sorting by {s.column_id}")   # it must parse back
-    word = OWN_FIELDS[s.column_id][1]
-    return f", {'highest' if s.direction == 'desc' else 'lowest'} {word} first"
+    if entity == "works" and _is_age_adjusted(sort_by):
+        return ", " + AGE_ADJUSTED_WORDS
+    words = _sort_words(entity, sort_by[0])
+    if words is None:
+        raise NotCore(f"no core words for sorting by {sort_by[0].column_id}")   # it must parse back
+    return ", " + words
+
+
+def _has_search(rows) -> bool:
+    return any(isinstance(f, LeafFilter) and ".search" in (f.column_id or "")
+               or isinstance(f, BranchFilter) and _has_search(f.filters) for f in rows or [])
 
 
 def _works_list(oqo, resolver):
     w = _works(oqo.filter_rows, resolver)
-    return "get " + w.text() + _order_text(oqo.sort_by)
+    return "get " + w.text() + _order_text(oqo.sort_by, "works", _has_search(oqo.filter_rows))
 
 
 def _number_sentence(oqo, resolver):
@@ -520,7 +594,9 @@ def _number_sentence(oqo, resolver):
 def _things_list(oqo, resolver):
     noun = oqo.get_rows
     sort = oqo.sort_by[0] if oqo.sort_by else None
-    by_own = sort is not None and sort.column_id in OWN_FIELDS
+    # a list in its default order (most works first) is a list, not a rank by works count
+    by_own = sort is not None and sort.column_id in OWN_FIELDS and not _is_default_order(
+        oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
     parts, thresholds, only, left = [], [], [], []
     for f in oqo.filter_rows:
         if isinstance(f, LeafFilter) and f.column_id == "type" and not f.is_negated \
@@ -544,7 +620,7 @@ def _things_list(oqo, resolver):
         parts.append("where " + _where_text(left, resolver))
     phrase = " ".join([noun] + parts)
     if not by_own:
-        return "get " + phrase + _order_text(oqo.sort_by)
+        return "get " + phrase + _order_text(oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
     text = f"rank {phrase} by {OWN_FIELDS[sort.column_id][1]}"
     if sort.direction == "asc":
         text += ", lowest first"
@@ -562,7 +638,15 @@ def _rank(oqo, resolver):
         parts.append(f"with {COMPARATOR_WORDS[count.operator]} {_number(count.value)} {works_text}")
     measures = list(oqo.calculate) or [Measure("count")]
     sort = oqo.sort_by[0] if oqo.sort_by else None
-    ranked = next((m for m in measures if sort is not None and m.key == sort.column_id), measures[0])
+    ranked = next((m for m in measures if sort is not None and m.key == sort.column_id), None)
+    if ranked is None and sort is not None and sort.column_id == "count":
+        # sorted by the count while showing other numbers: the rank is by the count, and the
+        # text says so (a `rank ... by mean FWCI` sorted by count would lie)
+        ranked = Measure("count")
+        measures = [ranked] + measures
+    elif ranked is None and sort is not None:
+        raise NotCore(f"a rank by {sort.column_id}, which it doesn't name")
+    ranked = ranked or measures[0]
     rest = [m for m in measures if m is not ranked]
     name = _measure_name(ranked)
     if name == "count of works":
@@ -598,11 +682,46 @@ def _breakdown(oqo, resolver):
                 word += " in (" + ", ".join(_link(v, g.column_id, resolver) for v in g.values) + ")"
         texts.append(word)
     phrase = w.text(all_works=True, keep_time=not year_dim)
-    text = f"break down {phrase} by {' and '.join(texts)}"
+    text = f"break down {phrase} by {' and '.join(texts)}" + _breakdown_order(oqo)
     keys = [(m.measure, m.column_id) for m in oqo.calculate]
     if oqo.calculate and keys not in (DEFAULT_BREAKDOWN, [("count", None)]):
         text += ". " + _show(oqo.calculate)
     return text
+
+
+def _breakdown_order(oqo) -> str:
+    """A breakdown's order, when it isn't the default (most works first): by its groups'
+    own key (`by year, oldest first`; `alphabetical by type`; `in institution ID order`)
+    or fewest works first. Rows and the chart come back in this order."""
+    if not oqo.sort_by or (oqo.sort_by[0].column_id, oqo.sort_by[0].direction) == ("count", "desc"):
+        return ""
+    s = oqo.sort_by[0]
+    if len(oqo.group_by) != 1 or s.column_id not in ("key", "count"):
+        raise NotCore("a breakdown in another order")
+    desc = s.direction == "desc"
+    if s.column_id == "count":
+        return ", fewest works first"
+    dim = oqo.group_by[0].column_id
+    if dim == "publication_year":
+        return ", newest first" if desc else ", oldest first"
+    fld = L._BY_COLUMN.get(dim)
+    if fld is not None and fld.kind in ("string", "enum", "bool"):
+        return f", {'reverse ' if desc else ''}alphabetical by {DIMS[dim]}"
+    return f", in {'reverse ' if desc else ''}{DIMS[dim]} ID order"
+
+
+_BREAKDOWN_ORDER_RE = re.compile(r", (?:(oldest|newest) first|fewest works first|"
+                                 r"(reverse )?alphabetical by [^,]+|in (reverse )?[^,]+ ID order)$")
+
+
+def _parse_breakdown_order(s: str) -> Tuple[str, List[SortBy]]:
+    m = _BREAKDOWN_ORDER_RE.search(s)
+    if m is None:
+        return s, []
+    if m.group(0) == ", fewest works first":
+        return s[: m.start()], [SortBy("count", "asc")]
+    desc = m.group(1) == "newest" or bool(m.group(2)) or bool(m.group(3))
+    return s[: m.start()], [SortBy("key", "desc" if desc else "asc")]
 
 
 # ===========================================================================
@@ -979,14 +1098,37 @@ def _parse_measures(t: _Text, s: str) -> List[Measure]:
     return out
 
 
-def _order(s: str) -> Tuple[str, List[SortBy]]:
+def _order(t, s: str, entity: str = "works") -> Tuple[str, List[SortBy]]:
+    """A list's order phrase at the end of `s` -> (the rest, sort_by); the words
+    `_sort_words` writes, read back by column kind."""
     for phrase, (col, d) in ORDER_PHRASES.items():
         if s.endswith(", " + phrase):
             return s[: -len(phrase) - 2], [SortBy(col, d)]
-    m = re.search(r", (highest|lowest) ([\w\- ]+?) first$", s)
-    if m and m.group(2) in OWN_FIELD_BY_WORD:
-        return s[: m.start()], [SortBy(OWN_FIELD_BY_WORD[m.group(2)],
-                                       "desc" if m.group(1) == "highest" else "asc")]
+    m = _AGE_ADJUSTED_RE.search(s)
+    if m and (m.group(1) is None or t.restore(m.group(1)) == "(age-adjusted)"):
+        return s[: m.start()], list(AGE_ADJUSTED)
+
+    def col_of(word: str, kinds) -> Optional[str]:
+        if word in OWN_FIELD_BY_WORD and "num" in kinds:
+            return OWN_FIELD_BY_WORD[word]
+        col = L._word_column(entity, word)
+        fld = L._BY_COLUMN.get(col) if col else None
+        return col if fld is not None and fld.kind in kinds else None
+
+    patterns = ((r", (highest|lowest) ([^,]+?) first$", ("num",), "highest"),
+                (r", (latest|earliest) ([^,]+?) first$", ("date",), "latest"),
+                (r", (reverse )?alphabetical by ([^,]+)$", ("string", "enum"), "reverse "),
+                (r", in (reverse )?([^,]+?) ID order$", ("id",), "reverse "),
+                (r", ([^,]+?) (first|last)$", ("bool",), "first"))
+    for rx, kinds, desc_word in patterns:
+        m = re.search(rx, s)
+        if not m:
+            continue
+        a, b = m.group(1), m.group(2)
+        word, flag = (a, b) if kinds == ("bool",) else (b, a)
+        col = col_of(word, kinds)
+        if col is not None:
+            return s[: m.start()], [SortBy(col, "desc" if flag == desc_word else "asc")]
     return s, []
 
 
@@ -1026,7 +1168,10 @@ def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
 
 
 def _parse_get(t, s, collection_type):
-    body, sort = _order(s)
+    noun = (re.findall(r"[^\s,]+", s) or [""])[0].lower()
+    entity = noun if noun in NOUN_THINGS else NOUN_THING_TYPES[noun][0] \
+        if noun in NOUN_THING_TYPES else "works"
+    body, sort = _order(t, s, entity)
     first = body.split()[0].lower() if body.split() else ""
     if (first in NOUN_THINGS or first in NOUN_THING_TYPES) and re.search(
             r" with (?:more than|at least|fewer than|at most|works|articles|\w+ works)\b", body):
@@ -1229,6 +1374,16 @@ def _parse_rank(t, s, collection_type, only):
 
 
 def _parse_breakdown(t, s, collection_type):
+    s, order = _parse_breakdown_order(s)
+    oqo = _parse_breakdown_body(t, s, collection_type)
+    if order:
+        if len(oqo.group_by) != 1:
+            raise NotCore("an order on a two-way breakdown")
+        oqo.sort_by = order
+    return oqo
+
+
+def _parse_breakdown_body(t, s, collection_type):
     # the works phrase ends at the ` by ` that opens the dimensions
     cut = None
     for mm in re.finditer(r" by ", s):

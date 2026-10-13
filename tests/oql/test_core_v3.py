@@ -299,3 +299,77 @@ def test_validate_reads_core_sentences():
         assert ok["oql"].startswith("get works where title-abstract-keywords has")
         bad = client.get("/validate", query_string={"q": "rank authors by count of works about"}).get_json()
         assert bad["valid"] is False and bad["diagnostics"]
+
+
+# --- words for every order (Jason 2026-10-13 via #1658) --------------------------------
+
+from query_translation.oqo import SortBy  # noqa: E402
+from query_translation.oqo import LeafFilter as _Leaf  # noqa: E402
+
+_ART = [_Leaf("type", "article")]
+
+
+@pytest.mark.parametrize("col,d,words", [
+    ("referenced_works_count", "desc", "highest reference count first"),
+    ("apc_paid.value_usd", "asc", "lowest estimated APC paid first"),
+    ("created_date", "desc", "latest created date first"),
+    ("open_access.is_oa", "desc", "open access first"),
+    ("open_access.is_oa", "asc", "open access last"),
+    ("citation_normalized_percentile.is_in_top_1_percent", "desc", "top 1% cited first"),
+    ("primary_location.source.id", "asc", "in source ID order"),
+    ("display_name", "desc", "reverse alphabetical by title"),
+    ("cited_by_count", "desc", "most cited first"),
+])
+def test_every_sortable_column_has_words(col, d, words):
+    text = render_core(OQO(get_rows="works", filter_rows=_ART, sort_by=[SortBy(col, d)]))
+    assert text == "get articles, " + words
+    assert [(s.column_id, s.direction) for s in parse_core(text).sort_by] == [(col, d)]
+
+
+def test_the_default_order_is_never_written():
+    # works: most cited (age-adjusted) with no search; best matches with one (Jason 2026-10-13)
+    from query_translation.oql_core import AGE_ADJUSTED
+    assert render_core(OQO(get_rows="works", filter_rows=_ART, sort_by=list(AGE_ADJUSTED))) == "get articles"
+    kelp = [_Leaf("title_abstract_keywords.search", "kelp", "has")]
+    assert render_core(OQO(get_rows="works", filter_rows=kelp,
+                           sort_by=[SortBy("relevance_score", "desc")])) == "get works about kelp"
+    # things: most works
+    assert render_core(OQO(get_rows="authors", filter_rows=[_Leaf("summary_stats.h_index", 50, ">")],
+                           sort_by=[SortBy("works_count", "desc")])) == "get authors with an h-index above 50"
+
+
+def test_age_adjusted_is_written_when_a_search_makes_best_matches_the_default():
+    from query_translation.oql_core import AGE_ADJUSTED
+    kelp = [_Leaf("title_abstract_keywords.search", "kelp", "has")]
+    text = render_core(OQO(get_rows="works", filter_rows=kelp, sort_by=list(AGE_ADJUSTED)))
+    assert text == "get works about kelp, most cited (age-adjusted) first"
+    for said in (text, "get works about kelp, most cited for their year first",
+                 "get works about kelp, highest citation percentile by year first"):
+        assert parse_core(said).sort_by == list(AGE_ADJUSTED)
+
+
+def test_a_rank_sorted_by_count_says_count():
+    # `rank institutions by mean FWCI` sorted by count would lie (#1658's edge)
+    from query_translation.oqo import GroupBy
+    oqo = OQO(get_rows="works", filter_rows=[_Leaf("title_abstract_keywords.search", "kelp", "has")],
+              group_by=[GroupBy(column_id="authorships.institutions.lineage")],
+              calculate=[Measure("mean", "fwci")], sort_by=[SortBy("count", "desc")])
+    text = render_core(oqo)
+    assert text == "rank institutions by count of works about kelp. Show mean FWCI."
+    assert parse_core(text).sort_by[0].column_id == "count"
+
+
+@pytest.mark.parametrize("col,d,tail", [
+    ("publication_year", "asc", "by year, oldest first"),
+    ("authorships.institutions.lineage", "asc", "by institution, in institution ID order"),
+    ("type", "desc", "by type, reverse alphabetical by type"),
+])
+def test_a_breakdown_in_key_order_says_so(col, d, tail):
+    # key order is a breakdown, not `rank ... by count, lowest first` (#1658's edge)
+    from query_translation.oqo import GroupBy
+    oqo = OQO(get_rows="works", filter_rows=[_Leaf("title_abstract_keywords.search", "kelp", "has")],
+              group_by=[GroupBy(column_id=col)], calculate=[Measure("count"), Measure("percent_of_those")],
+              sort_by=[SortBy("key", d)])
+    text = render_core(oqo)
+    assert text == "break down works about kelp " + tail
+    assert [(s.column_id, s.direction) for s in parse_core(text).sort_by] == [("key", d)]
