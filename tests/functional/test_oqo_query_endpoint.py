@@ -253,7 +253,7 @@ class TestMetaXQuery:
         # meta.x_query (#373).
         assert "oqo" not in body
         x_query = body["meta"]["x_query"]
-        assert set(x_query) == {"oql", "oqo", "url"}
+        assert set(x_query) == {"oql", "x_new_oql", "oqo", "url"}   # x_new_oql: oxjob #1555
         assert x_query["oqo"]["get_rows"] == "works"
         # A simple flat filter IS URL-expressible → url is a /works?filter=… form.
         assert x_query["url"] and x_query["url"].startswith("/works?filter=")

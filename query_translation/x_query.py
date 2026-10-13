@@ -137,6 +137,18 @@ def baseline_wanted() -> bool:
     return _request_arg("baseline", ("true",)) == "true"
 
 
+def new_oql(oqo: OQO, resolver=None) -> Optional[str]:
+    """The new canonical form, `x_new_oql`, beside every `oql` until the flip (Jason
+    2026-10-13: both forms everywhere, so we and others can try the new one): OQL core
+    v3 (oxjob #1555) where it can say the query, else today's pipeline text, which is
+    what the flip shows. None when no honest OQL exists (as for `oql`)."""
+    from query_translation.oql_core import render_core
+    try:
+        return render_core(oqo, resolver) or oql_lang.render(oqo, resolver=resolver, style="pipeline")
+    except OQLError:
+        return None
+
+
 def build_x_query(
     oqo: OQO,
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
@@ -227,6 +239,8 @@ def build_x_query(
 
     out = {
         "oql": oql_form,
+        # the new form beside the old until the flip (oxjob #1555, Jason 2026-10-13)
+        "x_new_oql": oql_form if effective_style() == "core" else new_oql(canonical),
         "oqo": oqo_dict,
         "url": url_form,
     }

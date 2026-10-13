@@ -232,3 +232,38 @@ def test_the_core_flip_is_a_config_change(monkeypatch):
     with Flask(__name__).test_request_context("/"):
         assert build_x_query(core, sort_operands=False)["oql"] == "break down works about kelp by year"
         assert build_x_query(piped, sort_operands=False)["oql"].startswith("get works;\nthen, group")
+
+
+# --- both forms everywhere until the flip: x_new_oql beside oql (Jason 2026-10-13) ---
+
+def test_x_query_carries_both_forms(monkeypatch):
+    from flask import Flask
+    from query_translation import oql_lang
+    from query_translation.x_query import build_x_query
+    monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
+    core = parse_core("break down works about kelp by year")
+    piped = OQO(get_rows="works", group_by=[GroupBy(column_id="publication_year")],
+                calculate=[Measure("max", "cited_by_count")])     # no core name for max
+    with Flask(__name__).test_request_context("/"):
+        xq = build_x_query(core, sort_operands=False)
+        assert xq["oql"].startswith("get works where title-abstract-keywords has")   # the old form stays
+        assert xq["x_new_oql"] == "break down works about kelp by year"
+        assert build_x_query(piped, sort_operands=False)["x_new_oql"].startswith("get works;\nthen, group")
+    with Flask(__name__).test_request_context("/?oql_style=core"):
+        xq = build_x_query(core, sort_operands=False)
+        assert xq["oql"] == xq["x_new_oql"] == "break down works about kelp by year"
+
+
+def test_query_endpoint_formats_carry_both_forms(monkeypatch):
+    from flask import Flask
+    from query_translation import oql_lang
+    from query_translation.validator import ValidationResult
+    from query_translation.views import render_all_formats
+    monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
+    with Flask(__name__).test_request_context("/"):
+        for oqo in (parse_core("get works about kelp since 2020"),          # plain path
+                    parse_core("break down works about kelp by year")):    # pipeline path
+            out = render_all_formats(oqo, ValidationResult(valid=True, errors=[], warnings=[]),
+                                     sort_operands=False)
+            assert out["oql"] and out["x_new_oql"] and out["oql"] != out["x_new_oql"]
+            assert out["x_new_oql"].startswith(("get works since 2020 about kelp", "break down works about kelp"))

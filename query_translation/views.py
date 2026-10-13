@@ -258,7 +258,8 @@ def _translate_response(oqo, parse_error, sort_operands: bool = True):
     validation_result = validate_oqo(oqo)
     if not validation_result.valid:
         return jsonify({
-            "oxurl": None, "oql": None, "oqo": oqo.to_dict(), "validation": validation_result.to_dict(), }), 400
+            "oxurl": None, "oql": None, "x_new_oql": None, "oqo": oqo.to_dict(),
+            "validation": validation_result.to_dict(), }), 400
 
     out = render_all_formats(oqo, validation_result, sort_operands=sort_operands)
     # a pipeline query the check refuses (a limit, the time budget) is invalid: 400,
@@ -404,7 +405,7 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
                                     entity=canonical_oqo.get_rows)
 
     from query_translation import oql_lang as _oql_lang
-    from query_translation.x_query import effective_style
+    from query_translation.x_query import effective_style, new_oql
     style = effective_style()
     from query_translation.oql_pipeline import render_pipeline_tree, stringify_pipeline
     core_text = None
@@ -412,6 +413,8 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
         # OQL core v3 (oxjob #1555), previewed per request with ?oql_style=core
         from query_translation.oql_core import render_core
         core_text = render_core(canonical_oqo, resolver)
+    # the new form beside the old until the flip (oxjob #1555, Jason 2026-10-13)
+    x_new_oql = core_text or new_oql(canonical_oqo, resolver)
     if core_text is not None or canonical_oqo.uses_pipeline:
         if core_text is not None:
             oql_output, oneline, oxurl = core_text, core_text, oxurl_output
@@ -422,7 +425,7 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
             oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
             oneline, oxurl = stringify_pipeline(tree), None
         out = {
-            "oxurl": oxurl, "oql": oql_output, "oql_oneline": oneline,
+            "oxurl": oxurl, "oql": oql_output, "oql_oneline": oneline, "x_new_oql": x_new_oql,
             "oql_render_v2": None, "oqo": canonical_oqo.to_dict(),
             "validation": {"valid": True, "errors": [], "warnings": [
                 {"type": w.type, "message": w.message, "location": w.location}
@@ -463,7 +466,8 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
 
     # Build response
     return {
-        "oxurl": oxurl_output, "oql": oql_output, "oql_oneline": oql_oneline, "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
+        "oxurl": oxurl_output, "oql": oql_output, "oql_oneline": oql_oneline, "x_new_oql": x_new_oql,
+        "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
             "valid": True, "errors": [
                 {"type": e.type, "message": e.message, "location": e.location}
                 for e in validation_result.errors
@@ -531,7 +535,7 @@ def get_natural_language_query(natural_language_query: str):
         # Includes the structured refusal path (e.g. collections out of scope).
         status = 422 if result.get("refused") else 502
         return jsonify({
-            "oxurl": None, "oql": None, "oqo": None,
+            "oxurl": None, "oql": None, "x_new_oql": None, "oqo": None,
             "validation": {"valid": False,
                            "errors": [{"type": "nl_translation_error",
                                        "message": result.get("error") or "no OQO produced"}],

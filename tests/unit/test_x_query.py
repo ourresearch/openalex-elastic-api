@@ -51,7 +51,7 @@ def test_build_x_query_flat_query_has_url_and_triple():
     )
     xq = build_x_query(oqo)
 
-    assert set(xq) == {"oql", "oqo", "url"}
+    assert set(xq) == {"oql", "x_new_oql", "oqo", "url"}   # x_new_oql: oxjob #1555
     # A query that arrived as a URL is URL-expressible, so `url` is never None here.
     assert xq["url"] is not None
     assert xq["url"].startswith("/works?filter=")

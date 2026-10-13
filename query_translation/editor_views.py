@@ -172,6 +172,8 @@ def validate_oql_route():
         # editor rewrites the buffer to this live as you type, leaving multi-line layout
         # to the tidy button (oxjob #587).
         "oql_oneline": formats.get("oql_oneline"),
+        # the new form beside the old until the flip (oxjob #1555, Jason 2026-10-13)
+        "x_new_oql": formats.get("x_new_oql"),
         "oqo": formats.get("oqo", oqo.to_dict()),
         "oxurl": formats.get("oxurl"),
         "diagnostics": diagnostics,
@@ -186,6 +188,6 @@ def _parse_error_body(diags):
     if not diags:
         diags = [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", "could not parse query"))]
     return {
-        "valid": False, "oql": None, "oqo": None, "oxurl": None,
+        "valid": False, "oql": None, "x_new_oql": None, "oqo": None, "oxurl": None,
         "diagnostics": [d.to_dict() for d in diags],
     }
