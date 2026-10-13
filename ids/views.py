@@ -451,7 +451,8 @@ def concepts_id_get(id):
             abort(404)
         full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
         query = Q("term", wikidata=full_wikidata)
-        s = s.filter(query)
+        # several concepts can share a Wikidata id (Q420: Biology and Biological sciences); return the most used
+        s = s.filter(query).sort("-works_count")
     else:
         abort(404)
     response = s.execute()
