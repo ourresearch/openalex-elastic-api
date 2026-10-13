@@ -155,6 +155,9 @@ def get_index_name_by_id(openalex_id, connection=None):
         index_name = settings.AUTHORS_INDEX_WALDEN if connection == 'walden' else settings.AUTHORS_INDEX_LEGACY
     elif clean_id.startswith("C"):
         index_name = settings.CONCEPTS_INDEX
+    elif clean_id.startswith("F"):
+        # without this, funder ids fell through to None = every index on the cluster (171 shards, oxjob #1617)
+        index_name = settings.FUNDERS_INDEX
     elif clean_id.startswith("I"):
         index_name = settings.INSTITUTIONS_INDEX
     elif clean_id.startswith("P"):
