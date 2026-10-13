@@ -83,51 +83,53 @@ class TestWorksIDGet:
 
 
 class TestAuthorsIDGet:
-    id_result = "https://openalex.org/A2609699"
+    # Peter Vandenabeele's old profile A2609699 was removed in the Oct 2026 author cleanup; he lives on as A5089113838
+    id_result = "https://openalex.org/A5089113838"
     name_result = "Peter Vandenabeele"
 
     def test_authors_openalex_get(self, client):
-        res = client.get("/authors/A2609699")
+        res = client.get("/authors/A5089113838")
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
     def test_authors_openalex_get_case_insensitive(self, client):
-        res = client.get("/authors/a2609699", follow_redirects=True)
+        res = client.get("/authors/a5089113838", follow_redirects=True)
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
     def test_authors_openalex_get_url(self, client):
         res = client.get(
-            "/authors/https://openalex.org/A2609699", follow_redirects=True
+            "/authors/https://openalex.org/A5089113838", follow_redirects=True
         )
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
     def test_authors_openalex_get_key(self, client):
-        res = client.get("/authors/openalex:A2609699", follow_redirects=True)
+        res = client.get("/authors/openalex:A5089113838", follow_redirects=True)
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
     def test_authors_orcid_get(self, client):
         res = client.get(
-            "/authors/https://orcid.org/0000-0001-5285-9835", follow_redirects=True
+            "/authors/https://orcid.org/0000-0002-6669-8822", follow_redirects=True
         )
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
     def test_authors_orcid_get_key(self, client):
-        res = client.get("/authors/orcid:0000-0001-5285-9835", follow_redirects=True)
+        res = client.get("/authors/orcid:0000-0002-6669-8822", follow_redirects=True)
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
     def test_authors_mag_get(self, client):
-        res = client.get("/authors/mag:2609699", follow_redirects=True)
+        # mag:N redirects to A{N}; author docs no longer carry MAG ids, so this checks the redirect
+        res = client.get("/authors/mag:5089113838", follow_redirects=True)
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
@@ -137,7 +139,7 @@ class TestAuthorsIDGet:
         assert res.status_code == 404
 
     def test_people_openalex_get(self, client):
-        res = client.get("/people/A2609699")
+        res = client.get("/people/A5089113838")
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
@@ -274,9 +276,9 @@ class TestUniversalIDGet:
         )
 
     def test_authors_openalex_get(self, client):
-        res = client.get("/A2609699", follow_redirects=True)
+        res = client.get("/A5089113838", follow_redirects=True)
         json_data = res.get_json()
-        assert json_data["id"] == "https://openalex.org/A2609699"
+        assert json_data["id"] == "https://openalex.org/A5089113838"
         assert json_data["display_name"] == "Peter Vandenabeele"
 
     def test_institutions_openalex_get(self, client):
@@ -311,7 +313,7 @@ class TestIDSelect:
         assert json_data.keys() == {"id", "display_name"}
 
     def test_authors_select(self, client):
-        res = client.get("/authors/A2609699?select=id,display_name")
+        res = client.get("/authors/A5089113838?select=id,display_name")
         json_data = res.get_json()
         assert json_data.keys() == {"id", "display_name"}
 
