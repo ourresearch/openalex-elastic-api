@@ -669,9 +669,8 @@ def _breakdown(oqo, resolver):
         raise NotCore("a dimension with no word")
     year_dim = any(g.column_id == "publication_year" for g in oqo.group_by)
     w = _works(oqo.filter_rows, resolver)
-    dims = sorted(oqo.group_by, key=lambda g: 0 if g.column_id == "publication_year" else 1)
     texts = []
-    for g in dims:
+    for g in oqo.group_by:      # the query's own order (it nests the rows); year is the x-axis either way
         word = DIMS[g.column_id]
         if g.column_id == "publication_year" and w.time_text():
             word += " " + w.time_text()
@@ -1147,6 +1146,8 @@ def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     main, extras = sentences[0], sentences[1:]
     show = [e[len("Show "):] for e in extras if e.startswith("Show ")]
     only = [e[len("Only "):] for e in extras if e.startswith("Only ")]
+    if only and not main.lower().startswith("rank "):
+        raise NotCore("an `Only` sentence follows a rank")     # loud, never dropped
     low = main.lower()
     if low.startswith("break down "):
         oqo = _parse_breakdown(t, main[len("break down "):], collection_type)
@@ -1364,6 +1365,22 @@ def _parse_rank(t, s, collection_type, only):
             raise NotCore(f"`{ranked} {join} <works>`")
     if phrase:
         works_rows += _parse_works(t, phrase, collection_type, thing=noun)
+    for o in only:
+        # `Only countries with more than 500 works about kelp.`: the count threshold the head
+        # can also say (`rank countries with more than 500 works about kelp`), or the things'
+        # own fields; anything else is refused, never dropped (session "1658", 2026-10-13)
+        o_noun, o_typ, o_items = _parse_things(t, o)
+        if o_noun != noun or o_typ != typ:
+            raise NotCore("an `Only` sentence names other things than the rank")
+        for it in o_items:
+            if not isinstance(it, tuple):
+                where.append(it)
+                continue
+            _, op, n, ph = it
+            rows = _parse_works(t, ph, collection_type, thing=noun)
+            if [r.to_dict() for r in rows] != [r.to_dict() for r in works_rows]:
+                raise NotCore("an `Only` count over other works than the rank counts")
+            where.append(MeasureFilter("count", op, n))
     mm, col = NAME_MEASURES[ranked]
     meas = Measure(mm, col)
     g = GroupBy(column_id=NOUN_THINGS[noun],

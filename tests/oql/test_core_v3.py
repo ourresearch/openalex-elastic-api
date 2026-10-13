@@ -373,3 +373,28 @@ def test_a_breakdown_in_key_order_says_so(col, d, tail):
     text = render_core(oqo)
     assert text == "break down works about kelp " + tail
     assert [(s.column_id, s.direction) for s in parse_core(text).sort_by] == [("key", d)]
+
+
+def test_only_count_threshold_is_read_never_dropped():
+    # session "1658", 2026-10-13: the `Only` count was silently dropped (all 115 groups)
+    o = parse_core("rank countries by count of works about kelp. Only countries with more than 500 works about kelp.")
+    assert parse_core("rank countries with more than 500 works about kelp").to_dict() == o.to_dict()
+    assert render_core(o) == "rank countries with more than 500 works about kelp"
+
+
+@pytest.mark.parametrize("q", [
+    "rank countries by count of works about kelp. Only countries with more than 500 works since 2020.",
+    "rank countries by count of works about kelp. Only institutions with more than 5 works about kelp.",
+    "break down works about kelp by year. Only years with more than 5 works.",
+])
+def test_an_only_sentence_it_cannot_read_is_refused(q):
+    from query_translation.oql_core import NotCore
+    with pytest.raises(NotCore):
+        parse_core(q)
+
+
+@pytest.mark.parametrize("dims", ["country and year", "year and country", "country and year since 2020"])
+def test_a_breakdown_keeps_its_own_dimension_order(dims):
+    # session "1658", 2026-10-13: `by country and year` echoed year-first and read back nested the other way
+    text = f"break down works about kelp by {dims}"
+    assert render_core(parse_core(text)) == text
