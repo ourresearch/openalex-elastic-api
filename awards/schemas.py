@@ -78,6 +78,20 @@ class RelatedAwardSchema(Schema):
     asserted_by = fields.Str()
 
 
+class RecipientOrganisationSchema(Schema):
+    id = fields.Str(allow_none=True)
+    display_name = fields.Str()
+    ror = fields.Str(allow_none=True)
+    country_code = fields.Str(allow_none=True)
+    roles = fields.List(fields.Str())
+    share = fields.Float(allow_none=True)
+    basis = fields.Str()
+    asserted_by = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class RecipientCountrySchema(Schema):
     country_code = fields.Str()
     share = fields.Float(allow_none=True)
@@ -128,6 +142,7 @@ class AwardsSchema(Schema):
     # Funding-flows release (oxjob #1570): USD amount at the start-date rate, where the money lands, research flag.
     amount_usd = fields.Float(default=None)
     amount_usd_basis = fields.Str(default=None)
+    recipients = fields.List(fields.Nested(RecipientOrganisationSchema), dump_default=list)
     recipient_countries = fields.List(fields.Nested(RecipientCountrySchema), dump_default=list)
     recipient_regions = fields.List(fields.Nested(RecipientRegionSchema), dump_default=list)
     research_scope = fields.Nested(ResearchScopeSchema, default=None)
