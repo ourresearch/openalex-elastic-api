@@ -872,6 +872,11 @@ def lex(s: str) -> List[Tok]:
             # Only meaningful infix inside a `has` value group; the parser
             # (_parse_search_operand) consumes it. A literal `!` must be quoted.
             toks.append(Tok("BANG", c, i)); i += 1; continue
+        if c == '-' and i + 1 < n and s[i + 1].isalpha():
+            # `-mice`: the minus lexes alone, as it already does before a quote
+            # (`-"animal model"`), so the parser reads both shapes the same way
+            # (_at_minus_term). `covid-19` (no leading minus) and `-19` stay one word.
+            toks.append(Tok("WORD", c, i)); i += 1; continue
         # WORD: run until a break char
         j = i
         while j < n and s[j] not in _WORD_BREAK:
@@ -3339,7 +3344,8 @@ class _Parser:
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
             return grp
-        leaf = self._parse_search_atom(base)
+        leaf = (self._parse_minus_term(base) if self._at_minus_term()
+                else self._parse_search_atom(base))
         self._skip_annot()
         if self._continues_value():
             t2 = self.peek()
@@ -3569,6 +3575,8 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_search_operand(base))
+        if self._at_minus_term():
+            return self._parse_minus_term(base)
         # leading list proximity `within N (a, b, ...)` nested in a group (oxjob #514).
         if self.word_is("within"):
             return self._parse_proximity_list(base)
@@ -3696,6 +3704,21 @@ class _Parser:
         parts += [f'~"{text}"' for text, _ in operands[2:]]
         return LeafFilter(col, "".join(parts), "has")
 
+    def _at_minus_term(self) -> bool:
+        """At `-word` or `-"phrase"`: a minus glued to the word or quote that follows
+        it, Google's exclusion (oxjob #1683), read as `not word` / `not "phrase"`.
+        A spaced ` - ` is not one; it stays text, as do `covid-19` and `-19`."""
+        t, nt = self.peek(), self.peek(1)
+        return (t is not None and t.kind == "WORD" and t.val == "-"
+                and nt is not None and nt.pos == t.pos + 1
+                and (nt.kind == "STRING" or (nt.kind == "WORD" and nt.val[:1].isalpha())))
+
+    def _parse_minus_term(self, base: str) -> FilterType:
+        """`-word` / `-"phrase"` -> the negated leaf. A minus word negates that one
+        word, never the run after it: `-machine learning` = not machine, and learning."""
+        self.next()                            # the `-`
+        return _negate(self._parse_search_atom(base, in_group=False))
+
     def _is_run_break_word(self, val: str) -> bool:
         """A bare word that TERMINATES a multi-word search run (#1) rather than
         folding into its stemmed value: a boolean connective, `not`, or a
@@ -3774,7 +3797,7 @@ class _Parser:
                     # a `(` mid-run starts a nested group, not more stemmed words —
                     # break the run so `has (machine learning (a or b))` reads the
                     # run then the group.
-                    if nt.kind == "LP":
+                    if nt.kind == "LP" or self._at_minus_term():
                         break
                     if nt.kind == "WORD" and not self._is_run_break_word(nt.val):
                         _reject_engine_chars(nt.val, nt.pos)
