@@ -393,7 +393,7 @@ CAP_COLUMN = "column"
 # (Jason, 07:05 CT: "volume number just drops support completely"): no OQL word, no GUI facet, not documented; it
 # stays in the work record and the REST filter is unlisted (#498), still executing for legacy callers. A property
 # removed = MAJOR per classify_properties_diff.py.
-# 17.2.0 (oxjob #1570, prepared 2026-10-09 as 15.3.0, renumbered 2026-10-14 on rebase over 17.1.0 on branch af1570-funding-flows; ships with the walden Nightly Grants funding-flows
+# 17.2.0 (oxjob #1570, rebased 2026-10-14 over 17.1.0 on branch af1570-ff-fix4; ships with the walden Nightly Grants funding-flows
 # release, not before): awards gain `amount_usd` + `amount_usd_basis` (the amount at the start-date exchange rate; `amount` and
 # `currency` unchanged), `recipient_countries` [{country_code, share, amount_usd, basis}] and `recipient_regions`
 # [{code, vocabulary, display_name, share}] (where the money lands), and `research_scope` {is_research, basis, tier}; filters
