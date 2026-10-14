@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "128ab8e812c48eb5567f7fb4a9bd8a48adca2f20c1324214cd434a366e220b05",
-    "property_count": 906,
-    "version": "17.1.0"
+    "fingerprint": "2b5fd21557fee70cf32b004c6d8ff92a81e0e2bd0c1bda25aa32763e2d899499",
+    "property_count": 919,
+    "version": "17.2.0"
   },
   "properties": {
     "authors": {
@@ -1311,6 +1311,54 @@
         ],
         "type": "number"
       },
+      "amount_usd": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "amount usd",
+        "entity_type": null,
+        "name": "amount_usd",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [],
+        "type": "number"
+      },
+      "amount_usd_basis": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "amount usd basis",
+        "entity_type": null,
+        "name": "amount_usd_basis",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
       "co_lead_investigator": {
         "actions": [
           "column"
@@ -1800,6 +1848,27 @@
         "display_name": "has parent award",
         "entity_type": null,
         "name": "has_parent_award",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "boolean"
+      },
+      "has_recipient_country": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "has recipient country",
+        "entity_type": null,
+        "name": "has_recipient_country",
         "operators": [
           "eq",
           "null"
@@ -2381,6 +2450,146 @@
         ],
         "type": "string"
       },
+      "recipient_countries": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "recipient countries",
+        "entity_type": null,
+        "name": "recipient_countries",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "recipient_countries.basis": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "recipient countries basis",
+        "entity_type": null,
+        "name": "recipient_countries.basis",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "recipient_countries.continent": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "recipient countries continent",
+        "entity_type": null,
+        "name": "recipient_countries.continent",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "recipient_countries.country_code": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "recipient countries country code",
+        "entity_type": null,
+        "name": "recipient_countries.country_code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "recipient_regions": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "recipient regions",
+        "entity_type": null,
+        "name": "recipient_regions",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "recipient_regions.code": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "recipient regions code",
+        "entity_type": null,
+        "name": "recipient_regions.code",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "recipients": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "recipients",
+        "entity_type": null,
+        "name": "recipients",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "relevance_score": {
         "actions": [
           "column"
@@ -2396,6 +2605,66 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "research_scope": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "research scope",
+        "entity_type": null,
+        "name": "research_scope",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "research_scope.basis": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "research scope basis",
+        "entity_type": null,
+        "name": "research_scope.basis",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "research_scope.is_research": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "research scope is research",
+        "entity_type": null,
+        "name": "research_scope.is_research",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "boolean"
       },
       "start_date": {
         "actions": [
