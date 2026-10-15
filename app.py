@@ -1,8 +1,11 @@
 import json
+import os
 import time
 
+import sentry_sdk
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify, request
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 import awards
 import authors
@@ -45,7 +48,6 @@ import work_types
 from core.collection_resolver import CollectionUrlIdsInQuery
 from core.exceptions import APIError
 from extensions import cache
-from sentry_setup import init_sentry
 
 
 def create_app(config_object="settings"):
@@ -131,7 +133,7 @@ def register_blueprints(app):
 
 
 def register_extensions(app):
-    init_sentry()  # oxjob #1685: per-app DSN, environment/release/server_name, user errors filtered
+    sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
     # oxjob #521: ES client timeout 15s -> 7s. The query timeout is a soft 5s
     # (returns partial), so a 15s client wait just pins a Heroku worker on doomed
     # queries long after the proxy (9s) gave up, exhausting workers -> H12s. 7s lets
