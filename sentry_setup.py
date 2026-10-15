@@ -30,6 +30,8 @@ _USER_QUERY_MARKERS = (
     "too_many_clauses",
     "too_many_nested_clauses",
     "maxClauseCount",
+    "Valid edit distances are",  # a title's "1920~1952" read as fuzzy distance 1952
+    "too_complex_to_determinize",
 )
 
 
@@ -46,8 +48,18 @@ def _is_user_query_error(exc):
 
 def _before_send(event, hint):
     exc_info = hint.get("exc_info") if hint else None
-    if exc_info and _is_user_query_error(exc_info[1]):
+    if not exc_info:
+        return event
+    exc = exc_info[1]
+    if _is_user_query_error(exc):
         return None
+    # Sentry titles an elasticsearch ApiError by its .message, which is only the
+    # error type ("search_phase_execution_exception") for every ES 400; use str(exc),
+    # which carries the root cause's reason, so issues say what went wrong.
+    if type(exc).__module__.startswith("elasticsearch") and hasattr(exc, "body"):
+        for value in (event.get("exception") or {}).get("values") or []:
+            if value.get("type") == type(exc).__name__:
+                value["value"] = str(exc)[:1000]
     return event
 
 
