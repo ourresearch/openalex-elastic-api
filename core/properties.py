@@ -401,7 +401,11 @@ CAP_COLUMN = "column"
 # `recipient_countries.continent`, `recipient_countries.basis`, `recipient_regions.code`, `has_recipient_country`,
 # `research_scope.is_research`, `research_scope.basis`. Purely additive = MINOR. Needs the awards-v4 mapping patch
 # (walden PatchAwardsV4FundingFlows) first. If another bump lands on master first, rebase and take the next MINOR.
-PROPERTIES_VERSION = "17.2.0"
+# 17.3.0 (oxjob #1570, 2026-10-16, branch af1570-recipient-filters): awards gain filters `recipients.id` (OpenAlex institution
+# id, short or full form) and `recipients.ror` (bare or https://ror.org/ form) on the existing `recipients` field, against
+# the `recipients_full` keyword sibling already in the awards-v4 mapping (walden PatchAwardsV4FundingFlows). Purely
+# additive = MINOR. Ships after 17.2.0; if another bump lands on master first, rebase and take the next MINOR.
+PROPERTIES_VERSION = "17.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

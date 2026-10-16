@@ -1195,6 +1195,7 @@ class TermField(Field):
             "pmid",
             "pmcid",
             "authorships.raw_orcid",
+            "recipients.ror",
             "ror",
             "wikidata_id",
         ]
@@ -1325,6 +1326,7 @@ class TermField(Field):
             "pmid",
             "pmcid",
             "authorships.raw_orcid",
+            "recipients.ror",
             "ror",
             "wikidata_id",
         ]
@@ -1399,6 +1401,7 @@ class TermField(Field):
                     "affiliations.institution.ror",
                     "authorships.institutions.ror",
                     "institutions.ror",
+                    "recipients.ror",
                     "ror",
                 ]
                 and "ror.org" not in self.value
@@ -1589,6 +1592,7 @@ class TermField(Field):
                 "affiliations.institution.ror",
                 "authorships.institutions.ror",
                 "institutions.ror",
+                "recipients.ror",
                 "ror",
             ]
             and "ror.org" not in self.value

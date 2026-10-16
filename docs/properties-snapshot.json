@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "2b5fd21557fee70cf32b004c6d8ff92a81e0e2bd0c1bda25aa32763e2d899499",
-    "property_count": 919,
-    "version": "17.2.0"
+    "fingerprint": "431d28a82d257d7fe4f33f1c07f7bc876ab628b009f041128f349c49b426f1fe",
+    "property_count": 921,
+    "version": "17.3.0"
   },
   "properties": {
     "authors": {
@@ -2589,6 +2589,52 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "recipients.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "recipients id",
+        "entity_type": null,
+        "name": "recipients.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
+      },
+      "recipients.ror": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "ids",
+        "display_name": "recipients ror",
+        "entity_type": null,
+        "name": "recipients.ror",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
       },
       "relevance_score": {
         "actions": [
