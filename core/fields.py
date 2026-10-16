@@ -425,6 +425,7 @@ class BooleanField(Field):
             or self.param == "has_raw_affiliation_strings"
             or self.param == "has_references"
             or self.param == "has_parent_award"   # awards: exists on parent_awards_full.id (unlinked docs carry no field until resent)
+            or self.param == "has_recipient_country"   # awards: exists on recipient_countries_full.country_code (a term on "true" matched nothing, 10-15)
         ):
             self.validate_true_false()
             if self.value.lower().strip() == "true":
