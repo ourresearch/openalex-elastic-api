@@ -536,7 +536,7 @@ def hydrate_results(vector_results, connection="walden", works_filter=None):
         citation_factor = 1.0 + max_boost * relevance_strength * citation_signal
         score_map[work_id] = knn_score * citation_factor
 
-    source_excludes = ["abstract", "embeddings", "fulltext", "authorships_full", "vector_embedding"]
+    source_excludes = ["abstract", "embeddings", "fulltext", "authorships_full", "locations_full", "vector_embedding"]
     if works_filter:
         # The vector index's filter fields are written when a work's text is embedded and are not
         # refreshed when its metadata changes (the 2026-09-27 affiliation swap left ~10% of works with

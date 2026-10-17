@@ -47,15 +47,15 @@ def test_locations_version_null_uses_own_es_field():
     assert q == {"bool": {"must_not": [{"exists": {"field": "version"}}]}}, q
 
 
-def test_works_version_null_still_targets_locations_version():
+def test_works_version_null_targets_locations_full_version():
     f = works_fields["version"]
     f.value = "null"
     q = f.build_query().to_dict()
-    assert q == {"bool": {"must_not": [{"exists": {"field": "locations.version"}}]}}, q
+    assert q == {"bool": {"must_not": [{"exists": {"field": "locations_full.version"}}]}}, q
 
 
 def test_group_by_version_override_scoped_to_works():
-    """Only works' `version` (es field `locations.version`) takes the bespoke
+    """Only works' `version` (es field `locations_full.version`) takes the bespoke
     group_by_version path; the locations entity's own `version` column must fall
     through to the default terms-agg path."""
     assert is_works_version_group_by(works_fields["version"]) is True

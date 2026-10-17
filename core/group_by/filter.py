@@ -13,13 +13,13 @@ def filter_group_by(field, group_by, q, s):
         "corresponding_author_ids": "authorships__author__display_name__autocomplete",
         "corresponding_institution_ids": "authorships__institutions__display_name__autocomplete",
         "keywords.id": "keywords__display_name",
-        "journal": "locations__source__display_name__autocomplete",
+        "journal": "locations_full__source__display_name__autocomplete",
         "last_known_institutions.id": "last_known_institutions__display_name__autocomplete",
-        "locations.source.id": "locations__source__display_name__autocomplete",
-        "locations.source.publisher_lineage": "locations__source__host_organization_lineage_names__autocomplete",
+        "locations.source.id": "locations_full__source__display_name__autocomplete",
+        "locations.source.publisher_lineage": "locations_full__source__host_organization_lineage_names__autocomplete",
         "primary_location.source.id": "primary_location__source__display_name__autocomplete",
         "publisher": "publisher__autocomplete",
-        "repository": "locations__source__display_name__autocomplete",
+        "repository": "locations_full__source__display_name__autocomplete",
     }
     if autocomplete_field_mapping.get(group_by):
         slop = get_slop(group_by)

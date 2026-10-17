@@ -387,7 +387,7 @@ def filter_by_repository_or_journal(field, s):
         field.param == "repository"
         or field.param == "locations.source.host_institution_lineage"
     ):
-        s = s.filter("term", **{"locations.source.type": "repository"})
+        s = s.filter("term", **{"locations_full.source.type": "repository"})
     if field.param == "journal":
         s = s.filter("term", **{"primary_location.source.type": "journal"})
     return s

@@ -7,13 +7,13 @@ from settings import GROUPBY_VALUES_INDEX
 
 def is_works_version_group_by(field):
     """True only for the WORKS `version` param — an alias whose es field is the
-    nested `locations.version` inside the works index, served by the bespoke
+    nested `locations_full.version` inside the works index, served by the bespoke
     `group_by_version` MultiSearch. The locations ENTITY has its own plain
     `version` column (es field `version`), which must take the default terms-agg
     path: routing it through the works override termed on `locations.version`, a
     path absent from the locations index, and returned all-zero buckets
     (oxjob #850, 2026-08-30)."""
-    return field.param == "version" and field.es_field() == "locations.version"
+    return field.param == "version" and field.es_field() == "locations_full.version"
 
 
 def get_bucket_keys(group_by):

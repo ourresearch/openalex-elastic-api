@@ -62,9 +62,9 @@ def group_by_version(field, index_name, params, include_unknown, fields_dict):
     for version in settings.VERSIONS:
         s = search_and_filter(fields_dict, index_name, params)
         if version == "null":
-            s = s.filter(~Q("exists", field="locations.version"))
+            s = s.filter(~Q("exists", field="locations_full.version"))
         else:
-            kwargs1 = {"locations.version": version}
+            kwargs1 = {"locations_full.version": version}
             s = s.query(Q("term", **kwargs1))
         ms = ms.add(s)
 

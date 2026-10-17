@@ -212,7 +212,7 @@ fields = [
         param="has_old_authors",
         custom_es_field="authorships.uthor.id",
     ),
-    BooleanField(param="has_pdf_url", custom_es_field="locations.pdf_url"),
+    BooleanField(param="has_pdf_url", custom_es_field="locations_full.pdf_url"),
     BooleanField(
         param="has_raw_affiliation_strings",
         custom_es_field="authorships.raw_affiliation_strings",
@@ -278,40 +278,46 @@ fields = [
         param="is_xpac",
         unlisted=True,
     ),
+    # Location filters read `locations_full`, every location; `locations` is capped at 100 for list views (oxjob #1673).
     BooleanField(
         param="locations.is_oa",
+        custom_es_field="locations_full.is_oa",
         docstring=DOCSTRINGS["is_oa"],
         documentation_link=DOCUMENTATION_LINKS["is_oa"],
         alternate_names=ALTERNATE_NAMES.get("is_oa", None),
     ),
     BooleanField(
         param="locations.source.is_oa",
+        custom_es_field="locations_full.source.is_oa",
         docstring=DOCSTRINGS["source.is_oa"],
         documentation_link=DOCUMENTATION_LINKS["source.is_oa"],
         alternate_names=ALTERNATE_NAMES.get("source.is_oa", None),
     ),
     BooleanField(
-        param="locations.source.has_issn", custom_es_field="locations.source.issn"
+        param="locations.source.has_issn", custom_es_field="locations_full.source.issn"
     ),
     BooleanField(
         param="locations.source.is_in_doaj",
+        custom_es_field="locations_full.source.is_in_doaj",
         docstring=DOCSTRINGS["source.is_in_doaj"],
         documentation_link=DOCUMENTATION_LINKS["source.is_in_doaj"],
         alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
     ),
     BooleanField(
         param="locations.source.is_core",
+        custom_es_field="locations_full.source.is_core",
     ),
     TermField(
         param="locations.source.listed_in",
         # Mapped as a bare `keyword` with no `.lower` subfield (list ids are
         # lowercase by construction), so query the field itself. oxjob #1205
-        custom_es_field="locations.source.listed_in",
+        custom_es_field="locations_full.source.listed_in",
         docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (any location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
     BooleanField(
         param="locations.is_accepted",
+        custom_es_field="locations_full.is_accepted",
         docstring=DOCSTRINGS["is_accepted"].format(
             location_type="at least one version"
         ),
@@ -320,6 +326,7 @@ fields = [
     ),
     BooleanField(
         param="locations.is_published",
+        custom_es_field="locations_full.is_published",
         docstring=DOCSTRINGS["is_published"].format(
             location_type="at least one version"
         ),
@@ -530,20 +537,24 @@ fields = [
     ),
     OpenAlexIDField(
         param="locations.source.id",
+        alias="locations_full.source.id",
         docstring=DOCSTRINGS["source"],
         documentation_link=DOCUMENTATION_LINKS["source"],
         alternate_names=ALTERNATE_NAMES.get("source", None),
     ),
     OpenAlexIDField(
         param="locations.source.host_institution_lineage",
-        custom_es_field="locations.source.host_organization_lineage",
+        custom_es_field="locations_full.source.host_organization_lineage",
         alternate_of="locations.source.host_organization_lineage",
     ),
-    OpenAlexIDField(param="locations.source.host_organization"),
-    OpenAlexIDField(param="locations.source.host_organization_lineage"),
+    OpenAlexIDField(param="locations.source.host_organization", alias="locations_full.source.host_organization"),
+    OpenAlexIDField(
+        param="locations.source.host_organization_lineage",
+        alias="locations_full.source.host_organization_lineage",
+    ),
     OpenAlexIDField(
         param="locations.source.publisher_lineage",
-        custom_es_field="locations.source.host_organization_lineage",
+        custom_es_field="locations_full.source.host_organization_lineage",
         alternate_of="locations.source.host_organization_lineage",
     ),
     OpenAlexIDField(
@@ -578,7 +589,7 @@ fields = [
     ),
     OpenAlexIDField(
         param="repository",
-        custom_es_field="locations.source.id",
+        custom_es_field="locations_full.source.id",
         docstring=DOCSTRINGS["repository"],
         documentation_link=DOCUMENTATION_LINKS["repository"],
         alternate_names=ALTERNATE_NAMES.get("repository", None),
@@ -859,7 +870,7 @@ fields = [
         docstring="The version of the work that is available Open Access",
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
-    TermField(param="best_open_version", custom_es_field="locations.version"),
+    TermField(param="best_open_version", custom_es_field="locations_full.version"),
     TermField(param="biblio.first_page"),
     TermField(param="biblio.issue"),
     TermField(param="biblio.last_page"),
@@ -942,24 +953,24 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("language", None),
     ),
     TermField(
-        param="locations.landing_page_url", custom_es_field="locations.landing_page_url"
+        param="locations.landing_page_url", custom_es_field="locations_full.landing_page_url"
     ),
-    TermField(param="locations.source.issn"),
+    TermField(param="locations.source.issn", alias="locations_full.source.issn"),
     TermField(
         param="locations.license",
         docstring=DOCSTRINGS["license"],
         documentation_link=DOCUMENTATION_LINKS["license"],
         alternate_names=ALTERNATE_NAMES.get("license", None),
-        custom_es_field="locations.license_id.keyword",
+        custom_es_field="locations_full.license_id.keyword",
     ),
     TermField(
         param="locations.license_id",
-        custom_es_field="locations.license_id.keyword",
+        custom_es_field="locations_full.license_id.keyword",
         alternate_of="locations.license",
     ),
-    TermField(param="locations.source.type"),
-    TermField(param="locations.raw_type"),
-    TermField(param="locations.version"),
+    TermField(param="locations.source.type", alias="locations_full.source.type"),
+    TermField(param="locations.raw_type", alias="locations_full.raw_type"),
+    TermField(param="locations.version", alias="locations_full.version"),
     TermField(param="mag", custom_es_field="ids.mag", alternate_of="ids.mag"),
     TermField(
         param="oa_status",
@@ -1050,7 +1061,7 @@ fields = [
     TermField(param="type_crossref"),
     TermField(
         param="version",
-        custom_es_field="locations.version",
+        custom_es_field="locations_full.version",
         alternate_of="locations.version",
     ),
     CollectionField(entity_type="works"),

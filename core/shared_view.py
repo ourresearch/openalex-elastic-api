@@ -234,6 +234,7 @@ def set_source(index_name, s):
                 "embeddings",
                 "fulltext",
                 "authorships_full",
+                "locations_full",
                 "vector_embedding",
             ]
         )

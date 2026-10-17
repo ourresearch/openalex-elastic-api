@@ -355,6 +355,9 @@ class Field(ABC):
     def es_sort_field(self):
         if self.custom_es_field:
             field = self.custom_es_field.replace("__", ".")
+        elif self.alias and self.alias.startswith("locations_full."):
+            # works location fields aliased to every location sort on it too (oxjob #1673)
+            field = self.alias
         elif "publisher" in self.param or self.param == "display_name":
             field = f"{self.param}.keyword"
         else:
@@ -403,8 +406,8 @@ class BooleanField(Field):
 
         if self.param == "has_oa_accepted_or_published_version":
             self.validate_true_false()
-            query = Q("term", locations__is_oa="true") & Q(
-                "terms", locations__version=["acceptedVersion", "publishedVersion"]
+            query = Q("term", locations_full__is_oa="true") & Q(
+                "terms", locations_full__version=["acceptedVersion", "publishedVersion"]
             )
             if self.value.lower().strip() == "true":
                 q = query
@@ -412,8 +415,8 @@ class BooleanField(Field):
                 q = ~query
         elif self.param == "has_oa_submitted_version":
             self.validate_true_false()
-            query = Q("term", locations__is_oa="true") & Q(
-                "term", locations__version="submittedVersion"
+            query = Q("term", locations_full__is_oa="true") & Q(
+                "term", locations_full__version="submittedVersion"
             )
             if self.value.lower().strip() == "true":
                 q = query
@@ -604,7 +607,7 @@ class OpenAlexIDField(Field):
             query = get_full_openalex_id(self.value[1:])
             kwargs = {self.es_field(): query}
             if self.param == "repository":
-                q = ~Q("term", locations__source__id=query)
+                q = ~Q("term", locations_full__source__id=query)
             elif self.param == "journal":
                 q = ~Q("term", primary_location__source__id=query)
             else:
@@ -619,17 +622,17 @@ class OpenAlexIDField(Field):
         elif self.param == "repository":
             if self.value == "null":
                 q = ~Q("exists", field=self.custom_es_field) & Q(
-                    "term", **{"locations.source.type": "repository"}
+                    "term", **{"locations_full.source.type": "repository"}
                 )
             elif self.value == "!null":
                 q = Q("exists", field=self.custom_es_field) & Q(
-                    "term", **{"locations.source.type": "repository"}
+                    "term", **{"locations_full.source.type": "repository"}
                 )
             else:
                 self.validate(self.value)
                 kwargs = {self.custom_es_field: get_full_openalex_id(self.value)}
                 q = Q("term", **kwargs) & Q(
-                    "term", **{"locations.source.type": "repository"}
+                    "term", **{"locations_full.source.type": "repository"}
                 )
         elif self.param == "journal":
             if self.value == "null":
@@ -1008,7 +1011,7 @@ class TermField(Field):
         if has_null:
             # (The old works-only `version` special case — hardcoding
             # `locations.version` — was redundant: works' version field already
-            # carries custom_es_field="locations.version", and it broke the
+            # carries its own custom_es_field, and it broke the
             # locations ENTITY's own bare `version` column. oxjob #850.)
             null_query = ~Q("exists", field=self.es_field().replace("__", "."))
 
@@ -1049,7 +1052,7 @@ class TermField(Field):
             kwargs = {self.es_field(): formatted_values}
             terms_query = Q("terms", **kwargs)
             if self.alias == "ids.doi":  # works: any location's DOI, not just the work's own (oxjob #1573)
-                terms_query |= Q("terms", locations__doi__lower=formatted_values)
+                terms_query |= Q("terms", locations_full__doi__lower=formatted_values)
 
         # Combine the literal-value terms clause with the null/missing clause.
         if terms_query is not None and null_query is not None:
@@ -1363,7 +1366,7 @@ class TermField(Field):
                 self.value = f"https://openalex.org/{self.value}"
         if self.value == "null":
             # (Works' `version` no longer needs a special case here — its
-            # custom_es_field IS "locations.version"; the hardcode broke the
+            # custom_es_field covers it; the hardcode broke the
             # locations entity's bare `version` column. oxjob #850.)
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -1554,7 +1557,7 @@ class TermField(Field):
             full_doi = f"https://doi.org/{value}".lower()
         q = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
         if self.alias == "ids.doi":  # works also match any location's DOI (always the full URL form, oxjob #1573)
-            q |= Q("term", locations__doi__lower=full_doi)
+            q |= Q("term", locations_full__doi__lower=full_doi)
         return q
 
     def es_field(self) -> str:

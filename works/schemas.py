@@ -423,10 +423,12 @@ class WorksSchema(Schema):
 
     @pre_dump
     def pre_dump(self, data, **kwargs):
-        """If single record, display authorships_full rather than truncated list."""
+        """If single record, display authorships_full and locations_full rather than truncated lists."""
         if "single_record" in self.context and self.context["single_record"]:
             if hasattr(data, "authorships_full"):
                 data.authorships = data.authorships_full
+            if hasattr(data, "locations_full"):
+                data.locations = data.locations_full
             if hasattr(data, "authorships_truncated"):
                 del data.authorships_truncated
         return data
@@ -449,12 +451,14 @@ class WorksSchema(Schema):
         def is_bad(loc):
             return isinstance(loc, dict) and loc.get("id") in bad_ids
 
+        # In list views `locations` holds the first 100 only (oxjob #1673): adjust the count rather than
+        # recount it, and judge OA from the locations only when all of them are here.
+        shown = data.get("locations") or []
+        complete = "locations" not in data or data.get("locations_count") is None or len(shown) >= data["locations_count"]
         if "locations" in data:
-            data["locations"] = [
-                loc for loc in (data.get("locations") or []) if not is_bad(loc)
-            ]
-            if "locations_count" in data:
-                data["locations_count"] = len(data["locations"])
+            data["locations"] = [loc for loc in shown if not is_bad(loc)]
+            if data.get("locations_count") is not None:
+                data["locations_count"] -= len(shown) - len(data["locations"])
 
         for key in ("primary_location", "best_oa_location"):
             if is_bad(data.get(key)):
@@ -462,7 +466,7 @@ class WorksSchema(Schema):
 
         # No OA location survives -> the work is toll-access (closed).
         remaining = data.get("locations") or []
-        if not any(isinstance(loc, dict) and loc.get("is_oa") for loc in remaining):
+        if complete and not any(isinstance(loc, dict) and loc.get("is_oa") for loc in remaining):
             if data.get("open_access") is not None:
                 data["open_access"] = {
                     "is_oa": False,

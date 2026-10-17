@@ -145,6 +145,7 @@ def funder_search():
                 "embeddings",
                 "fulltext",
                 "authorships_full",
+                "locations_full",
                 "vector_embedding",
             ]
         )
