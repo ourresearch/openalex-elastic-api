@@ -46,3 +46,10 @@ class CollectionTooBigToFilterError(APIError):
 class CollectionResolutionUnavailableError(APIError):
     code = 503
     description = "collection resolution unavailable"
+
+
+class SemanticSearchBusyError(APIError):
+    """The vector cluster or the query-embedding call didn't answer in time (oxjob #1433). A 503, so the proxy's
+    semantic ladder counts it as overload and the caller gets Retry-After instead of a hung request."""
+    code = 503
+    description = "Semantic search is busy"

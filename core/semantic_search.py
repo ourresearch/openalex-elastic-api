@@ -15,7 +15,9 @@ import time
 import requests as http_requests
 
 import settings
-from core.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError, SemanticSearchBusyError
+
+EMBED_TIMEOUT_S = 5
 
 # Databricks embedding model config (oxjob #1275: Qwen3-Embedding-0.6B, multilingual,
 # pay-per-token Foundation Model endpoint; corpus vectors live in
@@ -113,11 +115,14 @@ def embed_query(query_text: str) -> list:
     payload = {"model": EMBEDDING_MODEL, "input": truncated}
 
     try:
-        response = http_requests.post(url, headers=headers, json=payload, timeout=30)
+        # oxjob #1433: 5 s, not 30. Embedding takes ≈ 0.2 s; the proxy gives up at 9 s, so a slower answer can't help.
+        response = http_requests.post(url, headers=headers, json=payload, timeout=EMBED_TIMEOUT_S)
         response.raise_for_status()
         result = response.json()
         embedding = result["data"][0]["embedding"]
         return [float(x) for x in embedding]
+    except http_requests.exceptions.Timeout as e:
+        raise SemanticSearchBusyError("Semantic search is busy (the query embedding timed out). Please retry in a minute.") from e
     except Exception as e:
         raise APIQueryParamsError(f"Failed to embed query: {str(e)}")
 

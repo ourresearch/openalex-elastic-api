@@ -12,10 +12,11 @@ import logging
 import math
 from collections import OrderedDict
 
+from elasticsearch.exceptions import ConnectionTimeout
 from elasticsearch_dsl import connections
 
 import settings
-from core.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError, SemanticSearchBusyError
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.utils import get_full_openalex_id
 
@@ -643,6 +644,11 @@ def vector_semantic_search(params, index_name, connection):
             vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception as e:
         import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
+        if isinstance(e, ConnectionTimeout):
+            # oxjob #1433: the vector cluster didn't answer within the 7 s client timeout (app.py); say so with a 503.
+            raise SemanticSearchBusyError(
+                "Semantic search is under heavy load and this search didn't finish in time. Please retry in a minute."
+            ) from e
         raise
 
     # Text-boost injection for short queries (≤ 3 words).

@@ -135,15 +135,18 @@ def register_extensions(app):
     # oxjob #521: ES client timeout 15s -> 7s. The query timeout is a soft 5s
     # (returns partial), so a 15s client wait just pins a Heroku worker on doomed
     # queries long after the proxy (9s) gave up, exhausting workers -> H12s. 7s lets
-    # the worker return cleanly just after the 5s query budget. (vector left at 15s:
-    # semantic search legitimately runs longer and isn't part of the works-search load.)
+    # the worker return cleanly just after the 5s query budget.
+    # oxjob #1433: vector 15s -> 7s, for the same reason. The proxy gives up at 9s, so a slower semantic search can
+    # never reach its caller, and while the vector cluster was overloaded (13 and 15 Oct) every search ran on to the
+    # 12s gunicorn kill, keeping the cluster busy with searches nobody was waiting for. Closing the connection at 7s
+    # lets Elasticsearch cancel the search; vector_index.py turns the timeout into a 503 the proxy's ladder counts.
     # oxjob #1682: http_compress asks ES for gzip. Elastic Cloud bills every response byte
     # as data out (~16 TB/day, 99% of it search responses to this app); gzip cuts it ~6x.
     # Measured from a dyno: 25-result pages unchanged, 100-200-result pages +~20 ms.
     connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True)
     connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True)
     if settings.ES_VECTOR_SEARCH_URL:
-        connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=15, http_compress=True)
+        connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=7, http_compress=True)
     cache.init_app(app)
 
 
