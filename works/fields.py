@@ -101,6 +101,7 @@ fields = [
     ),
     BooleanField(
         param="authorships.is_corresponding",
+        custom_es_field="authorships_full.is_corresponding",
         docstring=DOCSTRINGS["corresponding_authors"],
         documentation_link=DOCUMENTATION_LINKS["corresponding_authors"],
         alternate_names=ALTERNATE_NAMES.get("corresponding_authors", None),
@@ -227,7 +228,7 @@ fields = [
     ),
     BooleanField(
         param="is_corresponding",
-        custom_es_field="authorships.is_corresponding",
+        custom_es_field="authorships_full.is_corresponding",
         alternate_of="authorships.is_corresponding",
         docstring=DOCSTRINGS["is_corresponding"],
         documentation_link=DOCUMENTATION_LINKS["is_corresponding"],
@@ -814,6 +815,7 @@ fields = [
     ),
     TermField(
         param="authorships.countries",
+        alias="authorships_full.countries",
         docstring=DOCSTRINGS["country"],
         documentation_link=DOCUMENTATION_LINKS["country"],
         alternate_names=ALTERNATE_NAMES.get("country", None),

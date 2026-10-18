@@ -355,8 +355,8 @@ class Field(ABC):
     def es_sort_field(self):
         if self.custom_es_field:
             field = self.custom_es_field.replace("__", ".")
-        elif self.alias and self.alias.startswith("locations_full."):
-            # works location fields aliased to every location sort on it too (oxjob #1673)
+        elif self.alias and (self.alias.startswith("locations_full.") or self.alias == "authorships_full.countries"):
+            # works fields aliased to every location / authorship sort on it too (oxjobs #1673, #1730)
             field = self.alias
         elif "publisher" in self.param or self.param == "display_name":
             field = f"{self.param}.keyword"
