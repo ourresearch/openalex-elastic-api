@@ -429,29 +429,31 @@ def test_a_things_own_continent_reads_in_place():
 def test_the_execute_echo_names_entities_in_the_new_form(monkeypatch):
     # meta.x_query.x_new_oql read `get (I63966007)'s works` on POST / while /query named it
     from query_translation import x_query
-    calls = []
+    batches = []
 
-    def fake(entity_id):
-        calls.append(entity_id)
-        return {"institutions/I63966007": "Massachusetts Institute of Technology"}.get(entity_id)
+    def fake(ids):
+        batches.append(list(ids))
+        return {i: "Massachusetts Institute of Technology" for i in ids if i == "institutions/I63966007"}
 
-    monkeypatch.setattr(x_query, "safe_get_display_name", fake)
+    monkeypatch.setattr(x_query, "_batch_names", fake)
     x_query._ECHO_NAMES.clear()
     oqo = parse_core("get [MIT](I63966007)'s works about (quantum computing)")
     xq = x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)
     assert xq["x_new_oql"] == "get [Massachusetts Institute of Technology](I63966007)'s works about (quantum computing)"
     assert x_query.build_x_query(oqo, sort_operands=False)["x_new_oql"].startswith("get (I63966007)'s")
     x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)
-    assert len(calls) == 1          # cached
+    assert batches == [["institutions/I63966007"]]          # one query, then the cache
 
 
-def test_the_execute_echo_caps_its_lookups(monkeypatch):
+def test_the_execute_echo_names_many_ids_in_one_query(monkeypatch):
     from query_translation import x_query
-    monkeypatch.setattr(x_query, "safe_get_display_name", lambda i: "Some Place")
-    x_query._ECHO_NAMES.clear()
-    ids = [f"I{100 + i}" for i in range(x_query.ECHO_NAME_LOOKUPS + 3)]
     from query_translation.oql_parser import parse_either
+    batches = []
+    monkeypatch.setattr(x_query, "_batch_names", lambda ids: batches.append(ids) or {i: "Some Place" for i in ids})
+    monkeypatch.setattr(x_query, "safe_get_display_name", lambda i: pytest.fail("one-by-one lookup"))
+    x_query._ECHO_NAMES.clear()
+    ids = [f"I{100 + i}" for i in range(30)]
     oqo = parse_either("get works where authorships.institutions.lineage is (" + " or ".join(ids) + ")")
     oqo = oqo[0] if isinstance(oqo, tuple) else oqo
     text = x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)["x_new_oql"]
-    assert text.count("[Some Place]") == x_query.ECHO_NAME_LOOKUPS and "no entity found" not in text
+    assert len(batches) == 1 and text.count("[Some Place]") == 30 and "no entity found" not in text

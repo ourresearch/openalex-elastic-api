@@ -382,7 +382,7 @@ class _Works:
         if len(plain) > 1:
             # works with every one of these places: `from both [Oxford] and [Cambridge]`, not
             # `from [Oxford] from [Cambridge]` (#1744's demo, B4)
-            joined = ("both " + " and ".join(plain)) if len(plain) == 2 else ("all of " + english_list(plain))
+            joined = ("both " if len(plain) == 2 else "all of ") + english_list(plain)
             froms = [x for x in froms if not x.startswith("from ")] + ["from " + joined]
         words += froms
         if len(self.authors) == 1:
@@ -430,21 +430,12 @@ def _thing_parts(where, noun: str, resolver=None) -> Tuple[str, List[str], List,
     left: List = []
     count = None
     items = _and_items(where) if where is not None else []
-    # `except [Kenya](KE)` / `except ([A](I1), [B](I2))`: the things left out by their own
-    # ID (`that institution is not ...`; found by #1744's demo, B5 and B6)
-    excluded = [f for f in items if isinstance(f, LeafFilter) and f.column_id == "ids.openalex"
-                and f.is_negated and f.operator == "is"]
-    if excluded:
-        col = NOUN_THINGS.get(noun) or NOUN_THINGS[NOUN_THING_TYPES[noun][0]] \
-            if noun in NOUN_THINGS or noun in NOUN_THING_TYPES else None
-        if col is None:
-            raise NotCore("an exclusion on unknown things")
-        links = [_link(f.value, col, resolver) for f in excluded]
+    excluded = _excluded(items)
+    except_text = _except_text(excluded, noun, resolver) if excluded else None   # base noun here
     for f in items:
-        if excluded and f is excluded[0]:
-            parts.append("except " + (links[0] if len(links) == 1 else "(" + ", ".join(links) + ")"))
-            continue
-        if excluded and f in excluded:
+        if f in excluded:
+            if f is excluded[0]:
+                parts.append(except_text)
             continue
         if (text := _record_text(f, resolver)) is not None:
             parts.append(text)
@@ -454,17 +445,38 @@ def _thing_parts(where, noun: str, resolver=None) -> Tuple[str, List[str], List,
         elif isinstance(f, LeafFilter) and f.column_id == "type" and not f.is_negated \
                 and (noun, f.value) in THING_TYPE_NOUNS:
             noun = THING_TYPE_NOUNS[(noun, f.value)]
-        elif isinstance(f, LeafFilter) and f.column_id == "country_code" and not f.is_negated:
-            parts.append(f"in {_link(f.value, 'authorships.countries', resolver)}")
-        elif isinstance(f, LeafFilter) and f.column_id == "continent" and not f.is_negated \
-                and f.operator == "is" and noun != "authors":
-            # a thing's own continent: `institutions in [Africa](Q15)` (found by #1744)
-            parts.append(f"in {_link(f.value, 'authorships.institutions.continent', resolver)}")
+        elif (text := _own_place(f, noun, resolver)) is not None:
+            parts.append(text)
         elif _is_own_threshold(f):
             parts.append(_own_threshold_text(f))
         else:
             left.append(f)
     return noun, parts, left, count
+
+
+def _own_place(f, noun: str, resolver=None) -> Optional[str]:
+    """A thing's own place: `in [Sweden](SE)`, `in [Africa](Q15)` (an author's place is
+    their record, `_record_text`, so no continent for authors)."""
+    if not isinstance(f, LeafFilter) or f.is_negated or f.operator != "is":
+        return None
+    if f.column_id == "country_code":
+        return f"in {_link(f.value, 'authorships.countries', resolver)}"
+    if f.column_id == "continent" and noun != "authors":
+        return f"in {_link(f.value, 'authorships.institutions.continent', resolver)}"
+    return None
+
+
+def _excluded(items) -> List:
+    """`that institution is not ...`: the things left out by their own ID."""
+    return [f for f in items if isinstance(f, LeafFilter) and f.column_id == "ids.openalex"
+            and f.is_negated and f.operator == "is"]
+
+
+def _except_text(excluded, noun: str, resolver=None) -> str:
+    """`except [Kenya](KE)` / `except ([A](I1), [B](I2))` (found by #1744's demo, B5 and B6);
+    `noun` is the things' base noun."""
+    links = [_link(f.value, NOUN_THINGS[noun], resolver) for f in excluded]
+    return "except " + (links[0] if len(links) == 1 else "(" + ", ".join(links) + ")")
 
 
 def _and_items(node) -> List:
@@ -633,8 +645,12 @@ def _things_list(oqo, resolver):
     by_own = sort is not None and sort.column_id in OWN_FIELDS and not _is_default_order(
         oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
     parts, thresholds, only, left = [], [], [], []
+    excluded = _excluded(oqo.filter_rows)
     for f in oqo.filter_rows:
-        if isinstance(f, LeafFilter) and f.column_id == "type" and not f.is_negated \
+        if f in excluded:
+            if f is excluded[0]:
+                parts.append(_except_text(excluded, oqo.get_rows, resolver))
+        elif isinstance(f, LeafFilter) and f.column_id == "type" and not f.is_negated \
                 and (noun, f.value) in THING_TYPE_NOUNS and noun == oqo.get_rows:
             noun = THING_TYPE_NOUNS[(noun, f.value)]
         elif (text := _record_text(f, resolver)) is not None:
@@ -642,12 +658,8 @@ def _things_list(oqo, resolver):
         elif isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
                 and f.column_id in THING_IN_KEYS:
             parts.append(f"in {THING_IN_KEYS[f.column_id]} {_link(f.value, f.column_id, resolver)}")
-        elif isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
-                and f.column_id == "country_code":
-            parts.append(f"in {_link(f.value, 'authorships.countries', resolver)}")
-        elif isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
-                and f.column_id == "continent" and noun != "authors":
-            parts.append(f"in {_link(f.value, 'authorships.institutions.continent', resolver)}")
+        elif (text := _own_place(f, noun, resolver)) is not None:
+            parts.append(text)
         elif _is_own_threshold(f):
             # a threshold on the rank's own number is its `Only ...` sentence (Jason's #logs note)
             (only if by_own and not TABLE_FORM and f.column_id == sort.column_id else thresholds).append(f)
@@ -711,21 +723,36 @@ def _breakdown(oqo, resolver):
     w = _works(oqo.filter_rows, resolver)
     texts = []
     for g in oqo.group_by:      # the query's own order (it nests the rows); year is the x-axis either way
-        word = DIMS[g.column_id]
-        if g.column_id == "publication_year" and w.time_text():
-            word += " " + w.time_text()
-        if g.values is not None:
-            if len(g.values) == 1 and isinstance(g.values[0], str) and g.values[0].startswith("col_"):
-                word += f" in the collection {_link(g.values[0], g.column_id, resolver)}"
-            else:
-                word += " in (" + ", ".join(_link(v, g.column_id, resolver) for v in g.values) + ")"
-        texts.append(word)
+        texts.append(_dim_words(g, DIMS[g.column_id], w, resolver))
     phrase = w.text(all_works=True, keep_time=not year_dim)
     text = f"break down {phrase} by {' and '.join(texts)}" + _breakdown_order(oqo)
     keys = [(m.measure, m.column_id) for m in oqo.calculate]
     if oqo.calculate and keys not in (DEFAULT_BREAKDOWN, [("count", None)]):
         text += ". " + _show(oqo.calculate)
     return text
+
+
+def _dim_words(g, word: str, w, resolver) -> str:
+    """A split's word, then the year range (`year since 2004`), then its listed values
+    (`country in ([Canada](CA), ...)`, `institution in the collection [X](col_x)`): the
+    order `_parse_dim` reads."""
+    if g.column_id == "publication_year" and w.time_text():
+        word += " " + w.time_text()
+    if g.values is not None:
+        if len(g.values) == 1 and isinstance(g.values[0], str) and g.values[0].startswith("col_"):
+            word += f" in the collection {_link(g.values[0], g.column_id, resolver)}"
+        else:
+            word += " in (" + ", ".join(_link(v, g.column_id, resolver) for v in g.values) + ")"
+    return word
+
+
+def _key_order(col: str, word: str, desc: bool) -> str:
+    """A split's own-key order: `, alphabetical by type` or `, in institution ID order`
+    (an ID column sorts by the ID, not the name)."""
+    fld = L._BY_COLUMN.get(col)
+    if fld is not None and fld.kind in ("string", "enum", "bool"):
+        return f", {'reverse ' if desc else ''}alphabetical by {word}"
+    return f", in {'reverse ' if desc else ''}{word} ID order"
 
 
 def _breakdown_order(oqo) -> str:
@@ -743,10 +770,7 @@ def _breakdown_order(oqo) -> str:
     dim = oqo.group_by[0].column_id
     if dim == "publication_year":
         return ", newest first" if desc else ", oldest first"
-    fld = L._BY_COLUMN.get(dim)
-    if fld is not None and fld.kind in ("string", "enum", "bool"):
-        return f", {'reverse ' if desc else ''}alphabetical by {DIMS[dim]}"
-    return f", in {'reverse ' if desc else ''}{DIMS[dim]} ID order"
+    return _key_order(dim, DIMS[dim], desc)
 
 
 # ---------------------------------------------------------------------------
@@ -765,6 +789,7 @@ THING_SINGULAR = {"authors": "author", "institutions": "institution", "countries
                   "subfields": "subfield", "funders": "funder", "publishers": "publisher"}
 SINGULAR_THING = {v: k for k, v in THING_SINGULAR.items()}
 _SPLIT_WORDS = sorted(set(DIM_COLUMNS) | set(SINGULAR_THING), key=len, reverse=True)
+_BY_SPLIT = re.compile(r" by (?:%s)\b" % "|".join(re.escape(w) for w in _SPLIT_WORDS))
 _SPLIT_AND = re.compile(r"\s+and\s+(?=(?:%s)\b)" % "|".join(re.escape(w) for w in _SPLIT_WORDS))
 
 
@@ -794,36 +819,30 @@ def _table(oqo, resolver):
         if g.values is not None:
             if g.column_id not in DIMS:
                 raise NotCore("a list on a split with no word")
-            word = DIMS[g.column_id]
-            if len(g.values) == 1 and isinstance(g.values[0], str) and g.values[0].startswith("col_"):
-                word += f" in the collection {_link(g.values[0], g.column_id, resolver)}"
-            else:
-                word += " in (" + ", ".join(_link(v, g.column_id, resolver) for v in g.values) + ")"
+            word = _dim_words(g, DIMS[g.column_id], w, resolver)
         elif g.where is not None:
             if g.column_id not in THING_NOUNS:
                 raise NotCore("which groups, on a split with no things")
             noun, parts, left, count = _thing_parts(g.where, THING_NOUNS[g.column_id], resolver)
-            if left or noun not in THING_SINGULAR:
+            if left:
                 raise NotCore("which groups, with no words")
             word = " ".join([THING_SINGULAR[noun]] + parts)
             if count is not None:
                 only.append(f"Only {noun} with {COMPARATOR_WORDS[count.operator]} "
                             f"{_number(count.value)} {w.text(keep_time=True)}.")
         elif g.column_id in DIMS:
-            word = DIMS[g.column_id]
+            word = _dim_words(g, DIMS[g.column_id], w, resolver)
         elif g.column_id in THING_NOUNS:
             word = THING_SINGULAR[THING_NOUNS[g.column_id]]
         else:
             raise NotCore(f"no word for splitting by {g.column_id}")
-        if g.column_id == "publication_year" and w.time_text():
-            word += " " + w.time_text()
         splits.append(word)
     order, sorted_own = _table_order(oqo, measures)
     names = english_list([_table_name(m) for m in nums])
     join = MEASURE_JOIN.get(_measure_name(nums[-1]), "of")
     text = f"get the {names} {join} {works_text} by {' and '.join(splits)}{order}"
-    extras = ([_show([m for m in own if m is not sorted_own])]
-              if [m for m in own if m is not sorted_own] else []) + only
+    shown = [m for m in own if m is not sorted_own]
+    extras = ([_show(shown)] if shown else []) + only
     return text + (". " + " ".join(extras) if extras else "")
 
 
@@ -844,16 +863,12 @@ def _table_order(oqo, measures) -> Tuple[str, Optional[Measure]]:
         if year_first:
             return (", newest first" if desc else ""), None
         word = DIMS.get(first) or THING_SINGULAR.get(THING_NOUNS.get(first, ""), "")
-        fld = L._BY_COLUMN.get(first)
-        if fld is not None and fld.kind in ("string", "enum", "bool"):
-            return f", {'reverse ' if desc else ''}alphabetical by {word}", None
-        return f", in {'reverse ' if desc else ''}{word} ID order", None
+        return _key_order(first, word, desc), None
     m = next((m for m in measures if m.key == s.column_id), None)
     if m is None:
         raise NotCore(f"an order by {s.column_id}, which the table doesn't show")
     word = "highest" if desc else "lowest"
-    if m.measure != "value" and [x for x in measures if x.measure != "value"] == [m] \
-            and len(measures) == 1:
+    if len(measures) == 1 and m.measure != "value":
         return f", {word} first", None      # one number: `highest first` says enough
     name = OWN_FIELDS[m.column_id][1] if m.measure == "value" else _table_name(m)
     return f", {word} {name} first", (m if m.measure == "value" else None)
@@ -1254,17 +1269,18 @@ def _split_sentences(t: _Text) -> List[str]:
 def _parse_measures(t: _Text, s: str) -> List[Measure]:
     # `a, b, and c` (the Oxford comma, canonical) or `a, b and c`
     names = [n.strip() for n in re.split(r",\s*(?:and\s+)?|\s+and\s+", s) if n.strip()]
-    out = []
-    for n in names:
-        if n.startswith("the "):
-            n = n[len("the "):]
-        if n == "count":
-            n = "count of works"
-        if n not in NAME_MEASURES:
-            raise NotCore(f"unknown measure {n!r}")
-        m, col = NAME_MEASURES[n]
-        out.append(Measure(m, col))
-    return out
+    return [_measure_named(n) for n in names]
+
+
+def _measure_named(n: str) -> Measure:
+    """A number's name (`the count`, `count`, `share`, `mean FWCI`) -> its Measure."""
+    if n.startswith("the "):
+        n = n[len("the "):]
+    if n == "count":
+        n = "count of works"
+    if n not in NAME_MEASURES:
+        raise NotCore(f"unknown measure {n!r}")
+    return Measure(*NAME_MEASURES[n])
 
 
 def _order(t, s: str, entity: str = "works") -> Tuple[str, List[SortBy]]:
@@ -1317,8 +1333,7 @@ def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     show = [e[len("Show "):] for e in extras if e.startswith("Show ")]
     only = [e[len("Only "):] for e in extras if e.startswith("Only ")]
     low = main.lower()
-    table = low.startswith("get the ") and any(
-        re.search(r" by %s\b" % re.escape(w), main) for w in _SPLIT_WORDS)
+    table = low.startswith("get the ") and _BY_SPLIT.search(main) is not None
     if only and not (low.startswith("rank ") or table):
         raise NotCore("an `Only` sentence follows a rank or a table")     # loud, never dropped
     if table:
@@ -1414,12 +1429,8 @@ def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
         if ws.at("except") or ws.at("other", "than"):        # `other than`: what writers reach for
             ws.take(2 if ws.at("other") else 1)
             tok = ws.take()[0]
-            ids = [t.link_id(tok)] if t.link_id(tok) else None
-            if ids is None:
-                inner = t.restore(tok)
-                if not (inner.startswith("(") and inner.endswith(")")):
-                    raise NotCore("`except [X]` or `except ([A], [B])`")
-                ids = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner[1:-1])]
+            ids = [t.link_id(tok)] if t.link_id(tok) else \
+                _inner_links(_paren_inner(t, tok, "`except [X]` or `except ([A], [B])`"))
             if not ids:
                 raise NotCore("`except` needs the things it leaves out")
             items += [LeafFilter("ids.openalex", i, is_negated=True) for i in ids]
@@ -1612,31 +1623,45 @@ def _parse_breakdown_body(t, s, collection_type):
         word = next((w for w in _DIMS_LONGEST if part == w or part.startswith(w + " ")), None)
         if word is None:
             raise NotCore(f"unknown dimension {part!r}")
-        col = DIM_COLUMNS[word]
-        rest = part[len(word):].strip()
-        g = GroupBy(column_id=col)
-        if rest:
-            ws = _Words(t, rest)
-            if col == "publication_year":
-                yrs = _years_from(ws)
-                if yrs is None:
-                    raise NotCore(f"after `by year`: {rest!r}")
-                rows += yrs
-            if ws.at("in", "the", "collection"):
-                ws.take(3)
-                g.values = [t.link_id(ws.take()[0])]
-            elif ws.at("in"):
-                ws.take()
-                inner = t.restore(ws.take()[0])
-                if not (inner.startswith("(") and inner.endswith(")")):
-                    raise NotCore("a list of values in parentheses")
-                # links named or bare (`[Canada](CA)`, `(I141945490)`), in order; else plain values
-                g.values = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner[1:-1])] or \
-                    [v.strip() for v in inner[1:-1].split(",")]
-            if not ws.done():
-                raise NotCore(f"unexpected {ws.peek()!r} after a dimension")
-        groups.append(g)
+        groups.append(_parse_dim(t, word, part[len(word):].strip(), rows))
     return OQO(get_rows="works", filter_rows=rows, group_by=groups, calculate=_default_breakdown())
+
+
+def _parse_dim(t, word: str, rest: str, rows: List) -> GroupBy:
+    """A dimension and what follows it: `year since 2004` (the years join `rows`),
+    `country in ([Canada](CA), [China](CN))`, `institution in the collection [X](col_x)`."""
+    g = GroupBy(column_id=DIM_COLUMNS[word])
+    if not rest:
+        return g
+    ws = _Words(t, rest)
+    if word == "year":
+        yrs = _years_from(ws)
+        if yrs is None:
+            raise NotCore(f"after `by year`: {rest!r}")
+        rows += yrs
+    if ws.at("in", "the", "collection"):
+        ws.take(3)
+        g.values = [t.link_id(ws.take()[0])]
+    elif ws.at("in"):
+        ws.take()
+        inner = _paren_inner(t, ws.take()[0], "a list of values in parentheses")
+        # links named or bare (`[Canada](CA)`, `(I141945490)`), in order; else plain values
+        g.values = _inner_links(inner) or [v.strip() for v in inner.split(",")]
+    if not ws.done():
+        raise NotCore(f"unexpected {ws.peek()!r} after `by {word}`")
+    return g
+
+
+def _paren_inner(t, tok: str, what: str) -> str:
+    """The text inside a held-aside `( ... )` token, or NotCore(what)."""
+    inner = t.restore(tok)
+    if not (inner.startswith("(") and inner.endswith(")")):
+        raise NotCore(what)
+    return inner[1:-1]
+
+
+def _inner_links(inner: str) -> List[str]:
+    return [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner)]
 
 
 _TABLE_ORDER_RE = re.compile(r", (?:(most|fewest) works first|(oldest|newest) first|"
@@ -1708,27 +1733,7 @@ def _parse_split(t, part, rows) -> GroupBy:
     rest = part[len(word):].strip()
     values_or_time = word == "year" or re.match(r"in (the collection |⟦Q)", rest)
     if word in DIM_COLUMNS and (not rest or values_or_time):
-        g = GroupBy(column_id=DIM_COLUMNS[word])
-        if rest:
-            ws = _Words(t, rest)
-            if word == "year":
-                yrs = _years_from(ws)
-                if yrs is None:
-                    raise NotCore(f"after `by year`: {rest!r}")
-                rows += yrs
-            if ws.at("in", "the", "collection"):
-                ws.take(3)
-                g.values = [t.link_id(ws.take()[0])]
-            elif ws.at("in"):
-                ws.take()
-                inner = t.restore(ws.take()[0])
-                if not (inner.startswith("(") and inner.endswith(")")):
-                    raise NotCore("a list of values in parentheses")
-                g.values = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner[1:-1])] or \
-                    [v.strip() for v in inner[1:-1].split(",")]
-            if not ws.done():
-                raise NotCore(f"unexpected {ws.peek()!r} after a split")
-        return g
+        return _parse_dim(t, word, rest, rows)
     if word not in SINGULAR_THING:
         raise NotCore(f"unexpected {rest!r} after `by {word}`")
     noun, typ, items = _parse_things(t, SINGULAR_THING[word] + (" " + rest if rest else ""))
@@ -1752,13 +1757,7 @@ def _table_sort(m, oqo) -> List[SortBy]:
         if len(nums) != 1:
             raise NotCore("`highest first` with more than one number: name it")
         return [SortBy(nums[0].key, "desc" if desc else "asc")]
-    name = {"count": "count of works", "share": "share of the total"}.get(name, name)
-    if name in OWN_FIELD_BY_WORD:
-        meas = Measure("value", OWN_FIELD_BY_WORD[name])
-    elif name in NAME_MEASURES:
-        meas = Measure(*NAME_MEASURES[name])
-    else:
-        raise NotCore(f"an order by {name!r}")
+    meas = Measure("value", OWN_FIELD_BY_WORD[name]) if name in OWN_FIELD_BY_WORD else _measure_named(name)
     if all(x.key != meas.key for x in oqo.calculate):
         oqo.calculate = list(oqo.calculate) + [meas]       # ordering by a column shows it
     return [SortBy(meas.key, "desc" if desc else "asc")]

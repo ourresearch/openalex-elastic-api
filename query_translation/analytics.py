@@ -122,10 +122,8 @@ def count_fix(lv: Optional["Level"] = None, n: int = 10) -> str:
     thing, else the group filter."""
     from query_translation.oql_core import THING_NOUNS
     thing = THING_NOUNS.get(lv.column_id) if lv is not None and lv.column_id else None
-    if thing:
-        # the table sentence's floor (oxjob #1555 D2, 2026-10-20)
-        return f"`Only {thing} with more than {n:,} works ...`"
-    return f"`Only ... with more than {n:,} works ...`"
+    # the table sentence's floor (oxjob #1555 D2, 2026-10-20)
+    return f"`Only {thing or '...'} with more than {n:,} works ...`"
 
 
 def too_slow(what: str) -> AnalyticsError:
@@ -1394,9 +1392,7 @@ def _code_name(code: str, column_id: str, entity: str) -> str:
 def _order_value(v):
     """A cell as a sort key: numbers (and number-like keys, `"2026"`) before text, so a
     column never compares a number with a string."""
-    if isinstance(v, bool):
-        return (0, int(v), "")
-    if isinstance(v, (int, float)):
+    if isinstance(v, (int, float)):        # bool too
         return (0, v, "")
     s = str(v)
     try:
@@ -1507,11 +1503,12 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     if sort is None and len(levels) == 1 and _is_year_level(levels[0]):
         eff_sort = ("key", "asc")
     sort_m = next((x for x in measures if eff_sort and x.key == eff_sort[0]), None)
+    by_own = sort_m is not None and sort_m.measure == "value"   # an own field orders the groups
     own_filled = False   # own fields already read for every group (to sort by one)
     sort_measure = None
     if eff_sort and not nested:
         key, direction = eff_sort
-        m = next((x for x in measures if x.key == key), None)
+        m = sort_m
         if key == "count" or (m is not None and m.measure == "percent_of_those"):
             # a share of the whole set is the count over one number: the count's order
             sort_measure = {"_count": direction}
@@ -1581,9 +1578,9 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         lv0 = levels[0]
         field0 = (lv0.agg["composite"]["sources"][0]["k"]["terms"]["field"] if lv0.composite
                   else lv0.agg["terms"]["field"])
-        if lv0.selector is None and lv0.post_keep is None:
+        if lv0.selector is None and lv0.post_keep is None and not lv0.all_groups:
             # how many groups a single split has in all (approximate past 3,000), less
-            # what a key-set filter leaves out
+            # what a key-set filter leaves out (all_groups counts its rows instead)
             body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
                                                         "precision_threshold": 3000}}
             keyset = _keyset_count_agg(lv0, field0)
@@ -1643,7 +1640,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             and not top.paged_floor
         if nested:
             # every group of every level is here: order each level (D4, oxjob #1555)
-            if sort_m is not None and sort_m.measure == "value":
+            if by_own:
                 fill_own_values(levels, group_rows, measures, deadline)
                 for i, rs in margins.items():
                     fill_own_values(levels, rs, measures, deadline, start_level=i)
@@ -1663,7 +1660,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         elif top.kind == "terms" and top.all_groups:
             # every group came back (a sort ES can't do): sort them all, then page
             _check_all_groups(top, aggs, sort_m, oqo.get_rows)
-            if sort_m is not None and sort_m.measure == "value":
+            if by_own:
                 fill_own_values(levels, group_rows, measures, deadline)
                 own_filled = True
             group_rows = _sort_rows(group_rows, eff_sort)
@@ -1702,7 +1699,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     f"starting set.")
         else:
             # every group is here: sort and page in Python
-            if sort_m is not None and sort_m.measure == "value":
+            if by_own:
                 if len(group_rows) > ALL_GROUPS_SORT_LIMIT:
                     raise _too_many_to_sort(top, sort_m, f"{len(group_rows):,}", oqo.get_rows)
                 fill_own_values(levels, group_rows, measures, deadline)
@@ -1721,10 +1718,10 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         margins = {i: name_rows(levels, rs, connection) for i, rs in margins.items()}
         if nested:
             groups_count = len(group_rows)
-    if group_rows and not own_filled:
-        fill_own_values(levels, group_rows, measures, deadline)   # the page only
-    for i, rs in margins.items():
-        if not own_filled:
+    if not own_filled:
+        if group_rows:
+            fill_own_values(levels, group_rows, measures, deadline)   # the page only
+        for i, rs in margins.items():
             fill_own_values(levels, rs, measures, deadline, start_level=i)
     for m in measures:
         if m.measure == "value":

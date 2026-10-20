@@ -37,6 +37,9 @@ SAME = [
     # `IT` in a comparison is Italy, not the pronoun
     ("get works where published after 2020; then compare country (US) versus (IT)",
      "get works where published after 2020; then group those works by country in (US, IT)"),
+    # a lone code that is also a step word is a value too: Belarus, Indonesia (#1744, 2026-10-20)
+    ("get works where published after 2020; then compare country (AL) versus (BY) versus (ID) versus (ON)",
+     "get works where published after 2020; then group those works by country in (AL, BY, ID, ON)"),
 ]
 
 

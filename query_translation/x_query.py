@@ -16,7 +16,7 @@ to keep the import graph acyclic.
 
 import urllib.parse
 from collections import OrderedDict
-from typing import Callable, Optional
+from typing import Callable, Dict, List, Optional
 
 from core.utils import get_display_name as _get_display_name
 from query_translation import oql_lang
@@ -150,36 +150,64 @@ def new_oql(oqo: OQO, resolver=None) -> Optional[str]:
         return None
 
 
-# Names for the new form on the OQL execute path (oxjob #1555, found by #1744): one ES
-# lookup per ID, so a small process cache and a per-answer cap; over the cap an ID stays a
-# bare link `(I123)`, which is still exact OQL.
+# Names for the new form on the OQL execute path (oxjob #1555, found by #1744): the IDs are
+# found with a render that does no I/O, then named in one `terms` query per index
+# (`analytics._id_names`), with a process cache. Collections and keywords are looked up one by
+# one (a few at most) and collections aren't cached (their names are per viewer). A miss is
+# a bare link `(I123)`, still exact OQL.
 _ECHO_NAMES: "OrderedDict[str, str]" = OrderedDict()
 _ECHO_NAMES_MAX = 20000
-ECHO_NAME_LOOKUPS = 12
+ECHO_NAME_LOOKUPS = 12      # one-by-one lookups (collections, keywords) per answer
+_BATCHED = NATIVE_ENTITY_TYPES - {"keywords"}
 
 
-def echo_name_resolver(entity: Optional[str] = None):
-    """An engine resolver for `x_new_oql` on the execute path: cached names, at most
-    ECHO_NAME_LOOKUPS fresh lookups per answer. A miss is None (a bare link), never a
-    `[no entity found]` note: only the core renderer gets it (`_link` ignores misses)."""
+def _batch_names(entity_ids: List[str]) -> Optional[Dict[str, str]]:
+    """Names for `type/ID` keys, one query per index; None when they can't be routed."""
+    from query_translation.analytics import _id_names
+    full = {f"https://openalex.org/{i.split('/', 1)[1].upper()}": i for i in entity_ids}
+    try:
+        got = _id_names(list(full), "default")
+    except Exception:
+        return None
+    return None if got is None else {full[k]: v for k, v in got.items() if k in full and v}
+
+
+def _remember(entity_id: str, name: str):
+    _ECHO_NAMES[entity_id] = name
+    while len(_ECHO_NAMES) > _ECHO_NAMES_MAX:
+        _ECHO_NAMES.popitem(last=False)
+
+
+def echo_name_resolver(oqo: OQO):
+    """An engine resolver for `x_new_oql` on the execute path. Only the core renderer
+    gets it, and `_link` ignores misses, so a miss is never a `[no entity found]` note."""
+    from query_translation.oql_core import render_core
     from query_translation.oql_renderer import make_engine_resolver
-    looked = [0]
-
-    def lookup(entity_id: str) -> Optional[str]:
-        if entity_id in _ECHO_NAMES:
-            _ECHO_NAMES.move_to_end(entity_id)
-            return _ECHO_NAMES[entity_id]
-        if looked[0] >= ECHO_NAME_LOOKUPS:
-            return None
-        looked[0] += 1
-        name = safe_get_display_name(entity_id)
-        if name:   # misses and errors aren't cached: a name is decoration, retried next time
-            _ECHO_NAMES[entity_id] = name
-            while len(_ECHO_NAMES) > _ECHO_NAMES_MAX:
-                _ECHO_NAMES.popitem(last=False)
-        return name
-
-    return make_engine_resolver(lookup, entity=entity)
+    wanted: List[str] = []
+    try:
+        render_core(oqo, make_engine_resolver(lambda i: wanted.append(i), entity=oqo.get_rows))
+    except Exception:  # noqa: BLE001 (names are decoration)
+        pass
+    names: Dict[str, Optional[str]] = {}
+    fresh = []
+    for i in dict.fromkeys(wanted):
+        if i in _ECHO_NAMES:
+            _ECHO_NAMES.move_to_end(i)
+            names[i] = _ECHO_NAMES[i]
+        elif "/" in i and i.split("/", 1)[0] in NATIVE_ENTITY_TYPES | {"collections"}:
+            fresh.append(i)
+    batch = [i for i in fresh if i.split("/", 1)[0] in _BATCHED]
+    got = _batch_names(batch) if batch else {}
+    one_by_one = [i for i in fresh if i not in batch] + (batch if got is None else [])
+    for i, name in (got or {}).items():
+        names[i] = name
+        _remember(i, name)
+    for i in one_by_one[:ECHO_NAME_LOOKUPS]:
+        name = safe_get_display_name(i)
+        names[i] = name
+        if name and not i.startswith("collections/"):
+            _remember(i, name)
+    return make_engine_resolver(names.get, entity=oqo.get_rows)
 
 
 def build_x_query(
@@ -272,16 +300,19 @@ def build_x_query(
         oqo_dict.pop(view_key, None)
 
     x_new = None
+    style = effective_style()
     if name_new_form:
         # the OQL execute path names its entities in the new form, as /query and /validate
         # do (oxjob #1555; the website projects this echo into its URL, #1744)
         from query_translation.oql_core import render_core
         try:
-            x_new = render_core(canonical, echo_name_resolver(canonical.get_rows))
+            x_new = render_core(canonical, echo_name_resolver(canonical))
         except OQLError:
-            x_new = None
+            pass
     if x_new is None:
-        x_new = oql_form if effective_style() == "core" else new_oql(canonical)
+        # no core form: the pipeline text, which `oql` already is in the core and pipeline styles
+        x_new = oql_form if style == "core" or (name_new_form and style == "pipeline") \
+            else new_oql(canonical)
     out = {
         "oql": oql_form,
         # the new form beside the old until the flip (oxjob #1555, Jason 2026-10-13)
