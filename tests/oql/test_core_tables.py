@@ -144,3 +144,39 @@ def test_an_only_over_other_works_is_refused():
 def test_a_count_floor_on_the_split_must_be_an_only_sentence():
     with pytest.raises(Exception):
         parse_core("get the count of works about kelp by country with at least 5 works about kelp")
+
+
+@pytest.mark.parametrize("old,new", [
+    # the things left out by their own ID (#1744's demo, B5 and B6)
+    ("get countries where that country is not [Kenya](KE) that published works where country is [Kenya](KE); "
+     "then, summarize each country using count",
+     "get the count of works from [Kenya](KE) by country except [Kenya](KE)"),
+    ("get institutions where that institution is not ([ETH Zurich](I35440088) or [Board of the Swiss Federal "
+     "Institutes of Technology](I2799323385)) that published works where institution is [ETH Zurich](I35440088) "
+     "and published since 2020; then, summarize each institution using count",
+     "get the count of works since 2020 co-authored with [ETH Zurich](I35440088) by institution except "
+     "([ETH Zurich](I35440088), [Board of the Swiss Federal Institutes of Technology](I2799323385))"),
+    # works with every one of several places (B4)
+    ("get works where institution is ([University of Oxford](I40120149) and [University of Cambridge](I241749)); "
+     "then, group those works by year; finally, summarize using count",
+     "get the count of works from both [University of Oxford](I40120149) and [University of Cambridge](I241749) "
+     "by year"),
+    ("get works where institution is ([University of Oxford](I40120149) and [University of Cambridge](I241749) "
+     "and [Imperial College London](I47508984))",
+     "get works from all of [University of Oxford](I40120149), [University of Cambridge](I241749), and "
+     "[Imperial College London](I47508984)"),
+])
+def test_demo_forms(old, new):
+    import re
+    from query_translation.oql_parser import parse_either
+    names = {m.group(2): m.group(1) for m in re.finditer(r"\[([^\]]*)\]\(([^)]+)\)", old)}
+    res = lambda v, c=None: names.get(str(v))   # noqa: E731
+    o = parse_either(old)
+    o = canonicalize_oqo(o[0] if isinstance(o, tuple) else o, sort_operands=False)
+    assert render_core(o, res) == new
+    assert canonicalize_oqo(parse(new)).to_dict() == canonicalize_oqo(o).to_dict()
+
+
+def test_other_than_reads_as_except():
+    assert render_core(parse("rank countries other than [Kenya](KE) by count of works from [Kenya](KE)"), resolver) \
+        == "get the count of works from [Kenya](KE) by country except [Kenya](KE)"

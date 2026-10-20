@@ -377,7 +377,14 @@ class _Works:
                 words.append(f"about {s}" if SEARCH_PLACES[base] is None
                              else f"with {s} in {SEARCH_PLACES[base]}")
         words += self.parts.get("citing", [])
-        words += self.parts.get("from", [])
+        froms = self.parts.get("from", [])
+        plain = [x[len("from "):] for x in froms if x.startswith("from ")]
+        if len(plain) > 1:
+            # works with every one of these places: `from both [Oxford] and [Cambridge]`, not
+            # `from [Oxford] from [Cambridge]` (#1744's demo, B4)
+            joined = ("both " + " and ".join(plain)) if len(plain) == 2 else ("all of " + english_list(plain))
+            froms = [x for x in froms if not x.startswith("from ")] + ["from " + joined]
+        words += froms
         if len(self.authors) == 1:
             words.append(f"by {_link(self.authors[0], 'authorships.author.id', r)}")
         elif self.authors:
@@ -422,7 +429,23 @@ def _thing_parts(where, noun: str, resolver=None) -> Tuple[str, List[str], List,
     parts: List[str] = []
     left: List = []
     count = None
-    for f in (_and_items(where) if where is not None else []):
+    items = _and_items(where) if where is not None else []
+    # `except [Kenya](KE)` / `except ([A](I1), [B](I2))`: the things left out by their own
+    # ID (`that institution is not ...`; found by #1744's demo, B5 and B6)
+    excluded = [f for f in items if isinstance(f, LeafFilter) and f.column_id == "ids.openalex"
+                and f.is_negated and f.operator == "is"]
+    if excluded:
+        col = NOUN_THINGS.get(noun) or NOUN_THINGS[NOUN_THING_TYPES[noun][0]] \
+            if noun in NOUN_THINGS or noun in NOUN_THING_TYPES else None
+        if col is None:
+            raise NotCore("an exclusion on unknown things")
+        links = [_link(f.value, col, resolver) for f in excluded]
+    for f in items:
+        if excluded and f is excluded[0]:
+            parts.append("except " + (links[0] if len(links) == 1 else "(" + ", ".join(links) + ")"))
+            continue
+        if excluded and f in excluded:
+            continue
         if (text := _record_text(f, resolver)) is not None:
             parts.append(text)
         elif isinstance(f, MeasureFilter) and f.measure == "count" and not f.is_negated \
@@ -1143,6 +1166,24 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             rows.append(LeafFilter("authorships.institutions.lineage", t.link_id(ws.take()[0]),
                                    "in collection"))
             continue
+        if ws.at("from", "both") or ws.at("from", "all", "of"):
+            ws.take(2 if ws.at("from", "both") else 3)
+            ids = []
+            while (id_ := t.link_id(ws.peek() or "")) is not None:      # `A and B`, `A, B, and C`
+                ws.take()
+                ids.append(id_)
+                if ws.at(","):
+                    ws.take()
+                if ws.at("and") and t.link_id(ws.peek(1) or ""):
+                    ws.take()
+            if len(ids) < 2:
+                raise NotCore("`from both A and B`")
+            for id_ in ids:
+                kind = _kind_of(id_)
+                if kind not in ("institutions", "countries", "continents"):
+                    raise NotCore(f"`from` {id_}")
+                rows.append(LeafFilter(_works_column(kind), id_))
+            continue
         if ws.at("from"):
             ws.take()
             ids = _links_list(ws)
@@ -1369,6 +1410,19 @@ def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
         if ws.at("in") and _kind_of(t.link_id(ws.peek(1) or "") or "") == "countries":
             ws.take()
             items.append(LeafFilter("country_code", t.link_id(ws.take()[0])))
+            continue
+        if ws.at("except") or ws.at("other", "than"):        # `other than`: what writers reach for
+            ws.take(2 if ws.at("other") else 1)
+            tok = ws.take()[0]
+            ids = [t.link_id(tok)] if t.link_id(tok) else None
+            if ids is None:
+                inner = t.restore(tok)
+                if not (inner.startswith("(") and inner.endswith(")")):
+                    raise NotCore("`except [X]` or `except ([A], [B])`")
+                ids = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner[1:-1])]
+            if not ids:
+                raise NotCore("`except` needs the things it leaves out")
+            items += [LeafFilter("ids.openalex", i, is_negated=True) for i in ids]
             continue
         if noun != "authors" and ws.at("in") and _kind_of(t.link_id(ws.peek(1) or "") or "") == "continents":
             ws.take()
