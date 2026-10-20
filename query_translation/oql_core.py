@@ -116,6 +116,9 @@ MEASURE_NAMES = {("count", None): "count of works",
 for _col, _adj in ADJECTIVES.items():
     MEASURE_NAMES.setdefault(("percent", _col), f"percent {_adj}")
 NAME_MEASURES = {v: k for k, v in MEASURE_NAMES.items()}
+# a row's slice of the group one level up (the whole set with one split; each year with
+# `by year and country`): the table sentence's word (oxjob #1555 D3); `share of the total` too
+NAME_MEASURES["share"] = ("percent_of_those", None)
 _MEASURES_LONGEST = sorted(NAME_MEASURES, key=len, reverse=True)
 # the preposition a rank measure takes before its works phrase
 MEASURE_JOIN = {"sum of citations": "to", "sum of APCs paid": "for"}
@@ -501,6 +504,11 @@ def _render(oqo: OQO, resolver: Resolver) -> str:
         if oqo.calculate:
             return _number_sentence(oqo, resolver)
         return _works_list(oqo, resolver)
+    if TABLE_FORM:
+        try:
+            return _table(oqo, resolver)
+        except NotCore:
+            pass        # rank / break down can still say some of what the table can't yet
     first = oqo.group_by[0]
     by_key = bool(oqo.sort_by) and oqo.sort_by[0].column_id == "key"
     if len(oqo.group_by) == 1 and first.column_id in THING_NOUNS and first.values is None \
@@ -619,14 +627,16 @@ def _things_list(oqo, resolver):
             parts.append(f"in {_link(f.value, 'authorships.institutions.continent', resolver)}")
         elif _is_own_threshold(f):
             # a threshold on the rank's own number is its `Only ...` sentence (Jason's #logs note)
-            (only if by_own and f.column_id == sort.column_id else thresholds).append(f)
+            (only if by_own and not TABLE_FORM and f.column_id == sort.column_id else thresholds).append(f)
         else:
             left.append(f)
     parts += [_own_threshold_text(f) for f in thresholds]
     if left:
         parts.append("where " + _where_text(left, resolver))
     phrase = " ".join([noun] + parts)
-    if not by_own:
+    if not by_own or TABLE_FORM:
+        # a list sorted by its own field is still a list (oxjob #1555 D1): the order goes
+        # at the end, the threshold stays a condition
         return "get " + phrase + _order_text(oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
     text = f"rank {phrase} by {OWN_FIELDS[sort.column_id][1]}"
     if sort.direction == "asc":
@@ -714,6 +724,116 @@ def _breakdown_order(oqo) -> str:
     if fld is not None and fld.kind in ("string", "enum", "bool"):
         return f", {'reverse ' if desc else ''}alphabetical by {DIMS[dim]}"
     return f", in {'reverse ' if desc else ''}{DIMS[dim]} ID order"
+
+
+# ---------------------------------------------------------------------------
+# Tables of groups (oxjob #1555, D1-D3, 2026-10-20): one sentence for every table,
+# numbers first, `get the <numbers> of <works> by <splits>[, <order>]`, the way one number
+# already reads. The sentence names the shape, never the order: a column sort changes only
+# the order words at the end. Which groups sit on their split (`by author at [UBC]`), apart
+# from which works; a count floor is its `Only` sentence; a thing's own fields not in the
+# order are `Show`. `rank` and `break down` stay accepted input.
+# ---------------------------------------------------------------------------
+TABLE_FORM = True
+
+THING_SINGULAR = {"authors": "author", "institutions": "institution", "countries": "country",
+                  "sources": "source", "journals": "journal", "repositories": "repository",
+                  "companies": "company", "topics": "topic", "fields": "field",
+                  "subfields": "subfield", "funders": "funder", "publishers": "publisher"}
+SINGULAR_THING = {v: k for k, v in THING_SINGULAR.items()}
+_SPLIT_WORDS = sorted(set(DIM_COLUMNS) | set(SINGULAR_THING), key=len, reverse=True)
+_SPLIT_AND = re.compile(r"\s+and\s+(?=(?:%s)\b)" % "|".join(re.escape(w) for w in _SPLIT_WORDS))
+
+
+def _table_name(m: Measure) -> str:
+    """A number's name in the table sentence: `count`, `share`, else the measure's name."""
+    name = _measure_name(m)
+    return {"count of works": "count", "share of the total": "share"}.get(name, name)
+
+
+def _table(oqo, resolver):
+    if len(oqo.group_by) > 2:
+        raise NotCore("three splits")
+    measures = list(oqo.calculate) or [Measure("count")]
+    nums = [m for m in measures if m.measure != "value"] or [Measure("count")]
+    own = [m for m in measures if m.measure == "value"]
+    for m in own:
+        if m.column_id not in OWN_FIELDS:
+            raise NotCore(f"no words for {m.column_id}")
+    thing = next((THING_NOUNS[g.column_id] for g in oqo.group_by
+                  if g.column_id in THING_NOUNS and g.values is None), None)
+    possessive = not any(g.column_id in STAR_COLUMNS for g in oqo.group_by)
+    w = _works(oqo.filter_rows, resolver, possessive=possessive, thing=thing)
+    year_dim = any(g.column_id == "publication_year" for g in oqo.group_by)
+    works_text = w.text(all_works=True, keep_time=not year_dim)
+    splits, only = [], []
+    for g in oqo.group_by:
+        if g.values is not None:
+            if g.column_id not in DIMS:
+                raise NotCore("a list on a split with no word")
+            word = DIMS[g.column_id]
+            if len(g.values) == 1 and isinstance(g.values[0], str) and g.values[0].startswith("col_"):
+                word += f" in the collection {_link(g.values[0], g.column_id, resolver)}"
+            else:
+                word += " in (" + ", ".join(_link(v, g.column_id, resolver) for v in g.values) + ")"
+        elif g.where is not None:
+            if g.column_id not in THING_NOUNS:
+                raise NotCore("which groups, on a split with no things")
+            noun, parts, left, count = _thing_parts(g.where, THING_NOUNS[g.column_id], resolver)
+            if left or noun not in THING_SINGULAR:
+                raise NotCore("which groups, with no words")
+            word = " ".join([THING_SINGULAR[noun]] + parts)
+            if count is not None:
+                only.append(f"Only {noun} with {COMPARATOR_WORDS[count.operator]} "
+                            f"{_number(count.value)} {w.text(keep_time=True)}.")
+        elif g.column_id in DIMS:
+            word = DIMS[g.column_id]
+        elif g.column_id in THING_NOUNS:
+            word = THING_SINGULAR[THING_NOUNS[g.column_id]]
+        else:
+            raise NotCore(f"no word for splitting by {g.column_id}")
+        if g.column_id == "publication_year" and w.time_text():
+            word += " " + w.time_text()
+        splits.append(word)
+    order, sorted_own = _table_order(oqo, measures)
+    names = english_list([_table_name(m) for m in nums])
+    join = MEASURE_JOIN.get(_measure_name(nums[-1]), "of")
+    text = f"get the {names} {join} {works_text} by {' and '.join(splits)}{order}"
+    extras = ([_show([m for m in own if m is not sorted_own])]
+              if [m for m in own if m is not sorted_own] else []) + only
+    return text + (". " + " ".join(extras) if extras else "")
+
+
+def _table_order(oqo, measures) -> Tuple[str, Optional[Measure]]:
+    """The order words, or "" for the default (most works first; years oldest first), and
+    the own-field measure the order names (it shows the column, so no `Show` for it)."""
+    if not oqo.sort_by:
+        return "", None
+    s = oqo.sort_by[0]
+    desc = s.direction == "desc"
+    first = oqo.group_by[0].column_id
+    year_first = first == "publication_year"
+    if s.column_id == "count":
+        if desc:
+            return (", most works first" if year_first else ""), None
+        return ", fewest works first", None
+    if s.column_id == "key":
+        if year_first:
+            return (", newest first" if desc else ""), None
+        word = DIMS.get(first) or THING_SINGULAR.get(THING_NOUNS.get(first, ""), "")
+        fld = L._BY_COLUMN.get(first)
+        if fld is not None and fld.kind in ("string", "enum", "bool"):
+            return f", {'reverse ' if desc else ''}alphabetical by {word}", None
+        return f", in {'reverse ' if desc else ''}{word} ID order", None
+    m = next((m for m in measures if m.key == s.column_id), None)
+    if m is None:
+        raise NotCore(f"an order by {s.column_id}, which the table doesn't show")
+    word = "highest" if desc else "lowest"
+    if m.measure != "value" and [x for x in measures if x.measure != "value"] == [m] \
+            and len(measures) == 1:
+        return f", {word} first", None      # one number: `highest first` says enough
+    name = OWN_FIELDS[m.column_id][1] if m.measure == "value" else _table_name(m)
+    return f", {word} {name} first", (m if m.measure == "value" else None)
 
 
 _BREAKDOWN_ORDER_RE = re.compile(r", (?:(oldest|newest) first|fewest works first|"
@@ -1095,6 +1215,8 @@ def _parse_measures(t: _Text, s: str) -> List[Measure]:
     names = [n.strip() for n in re.split(r",\s*(?:and\s+)?|\s+and\s+", s) if n.strip()]
     out = []
     for n in names:
+        if n.startswith("the "):
+            n = n[len("the "):]
         if n == "count":
             n = "count of works"
         if n not in NAME_MEASURES:
@@ -1153,9 +1275,17 @@ def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     main, extras = sentences[0], sentences[1:]
     show = [e[len("Show "):] for e in extras if e.startswith("Show ")]
     only = [e[len("Only "):] for e in extras if e.startswith("Only ")]
-    if only and not main.lower().startswith("rank "):
-        raise NotCore("an `Only` sentence follows a rank")     # loud, never dropped
     low = main.lower()
+    table = low.startswith("get the ") and any(
+        re.search(r" by %s\b" % re.escape(w), main) for w in _SPLIT_WORDS)
+    if only and not (low.startswith("rank ") or table):
+        raise NotCore("an `Only` sentence follows a rank or a table")     # loud, never dropped
+    if table:
+        oqo = _parse_table(t, main[len("get the "):], collection_type, only)
+        for e in show:
+            oqo.calculate = list(oqo.calculate) + [
+                x for x in _parse_measures(t, e) if all(x.key != y.key for y in oqo.calculate)]
+        return oqo
     if low.startswith("break down "):
         oqo = _parse_breakdown(t, main[len("break down "):], collection_type)
     elif low.startswith("rank "):
@@ -1453,6 +1583,131 @@ def _parse_breakdown_body(t, s, collection_type):
                 raise NotCore(f"unexpected {ws.peek()!r} after a dimension")
         groups.append(g)
     return OQO(get_rows="works", filter_rows=rows, group_by=groups, calculate=_default_breakdown())
+
+
+_TABLE_ORDER_RE = re.compile(r", (?:(most|fewest) works first|(oldest|newest) first|"
+                             r"(reverse )?alphabetical by ([^,]+)|in (reverse )?([^,]+?) ID order|"
+                             r"(highest|lowest)(?: ([^,]+?))? first)$")
+
+
+def _parse_table(t, s, collection_type, only):
+    """`get the <numbers> of <works> by <splits>[, <order>]` (oxjob #1555, D2)."""
+    order = _TABLE_ORDER_RE.search(s)
+    body = s[: order.start()] if order else s
+    measures, rest = None, None
+    for mm in re.finditer(r" (of|for|to) ", body):     # the longest list of numbers that reads
+        try:
+            got = _parse_measures(t, body[: mm.start()])
+        except NotCore:
+            continue
+        measures, rest = got, body[mm.end():]
+    if rest is None:
+        raise NotCore("unknown numbers")
+    cut = None
+    for mm in re.finditer(r" by ", rest):
+        nxt = rest[mm.end():]
+        if any(nxt == w or nxt.startswith(w + " ") for w in _SPLIT_WORDS):
+            cut = mm
+            break
+    if cut is None:
+        raise NotCore("`get the <numbers> of <works> by <split>`")
+    phrase, splits_text = rest[: cut.start()], rest[cut.end():]
+    rows_extra: List = []
+    groups = [_parse_split(t, part, rows_extra) for part in _SPLIT_AND.split(splits_text)]
+    if len(groups) > 2:
+        raise NotCore("three splits")
+    thing = next((THING_NOUNS[g.column_id] for g in groups
+                  if g.column_id in THING_NOUNS and g.values is None), None)
+    rows = _parse_works(t, phrase, collection_type, thing=thing) + rows_extra
+    for o in only:
+        # `Only institutions with at least 10 works about kelp.`: a count floor on the split of
+        # those things, over the same works; anything else is refused, never dropped
+        o_noun, o_typ, o_items = _parse_things(t, o)
+        g = next((g for g in groups if THING_NOUNS.get(g.column_id) and g.values is None
+                  and NOUN_THINGS.get(o_noun) == g.column_id), None)
+        if g is None:
+            raise NotCore("an `Only` sentence names things the table doesn't split by")
+        extra = []
+        for it in o_items:
+            if not isinstance(it, tuple):
+                extra.append(it)
+                continue
+            _, op, n, ph = it
+            got = rows if ph.strip() == "works" else _parse_works(t, ph, collection_type, thing=thing)
+            if [r.to_dict() for r in got] != [r.to_dict() for r in rows]:
+                raise NotCore("an `Only` count over other works than the table counts")
+            extra.append(MeasureFilter("count", op, n))
+        if o_typ:
+            extra.append(LeafFilter("type", o_typ))
+        items = ([g.where] if g.where is not None else []) + extra
+        g.where = items[0] if len(items) == 1 else BranchFilter(join="and", filters=items)
+    oqo = OQO(get_rows="works", filter_rows=rows, group_by=groups, calculate=measures)
+    if order:
+        oqo.sort_by = _table_sort(order, oqo)
+    return oqo
+
+
+def _parse_split(t, part, rows) -> GroupBy:
+    word = next((w for w in _SPLIT_WORDS if part == w or part.startswith(w + " ")), None)
+    if word is None:
+        raise NotCore(f"unknown split {part!r}")
+    rest = part[len(word):].strip()
+    values_or_time = word == "year" or re.match(r"in (the collection |⟦Q)", rest)
+    if word in DIM_COLUMNS and (not rest or values_or_time):
+        g = GroupBy(column_id=DIM_COLUMNS[word])
+        if rest:
+            ws = _Words(t, rest)
+            if word == "year":
+                yrs = _years_from(ws)
+                if yrs is None:
+                    raise NotCore(f"after `by year`: {rest!r}")
+                rows += yrs
+            if ws.at("in", "the", "collection"):
+                ws.take(3)
+                g.values = [t.link_id(ws.take()[0])]
+            elif ws.at("in"):
+                ws.take()
+                inner = t.restore(ws.take()[0])
+                if not (inner.startswith("(") and inner.endswith(")")):
+                    raise NotCore("a list of values in parentheses")
+                g.values = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner[1:-1])] or \
+                    [v.strip() for v in inner[1:-1].split(",")]
+            if not ws.done():
+                raise NotCore(f"unexpected {ws.peek()!r} after a split")
+        return g
+    if word not in SINGULAR_THING:
+        raise NotCore(f"unexpected {rest!r} after `by {word}`")
+    noun, typ, items = _parse_things(t, SINGULAR_THING[word] + (" " + rest if rest else ""))
+    if any(isinstance(it, tuple) for it in items):
+        raise NotCore("a count floor on a split goes in an `Only` sentence")
+    where = list(items) + ([LeafFilter("type", typ)] if typ else [])
+    return GroupBy(column_id=NOUN_THINGS[noun],
+                   where=(where[0] if len(where) == 1 else BranchFilter(join="and", filters=where))
+                   if where else None)
+
+
+def _table_sort(m, oqo) -> List[SortBy]:
+    most, old_new, rev_a, a_word, rev_id, id_word, hi_lo, name = m.groups()
+    if most:
+        return [SortBy("count", "desc" if most == "most" else "asc")]
+    if old_new or a_word or id_word:
+        return [SortBy("key", "desc" if (old_new == "newest" or rev_a or rev_id) else "asc")]
+    desc = hi_lo == "highest"
+    nums = [x for x in oqo.calculate if x.measure != "value"]
+    if name is None:
+        if len(nums) != 1:
+            raise NotCore("`highest first` with more than one number: name it")
+        return [SortBy(nums[0].key, "desc" if desc else "asc")]
+    name = {"count": "count of works", "share": "share of the total"}.get(name, name)
+    if name in OWN_FIELD_BY_WORD:
+        meas = Measure("value", OWN_FIELD_BY_WORD[name])
+    elif name in NAME_MEASURES:
+        meas = Measure(*NAME_MEASURES[name])
+    else:
+        raise NotCore(f"an order by {name!r}")
+    if all(x.key != meas.key for x in oqo.calculate):
+        oqo.calculate = list(oqo.calculate) + [meas]       # ordering by a column shows it
+    return [SortBy(meas.key, "desc" if desc else "asc")]
 
 
 # ===========================================================================

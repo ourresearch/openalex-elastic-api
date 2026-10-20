@@ -19,6 +19,15 @@ NAMES = DATA["names"]
 CASES = DATA["cases"]
 
 
+@pytest.fixture(autouse=True)
+def _v3_wording(monkeypatch):
+    # these pin the 2026-10-11 v3 wording (rank / break down), which the table sentence
+    # replaced (oxjob #1555 D2, 2026-10-20) and which stays accepted input; the table form
+    # has its own tests (test_core_tables.py)
+    import query_translation.oql_core as core
+    monkeypatch.setattr(core, "TABLE_FORM", False)
+
+
 def resolver(value, column=None):
     return NAMES.get(str(value))
 

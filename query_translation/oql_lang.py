@@ -4368,6 +4368,12 @@ class _Parser:
         if t.kind == "LP" and self._compare_prev is not None \
                 and self._compare_prev[1].kind == "search":
             return True
+        if t.kind == "WORD" and self._compare_prev is not None and self.i + k > 0 \
+                and self.toks[self.i + k - 1].kind == "LP" \
+                and (self.peek(k + 1) is not None and self.peek(k + 1).kind == "RP"):
+            # `versus (BY)`: a lone word in parentheses is a value, even one that is also
+            # a step word (Belarus, Indonesia; found by #1744 on an echo with no names)
+            return True
         if t.kind == "WORD" and t.val.lower() not in _COMPARE_STOPS \
                 and t.val.lower() not in _CONNECTIVES and t.val.lower() != "not" \
                 and self._compare_prev is not None:
