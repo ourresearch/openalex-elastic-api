@@ -56,6 +56,9 @@ LOOKUP_LIMIT = 60_000          # own-field lookups list at most this many ids
 WORKS_SIDE_LIMIT = 250_000
 DEFAULT_PER_PAGE = 200
 MAX_PAGE_DEPTH = 10_000        # page x per_page on a single split
+# a sort ES can't do (a percent, a group's own field) reads every group of a single split
+# and sorts them all, up to this many groups; past it, a loud error (oxjob #1555)
+ALL_GROUPS_SORT_LIMIT = 10_000
 CSV_PAGE_GROUPS = 10_000       # groups in one page of an export (format=csv with a cursor, #1550)
 ROWS_PER_PRICE = 100           # an export costs the query's price per 100 rows, like works (#1550)
 ID_PREFIX = "https://openalex.org/"
@@ -348,6 +351,7 @@ class Level:
     by_count: bool = False                     # filters: biggest first, empty ones dropped
     paged_floor: bool = False                  # a count floor sorted and paged by ES
     works_filters: List[dict] = field(default_factory=list)  # own fields pushed down (#1617)
+    all_groups: bool = False                   # read every group: a sort ES can't do (#1555)
 
 
 def _label_bool(column_id: str, value: bool) -> str:
@@ -1028,6 +1032,10 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
             lv.paged_floor = True
         elif lv.selector is not None or lv.post_keep is not None:
             size = FILTERED_CANDIDATES
+        elif lv.all_groups:
+            # every group, so the sort covers them all; one past the limit says the
+            # estimate was short (checked after the request)
+            size = min(int((card or 0) * 1.1) + 10, ALL_GROUPS_SORT_LIMIT + 1)
         else:
             size = page * per_page
             if size > MAX_PAGE_DEPTH:
@@ -1382,14 +1390,60 @@ def _code_name(code: str, column_id: str, entity: str) -> str:
     return name or code
 
 
+def _order_value(v):
+    """A cell as a sort key: numbers (and number-like keys, `"2026"`) before text, so a
+    column never compares a number with a string."""
+    if isinstance(v, bool):
+        return (0, int(v), "")
+    if isinstance(v, (int, float)):
+        return (0, v, "")
+    s = str(v)
+    try:
+        return (0, float(s), "")
+    except ValueError:
+        return (1, 0, s.lower())
+
+
 def _sort_rows(rows: List[dict], sort: Optional[Tuple[str, str]]):
+    """Rows by one column, either way; groups with no value last. Ties keep the order
+    they came in (the default: most works first), since Python's sort is stable."""
     if not sort:
         return rows
     key, direction = sort
     present = [r for r in rows if r.get(key) is not None]
     missing = [r for r in rows if r.get(key) is None]
-    present.sort(key=lambda r: (r[key], str(r["key"])), reverse=(direction == "desc"))
+    present.sort(key=lambda r: _order_value(r[key]), reverse=(direction == "desc"))
     return present + missing
+
+
+def _is_year_level(lv: "Level") -> bool:
+    """A split by publication year: its groups read oldest first unless a sort says
+    otherwise (Jason's default, oxjob #1555 D4), like a chart's x-axis."""
+    return lv.kind == "terms" and (lv.column_id or "").split(".")[-1] == "publication_year"
+
+
+def _default_order(lv: "Level", rows: List[dict]) -> List[dict]:
+    """A level's rows in its default order: years oldest first; everything else as ES
+    returned them (most works first) or as listed."""
+    if _is_year_level(lv):
+        return sorted(rows, key=lambda r: _order_value(r.get("key")))
+    return rows
+
+
+def _order_levels(levels: List["Level"], rows: List[dict], sort: Optional[Tuple[str, str]],
+                  level_i: int = 0) -> List[dict]:
+    """Every level of a nested table in the asked order (oxjob #1555 D4): a sort on the
+    key orders the outer split's groups (inner groups keep their default); a sort on a
+    number orders the groups at every level by it; no sort, each level's default."""
+    lv = levels[level_i]
+    if sort is None or (sort[0] == "key" and level_i > 0):
+        rows = _default_order(lv, rows)
+    else:
+        rows = _sort_rows(rows, sort)
+    for r in rows:
+        if r.get("groups") and level_i + 1 < len(levels):
+            r["groups"] = _order_levels(levels, r["groups"], sort, level_i + 1)
+    return rows
 
 
 def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
@@ -1446,11 +1500,19 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     n_works, cards = (_probe(levels, index_name, connection, base_query, deadline)
                       if (nested and any(lv.kind == "terms" for lv in levels)) else (None, {}))
 
+    # no sort asked: a single split by year reads oldest first (D4, oxjob #1555); the
+    # OQO's sort_by stays empty, since a default isn't the user's choice
+    eff_sort = sort
+    if sort is None and len(levels) == 1 and _is_year_level(levels[0]):
+        eff_sort = ("key", "asc")
+    sort_m = next((x for x in measures if eff_sort and x.key == eff_sort[0]), None)
+    own_filled = False   # own fields already read for every group (to sort by one)
     sort_measure = None
-    if sort and not nested:
-        key, direction = sort
+    if eff_sort and not nested:
+        key, direction = eff_sort
         m = next((x for x in measures if x.key == key), None)
-        if key == "count":
+        if key == "count" or (m is not None and m.measure == "percent_of_those"):
+            # a share of the whole set is the count over one number: the count's order
             sort_measure = {"_count": direction}
         elif m is not None and m.measure in ("mean", "sum", "min", "max", "median"):
             # groups with no value (a mean of nothing) sort last either way: first by
@@ -1462,7 +1524,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             sort_measure = [{f"h_{m.key}": "desc"}, {path: direction}]
         elif key == "key":
             sort_measure = {"_key": direction}
-        # percent and percent_of_those sort after the fact (one page of groups)
+        elif (m is not None and m.measure in ("percent", "value") and levels
+              and levels[0].kind == "terms" and levels[0].selector is None
+              and levels[0].post_keep is None and oqo.cursor is None):
+            # a percent or a group's own field: ES can't order the split by it, so every
+            # group is read and sorted here (a filtered split already reads them all)
+            _read_all_groups(levels[0], m, cards, index_name, connection, base_query,
+                             deadline, oqo.get_rows)
     cursor = oqo.cursor
     if cursor is not None:
         # one split pages through any number of groups, in key order (composite)
@@ -1573,6 +1641,16 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         filtered = (top.selector is not None or top.post_keep is not None) \
             and not top.paged_floor
         if nested:
+            # every group of every level is here: order each level (D4, oxjob #1555)
+            if sort_m is not None and sort_m.measure == "value":
+                fill_own_values(levels, group_rows, measures, deadline)
+                for i, rs in margins.items():
+                    fill_own_values(levels, rs, measures, deadline, start_level=i)
+                own_filled = True
+            group_rows = _order_levels(levels, group_rows, eff_sort)
+            margins = {i: (_sort_rows(rs, eff_sort) if eff_sort and eff_sort[0] != "key"
+                           else _default_order(levels[i], rs))
+                       for i, rs in margins.items()}
             groups_count = len(group_rows)
         elif top.composite:
             raw = aggs["s0"]
@@ -1581,11 +1659,21 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 next_cursor = _encode_cursor(after["k"])
             more_groups = next_cursor is not None
             groups_count = _groups_count(top, aggs)
+        elif top.kind == "terms" and top.all_groups:
+            # every group came back (a sort ES can't do): sort them all, then page
+            _check_all_groups(top, aggs, sort_m, oqo.get_rows)
+            if sort_m is not None and sort_m.measure == "value":
+                fill_own_values(levels, group_rows, measures, deadline)
+                own_filled = True
+            group_rows = _sort_rows(group_rows, eff_sort)
+            groups_count = len(group_rows)
+            start = (page - 1) * per_page
+            group_rows = group_rows[start:start + per_page]
+            more_groups = start + per_page < groups_count
         elif top.kind == "terms" and not filtered:
-            # one page of groups straight from ES, in its order; a sort ES can't do
-            # (percent) reorders that page
-            if sort and sort_measure is None:
-                group_rows = _sort_rows(group_rows, sort)
+            # one page of groups straight from ES, in its order
+            if eff_sort and sort_measure is None:
+                group_rows = _sort_rows(group_rows, eff_sort)
             start = (page - 1) * per_page
             n_rows = len(group_rows)
             group_rows = group_rows[start:start + per_page]
@@ -1599,7 +1687,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             # more groups than the filter checked: the first FILTERED_CANDIDATES by count
             # are exact when a count floor is the whole filter and the sort is by count
             if (top.post_keep is None and _count_floor_only(top.split.where)
-                    and sort in (None, ("count", "desc"))):
+                    and eff_sort in (None, ("count", "desc"))):
                 start = (page - 1) * per_page
                 group_rows = group_rows[start:start + per_page]
                 more_groups = True
@@ -1613,8 +1701,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     f"starting set.")
         else:
             # every group is here: sort and page in Python
-            if sort:
-                group_rows = _sort_rows(group_rows, sort)
+            if sort_m is not None and sort_m.measure == "value":
+                if len(group_rows) > ALL_GROUPS_SORT_LIMIT:
+                    raise _too_many_to_sort(top, sort_m, f"{len(group_rows):,}", oqo.get_rows)
+                fill_own_values(levels, group_rows, measures, deadline)
+                own_filled = True
+            if eff_sort:
+                group_rows = _sort_rows(group_rows, eff_sort)
             groups_count = len(group_rows)
             if top.kind == "terms":
                 start = (page - 1) * per_page
@@ -1627,10 +1720,11 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         margins = {i: name_rows(levels, rs, connection) for i, rs in margins.items()}
         if nested:
             groups_count = len(group_rows)
-    if group_rows:
+    if group_rows and not own_filled:
         fill_own_values(levels, group_rows, measures, deadline)   # the page only
     for i, rs in margins.items():
-        fill_own_values(levels, rs, measures, deadline, start_level=i)
+        if not own_filled:
+            fill_own_values(levels, rs, measures, deadline, start_level=i)
     for m in measures:
         if m.measure == "value":
             all_row.pop(m.key, None)   # a group's own field has no whole-set value
@@ -1664,6 +1758,47 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "cost": price(oqo),
     }
     return {"meta": meta, "summary": summary, "group_by": group_rows, "results": []}
+
+
+def _too_many_to_sort(lv: Level, m: Optional[Measure], how_many: str, entity: str = "works"):
+    from query_translation.oql_pipeline import measure_text
+    what = measure_text(m, entity.replace("-", " ")) if m is not None else "that column"
+    return AnalyticsError(
+        "too_many_groups",
+        f"Sorting by {what} reads every {_split_noun(lv)} group, and there are "
+        f"{how_many} here; a sort like this reads up to {ALL_GROUPS_SORT_LIMIT:,}.",
+        f"Keep only the bigger groups with a count filter ({count_fix(lv, 100)}), or "
+        f"narrow the starting set.")
+
+
+def _read_all_groups(lv: Level, m: Measure, cards: Dict[int, int], index_name: str,
+                     connection, base_query, deadline: Deadline, entity: str = "works"):
+    """Size a single split to read every group, so a sort ES can't do (a percent, a
+    group's own field) covers them all, not just the biggest (#524: a page of 8 by count
+    put the Medical University of Vienna's 52.5% first, above smaller institutions at
+    96.9%, and the answer changed with the page size)."""
+    if lv.include is not None:
+        # a key set (`by author at [UBC]`) caps the groups; ES says after the request
+        # whether more than the limit came back
+        cards[lv.index] = min(len(lv.include - (lv.exclude or set())), ALL_GROUPS_SORT_LIMIT)
+    else:
+        # own fields pushed down to the works (#1617) narrow the groups too
+        probe_query = ({"bool": {"filter": [base_query] + lv.works_filters}}
+                       if lv.works_filters else base_query)
+        card = _cardinalities([lv], index_name, connection, probe_query, deadline)[lv.index]
+        if card > ALL_GROUPS_SORT_LIMIT:
+            raise _too_many_to_sort(lv, m, f"about {card:,}", entity)
+        cards[lv.index] = card
+    lv.all_groups = True
+
+
+def _check_all_groups(lv: Level, aggs: dict, sort_m: Optional[Measure], entity: str):
+    """An all-groups read came back whole, or the sort would cover only part of it."""
+    raw = aggs.get("s0") or {}
+    n = len(raw.get("buckets") or [])
+    if raw.get("sum_other_doc_count") or n > ALL_GROUPS_SORT_LIMIT:
+        raise _too_many_to_sort(lv, sort_m, f"more than {min(n, ALL_GROUPS_SORT_LIMIT):,}",
+                                entity)
 
 
 def _encode_cursor(key) -> str:
