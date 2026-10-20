@@ -120,11 +120,12 @@ def say_seconds(s: float) -> str:
 def count_fix(lv: Optional["Level"] = None, n: int = 10) -> str:
     """A count filter as the echo writes it (oxjob #1555): thing-first for a split by a
     thing, else the group filter."""
-    from query_translation.oql_lang import THING_BY_COLUMN, THING_VERBS
-    thing = THING_BY_COLUMN.get(lv.column_id) if lv is not None and lv.column_id else None
+    from query_translation.oql_core import THING_NOUNS
+    thing = THING_NOUNS.get(lv.column_id) if lv is not None and lv.column_id else None
     if thing:
-        return f"get {thing} {THING_VERBS[thing]} more than {n} works where ..."
-    return f"... where count of those works is above {n}"
+        # the table sentence's floor (oxjob #1555 D2, 2026-10-20)
+        return f"`Only {thing} with more than {n:,} works ...`"
+    return f"`Only ... with more than {n:,} works ...`"
 
 
 def too_slow(what: str) -> AnalyticsError:
