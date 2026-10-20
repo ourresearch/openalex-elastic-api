@@ -93,10 +93,10 @@ def build_schema() -> dict:
             "sort_by": {
                 "type": "array",
                 "description": (
-                    "The order, primary key first (oxjob #1555, v1.6): a list's order "
-                    "phrase (`most cited first`) or a rank's measure (`rank authors by "
-                    "h-index`). Absent ⇒ the entity's default order. With a split by a "
-                    "thing, a sort makes it a rank; without one, a breakdown."
+                    "The order, primary key first (oxjob #1555, v1.6): the order words at "
+                    "the end of the OQL (`, most cited first`, `, highest h-index first`). "
+                    "Absent ⇒ the default order (a list's; a table's most works first, "
+                    "years oldest first). The order never changes what else the OQL says."
                 ),
                 "items": {"$ref": "#/$defs/SortBy"},
                 "default": [],

@@ -19,15 +19,6 @@ NAMES = DATA["names"]
 CASES = DATA["cases"]
 
 
-@pytest.fixture(autouse=True)
-def _v3_wording(monkeypatch):
-    # these pin the 2026-10-11 v3 wording (rank / break down), which the table sentence
-    # replaced (oxjob #1555 D2, 2026-10-20) and which stays accepted input; the table form
-    # has its own tests (test_core_tables.py)
-    import query_translation.oql_core as core
-    monkeypatch.setattr(core, "TABLE_FORM", False)
-
-
 def resolver(value, column=None):
     return NAMES.get(str(value))
 
@@ -53,12 +44,24 @@ def _canon(oqo):
     return d
 
 
+def _order(oqo):
+    """sort_by, with a table's default order (most works first; years oldest first) as none:
+    the text never writes it (the cases were written before tables read `get the ...`)."""
+    sort = [s.to_dict() for s in oqo.sort_by]
+    if oqo.group_by and sort:
+        first = oqo.group_by[0].column_id
+        if (sort[0]["column_id"], sort[0].get("direction")) == (
+                ("key", "asc") if first == "publication_year" else ("count", "desc")):
+            return []
+    return sort
+
+
 @pytest.mark.parametrize("c", CASES, ids=[_id(c) for c in CASES])
 def test_parses_back(c):
     got = parse_core(c["new"], COLLECTION_TYPES.get)
     want = OQO.from_dict(c["oqo"])
     assert _canon(got) == _canon(want)
-    assert [s.to_dict() for s in got.sort_by] == [s.to_dict() for s in want.sort_by]
+    assert _order(got) == _order(want)
 
 
 @pytest.mark.parametrize("c", CASES, ids=[_id(c) for c in CASES])
@@ -130,8 +133,8 @@ def _rt(text):
 
 @pytest.mark.parametrize("text", [
     "get works since 2020 from [Asia](Q48)",
-    "rank authors at [UBC](I141945490) by count of works about kelp",
-    "rank authors in [Brazil](BR) since 2022 by count of works about kelp",
+    "get the count of works about kelp by author at [UBC](I141945490)",
+    "get the count of works about kelp by author in [Brazil](BR) since 2022",
     "get authors at [UBC](I141945490) in 2+ years since 2022 with an h-index above 50",
 ])
 def test_review_round_trips(text):
@@ -140,13 +143,13 @@ def test_review_round_trips(text):
 
 def test_bare_at_means_what_todays_parser_means():
     # `at [UBC]` is any year in both grammars (Jason 2026-10-12: OQL hides no assumptions)
-    core = parse_core("rank authors at [UBC](I141945490) by count of works about kelp")
+    core = parse_core("get the count of works about kelp by author at [UBC](I141945490)")
     old = _old_parse("get authors at [UBC](I141945490) who published works where "
                      "title-abstract-keywords has kelp; then, summarize each author using count")
     assert core.group_by[0].where == old.group_by[0].where
     assert core.group_by[0].where == parse_core(
-        "rank authors ever at [UBC](I141945490) by count of works about kelp").group_by[0].where
-    assert "since" not in _rt("rank authors at [UBC](I141945490) by count of works about kelp")
+        "get the count of works about kelp by author ever at [UBC](I141945490)").group_by[0].where
+    assert "since" not in _rt("get the count of works about kelp by author at [UBC](I141945490)")
 
 
 def test_unnamed_measure_keeps_todays_echo():
@@ -158,13 +161,13 @@ def test_unnamed_measure_keeps_todays_echo():
 def test_core_sentence_error_is_cores():
     from query_translation.oql_parser import OQLParseError
     with pytest.raises(OQLParseError) as e:
-        parse_oql_to_oqo("rank authors by count of works about")
+        parse_oql_to_oqo("get the count of works about by author")
     assert "ends too soon" in str(e.value)
 
 
 @pytest.mark.parametrize("oxford,plain", [
-    ("rank authors by count of works about kelp. Show sum of citations, mean FWCI, and h-index.",
-     "rank authors by count of works about kelp. Show sum of citations, mean FWCI and h-index."),
+    ("get the count, sum of citations, and mean FWCI of works about kelp by author. Show h-index.",
+     "get the count, sum of citations and mean FWCI of works about kelp by author. Show h-index."),
     ("get works co-authored by [A](A5067184382), [B](A5074743574), and [C](A5047110566)",
      "get works co-authored by [A](A5067184382), [B](A5074743574) and [C](A5047110566)"),
 ])
@@ -235,11 +238,11 @@ def test_the_core_flip_is_a_config_change(monkeypatch):
     from query_translation import oql_lang
     from query_translation.x_query import build_x_query
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "core")
-    core = parse_core("break down works about kelp by year")
+    core = parse_core("get the count and share of works about kelp by year")
     piped = OQO(get_rows="works", group_by=[GroupBy(column_id="publication_year")],
                 calculate=[Measure("max", "cited_by_count")])     # no core name for max
     with Flask(__name__).test_request_context("/"):
-        assert build_x_query(core, sort_operands=False)["oql"] == "break down works about kelp by year"
+        assert build_x_query(core, sort_operands=False)["oql"] == "get the count and share of works about kelp by year"
         assert build_x_query(piped, sort_operands=False)["oql"].startswith("get works;\nthen, group")
 
 
@@ -250,17 +253,17 @@ def test_x_query_carries_both_forms(monkeypatch):
     from query_translation import oql_lang
     from query_translation.x_query import build_x_query
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
-    core = parse_core("break down works about kelp by year")
+    core = parse_core("get the count and share of works about kelp by year")
     piped = OQO(get_rows="works", group_by=[GroupBy(column_id="publication_year")],
                 calculate=[Measure("max", "cited_by_count")])     # no core name for max
     with Flask(__name__).test_request_context("/"):
         xq = build_x_query(core, sort_operands=False)
         assert xq["oql"].startswith("get works where title-abstract-keywords has")   # the old form stays
-        assert xq["x_new_oql"] == "break down works about kelp by year"
+        assert xq["x_new_oql"] == "get the count and share of works about kelp by year"
         assert build_x_query(piped, sort_operands=False)["x_new_oql"].startswith("get works;\nthen, group")
     with Flask(__name__).test_request_context("/?oql_style=core"):
         xq = build_x_query(core, sort_operands=False)
-        assert xq["oql"] == xq["x_new_oql"] == "break down works about kelp by year"
+        assert xq["oql"] == xq["x_new_oql"] == "get the count and share of works about kelp by year"
 
 
 def test_query_endpoint_formats_carry_both_forms(monkeypatch):
@@ -271,11 +274,11 @@ def test_query_endpoint_formats_carry_both_forms(monkeypatch):
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
     with Flask(__name__).test_request_context("/"):
         for oqo in (parse_core("get works about kelp since 2020"),          # plain path
-                    parse_core("break down works about kelp by year")):    # pipeline path
+                    parse_core("get the count and share of works about kelp by year")):    # pipeline path
             out = render_all_formats(oqo, ValidationResult(valid=True, errors=[], warnings=[]),
                                      sort_operands=False)
             assert out["oql"] and out["x_new_oql"] and out["oql"] != out["x_new_oql"]
-            assert out["x_new_oql"].startswith(("get works since 2020 about kelp", "break down works about kelp"))
+            assert out["x_new_oql"].startswith(("get works since 2020 about kelp", "get the count and share of works"))
 
 
 def test_things_with_key_value_where_round_trip():
@@ -303,11 +306,13 @@ def test_validate_reads_core_sentences():
     app = Flask(__name__)
     app.register_blueprint(blueprint)
     with app.test_client() as client:
-        ok = client.get("/validate", query_string={"q": "break down works about kelp by year"}).get_json()
-        assert ok["valid"] and ok["x_new_oql"] == "break down works about kelp by year"
+        ok = client.get("/validate", query_string={"q": "get the count and share of works about kelp by year"}).get_json()
+        assert ok["valid"] and ok["x_new_oql"] == "get the count and share of works about kelp by year"
         assert ok["oql"].startswith("get works where title-abstract-keywords has")
-        bad = client.get("/validate", query_string={"q": "rank authors by count of works about"}).get_json()
+        bad = client.get("/validate", query_string={"q": "get the count of works about by author"}).get_json()
         assert bad["valid"] is False and bad["diagnostics"]
+        gone = client.get("/validate", query_string={"q": "break down works about kelp by year"}).get_json()
+        assert gone["valid"] is False      # `rank` and `break down` are gone (Jason 2026-10-20)
 
 
 # --- words for every order (Jason 2026-10-13 via #1658) --------------------------------
@@ -357,44 +362,47 @@ def test_age_adjusted_is_written_when_a_search_makes_best_matches_the_default():
         assert parse_core(said).sort_by == list(AGE_ADJUSTED)
 
 
-def test_a_rank_sorted_by_count_says_count():
-    # `rank institutions by mean FWCI` sorted by count would lie (#1658's edge)
+def test_a_table_sorted_by_count_writes_no_order():
+    # most works first is a table's default, whatever numbers it shows (#1658's edge)
     from query_translation.oqo import GroupBy
     oqo = OQO(get_rows="works", filter_rows=[_Leaf("title_abstract_keywords.search", "kelp", "has")],
               group_by=[GroupBy(column_id="authorships.institutions.lineage")],
               calculate=[Measure("mean", "fwci")], sort_by=[SortBy("count", "desc")])
     text = render_core(oqo)
-    assert text == "rank institutions by count of works about kelp. Show mean FWCI."
-    assert parse_core(text).sort_by[0].column_id == "count"
+    assert text == "get the mean FWCI of works about kelp by institution"
+    assert parse_core(text).sort_by == []
 
 
 @pytest.mark.parametrize("col,d,tail", [
-    ("publication_year", "asc", "by year, oldest first"),
+    ("publication_year", "desc", "by year, newest first"),
     ("authorships.institutions.lineage", "asc", "by institution, in institution ID order"),
     ("type", "desc", "by type, reverse alphabetical by type"),
 ])
-def test_a_breakdown_in_key_order_says_so(col, d, tail):
-    # key order is a breakdown, not `rank ... by count, lowest first` (#1658's edge)
+def test_a_table_in_key_order_says_so(col, d, tail):
+    # a split's own order, at the end like any order (#1658's edge)
     from query_translation.oqo import GroupBy
     oqo = OQO(get_rows="works", filter_rows=[_Leaf("title_abstract_keywords.search", "kelp", "has")],
               group_by=[GroupBy(column_id=col)], calculate=[Measure("count"), Measure("percent_of_those")],
               sort_by=[SortBy("key", d)])
     text = render_core(oqo)
-    assert text == "break down works about kelp " + tail
+    assert text == "get the count and share of works about kelp " + tail
     assert [(s.column_id, s.direction) for s in parse_core(text).sort_by] == [("key", d)]
 
 
 def test_only_count_threshold_is_read_never_dropped():
     # session "1658", 2026-10-13: the `Only` count was silently dropped (all 115 groups)
-    o = parse_core("rank countries by count of works about kelp. Only countries with more than 500 works about kelp.")
-    assert parse_core("rank countries with more than 500 works about kelp").to_dict() == o.to_dict()
-    assert render_core(o) == "rank countries with more than 500 works about kelp"
+    text = "get the count of works about kelp by country. Only countries with more than 500 works about kelp."
+    o = parse_core(text)
+    assert o.group_by[0].where.measure == "count" and o.group_by[0].where.value == 500
+    assert render_core(o) == text
 
 
 @pytest.mark.parametrize("q", [
-    "rank countries by count of works about kelp. Only countries with more than 500 works since 2020.",
-    "rank countries by count of works about kelp. Only institutions with more than 5 works about kelp.",
-    "break down works about kelp by year. Only years with more than 5 works.",
+    "get the count of works about kelp by country. Only countries with more than 500 works since 2020.",
+    "get the count of works about kelp by country. Only institutions with more than 5 works about kelp.",
+    "get works about kelp. Only works with more than 5 citations.",
+    "rank countries by count of works about kelp",          # `rank` is gone (Jason 2026-10-20)
+    "break down works about kelp by year",                  # so is `break down`
 ])
 def test_an_only_sentence_it_cannot_read_is_refused(q):
     from query_translation.oql_core import NotCore
@@ -405,7 +413,7 @@ def test_an_only_sentence_it_cannot_read_is_refused(q):
 @pytest.mark.parametrize("dims", ["country and year", "year and country", "country and year since 2020"])
 def test_a_breakdown_keeps_its_own_dimension_order(dims):
     # session "1658", 2026-10-13: `by country and year` echoed year-first and read back nested the other way
-    text = f"break down works about kelp by {dims}"
+    text = f"get the count and share of works about kelp by {dims}"
     assert render_core(parse_core(text)) == text
 
 
@@ -418,11 +426,11 @@ def test_a_things_own_continent_reads_in_place():
                          "calculate": [{"measure": "count"}],
                          "sort_by": [{"column_id": "count", "direction": "desc"}]})
     text = render_core(oqo, lambda v, c=None: {"Q15": "Africa", "T10091": "Malaria Research and Control"}.get(v))
-    assert text == ("rank institutions in [Africa](Q15) by count of works in the topic "
-                    "[Malaria Research and Control](T10091)")
+    assert text == ("get the count of works in the topic [Malaria Research and Control](T10091) by "
+                    "institution in [Africa](Q15)")
     back = canonicalize_oqo(parse_core(text), sort_operands=False)
     assert back.group_by[0].where.column_id == "continent" and back.group_by[0].where.value == "Q15"
-    assert render_core(back, None) == "rank institutions in [Africa](Q15) by count of works in the topic (T10091)"
+    assert render_core(back, None) == "get the count of works in the topic (T10091) by institution in [Africa](Q15)"
     assert render_core(parse_core("get institutions in [Africa](Q15)"), None) == "get institutions in [Africa](Q15)"
 
 

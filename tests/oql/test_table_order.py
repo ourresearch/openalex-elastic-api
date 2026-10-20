@@ -129,14 +129,14 @@ def _run(monkeypatch, oql, fake, **kw):
 
 def test_a_year_split_reads_oldest_first_with_no_sort(monkeypatch):
     fake = FakeES([("2026", 50, {}), ("1990", 1, {}), ("2001", 7, {})])
-    body = _run(monkeypatch, "break down works about kelp by year", fake, per_page=2)
+    body = _run(monkeypatch, "get the count and share of works about kelp by year", fake, per_page=2)
     assert fake.bodies[-1]["aggs"]["s0"]["terms"]["order"][0] == {"_key": "asc"}
     assert [r["key"] for r in body["group_by"]] == ["1990", "2001"]
 
 
 def test_a_year_split_still_sorts_when_asked(monkeypatch):
     fake = FakeES([("2026", 50, {}), ("1990", 1, {}), ("2001", 7, {})])
-    body = _run(monkeypatch, "break down works about kelp by year", fake, per_page=2,
+    body = _run(monkeypatch, "get the count and share of works about kelp by year", fake, per_page=2,
                 sort=("count", "desc"))
     assert [r["key"] for r in body["group_by"]] == ["2026", "2001"]
 
@@ -147,7 +147,7 @@ def test_a_percent_sort_reads_every_group(monkeypatch):
     fake = FakeES([("US", 100, {"m_percent_open_access_is_oa": {"doc_count": 40}}),
                    ("CN", 50, {"m_percent_open_access_is_oa": {"doc_count": 30}}),
                    ("NU", 2, {"m_percent_open_access_is_oa": {"doc_count": 2}})])
-    body = _run(monkeypatch, "rank countries by percent open access of works", fake,
+    body = _run(monkeypatch, "get the percent open access of all works by country, highest first", fake,
                 per_page=1)
     main = fake.bodies[-1]["aggs"]["s0"]["terms"]
     assert main["size"] >= 3                       # sized to every group, not the page
@@ -158,7 +158,7 @@ def test_a_percent_sort_reads_every_group(monkeypatch):
 def test_a_percent_sort_over_too_many_groups_is_refused_loudly(monkeypatch):
     fake = FakeES([("I1", 5, {})], cards={"card0": A.ALL_GROUPS_SORT_LIMIT + 1})
     with pytest.raises(A.AnalyticsError) as ei:
-        _run(monkeypatch, "rank institutions by percent open access of works", fake)
+        _run(monkeypatch, "get the percent open access of all works by institution, highest first", fake)
     assert ei.value.code == "too_many_groups" and ei.value.fix
     assert "percent open access" in ei.value.message
 
@@ -166,13 +166,13 @@ def test_a_percent_sort_over_too_many_groups_is_refused_loudly(monkeypatch):
 def test_an_all_groups_read_that_comes_back_short_is_refused(monkeypatch):
     fake = FakeES([("US", 100, {}), ("CN", 50, {})], cards={"card0": 2}, other=7)
     with pytest.raises(A.AnalyticsError) as ei:
-        _run(monkeypatch, "rank countries by percent open access of works", fake)
+        _run(monkeypatch, "get the percent open access of all works by country, highest first", fake)
     assert ei.value.code == "too_many_groups"
 
 
 def test_a_share_sort_orders_like_the_count_in_es(monkeypatch):
     fake = FakeES([("US", 100, {}), ("CN", 50, {})])
-    _run(monkeypatch, "break down works about kelp by country", fake,
+    _run(monkeypatch, "get the count and share of works about kelp by country", fake,
          sort=("percent_of_those", "desc"))
     assert fake.bodies[-1]["aggs"]["s0"]["terms"]["order"][0] == {"_count": "desc"}
 
@@ -189,7 +189,7 @@ def test_an_own_field_sort_reads_every_group_once(monkeypatch):
     monkeypatch.setattr(A, "fill_own_values", fake_fill)
     fake = FakeES([("https://openalex.org/A1", 90, {}), ("https://openalex.org/A3", 82, {}),
                    ("https://openalex.org/A2", 50, {})])
-    body = _run(monkeypatch, "rank authors by count of works about kelp. Show h-index.", fake,
+    body = _run(monkeypatch, "get the count of works about kelp by author. Show h-index.", fake,
                 per_page=2, sort=("summary_stats_h_index", "desc"))
     assert [r["key"] for r in body["group_by"]] == ["https://openalex.org/A2",
                                                     "https://openalex.org/A3"]

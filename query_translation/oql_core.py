@@ -1,15 +1,15 @@
 """OQL core v3: the scaled-back, English-first surface (oxjob #1555, Jason 2026-10-11).
 
-Three sentences over the same OQO and engine:
+Every statement starts with `get`, over the same OQO and engine (one way in: `rank` and
+`break down` were dropped as input too, Jason 2026-10-20):
 
-    get <works phrase>[, <order>]                       a list of works
-    get <things phrase>[, <order>]                      things by their own fields
-    get the <measure>[ and <measure>] of <works>        one or a few numbers
-    rank <things phrase> by <measure>[, lowest first]   things in order of a number
-    break down <works phrase> by <dim>[ and <dim>]      one body of work, sliced
+    get <works phrase>[, <order>]                                 a list of works
+    get <things phrase>[, <order>]                                things by their own fields
+    get the <numbers> of <works> by <splits>[, <order>]           a table of groups
+    get the <numbers> of <works>                                  one row: the smallest table
 
-plus optional `Show ...` (extra columns) and `Only ...` (a threshold on the rank's own
-number) sentences. The spec is #1555 `work/core_v3_spec.md`; its 44 cases are
+plus optional `Show ...` (a thing's own fields) and `Only ...` (a count floor on a split)
+sentences. The spec is #1555 `work/core_v3_spec.md`; its 44 cases are
 `tests/oql/core_v3_cases.json`.
 
 This module renders (OQO -> text) and parses (text -> OQO). The parser chunks the
@@ -82,8 +82,6 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "language": "language", "corresponding_author_ids": "corresponding author",
         "is_retracted": "retracted"}
 DIM_COLUMNS = {v: k for k, v in DIMS.items()}
-_DIMS_LONGEST = sorted(DIM_COLUMNS, key=len, reverse=True)
-_DIM_SPLIT = re.compile(r"\s+and\s+(?=(?:%s)\b)" % "|".join(re.escape(w) for w in _DIMS_LONGEST))
 _TYPE_NOUNS_LONGEST = sorted(NOUN_TYPES, key=lambda n: -len(n.split()))
 
 # rank: group column -> the things' plural noun
@@ -119,8 +117,7 @@ NAME_MEASURES = {v: k for k, v in MEASURE_NAMES.items()}
 # a row's slice of the group one level up (the whole set with one split; each year with
 # `by year and country`): the table sentence's word (oxjob #1555 D3); `share of the total` too
 NAME_MEASURES["share"] = ("percent_of_those", None)
-_MEASURES_LONGEST = sorted(NAME_MEASURES, key=len, reverse=True)
-# the preposition a rank measure takes before its works phrase
+# the preposition a number takes before its works phrase
 MEASURE_JOIN = {"sum of citations": "to", "sum of APCs paid": "for"}
 
 DEFAULT_BREAKDOWN = [("count", None), ("percent_of_those", None)]
@@ -539,17 +536,7 @@ def _render(oqo: OQO, resolver: Resolver) -> str:
         if oqo.calculate:
             return _number_sentence(oqo, resolver)
         return _works_list(oqo, resolver)
-    if TABLE_FORM:
-        try:
-            return _table(oqo, resolver)
-        except NotCore:
-            pass        # rank / break down can still say some of what the table can't yet
-    first = oqo.group_by[0]
-    by_key = bool(oqo.sort_by) and oqo.sort_by[0].column_id == "key"
-    if len(oqo.group_by) == 1 and first.column_id in THING_NOUNS and first.values is None \
-            and not by_key and (oqo.sort_by or first.where is not None):
-        return _rank(oqo, resolver)
-    return _breakdown(oqo, resolver)
+    return _table(oqo, resolver)
 
 
 def _is_age_adjusted(sort_by) -> bool:
@@ -640,11 +627,7 @@ def _number_sentence(oqo, resolver):
 
 def _things_list(oqo, resolver):
     noun = oqo.get_rows
-    sort = oqo.sort_by[0] if oqo.sort_by else None
-    # a list in its default order (most works first) is a list, not a rank by works count
-    by_own = sort is not None and sort.column_id in OWN_FIELDS and not _is_default_order(
-        oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
-    parts, thresholds, only, left = [], [], [], []
+    parts, thresholds, left = [], [], []
     excluded = _excluded(oqo.filter_rows)
     for f in oqo.filter_rows:
         if f in excluded:
@@ -661,75 +644,16 @@ def _things_list(oqo, resolver):
         elif (text := _own_place(f, noun, resolver)) is not None:
             parts.append(text)
         elif _is_own_threshold(f):
-            # a threshold on the rank's own number is its `Only ...` sentence (Jason's #logs note)
-            (only if by_own and not TABLE_FORM and f.column_id == sort.column_id else thresholds).append(f)
+            thresholds.append(f)
         else:
             left.append(f)
     parts += [_own_threshold_text(f) for f in thresholds]
     if left:
         parts.append("where " + _where_text(left, resolver))
     phrase = " ".join([noun] + parts)
-    if not by_own or TABLE_FORM:
-        # a list sorted by its own field is still a list (oxjob #1555 D1): the order goes
-        # at the end, the threshold stays a condition
-        return "get " + phrase + _order_text(oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
-    text = f"rank {phrase} by {OWN_FIELDS[sort.column_id][1]}"
-    if sort.direction == "asc":
-        text += ", lowest first"
-    return text + "".join(f". Only {noun} {_own_threshold_text(f)}." for f in only)
-
-
-def _rank(oqo, resolver):
-    g = oqo.group_by[0]
-    thing = THING_NOUNS[g.column_id]
-    noun, parts, left, count = _thing_parts(g.where, thing, resolver)
-    if left:
-        raise NotCore("a things filter with no phrase")
-    works_text = _works(oqo.filter_rows, resolver, possessive=False, thing=thing).text()
-    if count is not None:
-        parts.append(f"with {COMPARATOR_WORDS[count.operator]} {_number(count.value)} {works_text}")
-    measures = list(oqo.calculate) or [Measure("count")]
-    sort = oqo.sort_by[0] if oqo.sort_by else None
-    ranked = next((m for m in measures if sort is not None and m.key == sort.column_id), None)
-    if ranked is None and sort is not None and sort.column_id == "count":
-        # sorted by the count while showing other numbers: the rank is by the count, and the
-        # text says so (a `rank ... by mean FWCI` sorted by count would lie)
-        ranked = Measure("count")
-        measures = [ranked] + measures
-    elif ranked is None and sort is not None:
-        raise NotCore(f"a rank by {sort.column_id}, which it doesn't name")
-    ranked = ranked or measures[0]
-    rest = [m for m in measures if m is not ranked]
-    name = _measure_name(ranked)
-    if name == "count of works":
-        # with a count filter, the rank is by that count and needs no `by`
-        by = None if count is not None else f"count of {works_text}"
-    elif count is not None or works_text == "works":
-        by = name
-    else:
-        by = f"{name} {MEASURE_JOIN.get(name, 'of')} {works_text}"
-    text = f"rank {' '.join([noun] + parts)}" + (f" by {by}" if by else "")
-    if sort is not None and sort.direction == "asc":
-        text += ", lowest first"
-    return text + (". " + _show(rest) if rest else "")
-
-
-def _breakdown(oqo, resolver):
-    if len(oqo.group_by) > 2:
-        raise NotCore("three dimensions")
-    if any(g.where is not None or g.column_id not in DIMS for g in oqo.group_by):
-        raise NotCore("a dimension with no word")
-    year_dim = any(g.column_id == "publication_year" for g in oqo.group_by)
-    w = _works(oqo.filter_rows, resolver)
-    texts = []
-    for g in oqo.group_by:      # the query's own order (it nests the rows); year is the x-axis either way
-        texts.append(_dim_words(g, DIMS[g.column_id], w, resolver))
-    phrase = w.text(all_works=True, keep_time=not year_dim)
-    text = f"break down {phrase} by {' and '.join(texts)}" + _breakdown_order(oqo)
-    keys = [(m.measure, m.column_id) for m in oqo.calculate]
-    if oqo.calculate and keys not in (DEFAULT_BREAKDOWN, [("count", None)]):
-        text += ". " + _show(oqo.calculate)
-    return text
+    # a list sorted by its own field is still a list (oxjob #1555 D1): the order goes at the
+    # end, a threshold stays a condition
+    return "get " + phrase + _order_text(oqo.sort_by, oqo.get_rows, _has_search(oqo.filter_rows))
 
 
 def _dim_words(g, word: str, w, resolver) -> str:
@@ -755,33 +679,14 @@ def _key_order(col: str, word: str, desc: bool) -> str:
     return f", in {'reverse ' if desc else ''}{word} ID order"
 
 
-def _breakdown_order(oqo) -> str:
-    """A breakdown's order, when it isn't the default (most works first): by its groups'
-    own key (`by year, oldest first`; `alphabetical by type`; `in institution ID order`)
-    or fewest works first. Rows and the chart come back in this order."""
-    if not oqo.sort_by or (oqo.sort_by[0].column_id, oqo.sort_by[0].direction) == ("count", "desc"):
-        return ""
-    s = oqo.sort_by[0]
-    if len(oqo.group_by) != 1 or s.column_id not in ("key", "count"):
-        raise NotCore("a breakdown in another order")
-    desc = s.direction == "desc"
-    if s.column_id == "count":
-        return ", fewest works first"
-    dim = oqo.group_by[0].column_id
-    if dim == "publication_year":
-        return ", newest first" if desc else ", oldest first"
-    return _key_order(dim, DIMS[dim], desc)
-
-
 # ---------------------------------------------------------------------------
 # Tables of groups (oxjob #1555, D1-D3, 2026-10-20): one sentence for every table,
 # numbers first, `get the <numbers> of <works> by <splits>[, <order>]`, the way one number
 # already reads. The sentence names the shape, never the order: a column sort changes only
 # the order words at the end. Which groups sit on their split (`by author at [UBC]`), apart
 # from which works; a count floor is its `Only` sentence; a thing's own fields not in the
-# order are `Show`. `rank` and `break down` stay accepted input.
+# order are `Show`. `rank` and `break down` are gone, as input too (Jason 2026-10-20).
 # ---------------------------------------------------------------------------
-TABLE_FORM = True
 
 THING_SINGULAR = {"authors": "author", "institutions": "institution", "countries": "country",
                   "sources": "source", "journals": "journal", "repositories": "repository",
@@ -872,20 +777,6 @@ def _table_order(oqo, measures) -> Tuple[str, Optional[Measure]]:
         return f", {word} first", None      # one number: `highest first` says enough
     name = OWN_FIELDS[m.column_id][1] if m.measure == "value" else _table_name(m)
     return f", {word} {name} first", (m if m.measure == "value" else None)
-
-
-_BREAKDOWN_ORDER_RE = re.compile(r", (?:(oldest|newest) first|fewest works first|"
-                                 r"(reverse )?alphabetical by [^,]+|in (reverse )?[^,]+ ID order)$")
-
-
-def _parse_breakdown_order(s: str) -> Tuple[str, List[SortBy]]:
-    m = _BREAKDOWN_ORDER_RE.search(s)
-    if m is None:
-        return s, []
-    if m.group(0) == ", fewest works first":
-        return s[: m.start()], [SortBy("count", "asc")]
-    desc = m.group(1) == "newest" or bool(m.group(2)) or bool(m.group(3))
-    return s[: m.start()], [SortBy("key", "desc" if desc else "asc")]
 
 
 # ===========================================================================
@@ -1317,7 +1208,7 @@ def _order(t, s: str, entity: str = "works") -> Tuple[str, List[SortBy]]:
     return s, []
 
 
-_CORE_FIRST = re.compile(r"\s*(?:rank|break\s+down|get\s+the)\s", re.I)
+_CORE_FIRST = re.compile(r"\s*get\s+the\s", re.I)
 
 
 def core_first(text: str) -> bool:
@@ -1334,30 +1225,22 @@ def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     only = [e[len("Only "):] for e in extras if e.startswith("Only ")]
     low = main.lower()
     table = low.startswith("get the ") and _BY_SPLIT.search(main) is not None
-    if only and not (low.startswith("rank ") or table):
-        raise NotCore("an `Only` sentence follows a rank or a table")     # loud, never dropped
+    if only and not table:
+        raise NotCore("an `Only` sentence follows a table")     # loud, never dropped
     if table:
         oqo = _parse_table(t, main[len("get the "):], collection_type, only)
         for e in show:
             oqo.calculate = list(oqo.calculate) + [
                 x for x in _parse_measures(t, e) if all(x.key != y.key for y in oqo.calculate)]
         return oqo
-    if low.startswith("break down "):
-        oqo = _parse_breakdown(t, main[len("break down "):], collection_type)
-    elif low.startswith("rank "):
-        oqo = _parse_rank(t, main[len("rank "):], collection_type, only)
-    elif low.startswith("get the "):
+    if low.startswith("get the "):
         oqo = _parse_number(t, main[len("get the "):], collection_type)
     elif low.startswith("get "):
         oqo = _parse_get(t, main[len("get "):], collection_type)
     else:
         raise NotCore("not a core sentence")
     if show:
-        extra = _parse_measures(t, show[0])
-        if oqo.group_by and oqo.get_rows == "works" and not oqo.sort_by:
-            oqo.calculate = extra                       # a breakdown's columns
-        else:
-            oqo.calculate = list(oqo.calculate) + extra
+        oqo.calculate = list(oqo.calculate) + _parse_measures(t, show[0])
     return oqo
 
 
@@ -1367,10 +1250,6 @@ def _parse_get(t, s, collection_type):
         if noun in NOUN_THING_TYPES else "works"
     body, sort = _order(t, s, entity)
     first = body.split()[0].lower() if body.split() else ""
-    if (first in NOUN_THINGS or first in NOUN_THING_TYPES) and re.search(
-            r" with (?:more than|at least|fewer than|at most|works|articles|\w+ works)\b", body):
-        oqo = _parse_rank(t, body, collection_type, [])  # things with works: ranked by count
-        return oqo
     if first in NOUN_THINGS or first in NOUN_THING_TYPES:
         oqo = _parse_things_list(t, body)
     else:
@@ -1511,120 +1390,6 @@ def _parse_things_list(t, s) -> OQO:
     return OQO(get_rows=entity, filter_rows=rows)
 
 
-_MEASURE_START = re.compile(r" by (count of|count\b|sum of|mean |median |percent |share of the total|"
-                            r"h-index|i10-index|works count|citation count)")
-
-
-def _parse_rank(t, s, collection_type, only):
-    body, low = (s[: -len(", lowest first")], True) if s.endswith(", lowest first") else (s, False)
-    m = _MEASURE_START.search(body)
-    if m:
-        things, measure = body[: m.start()], body[m.start() + len(" by "):]
-    elif re.search(r" with (?:more than|at least|fewer than|at most|\w+ works|works) ", " " + body + " "):
-        things, measure = body, "count of works"     # `rank authors with at least 5 works about X`
-    else:
-        raise NotCore("`rank <things> by <measure>`")
-    direction = "asc" if low else "desc"
-    # rank by an own field: a sorted list of things
-    if measure in OWN_FIELD_BY_WORD:
-        oqo = _parse_things_list(t, things)
-        col = OWN_FIELD_BY_WORD[measure]
-        for o in only:
-            rest = o.split(" ", 1)[1] if " " in o else ""
-            got = _parse_own_threshold(rest)
-            if got is None or got[1] != rest:
-                raise NotCore("`Only <things> with an <field> above N`")
-            oqo.filter_rows.append(got[0])
-        oqo.sort_by = [SortBy(col, direction)]
-        return oqo
-    noun, typ, items = _parse_things(t, things)
-    where: List = []
-    works_rows: List = []
-    for it in items:
-        if isinstance(it, tuple):
-            _, op, n, phrase = it
-            if not (op == ">=" and n == 1):
-                where.append(MeasureFilter("count", op, n))
-            works_rows += _parse_works(t, phrase, collection_type, thing=noun)
-        else:
-            where.append(it)
-    if typ:
-        where.append(LeafFilter("type", typ))
-    # the measure, and the works it covers
-    if measure == "count of works":
-        ranked, phrase = "count of works", ""
-    elif measure.startswith("count of "):
-        ranked = "count of works"
-        phrase = measure[len("count of "):]
-    else:
-        ranked = next((n for n in _MEASURES_LONGEST
-                       if measure == n or measure.startswith(n + " ")), None)
-        if ranked is None:
-            raise NotCore(f"unknown measure in {measure!r}")
-        tail = measure[len(ranked):].strip()
-        join = MEASURE_JOIN.get(ranked, "of")
-        if tail.startswith(join + " "):
-            phrase = tail[len(join) + 1:]
-        elif tail == "":
-            phrase = ""
-        else:
-            raise NotCore(f"`{ranked} {join} <works>`")
-    if phrase:
-        works_rows += _parse_works(t, phrase, collection_type, thing=noun)
-    for o in only:
-        # `Only countries with more than 500 works about kelp.`: the count threshold the head
-        # can also say (`rank countries with more than 500 works about kelp`), or the things'
-        # own fields; anything else is refused, never dropped (session "1658", 2026-10-13)
-        o_noun, o_typ, o_items = _parse_things(t, o)
-        if o_noun != noun or o_typ != typ:
-            raise NotCore("an `Only` sentence names other things than the rank")
-        for it in o_items:
-            if not isinstance(it, tuple):
-                where.append(it)
-                continue
-            _, op, n, ph = it
-            rows = _parse_works(t, ph, collection_type, thing=noun)
-            if [r.to_dict() for r in rows] != [r.to_dict() for r in works_rows]:
-                raise NotCore("an `Only` count over other works than the rank counts")
-            where.append(MeasureFilter("count", op, n))
-    mm, col = NAME_MEASURES[ranked]
-    meas = Measure(mm, col)
-    g = GroupBy(column_id=NOUN_THINGS[noun],
-                where=(where[0] if len(where) == 1 else BranchFilter(join="and", filters=where))
-                if where else None)
-    return OQO(get_rows="works", filter_rows=works_rows, group_by=[g], calculate=[meas],
-               sort_by=[SortBy(meas.key, direction)])
-
-
-def _parse_breakdown(t, s, collection_type):
-    s, order = _parse_breakdown_order(s)
-    oqo = _parse_breakdown_body(t, s, collection_type)
-    if order:
-        if len(oqo.group_by) != 1:
-            raise NotCore("an order on a two-way breakdown")
-        oqo.sort_by = order
-    return oqo
-
-
-def _parse_breakdown_body(t, s, collection_type):
-    # the works phrase ends at the ` by ` that opens the dimensions
-    cut = None
-    for mm in re.finditer(r" by ", s):
-        nxt = s[mm.end():]
-        if any(nxt == w or nxt.startswith(w + " ") for w in _DIMS_LONGEST):
-            cut = mm
-            break
-    if cut is None:
-        raise NotCore("`break down <works> by <dimension>`")
-    phrase, dims_text = s[: cut.start()], s[cut.end():]
-    rows = _parse_works(t, phrase, collection_type)
-    groups: List[GroupBy] = []
-    for part in _DIM_SPLIT.split(dims_text):
-        word = next((w for w in _DIMS_LONGEST if part == w or part.startswith(w + " ")), None)
-        if word is None:
-            raise NotCore(f"unknown dimension {part!r}")
-        groups.append(_parse_dim(t, word, part[len(word):].strip(), rows))
-    return OQO(get_rows="works", filter_rows=rows, group_by=groups, calculate=_default_breakdown())
 
 
 def _parse_dim(t, word: str, rest: str, rows: List) -> GroupBy:

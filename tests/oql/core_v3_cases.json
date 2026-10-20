@@ -457,7 +457,7 @@
    "case": 66,
    "label": null,
    "shape": "rank",
-   "new": "rank authors at [University of British Columbia](I141945490) by count of works about kelp",
+   "new": "get the count of works about kelp by author at [University of British Columbia](I141945490)",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -487,13 +487,14 @@
       "measure": "count"
      }
     ]
-   }
+   },
+   "v3": "rank authors at [University of British Columbia](I141945490) by count of works about kelp"
   },
   {
    "case": 0,
    "label": "Jason's example",
    "shape": "rank",
-   "new": "rank institutions in [Sweden](SE) with at least 10 works about kelp by mean FWCI",
+   "new": "get the mean FWCI of works about kelp by institution in [Sweden](SE), highest first. Only institutions with at least 10 works about kelp.",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -534,13 +535,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank institutions in [Sweden](SE) with at least 10 works about kelp by mean FWCI"
   },
   {
    "case": 29,
    "label": null,
    "shape": "rank",
-   "new": "rank authors by count of works about \"latent dirichlet allocation\". Show sum of citations, mean FWCI, and h-index.",
+   "new": "get the count, sum of citations, and mean FWCI of works about \"latent dirichlet allocation\" by author. Show h-index.",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -578,13 +580,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank authors by count of works about \"latent dirichlet allocation\". Show sum of citations, mean FWCI, and h-index."
   },
   {
    "case": 361,
    "label": null,
    "shape": "rank",
-   "new": "rank authors by sum of citations to works since 2018 about oleogel*",
+   "new": "get the sum of citations to works since 2018 about oleogel* by author, highest first",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -616,13 +619,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank authors by sum of citations to works since 2018 about oleogel*"
   },
   {
    "case": 78,
    "label": null,
    "shape": "rank",
-   "new": "rank authors at [University of Colorado Boulder](I188538660) by count of works in SDG [Climate action](13)",
+   "new": "get the count of works in SDG [Climate action](13) by author at [University of Colorado Boulder](I188538660)",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -651,13 +655,14 @@
       "measure": "count"
      }
     ]
-   }
+   },
+   "v3": "rank authors at [University of Colorado Boulder](I188538660) by count of works in SDG [Climate action](13)"
   },
   {
    "case": 87,
    "label": null,
    "shape": "rank",
-   "new": "rank authors at [University of Kansas](I146416000) by count of works about biodiversity",
+   "new": "get the count of works about biodiversity by author at [University of Kansas](I146416000)",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -687,13 +692,14 @@
       "measure": "count"
      }
     ]
-   }
+   },
+   "v3": "rank authors at [University of Kansas](I146416000) by count of works about biodiversity"
   },
   {
    "case": 569,
    "label": null,
    "shape": "rank",
-   "new": "rank companies by count of works co-authored with [Kiel University](I32021983)",
+   "new": "get the count of works co-authored with [Kiel University](I32021983) by company",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -722,13 +728,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank companies by count of works co-authored with [Kiel University](I32021983)"
   },
   {
    "case": 473,
    "label": null,
    "shape": "rank",
-   "new": "rank countries with more than 100,000 works since 2006 by percent retracted",
+   "new": "get the percent retracted of works since 2006 by country, highest first. Only countries with more than 100,000 works since 2006.",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -760,13 +767,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank countries with more than 100,000 works since 2006 by percent retracted"
   },
   {
    "case": 428,
    "label": null,
    "shape": "rank",
-   "new": "rank journals by count of works since 2020 about (archaeology AND \"deep learning\")",
+   "new": "get the count of works since 2020 about (archaeology AND \"deep learning\") by journal",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -806,13 +814,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank journals by count of works since 2020 about (archaeology AND \"deep learning\")"
   },
   {
    "case": 837,
    "label": null,
    "shape": "rank",
-   "new": "rank topics by count of works funded by [Russian Science Foundation](F4320324099) or [Russian Foundation for Basic Research](F4320321079)",
+   "new": "get the count of works funded by [Russian Science Foundation](F4320324099) or [Russian Foundation for Basic Research](F4320321079) by topic",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -846,13 +855,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank topics by count of works funded by [Russian Science Foundation](F4320324099) or [Russian Foundation for Basic Research](F4320321079)"
   },
   {
    "case": 684,
    "label": null,
    "shape": "rank",
-   "new": "rank institutions by count of works citing works in the collection [JMIR articles](col_jmir)",
+   "new": "get the count of works citing works in the collection [JMIR articles](col_jmir) by institution",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -878,13 +888,14 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank institutions by count of works citing works in the collection [JMIR articles](col_jmir)"
   },
   {
    "case": 0,
    "label": "from the logs",
    "shape": "lookup",
-   "new": "rank authors at [University of British Columbia](I141945490) by h-index. Only authors with an h-index above 50.",
+   "new": "get authors at [University of British Columbia](I141945490) with an h-index above 50, highest h-index first",
    "oqo": {
     "get_rows": "authors",
     "filter_rows": [
@@ -904,7 +915,8 @@
       "direction": "desc"
      }
     ]
-   }
+   },
+   "v3": "rank authors at [University of British Columbia](I141945490) by h-index. Only authors with an h-index above 50."
   },
   {
    "case": 95,
@@ -994,7 +1006,7 @@
    "case": 185,
    "label": null,
    "shape": "number",
-   "new": "break down [Dolph Schluter](A5047110566)'s works by corresponding author",
+   "new": "get the count and share of [Dolph Schluter](A5047110566)'s works by corresponding author",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1016,13 +1028,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down [Dolph Schluter](A5047110566)'s works by corresponding author"
   },
   {
    "case": 105,
    "label": null,
    "shape": "breakdown",
-   "new": "break down all works by SDG",
+   "new": "get the count and share of all works by SDG",
    "oqo": {
     "get_rows": "works",
     "group_by": [
@@ -1038,13 +1051,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down all works by SDG"
   },
   {
    "case": 100,
    "label": null,
    "shape": "breakdown",
-   "new": "break down [University of Kansas](I146416000)'s works by SDG",
+   "new": "get the count and share of [University of Kansas](I146416000)'s works by SDG",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1066,13 +1080,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down [University of Kansas](I146416000)'s works by SDG"
   },
   {
    "case": 1073,
    "label": null,
    "shape": "breakdown",
-   "new": "break down works since 2020 in [Cureus](S2738950867) by country",
+   "new": "get the count and share of works since 2020 in [Cureus](S2738950867) by country",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1099,13 +1114,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down works since 2020 in [Cureus](S2738950867) by country"
   },
   {
    "case": 25,
    "label": null,
    "shape": "breakdown",
-   "new": "break down [University of Florida](I33213144)'s works by open access. Show count of works, mean citations, median citations, and mean FWCI.",
+   "new": "get the count, mean citations, median citations, and mean FWCI of [University of Florida](I33213144)'s works by open access",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1136,13 +1152,14 @@
       "column_id": "fwci"
      }
     ]
-   }
+   },
+   "v3": "break down [University of Florida](I33213144)'s works by open access. Show count of works, mean citations, median citations, and mean FWCI."
   },
   {
    "case": 461,
    "label": null,
    "shape": "breakdown",
-   "new": "break down works from 2020-10-01 through 2021-09-30 funded by [Wellcome Trust](F4320311904) by publisher. Show sum of APCs paid and count of works.",
+   "new": "get the sum of APCs paid and count of works from 2020-10-01 through 2021-09-30 funded by [Wellcome Trust](F4320311904) by publisher",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1173,13 +1190,14 @@
       "measure": "count"
      }
     ]
-   }
+   },
+   "v3": "break down works from 2020-10-01 through 2021-09-30 funded by [Wellcome Trust](F4320311904) by publisher. Show sum of APCs paid and count of works."
   },
   {
    "case": 629,
    "label": null,
    "shape": "trend",
-   "new": "break down [University of Florida](I33213144)'s works by year since 2004",
+   "new": "get the count and share of [University of Florida](I33213144)'s works by year since 2004",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1206,13 +1224,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down [University of Florida](I33213144)'s works by year since 2004"
   },
   {
    "case": 934,
    "label": null,
    "shape": "trend",
-   "new": "break down all works by year. Show count of works and percent with an abstract.",
+   "new": "get the count and percent with an abstract of all works by year",
    "oqo": {
     "get_rows": "works",
     "group_by": [
@@ -1229,13 +1248,14 @@
       "column_id": "has_abstract"
      }
     ]
-   }
+   },
+   "v3": "break down all works by year. Show count of works and percent with an abstract."
   },
   {
    "case": 173,
    "label": null,
    "shape": "trend",
-   "new": "break down [University of Kansas](I146416000)'s works by year from 2015–2024 and field. Show mean FWCI.",
+   "new": "get the mean FWCI of [University of Kansas](I146416000)'s works by year from 2015–2024 and field",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1268,13 +1288,14 @@
       "column_id": "fwci"
      }
     ]
-   }
+   },
+   "v3": "break down [University of Kansas](I146416000)'s works by year from 2015–2024 and field. Show mean FWCI."
   },
   {
    "case": 621,
    "label": null,
    "shape": "trend",
-   "new": "break down works funded by [Wellcome Trust](F4320311904) by year and type",
+   "new": "get the count and share of works funded by [Wellcome Trust](F4320311904) by year and type",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1299,13 +1320,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down works funded by [Wellcome Trust](F4320311904) by year and type"
   },
   {
    "case": 1061,
    "label": null,
    "shape": "trend",
-   "new": "break down works in [Heliyon](S2898612692) by year and field. Show count of works and percent retracted.",
+   "new": "get the count and percent retracted of works in [Heliyon](S2898612692) by year and field",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1331,13 +1353,14 @@
       "column_id": "is_retracted"
      }
     ]
-   }
+   },
+   "v3": "break down works in [Heliyon](S2898612692) by year and field. Show count of works and percent retracted."
   },
   {
    "case": 665,
    "label": null,
    "shape": "trend",
-   "new": "break down works by year since 2000 and country in ([Canada](CA), [China](CN), [India](IN), [Brazil](BR), [Turkey](TR)). Show count of works and mean FWCI.",
+   "new": "get the count and mean FWCI of works by year since 2000 and country in ([Canada](CA), [China](CN), [India](IN), [Brazil](BR), [Turkey](TR))",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1371,13 +1394,14 @@
       "column_id": "fwci"
      }
     ]
-   }
+   },
+   "v3": "break down works by year since 2000 and country in ([Canada](CA), [China](CN), [India](IN), [Brazil](BR), [Turkey](TR)). Show count of works and mean FWCI."
   },
   {
    "case": 169,
    "label": null,
    "shape": "trend",
-   "new": "break down top 1% cited articles by year and country in ([United States](US), [China](CN))",
+   "new": "get the count and share of top 1% cited articles by year and country in ([United States](US), [China](CN))",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1410,13 +1434,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down top 1% cited articles by year and country in ([United States](US), [China](CN))"
   },
   {
    "case": 511,
    "label": null,
    "shape": "trend",
-   "new": "break down works in the collection [Catalan institutions](col_cat) by year since 2015 and open access status",
+   "new": "get the count and share of works in the collection [Catalan institutions](col_cat) by year since 2015 and open access status",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1447,13 +1472,14 @@
       "measure": "percent_of_those"
      }
     ]
-   }
+   },
+   "v3": "break down works in the collection [Catalan institutions](col_cat) by year since 2015 and open access status"
   },
   {
    "case": 0,
    "label": "Jason's example",
    "shape": "trend",
-   "new": "break down works about kelp by year and institution in the collection [My peers](col_peers)",
+   "new": "get the count and share of works about kelp by year and institution in the collection [My peers](col_peers)",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -1483,7 +1509,8 @@
      }
     ]
    },
-   "note": "new engine work: one group per member of a collection"
+   "note": "new engine work: one group per member of a collection",
+   "v3": "break down works about kelp by year and institution in the collection [My peers](col_peers)"
   }
  ]
 }

@@ -73,7 +73,7 @@ def parse_either(oql: str) -> OQO:
     from query_translation.oql_core import NotCore, core_first, parse_core
     core_error = None
     if core_first(oql):
-        # `rank ...`, `break down ...`, `get the ...`; a search or `where` part of a core
+        # `get the ...` (a table or a number); a search or `where` part of a core
         # sentence that fails raises the engine's own OQLError
         try:
             return parse_core(oql, _collection_type)

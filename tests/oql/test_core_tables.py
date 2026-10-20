@@ -2,7 +2,7 @@
 
 `get the <numbers> of <works> by <splits>[, <order>]`: the sentence names the shape, never
 the order, so a column sort changes only the order words at the end. `rank` and `break down`
-stay accepted input and now echo this form. Run:
+are gone, as input too (Jason 2026-10-20). Run:
     PYTHONPATH=. pytest tests/oql/test_core_tables.py -q --noconftest
 """
 import json
@@ -59,25 +59,35 @@ def test_a_table_means_what_it_meant(c):
     assert render_core(parse(text), resolver) == text            # a fixed point
 
 
-@pytest.mark.parametrize("old,new", [
-    ("rank authors at [University of British Columbia](I141945490) by count of works about kelp",
-     "get the count of works about kelp by author at [University of British Columbia](I141945490)"),
-    ("break down works about kelp by year", "get the count and share of works about kelp by year"),
-    ("rank institutions in [Sweden](SE) with at least 10 works about kelp by mean FWCI",
-     "get the mean FWCI of works about kelp by institution in [Sweden](SE), highest first. "
-     "Only institutions with at least 10 works about kelp."),
-    ("rank countries by count of works about kelp. Show mean FWCI.",
-     "get the count and mean FWCI of works about kelp by country"),
-    ("rank authors by count of works about kelp. Show h-index.",
-     "get the count of works about kelp by author. Show h-index."),
-    ("break down works about kelp by year and country", "get the count and share of works about kelp by year and country"),
-    ("get authors at [University of British Columbia](I141945490) with an h-index above 50, highest h-index first",
-     "get authors at [University of British Columbia](I141945490) with an h-index above 50, highest h-index first"),
-    ("rank authors at [University of British Columbia](I141945490) by h-index. Only authors with an h-index above 50.",
-     "get authors at [University of British Columbia](I141945490) with an h-index above 50, highest h-index first"),
+@pytest.mark.parametrize("text", [
+    "rank authors at [University of British Columbia](I141945490) by count of works about kelp",
+    "break down works about kelp by year",
+    "rank institutions in [Sweden](SE) with at least 10 works about kelp by mean FWCI",
+    "rank authors at [University of British Columbia](I141945490) by h-index. Only authors with an h-index above 50.",
+    "get authors with at least 5 works about kelp",
 ])
-def test_rank_and_break_down_are_accepted_and_echo_the_table(old, new):
-    assert render_core(parse(old), resolver) == new
+def test_rank_and_break_down_are_gone(text):
+    # one way in: `get` (Jason 2026-10-20: "Ditch em now ... the parser becoming spaghetti of
+    # aliases. Esp bad at start")
+    from query_translation.oql_core import NotCore
+    from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
+    with pytest.raises(NotCore):
+        parse_core(text)
+    with pytest.raises(OQLParseError):
+        parse_oql_to_oqo(text)
+
+
+@pytest.mark.parametrize("text", [
+    "get the count of works about kelp by author at [University of British Columbia](I141945490)",
+    "get the mean FWCI of works about kelp by institution in [Sweden](SE), highest first. "
+    "Only institutions with at least 10 works about kelp.",
+    "get the count and mean FWCI of works about kelp by country",
+    "get the count of works about kelp by author. Show h-index.",
+    "get the count and share of works about kelp by year and country",
+    "get authors at [University of British Columbia](I141945490) with an h-index above 50, highest h-index first",
+])
+def test_get_says_every_table_and_list(text):
+    assert render_core(parse(text), resolver) == text
 
 
 BASE = "get the count and mean FWCI of works about kelp by author at [University of British Columbia](I141945490)"
@@ -178,5 +188,5 @@ def test_demo_forms(old, new):
 
 
 def test_other_than_reads_as_except():
-    assert render_core(parse("rank countries other than [Kenya](KE) by count of works from [Kenya](KE)"), resolver) \
+    assert render_core(parse("get the count of works from [Kenya](KE) by country other than [Kenya](KE)"), resolver) \
         == "get the count of works from [Kenya](KE) by country except [Kenya](KE)"

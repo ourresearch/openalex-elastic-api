@@ -12,9 +12,9 @@ Scope: **Stage A (filter / sample) + Stage B (group_by)**. Stage C
 
 **Query/view split (oxjob #661, schema v1.4; sort rejoined the query in v1.6):** the OQO
 describes **which rows a query matches, and in what order** — nothing else. Sort is
-part of the query (Jason, 2026-10-12, oxjob #1555): OQL says it (`, most cited first`,
-`rank authors by h-index`), the website's sort control and the OQL text are two views
-of the same `sort_by`, and with a split by a thing a sort makes it a rank. View /
+part of the query (Jason, 2026-10-12, oxjob #1555): OQL says it at the end (`, most cited
+first`, `, highest h-index first`), the website's sort control and the OQL text are two views
+of the same `sort_by`, and the order never changes the rest of the sentence (2026-10-20). View /
 presentation parameters — column projection and pagination — are *not* part of the
 OQO. They travel as **sibling request params** on the execute surface, in the classic
 URL syntax: `select=<col>,[…]`, `page`, `per_page`, `cursor` — query-string params on
