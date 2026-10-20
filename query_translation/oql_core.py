@@ -698,10 +698,14 @@ _BY_SPLIT = re.compile(r" by (?:%s)\b" % "|".join(re.escape(w) for w in _SPLIT_W
 _SPLIT_AND = re.compile(r"\s+and\s+(?=(?:%s)\b)" % "|".join(re.escape(w) for w in _SPLIT_WORDS))
 
 
+# a number's short name in a sentence (the editor's autocomplete reads it too, #1597)
+TABLE_NAMES = {"count of works": "count", "share of the total": "share"}
+
+
 def _table_name(m: Measure) -> str:
     """A number's name in the table sentence: `count`, `share`, else the measure's name."""
     name = _measure_name(m)
-    return {"count of works": "count", "share of the total": "share"}.get(name, name)
+    return TABLE_NAMES.get(name, name)
 
 
 def _table(oqo, resolver):
@@ -870,6 +874,17 @@ def _works_column(kind: Optional[str]) -> Optional[str]:
 
 _YEAR = r"(\d{4})"
 _RANGE = re.compile(r"(\d{4})\s*[–-]\s*(\d{4})$")
+# a year's word and the bound it sets (`since 2020`). The parser and the editor's
+# autocomplete (oql_core_context, oxjob #1597) read this one table
+YEAR_OPS = {"since": ">=", "from": "is", "in": "is", "before": "<", "through": "<="}
+# `<words> [X]` slots of a works phrase that take one link or an `or` list: the words and
+# the works column the links narrow (also read by the editor's autocomplete, #1597)
+LINK_SLOTS = {"co-authored with": "authorships.institutions.lineage",
+              "published by": "primary_location.source.host_organization_lineage",
+              "funded by": "funders.id"}
+_LINK_SLOT_WORDS = [(tuple(p.split()), col) for p, col in LINK_SLOTS.items()]
+# the kinds of place `from [X]` takes
+FROM_KINDS = ("institutions", "countries", "continents")
 _DATE = r"(\d{4}-\d{2}-\d{2})"
 
 
@@ -942,10 +957,9 @@ def _years_from(ws: _Words, col: str = "publication_year") -> Optional[List[Leaf
         y1, y2 = int(b), int(ws.peek(3))
         ws.take(4)
         return [LeafFilter(col, y1, ">="), LeafFilter(col, y2, "<=")]
-    if re.fullmatch(_YEAR, b) and a in ("since", "from", "in", "before", "through"):
+    if re.fullmatch(_YEAR, b) and a in YEAR_OPS:
         ws.take(2)
-        op = {"since": ">=", "from": "is", "in": "is", "before": "<", "through": "<="}[a]
-        return [LeafFilter(col, int(b), op)]
+        return [LeafFilter(col, int(b), YEAR_OPS[a])]
     return None
 
 
@@ -1051,9 +1065,10 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             ws.take()
             rows.append(_any_of("referenced_works", _links_list(ws)))
             continue
-        if ws.at("co-authored", "with"):
-            ws.take(2)
-            rows.append(_any_of("authorships.institutions.lineage", _links_list(ws)))
+        slot = next(((words, col) for words, col in _LINK_SLOT_WORDS if ws.at(*words)), None)
+        if slot is not None:
+            ws.take(len(slot[0]))
+            rows.append(_any_of(slot[1], _links_list(ws)))
             continue
         if ws.at("co-authored", "by"):
             ws.take(2)
@@ -1086,7 +1101,7 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
                 raise NotCore("`from both A and B`")
             for id_ in ids:
                 kind = _kind_of(id_)
-                if kind not in ("institutions", "countries", "continents"):
+                if kind not in FROM_KINDS:
                     raise NotCore(f"`from` {id_}")
                 rows.append(LeafFilter(_works_column(kind), id_))
             continue
@@ -1096,7 +1111,7 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             if not ids:
                 raise NotCore("`from` needs a place")
             kind = _kind_of(ids[0])
-            if kind not in ("institutions", "countries", "continents"):
+            if kind not in FROM_KINDS:
                 raise NotCore(f"`from` {ids[0]}")
             col = _works_column(kind)
             rows.append(_any_of(col, ids))
@@ -1129,14 +1144,6 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             if _kind_of(ids[0]) != "sources":
                 raise NotCore(f"`in` {ids[0]}: name its kind (the topic, SDG, the collection)")
             rows.append(_any_of("primary_location.source.id", ids))
-            continue
-        if ws.at("published", "by"):
-            ws.take(2)
-            rows.append(_any_of("primary_location.source.host_organization_lineage", _links_list(ws)))
-            continue
-        if ws.at("funded", "by"):
-            ws.take(2)
-            rows.append(_any_of("funders.id", _links_list(ws)))
             continue
         if ws.at("under", "the") and t.link_id(ws.peek(2) or "") and ws.at("under", "the", ws.peek(2), "license"):
             rows.append(LeafFilter("primary_location.license", t.link_id(ws.peek(2))))

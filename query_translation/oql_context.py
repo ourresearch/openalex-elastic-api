@@ -286,7 +286,24 @@ def _leading_entity(q: str) -> Optional[str]:
 
 # --- main entry ---------------------------------------------------------------
 def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
-    """Resolve the grammar context at `pos` (code-point offset) in OQL string `q`."""
+    """Resolve the grammar context at `pos` (code-point offset) in OQL string `q`.
+
+    A core v3 statement (`get works about kelp ...`, `get the count of works by ...`,
+    oxjob #1555) is answered by `oql_core_context` from core's own tables (oxjob #1597);
+    everything else, `get works where ...` and the general form included, by the
+    key-value resolver below, unchanged."""
+    from query_translation import oql_core_context as core
+    if core.is_core(q):
+        try:
+            return core.core_context(q, pos)
+        except Exception:  # noqa: BLE001 (an editor hint never raises)
+            return core.none_reply(core.clamp(q, pos))
+    return _parse_context_old(q, pos)
+
+
+def _parse_context_old(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
+    """Today's key-value grammar context (also a core `where` tail's, via the core
+    resolver's delegation)."""
     if pos is None:
         pos = len(q)
     cpos = max(0, min(pos, len(q)))

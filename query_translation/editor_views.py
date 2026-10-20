@@ -7,6 +7,8 @@ playground's CodeMirror editor:
                                          here, for autocomplete. Always 200.
   GET /validate?q=<oql>                  full OQL -> diagnostics + canonical formats,
                                          for inline linting. Always 200.
+  GET /oql-vocabulary                    every core v3 phrase with its hover help
+                                         (oxjob #1597). Always 200.
 
 Kept in a **separate blueprint** (not `query_translation/views.py`) so it doesn't
 collide with the in-flight execution/translation reorg in that file (#384). It reuses
@@ -100,6 +102,18 @@ def parse_context_route():
         except (TypeError, ValueError):
             pos = None
     return jsonify(_enrich_enum_suggestions(_parse_context(q, pos))), 200
+
+
+@blueprint.route("/oql-vocabulary", methods=["GET"])
+def oql_vocabulary_route():
+    """Every phrase of the OQL core v3 grammar, for the editor's hover help (oxjob #1597).
+
+    Returns {phrases: [{value, kind, detail, doc}]}: the union of every list
+    `/parse-context` suggests from (keywords, nouns, adjectives, numbers, splits, orders,
+    places, sentences), without entity links. Built once at import from oql_core's own
+    tables, so hover help and autocomplete never disagree with the parser."""
+    from query_translation.oql_core_context import VOCABULARY
+    return jsonify({"phrases": VOCABULARY}), 200
 
 
 @blueprint.route("/validate", methods=["GET"])
