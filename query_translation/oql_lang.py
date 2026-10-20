@@ -2429,7 +2429,10 @@ class _Parser:
             raise _CtxFound()
         raise oql_error("OQL_UNKNOWN_ENTITY",
                        f'unknown entity type "{t.val}"',
-                       f'use one of: works, authors, institutions, sources, ...', t.pos)
+                       # every statement starts with `get` (oxjob #1555, 2026-10-20); the hint
+                       # shows the three shapes, so any bad first word gets the way back in
+                       "write `get works ...`, `get authors ...` (or institutions, sources, ...), or a "
+                       "table: `get the count of works about kelp by country`", t.pos)
 
     def _parse_corpus_opt(self) -> str:
         """Optional corpus selector parenthetical immediately after the entity
