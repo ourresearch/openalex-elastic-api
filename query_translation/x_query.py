@@ -15,6 +15,7 @@ to keep the import graph acyclic.
 """
 
 import urllib.parse
+from collections import OrderedDict
 from typing import Callable, Optional
 
 from core.utils import get_display_name as _get_display_name
@@ -149,10 +150,43 @@ def new_oql(oqo: OQO, resolver=None) -> Optional[str]:
         return None
 
 
+# Names for the new form on the OQL execute path (oxjob #1555, found by #1744): one ES
+# lookup per ID, so a small process cache and a per-answer cap; over the cap an ID stays a
+# bare link `(I123)`, which is still exact OQL.
+_ECHO_NAMES: "OrderedDict[str, str]" = OrderedDict()
+_ECHO_NAMES_MAX = 20000
+ECHO_NAME_LOOKUPS = 12
+
+
+def echo_name_resolver(entity: Optional[str] = None):
+    """An engine resolver for `x_new_oql` on the execute path: cached names, at most
+    ECHO_NAME_LOOKUPS fresh lookups per answer. A miss is None (a bare link), never a
+    `[no entity found]` note: only the core renderer gets it (`_link` ignores misses)."""
+    from query_translation.oql_renderer import make_engine_resolver
+    looked = [0]
+
+    def lookup(entity_id: str) -> Optional[str]:
+        if entity_id in _ECHO_NAMES:
+            _ECHO_NAMES.move_to_end(entity_id)
+            return _ECHO_NAMES[entity_id]
+        if looked[0] >= ECHO_NAME_LOOKUPS:
+            return None
+        looked[0] += 1
+        name = safe_get_display_name(entity_id)
+        if name:   # misses and errors aren't cached: a name is decoration, retried next time
+            _ECHO_NAMES[entity_id] = name
+            while len(_ECHO_NAMES) > _ECHO_NAMES_MAX:
+                _ECHO_NAMES.popitem(last=False)
+        return name
+
+    return make_engine_resolver(lookup, entity=entity)
+
+
 def build_x_query(
     oqo: OQO,
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
     sort_operands: bool = True,
+    name_new_form: bool = False,
 ) -> dict:
     """Build the private `meta.x_query` triple {oql, oqo, url} (oxjob #373).
 
@@ -237,10 +271,21 @@ def build_x_query(
     for view_key in ("select", "page", "per_page", "cursor"):
         oqo_dict.pop(view_key, None)
 
+    x_new = None
+    if name_new_form:
+        # the OQL execute path names its entities in the new form, as /query and /validate
+        # do (oxjob #1555; the website projects this echo into its URL, #1744)
+        from query_translation.oql_core import render_core
+        try:
+            x_new = render_core(canonical, echo_name_resolver(canonical.get_rows))
+        except OQLError:
+            x_new = None
+    if x_new is None:
+        x_new = oql_form if effective_style() == "core" else new_oql(canonical)
     out = {
         "oql": oql_form,
         # the new form beside the old until the flip (oxjob #1555, Jason 2026-10-13)
-        "x_new_oql": oql_form if effective_style() == "core" else new_oql(canonical),
+        "x_new_oql": x_new,
         "oqo": oqo_dict,
         "url": url_form,
     }

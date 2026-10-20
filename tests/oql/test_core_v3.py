@@ -398,3 +398,51 @@ def test_a_breakdown_keeps_its_own_dimension_order(dims):
     # session "1658", 2026-10-13: `by country and year` echoed year-first and read back nested the other way
     text = f"break down works about kelp by {dims}"
     assert render_core(parse_core(text)) == text
+
+
+# --- found by the new search page (#1744), 2026-10-20 ---
+def test_a_things_own_continent_reads_in_place():
+    # `institutions in [Africa]` fell back to the old multi-line form
+    oqo = OQO.from_dict({"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10091"}],
+                         "group_by": [{"column_id": "authorships.institutions.lineage",
+                                       "where": {"column_id": "continent", "value": "Q15"}}],
+                         "calculate": [{"measure": "count"}],
+                         "sort_by": [{"column_id": "count", "direction": "desc"}]})
+    text = render_core(oqo, lambda v, c=None: {"Q15": "Africa", "T10091": "Malaria Research and Control"}.get(v))
+    assert text == ("rank institutions in [Africa](Q15) by count of works in the topic "
+                    "[Malaria Research and Control](T10091)")
+    back = canonicalize_oqo(parse_core(text), sort_operands=False)
+    assert back.group_by[0].where.column_id == "continent" and back.group_by[0].where.value == "Q15"
+    assert render_core(back, None) == "rank institutions in [Africa](Q15) by count of works in the topic (T10091)"
+    assert render_core(parse_core("get institutions in [Africa](Q15)"), None) == "get institutions in [Africa](Q15)"
+
+
+def test_the_execute_echo_names_entities_in_the_new_form(monkeypatch):
+    # meta.x_query.x_new_oql read `get (I63966007)'s works` on POST / while /query named it
+    from query_translation import x_query
+    calls = []
+
+    def fake(entity_id):
+        calls.append(entity_id)
+        return {"institutions/I63966007": "Massachusetts Institute of Technology"}.get(entity_id)
+
+    monkeypatch.setattr(x_query, "safe_get_display_name", fake)
+    x_query._ECHO_NAMES.clear()
+    oqo = parse_core("get [MIT](I63966007)'s works about (quantum computing)")
+    xq = x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)
+    assert xq["x_new_oql"] == "get [Massachusetts Institute of Technology](I63966007)'s works about (quantum computing)"
+    assert x_query.build_x_query(oqo, sort_operands=False)["x_new_oql"].startswith("get (I63966007)'s")
+    x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)
+    assert len(calls) == 1          # cached
+
+
+def test_the_execute_echo_caps_its_lookups(monkeypatch):
+    from query_translation import x_query
+    monkeypatch.setattr(x_query, "safe_get_display_name", lambda i: "Some Place")
+    x_query._ECHO_NAMES.clear()
+    ids = [f"I{100 + i}" for i in range(x_query.ECHO_NAME_LOOKUPS + 3)]
+    from query_translation.oql_parser import parse_either
+    oqo = parse_either("get works where authorships.institutions.lineage is (" + " or ".join(ids) + ")")
+    oqo = oqo[0] if isinstance(oqo, tuple) else oqo
+    text = x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)["x_new_oql"]
+    assert text.count("[Some Place]") == x_query.ECHO_NAME_LOOKUPS and "no entity found" not in text

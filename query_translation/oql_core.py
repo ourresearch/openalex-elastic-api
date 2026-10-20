@@ -430,6 +430,10 @@ def _thing_parts(where, noun: str, resolver=None) -> Tuple[str, List[str], List,
             noun = THING_TYPE_NOUNS[(noun, f.value)]
         elif isinstance(f, LeafFilter) and f.column_id == "country_code" and not f.is_negated:
             parts.append(f"in {_link(f.value, 'authorships.countries', resolver)}")
+        elif isinstance(f, LeafFilter) and f.column_id == "continent" and not f.is_negated \
+                and f.operator == "is" and noun != "authors":
+            # a thing's own continent: `institutions in [Africa](Q15)` (found by #1744)
+            parts.append(f"in {_link(f.value, 'authorships.institutions.continent', resolver)}")
         elif _is_own_threshold(f):
             parts.append(_own_threshold_text(f))
         else:
@@ -610,6 +614,9 @@ def _things_list(oqo, resolver):
         elif isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
                 and f.column_id == "country_code":
             parts.append(f"in {_link(f.value, 'authorships.countries', resolver)}")
+        elif isinstance(f, LeafFilter) and not f.is_negated and f.operator == "is" \
+                and f.column_id == "continent" and noun != "authors":
+            parts.append(f"in {_link(f.value, 'authorships.institutions.continent', resolver)}")
         elif _is_own_threshold(f):
             # a threshold on the rank's own number is its `Only ...` sentence (Jason's #logs note)
             (only if by_own and f.column_id == sort.column_id else thresholds).append(f)
@@ -1232,6 +1239,10 @@ def _parse_things(t, s) -> Tuple[str, Optional[str], List]:
         if ws.at("in") and _kind_of(t.link_id(ws.peek(1) or "") or "") == "countries":
             ws.take()
             items.append(LeafFilter("country_code", t.link_id(ws.take()[0])))
+            continue
+        if noun != "authors" and ws.at("in") and _kind_of(t.link_id(ws.peek(1) or "") or "") == "continents":
+            ws.take()
+            items.append(LeafFilter("continent", t.link_id(ws.take()[0])))
             continue
         if ws.at("with", "works") or ws.at("with", "articles") or (ws.at("with") and (ws.peek(1) or "").lower()
                                                                 in NOUN_TYPES):

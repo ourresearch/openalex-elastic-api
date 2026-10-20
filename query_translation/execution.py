@@ -694,7 +694,7 @@ def _run_walks(oqo: OQO, connection):
                         "oqo": oqo.to_dict()}), e.status
     if kind == "oqo":
         return val
-    val["meta"]["x_query"] = build_x_query(oqo, sort_operands=False)
+    val["meta"]["x_query"] = build_x_query(oqo, sort_operands=False, name_new_form=True)
     val["meta"]["cost_usd"] = val["meta"]["cost"]["usd"]
     response = jsonify(val)
     response.headers["X-Credits-Cost"] = str(val["meta"]["cost"]["credits"])
@@ -786,7 +786,7 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     if csv_export:
         return _csv_response(oqo, body, cost, paging)
     _add_baseline(body, _echo_oqo(oqo), index_name, connection, fields_dict, per_page, deadline)
-    body["meta"]["x_query"] = build_x_query(_echo_oqo(oqo), sort_operands=False)
+    body["meta"]["x_query"] = build_x_query(_echo_oqo(oqo), sort_operands=False, name_new_form=True)
     body["meta"]["cost_usd"] = cost["usd"]
     response = jsonify(body)
     # the proxy reconciles what it charged up front against this (as for the
@@ -1008,7 +1008,8 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
     # sorting commutative value-bag members here would silently alphabetize the user's
     # values. Sorting stays on the legacy-URL path (shared_view) and dedup hash-keys.
     serialized.setdefault("meta", {})["x_query"] = build_x_query(_echo_oqo(oqo),
-                                                                 sort_operands=False)
+                                                                 sort_operands=False,
+                                                                 name_new_form=True)
     cost = None
     if _echo_oqo(oqo) is not oqo:
         # a walk or set ran as this list (oxjob #1535): its price from the plan
