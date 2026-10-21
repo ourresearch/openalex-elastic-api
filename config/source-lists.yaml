@@ -128,3 +128,5 @@ values:
   display_name: Dongbi Index (China), C
 - id: source-lists/dongbi-d
   display_name: Dongbi Index (China), D
+- id: source-lists/ddh
+  display_name: Diamond Discovery Hub
