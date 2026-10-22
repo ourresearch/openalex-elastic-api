@@ -12,7 +12,10 @@ Mode, env ES_RESPONSE_CACHE (set it on BOTH Heroku apps; searches go to openalex
   shadow  look up and fill, but always ask ES: counts what `on` would have served.
   on      serve hits.
 Store: ES_RESPONSE_CACHE_URL (default: the shared REDISCLOUD_URL), its own client with short timeouts so a
-Redis stall can't hold a request.
+Redis stall can't hold a request. Give it its own Redis: the replay (oxjob #1682) puts its traffic at ~80-150
+GB/day compressed, far over Redis Cloud's 400 GB/month on the shared 2.5 GB plan; Heroku Key-Value Store has no
+network cap (premium-5: 1 GB, 1,000 connections; we need ~540 = 135 dynos x 4 workers). Set its
+maxmemory policy to allkeys-lru (the default, noeviction, would make SETs fail when full).
 
 Admission: a response is stored only the second time its key is asked for within the TTL (the first ask
 leaves a 1-byte marker), so one-off pages cost Redis neither space nor bandwidth.
@@ -50,8 +53,11 @@ def _redis():
     global _client
     if _client is None:
         import redis
-        _client = redis.Redis.from_url(settings.ES_RESPONSE_CACHE_URL, socket_timeout=0.25,
-                                       socket_connect_timeout=0.25)
+        url = settings.ES_RESPONSE_CACHE_URL
+        kw = {"socket_timeout": 0.25, "socket_connect_timeout": 0.25}
+        if url.startswith("rediss://"):
+            kw["ssl_cert_reqs"] = None  # Heroku Key-Value Store's TLS certificate is self-signed
+        _client = redis.Redis.from_url(url, **kw)
     return _client
 
 
