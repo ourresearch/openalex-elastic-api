@@ -107,5 +107,7 @@ def sort_with_sample(s, seed):
         s = s.params(preference=clean_preference(seed))
     else:
         random_query = Q("function_score", functions={"random_score": {}})
+        # Not repeatable: keeps it out of ES's request cache and core/es_response_cache.
+        s = s.params(request_cache=False)
     s = s.query(random_query)
     return s

@@ -4,7 +4,7 @@ from elasticsearch.exceptions import RequestError
 from elasticsearch_dsl import Search
 
 import settings
-from core import rerank
+from core import es_response_cache, rerank
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
@@ -695,14 +695,11 @@ def execute_search(s, params):
     s = s.params(timeout='5s')
 
     # A repeat of the same ES request within a few minutes can come from Redis (oxjob #1682).
-    from core import es_response_cache
-
     if params["group_by"]:
-        return es_response_cache.execute(s, s.execute)
+        return es_response_cache.execute(s)
     else:
         try:
-            page = s[paginate.start:paginate.end]
-            return es_response_cache.execute(page, page.execute)
+            return es_response_cache.execute(s[paginate.start:paginate.end])
         except RequestError as e:
             if "search_after has" in str(e) and "sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
