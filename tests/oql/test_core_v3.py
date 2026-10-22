@@ -415,6 +415,18 @@ def test_only_count_threshold_is_read_never_dropped():
     assert render_core(o) == text
 
 
+@pytest.mark.parametrize("ops, want", [
+    ([(">", 1989), ("<", 2000)], "get works from 1990–1999"),    # was `since 1990`: the bound was dropped
+    ([("<", 2010)], "get works before 2010"),
+    ([(">", 42), ("<", 100)], None),                             # 2-digit years: the general form
+    ([("is", 2020), (">=", 2010)], None),
+])
+def test_every_year_bound_is_said_or_the_sentence_is_not_used(ops, want):
+    # corpus row 100 (pre-flip check, 2026-10-22): `year > 42 and year < 100` echoed `get works since 43`
+    oqo = OQO(get_rows="works", filter_rows=[_Leaf("publication_year", v, op) for op, v in ops])
+    assert render_core(oqo) == want
+
+
 def test_an_only_floor_on_a_journal_split_says_journal_once():
     # #1494's eval, 2026-10-20: `by journal. Only journals ...` doubled `type: journal` in the
     # split, and the echo fell back to the general form

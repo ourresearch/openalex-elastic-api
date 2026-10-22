@@ -227,9 +227,18 @@ def _where_text(rows, resolver=None) -> str:
 
 
 def _years_text(ops: Dict[str, object], dates: bool = False) -> str:
-    lo = ops.get(">=")
-    hi = ops.get("<=")
+    lo, hi, lt = ops.get(">="), ops.get("<="), ops.get("<")
+    if not dates:
+        if lt is not None and lo is not None and hi is None:
+            hi, lt = lt - 1, None       # whole years: since 1990 and before 2000 = 1990–1999
+        if any(len(str(v)) != 4 for v in (lo, hi, lt, ops.get("=")) if v is not None):
+            raise NotCore("a year the sentence can't write")       # the parser reads 4 digits
+    # every bound is said or the sentence isn't used (a dropped `before 100` changed the query)
+    if len([v for v in (lo, hi, lt, ops.get("=")) if v is not None]) > (2 if lt is None else 1):
+        raise NotCore("year bounds")
     if "=" in ops:
+        if lo is not None or hi is not None:
+            raise NotCore("year bounds")
         return f"from {ops['=']}"
     if lo is not None and hi is not None:
         return f"from {lo} through {hi}" if dates else f"from {lo}–{hi}"
