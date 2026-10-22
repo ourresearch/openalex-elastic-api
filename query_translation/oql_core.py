@@ -901,6 +901,11 @@ def _old_filters(entity: str, condition: str) -> List:
     """Today's parser on one key-value condition list: its filter_rows."""
     from query_translation.oql_lang import parse
     oqo = parse(f"get {entity} where {condition}")
+    if oqo.group_by or oqo.calculate or oqo.sort_by or oqo.sample or oqo.uses_pipeline:
+        # `get works about kelp where ...; then group those works by year` ran as a plain
+        # list, the step dropped (MCP pre-flip audit, 2026-10-22): refuse it, never drop it
+        raise NotCore("a `; then` step after a sentence: write the table sentence "
+                      "(`get the count of works ... by year`)")
     return list(oqo.filter_rows)
 
 

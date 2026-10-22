@@ -505,3 +505,14 @@ def test_the_execute_echo_names_many_ids_in_one_query(monkeypatch):
     oqo = oqo[0] if isinstance(oqo, tuple) else oqo
     text = x_query.build_x_query(oqo, sort_operands=False, name_new_form=True)["x_new_oql"]
     assert len(batches) == 1 and text.count("[Some Place]") == 30 and "no entity found" not in text
+
+
+def test_a_then_step_after_a_sentence_is_refused_never_dropped():
+    # MCP pre-flip audit, 2026-10-22: the step was dropped and the query ran as a plain list
+    from query_translation.oql_parser import parse_either
+    from query_translation.oql_core import NotCore
+    q = "get works about kelp where retracted is (false); then group those works by year"
+    with pytest.raises(NotCore):
+        parse_core(q)
+    with pytest.raises(Exception):
+        parse_either(q)
