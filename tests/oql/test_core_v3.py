@@ -12,7 +12,7 @@ import pytest
 import tests.oql._qt_loader  # noqa: F401
 
 from query_translation.oqo import OQO  # noqa: E402
-from query_translation.oql_core import render_core  # noqa: E402
+from query_translation.oql_core import render_core, _and_items  # noqa: E402
 
 DATA = json.load(open(os.path.join(os.path.dirname(__file__), "core_v3_cases.json")))
 NAMES = DATA["names"]
@@ -281,6 +281,24 @@ def test_query_endpoint_formats_carry_both_forms(monkeypatch):
             assert out["x_new_oql"].startswith(("get works since 2020 about kelp", "get the count and share of works"))
 
 
+def test_the_core_flip_keeps_the_builder_tree(monkeypatch):
+    # the website's no-code builder draws `oql_render_v2`; the core echo changes only the text
+    from flask import Flask
+    from query_translation import oql_lang
+    from query_translation.validator import ValidationResult
+    from query_translation.views import render_all_formats
+    oqo = parse_core("get works about kelp since 2020")
+    ok = ValidationResult(valid=True, errors=[], warnings=[])
+    with Flask(__name__).test_request_context("/"):
+        monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
+        before = render_all_formats(oqo, ok, sort_operands=False)
+        monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "core")
+        after = render_all_formats(oqo, ok, sort_operands=False)
+    assert after["oql"] == after["oql_oneline"] == after["x_new_oql"] == before["x_new_oql"]
+    assert after["oql_render_v2"] and after["oql_render_v2"] == before["oql_render_v2"]
+    assert after["oxurl"] == before["oxurl"]
+
+
 def test_things_with_key_value_where_round_trip():
     # the echo writes the things' own fields it can't say as `where` (live check, 2026-10-13)
     text = "get authors with an h-index above 50 where last known institution is [UBC](I141945490)"
@@ -394,6 +412,16 @@ def test_only_count_threshold_is_read_never_dropped():
     text = "get the count of works about kelp by country. Only countries with more than 500 works about kelp."
     o = parse_core(text)
     assert o.group_by[0].where.measure == "count" and o.group_by[0].where.value == 500
+    assert render_core(o) == text
+
+
+def test_an_only_floor_on_a_journal_split_says_journal_once():
+    # #1494's eval, 2026-10-20: `by journal. Only journals ...` doubled `type: journal` in the
+    # split, and the echo fell back to the general form
+    text = ("get the count and mean FWCI of works in the topic (T10005) by journal. "
+            "Only journals with at least 50 works in the topic (T10005).")
+    o = parse_core(text)
+    assert [f.to_dict() for f in _and_items(o.group_by[0].where)].count({"column_id": "type", "value": "journal"}) == 1
     assert render_core(o) == text
 
 

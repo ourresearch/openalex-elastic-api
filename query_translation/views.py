@@ -415,7 +415,7 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
         core_text = render_core(canonical_oqo, resolver)
     # the new form beside the old until the flip (oxjob #1555, Jason 2026-10-13)
     x_new_oql = core_text or new_oql(canonical_oqo, resolver)
-    if core_text is not None or canonical_oqo.uses_pipeline:
+    if canonical_oqo.uses_pipeline:
         if core_text is not None:
             oql_output, oneline, oxurl = core_text, core_text, oxurl_output
         else:
@@ -450,10 +450,16 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
         # No honest OQL form for this OQO (classic fuzzy `term~N`, oxjob #865):
         # omit the OQL legs and say why, as the oxurl leg does above.
         oql_render_v2, oql_output, oql_oneline = None, None, None
-        warnings.append(ValidationError(
-            type="oql_not_representable", message=e.message
-        ))
-    if _oql_lang._pipeline_style(canonical_oqo, style) and oql_output is not None:
+        if core_text is None:
+            warnings.append(ValidationError(
+                type="oql_not_representable", message=e.message
+            ))
+    if core_text is not None:
+        # A plain query in the new form (oxjob #1555): only the text changes. The builder
+        # tree stays (it is about the where-clause, in today's tokens), so the website's
+        # no-code builder keeps working after the default flip.
+        oql_output = oql_oneline = core_text
+    elif _oql_lang._pipeline_style(canonical_oqo, style) and oql_output is not None:
         # A plain query in the pipeline style (or core's fallback): only the text changes. It keeps its
         # URL, the builder tree (which is about the where-clause, not the text
         # style) and today's executor, so no pipeline check.

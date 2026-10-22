@@ -1490,6 +1490,9 @@ def _parse_table(t, s, collection_type, only):
             extra.append(MeasureFilter("count", op, n))
         if o_typ:
             extra.append(LeafFilter("type", o_typ))
+        have = _and_items(g.where) if g.where is not None else []
+        # `by journal. Only journals with ...`: the split already says journal; don't say it twice
+        extra = [x for x in extra if x.to_dict() not in [h.to_dict() for h in have]]
         items = ([g.where] if g.where is not None else []) + extra
         g.where = items[0] if len(items) == 1 else BranchFilter(join="and", filters=items)
     oqo = OQO(get_rows="works", filter_rows=rows, group_by=groups, calculate=measures)
