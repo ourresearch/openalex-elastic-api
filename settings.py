@@ -87,6 +87,12 @@ RERANK_ENABLED = os.environ.get("RERANK_ENABLED", "true").lower() == "true"
 RERANK_WINDOW = 100
 RERANK_TIMEOUT_S = float(os.environ.get("RERANK_TIMEOUT_S", "0.6"))
 RERANK_CACHE_SECONDS = 24 * 3600
+
+# Repeated ES searches served from Redis (oxjob #1682, core/es_response_cache.py): off | shadow | on.
+# Set it on BOTH Heroku apps (openalex-elastic-api and openalex-search-api).
+ES_RESPONSE_CACHE = os.environ.get("ES_RESPONSE_CACHE", "off").lower()
+ES_RESPONSE_CACHE_SECONDS = int(os.environ.get("ES_RESPONSE_CACHE_SECONDS", "600"))
+ES_RESPONSE_CACHE_MAX_BYTES = int(os.environ.get("ES_RESPONSE_CACHE_MAX_BYTES", "2000000"))  # compressed
 JEV_URL = os.environ.get("JEV_URL", "https://api.typesafe.ai/v1/systemone")
 JEV_MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
 TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY")

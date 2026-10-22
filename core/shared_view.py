@@ -694,11 +694,15 @@ def execute_search(s, params):
     # than hard-cancelling. Applies to both search and group_by aggregations below.
     s = s.params(timeout='5s')
 
+    # A repeat of the same ES request within a few minutes can come from Redis (oxjob #1682).
+    from core import es_response_cache
+
     if params["group_by"]:
-        return s.execute()
+        return es_response_cache.execute(s, s.execute)
     else:
         try:
-            return s[paginate.start:paginate.end].execute()
+            page = s[paginate.start:paginate.end]
+            return es_response_cache.execute(page, page.execute)
         except RequestError as e:
             if "search_after has" in str(e) and "sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
