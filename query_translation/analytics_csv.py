@@ -42,7 +42,18 @@ def split_meta(g: GroupBy, entity: str) -> dict:
     else:
         kind, oql = "column", name
     has_ids = kind in ("column", "values") and _group_entity(g, entity) is not None
-    return {"oql": oql, "column_id": g.column_id, "kind": kind, "has_ids": has_ids}
+    return {"oql": oql, "column_id": g.column_id, "kind": kind, "has_ids": has_ids,
+            "key_order": _key_order(g.column_id) if kind == "column" else None}
+
+
+def _key_order(column_id: str) -> str:
+    """How a split's groups read in key order, so the website offers a header sort only where
+    it helps (oxjob #1658): `alphabetical` (by name: countries, types), `year`, or `id`
+    (`in institution ID order`, the ID string: no use to people)."""
+    from query_translation.oql_core import key_order_is_alphabetical
+    if column_id == "publication_year":
+        return "year"
+    return "alphabetical" if key_order_is_alphabetical(column_id) else "id"
 
 
 def _short_id(key) -> str:

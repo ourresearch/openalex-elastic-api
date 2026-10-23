@@ -117,3 +117,15 @@ def test_one_number_has_no_order():
 def test_oql_that_does_not_parse_raises():
     with pytest.raises(Exception):
         orders_for("get works wherever")
+
+
+def test_split_meta_says_how_a_key_order_reads():
+    """The website offers a split's header sort only where it reads by name or year."""
+    from query_translation import analytics_csv
+    oqo = parse_either("get the count of works about kelp by country and year")
+    assert [analytics_csv.split_meta(g, "works")["key_order"] for g in oqo.group_by] == [
+        "alphabetical", "year"]
+    for split, order in [("institution", "id"), ("type", "alphabetical"), ("journal", "id"),
+                         ("language", "alphabetical")]:
+        g = parse_either(f"get the count of works about kelp by {split}").group_by[0]
+        assert analytics_csv.split_meta(g, "works")["key_order"] == order, split
