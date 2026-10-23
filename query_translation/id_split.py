@@ -120,12 +120,15 @@ def _replace(q: dict, path, new: dict) -> dict:
 
 
 def _id_filter(query: dict):
-    """(path, clause, field, n) of the biggest terms filter ANDed into `query` with at
-    least SPLIT_MIN_IDS values."""
+    """(path, clause, field, n) of the biggest record-id filter ANDed into `query`
+    with at least SPLIT_MIN_IDS values. Related ids aren't disjoint: a work can
+    match authors or references in several pieces, so adding their answers would
+    count it more than once."""
     best = None
     for path, c in _and_clauses(query):
         found = _terms_size(c)
-        if found and found[1] >= SPLIT_MIN_IDS and (best is None or found[1] > best[3]):
+        if found and found[0] == "id" and found[1] >= SPLIT_MIN_IDS \
+                and (best is None or found[1] > best[3]):
             best = (path, c, found[0], found[1])
     return best
 
