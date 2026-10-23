@@ -80,7 +80,7 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "primary_location.source.id": "source", "funders.id": "funder",
         "primary_location.source.host_organization_lineage": "publisher",
         "language": "language", "corresponding_author_ids": "corresponding author",
-        "is_retracted": "retracted"}
+        "is_retracted": "retracted", "authorships.author.id": "author"}
 DIM_COLUMNS = {v: k for k, v in DIMS.items()}
 _TYPE_NOUNS_LONGEST = sorted(NOUN_TYPES, key=lambda n: -len(n.split()))
 
@@ -181,7 +181,7 @@ def _link(value, column_id: str, resolver: Resolver = None) -> str:
         except Exception:  # noqa: BLE001 (a name is decoration)
             name = None
     text = link_text(value, _entity_type(column_id) or "", None, name=name)
-    if column_id == "referenced_works":
+    if column_id in ("referenced_works", "cited_by"):
         text = _short_title(text)
     return text
 
@@ -313,6 +313,8 @@ class _Works:
         if not isinstance(f, LeafFilter) or f.is_negated:
             raise _Leftover()
         col, val, op = f.column_id, f.value, f.operator
+        if val is None:
+            raise _Leftover()       # `institution is unknown` has no phrase; it was `from (None)`
         if col in ADJECTIVES and val is True and op == "is":
             self.adjectives.append(ADJECTIVES[col])
         elif col == "type" and op == "is" and val in TYPE_NOUNS and self.type_noun == "works":
@@ -355,6 +357,8 @@ class _Works:
             self._add("license", f"under the {link} license")
         elif col == "referenced_works":
             self._add("citing", f"citing {link}")
+        elif col == "cited_by":
+            self._add("citing", f"cited by {link}")
         else:
             raise _Leftover()
 
@@ -506,6 +510,11 @@ def _record_text(f, resolver=None) -> Optional[str]:
     as today's parser reads it. No years is any year, plain `at` / `in` (Jason 2026-10-12);
     today's parser keeps that as a plain leaf on the record's column."""
     if f.is_negated:
+        # `never at [UBC]` (its general form leaked the column id, #1589's recheck 2026-10-23)
+        if isinstance(f, LeafFilter) and f.operator == "is" and f.column_id in L._AT_EVER.values():
+            country = f.column_id.endswith("country_code")
+            col = "authorships.countries" if country else "authorships.institutions.lineage"
+            return f"never {'in' if country else 'at'} {_link(f.value, col, resolver)}"
         return None
     if isinstance(f, AffiliationFilter):
         since, through, min_years = f.since, f.through, f.min_years
@@ -933,7 +942,8 @@ def _old_filters(entity: str, condition: str) -> List:
     """Today's parser on one key-value condition list: its filter_rows."""
     from query_translation.oql_lang import parse
     oqo = parse(f"get {entity} where {condition}")
-    if oqo.group_by or oqo.calculate or oqo.sort_by or oqo.sample or oqo.uses_pipeline:
+    # steps only: a relation or nested condition (`co-author is not [X]`) is a filter (#1589's recheck)
+    if oqo.group_by or oqo.calculate or oqo.sort_by or oqo.sample or oqo.walks or oqo.each:
         # `get works about kelp where ...; then group those works by year` ran as a plain
         # list, the step dropped (MCP pre-flip audit, 2026-10-22): refuse it, never drop it
         raise NotCore("a `; then` step after a sentence: write the table sentence "
@@ -1110,6 +1120,11 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
         if ws.at("citing"):
             ws.take()
             rows.append(_any_of("referenced_works", _links_list(ws)))
+            continue
+        if ws.at("cited", "by") and t.link_id(ws.peek(2) or ""):
+            # `cited by [W](W1)`: the works W cites (core spec § 2.6; #1589's recheck)
+            ws.take(2)
+            rows.append(_any_of("cited_by", _links_list(ws)))
             continue
         slot = next(((words, col) for words, col in _LINK_SLOT_WORDS if ws.at(*words)), None)
         if slot is not None:
@@ -1552,6 +1567,8 @@ def _parse_split(t, part, rows) -> GroupBy:
     if word is None:
         raise NotCore(f"unknown split {part!r}")
     rest = part[len(word):].strip()
+    if word == "journal" and rest.startswith("in ") and not rest.startswith("in the collection"):
+        word = "source"     # named journals are sources by ID (`by journal in ([A](S1), ...)`, #1494)
     values_or_time = word == "year" or re.match(r"in (the collection |⟦Q)", rest)
     if word in DIM_COLUMNS and (not rest or values_or_time):
         return _parse_dim(t, word, rest, rows)

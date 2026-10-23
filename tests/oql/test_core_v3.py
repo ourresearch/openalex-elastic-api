@@ -516,3 +516,33 @@ def test_a_then_step_after_a_sentence_is_refused_never_dropped():
         parse_core(q)
     with pytest.raises(Exception):
         parse_either(q)
+
+
+# --- #1589's recheck after the default flip (2026-10-23) ---
+
+@pytest.mark.parametrize("text, echo", [
+    # a group's own relation filter is a filter, not a step (the `; then` refusal caught it)
+    ("get the count of works about kelp by author where co-author is not [Y](A5023888391)", None),
+    # an unknown value reads in the general where clause, never `from (None)`
+    ("get works from 2024 about kelp where institution is unknown",
+     "get works from 2024 about kelp where institution is unknown"),
+    # `never at` in words; its general form leaked the column id
+    ("get authors never at [UBC](I141945490)", "get authors never at (I141945490)"),
+    ("get authors at [UBC](I141945490) never in [Brazil](BR)", "get authors at (I141945490) never in [Brazil](BR)"),
+    # `cited by [W]` (core spec § 2.6), beside `citing`
+    ("get works cited by [W](W2741809807)", "get works cited by (W2741809807)"),
+    # named authors or journals as a split (#1494's gap 1)
+    ("get the count of works about kelp by author in ([A](A5023888391), [B](A5067184382))",
+     "get the count of works about kelp by author in ((A5023888391), (A5067184382))"),
+    ("get the count of works about kelp by journal in ([N](S137773608), [S](S3880285))",
+     "get the count of works about kelp by source in ((S137773608), (S3880285))"),
+])
+def test_forms_found_after_the_default_flip_read_and_round_trip(text, echo):
+    from query_translation.oql_parser import parse_either
+    from query_translation.oqo_canonicalizer import canonicalize_oqo as canon
+    from query_translation.x_query import new_oql
+    o = parse_either(text)
+    e = new_oql(o)
+    if echo is not None:
+        assert e == echo
+    assert canon(parse_either(e)).to_dict() == canon(o).to_dict()

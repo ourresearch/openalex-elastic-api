@@ -48,6 +48,21 @@ class TestPositive:
         assert "https://openalex.org/S123" in body
         assert "https://openalex.org/S456" in body
 
+    @pytest.mark.parametrize("param", ["referenced_works", "cites", "cited_by"])
+    def test_works_collection_on_a_citation_filter(self, monkeypatch, param):
+        # OQL `citing works in the collection [X]` checked valid, then 400ed: the citation
+        # filters carry no entity_type (#1589's recheck, 2026-10-23)
+        monkeypatch.setattr("core.filter.resolve_collection", lambda lid: ("works", ["W111", "W222"]))
+        s, remaining = _apply_cross_type_collection_filters(works_fields_dict, [{param: "col_w"}], Search())
+        body = json.dumps(s.to_dict())
+        assert remaining == []
+        assert "W111" in body and "W222" in body
+
+    def test_an_author_collection_on_a_citation_filter_is_refused(self, monkeypatch):
+        monkeypatch.setattr("core.filter.resolve_collection", lambda lid: ("authors", ["A1"]))
+        with pytest.raises(APIQueryParamsError):
+            _apply_cross_type_collection_filters(works_fields_dict, [{"referenced_works": "col_a"}], Search())
+
     def test_author_collection_on_works_endpoint(self, monkeypatch):
         monkeypatch.setattr(
             "core.filter.resolve_collection",
@@ -164,16 +179,16 @@ class TestNegation:
         assert "sources" in msg
 
     def test_unsupported_field_400(self, monkeypatch):
-        # cited_by has no entity_type set — explicit cue that v1 does not
-        # support cross-type collection refs on it.
+        # doi holds no entity IDs, so it takes no collection (cited_by does since
+        # 2026-10-23: a works collection, #1589's recheck)
         s = Search()
         with pytest.raises(APIQueryParamsError) as exc:
             _apply_cross_type_collection_filters(
                 works_fields_dict,
-                [{"cited_by": "col_foo"}],
+                [{"doi": "col_foo"}],
                 s,
             )
-        assert "cited_by" in str(exc.value)
+        assert "doi" in str(exc.value)
         assert "col_" in str(exc.value).lower()
 
     def test_mixed_with_literal_pipe_400(self):

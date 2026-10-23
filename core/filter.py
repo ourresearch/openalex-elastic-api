@@ -363,12 +363,25 @@ def resolve_collection_for_field(field, collection_id):
     empty clause, and the per-request ID budget are the caller's concern.
     """
     etype, ids = resolve_collection(collection_id)
-    if etype != field.entity_type:
+    expected = collection_type_for(field)
+    if etype != expected:
         raise APIQueryParamsError(
             f"collection {collection_id} is type '{etype}', not valid for "
-            f"the `{field.param}` filter (expects '{field.entity_type}')."
+            f"the `{field.param}` filter (expects '{expected}')."
         )
     return etype, ids
+
+
+# Citation filters hold work IDs but carry no entity_type in the public registry, so OQL's
+# `citing works in the collection [X]` checked valid and then 400ed (#1589's recheck,
+# 2026-10-23). shortcut: named here, not in ENTITY_ID_PARAM_TYPES, because that changes the
+# properties contract (snapshot + a human-approved PROPERTIES_VERSION bump); move it there then.
+_WORK_ID_PARAMS = {"referenced_works", "cites", "cited_by"}
+
+
+def collection_type_for(field):
+    """The entity type a `col_...` on this filter must hold, or None when it takes none."""
+    return field.entity_type or ("works" if field.param in _WORK_ID_PARAMS else None)
 
 
 def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
@@ -419,7 +432,7 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
             # "not a valid filter field" error.
             remaining.append(f)
             continue
-        if field.entity_type is None:
+        if collection_type_for(field) is None:
             raise APIQueryParamsError(
                 f"The `{key}` filter does not support cross-type collection "
                 f"references (col_...). Use a same-type `collection:` filter "
