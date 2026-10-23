@@ -546,3 +546,33 @@ def test_forms_found_after_the_default_flip_read_and_round_trip(text, echo):
     if echo is not None:
         assert e == echo
     assert canon(parse_either(e)).to_dict() == canon(o).to_dict()
+
+
+@pytest.mark.parametrize("text, says, fix", [
+    # #1589's recheck, 2026-10-23: a mistake inside a sentence got today's parser's error,
+    # which pointed at the old form; core's reason shows now, with a fix
+    ("get works about kelp, most popular first", "unknown order", ", most cited first"),
+    ("get works about kelp; then, group those works by year", "a `; then` step", "one sentence"),
+    ("get works about kelp where published after 2021-06-01", "ambiguous", "published since"),
+    ("get works abut kelp since 2020", "unexpected 'abut'", "about kelp"),
+    ("get the sum of works about kelp", "unknown numbers", "mean FWCI"),
+    ("get the count of works about kelp by banana", "unknown split `by banana`", "by year"),
+    ("get the count of works about kelp by year and country and type", "three splits", "two ways"),
+    ("get the count of works about kelp by year and year", "the same split twice", "two different ways"),
+])
+def test_a_sentence_mistake_gets_the_sentence_error_with_a_fix(text, says, fix):
+    from query_translation.oql_parser import parse_oql_to_oqo
+    with pytest.raises(Exception) as e:
+        parse_oql_to_oqo(text)
+    assert says in str(e.value) and "Fix:" in str(e.value) and fix in str(e.value)
+
+
+@pytest.mark.parametrize("text, says", [
+    ("get workz where title has kelp", "workz"),               # a mistake AT the noun: today's reason
+    ("get works where titel has kelp", "titel"),               # in today's form: today's reason
+])
+def test_todays_form_keeps_todays_error(text, says):
+    from query_translation.oql_parser import parse_oql_to_oqo
+    with pytest.raises(Exception) as e:
+        parse_oql_to_oqo(text)
+    assert says in str(e.value) and "a works phrase reads like" not in str(e.value)

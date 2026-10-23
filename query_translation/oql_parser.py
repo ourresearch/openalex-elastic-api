@@ -9,6 +9,7 @@ until #363; it is gone — the engine is the only parser.
 See docs/oql-spec.md for the full specification.
 """
 
+import re
 from typing import Optional, List
 from dataclasses import dataclass
 
@@ -59,7 +60,8 @@ def parse_oql_to_oqo(oql: str) -> OQO:
     except _OQLError as e:
         core_error = getattr(e, "core_error", None)
         if core_error is not None:
-            message = str(core_error)
+            msg, fix = core_reason(core_error)
+            message = f"{msg}  Fix: {fix}" if fix else msg
             raise OQLParseError(message, errors=[ParseError(message=message, position=None,
                                                             context=None)]) from e
         raise _parse_error(oql, e) from e
@@ -86,10 +88,31 @@ def parse_either(oql: str) -> OQO:
             # a core `get` sentence today's grammar refuses (`get [UBC]'s articles since 2020`)
             try:
                 return parse_core(oql, _collection_type)
-            except (NotCore, _OQLError):
-                pass
+            except (NotCore, _OQLError) as ce:
+                if _meant_as_a_sentence(oql, e):
+                    core_error = ce
         e.core_error = core_error
         raise
+
+
+_HEAD = re.compile(r"\s*get\s+\S+\s*", re.I)
+
+
+def _meant_as_a_sentence(oql: str, e) -> bool:
+    """Today's grammar stopped right after `get <word>` (`get works about ...`), so the
+    text was written as a sentence and core's reason is the one to show (#1589's recheck,
+    2026-10-23: the old error pointed at the old form)."""
+    head = _HEAD.match(oql)
+    # at the word after the noun; an error AT the noun (`get workz ...`) keeps today's reason
+    return head is not None and e.position is not None and head.end() - 1 <= e.position <= head.end()
+
+
+def core_reason(core_error):
+    """(message, fixit) for a sentence's error: core's NotCore, or an OQLError from the
+    `where` part (its position is in the inner text, so it is dropped)."""
+    if isinstance(core_error, _OQLError):
+        return core_error.message, core_error.fixit
+    return str(core_error).split("  Fix: ", 1)[0], getattr(core_error, "fix", "")
 
 
 def _parse_error(oql: str, e) -> "OQLParseError":

@@ -165,7 +165,36 @@ Resolver = Optional[Callable]
 
 
 class NotCore(Exception):
-    """The OQO (or text) uses something outside the core; fall back to today's form."""
+    """The OQO (or text) uses something outside the core; fall back to today's form. A
+    parse error may carry a `fix` (the words that would read), shown after `  Fix: `."""
+
+    def __init__(self, message: str, fix: str = ""):
+        self.fix = fix
+        super().__init__(message + (f"  Fix: {fix}" if fix else ""))
+
+
+# Fix-its for a sentence the parser can't read (#1589's recheck, 2026-10-23: "OQL never
+# guesses" promises an error with a fix). Built from the tables the parser reads.
+def _numbers_fix() -> str:
+    names = ["count", "share"] + [n for n in MEASURE_NAMES.values()
+                                  if n not in ("count of works", "share of the total")
+                                  and not n.startswith("percent ")]
+    return ("the numbers are " + ", ".join(names) + ", and percent <yes/no word> (percent open "
+            "access, percent retracted, ...): `get the count and mean FWCI of works about kelp by year`")
+
+
+def _splits_fix() -> str:
+    return ("a table splits by " + ", ".join(sorted(set(_SPLIT_WORDS), key=str.lower))
+            + ": `get the count of works about kelp by year`")
+
+
+def _orders_fix() -> str:
+    return ("a list ends with one order after a comma: " + "; ".join(", " + p for p in ORDER_PHRASES)
+            + "; or `, highest <number> first`")
+
+
+_WORKS_PHRASE_FIX = ("a works phrase reads like `works since 2020 about kelp from [UBC](I141945490)`; "
+                     "any other condition goes after `where` (`where type is article`)")
 
 
 # ---------------------------------------------------------------------------
@@ -1216,7 +1245,15 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             ws.i = len(ws.w)
             rows += _old_filters("works", rest)
             continue
-        raise NotCore(f"unexpected {ws.peek()!r} in a works phrase")
+        word = ws.peek() or ""
+        if word.startswith(","):
+            raise NotCore(f"unknown order {t.restore(ws.rest())!r}", _orders_fix())
+        if word.lstrip(";").lower() in ("then", "then,") or word.startswith(";"):
+            raise NotCore("a `; then` step", "OQL has no steps now: a table is one sentence, "
+                          "`get the count of works about kelp by year`")
+        if word.lower() == "by":
+            raise NotCore(f"unknown split `by {ws.peek(1) or ''}`", _splits_fix())
+        raise NotCore(f"unexpected {word!r} in a works phrase", _WORKS_PHRASE_FIX)
     return rows
 
 
@@ -1238,7 +1275,7 @@ def _measure_named(n: str) -> Measure:
     if n == "count":
         n = "count of works"
     if n not in NAME_MEASURES:
-        raise NotCore(f"unknown measure {n!r}")
+        raise NotCore(f"unknown number {n!r}", _numbers_fix())
     return Measure(*NAME_MEASURES[n])
 
 
@@ -1338,7 +1375,7 @@ def _parse_number(t, s, collection_type):
         rest = s[mm.end():]
         break
     if rest is None:
-        raise NotCore("unknown measures")
+        raise NotCore("unknown numbers", _numbers_fix())
     return OQO(get_rows="works", filter_rows=_parse_works(t, rest, collection_type),
                calculate=measures)
 
@@ -1514,7 +1551,8 @@ def _parse_table(t, s, collection_type, only):
             continue
         measures, rest = got, body[mm.end():]
     if rest is None:
-        raise NotCore("unknown numbers")
+        raise NotCore("unknown numbers, or no `of <works>`",
+                      "`get the <numbers> of <works> by <splits>`; " + _numbers_fix())
     cut = None
     for mm in re.finditer(r" by ", rest):
         nxt = rest[mm.end():]
@@ -1526,8 +1564,10 @@ def _parse_table(t, s, collection_type, only):
     phrase, splits_text = rest[: cut.start()], rest[cut.end():]
     rows_extra: List = []
     groups = [_parse_split(t, part, rows_extra) for part in _SPLIT_AND.split(splits_text)]
+    if len(groups) == 2 and groups[0].column_id == groups[1].column_id:
+        raise NotCore("the same split twice", "split two different ways: `by year and country`")
     if len(groups) > 2:
-        raise NotCore("three splits")
+        raise NotCore("three splits", "a table splits two ways at most: `by year and country`")
     thing = next((THING_NOUNS[g.column_id] for g in groups
                   if g.column_id in THING_NOUNS and g.values is None), None)
     rows = _parse_works(t, phrase, collection_type, thing=thing) + rows_extra
@@ -1565,7 +1605,7 @@ def _parse_table(t, s, collection_type, only):
 def _parse_split(t, part, rows) -> GroupBy:
     word = next((w for w in _SPLIT_WORDS if part == w or part.startswith(w + " ")), None)
     if word is None:
-        raise NotCore(f"unknown split {part!r}")
+        raise NotCore(f"unknown split {part!r}", _splits_fix())
     rest = part[len(word):].strip()
     if word == "journal" and rest.startswith("in ") and not rest.startswith("in the collection"):
         word = "source"     # named journals are sources by ID (`by journal in ([A](S1), ...)`, #1494)

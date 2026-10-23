@@ -166,8 +166,10 @@ def validate_oql_route():
         oqo = parse_either(oql)
     except _OQLError as e:
         if getattr(e, "core_error", None) is not None:
+            from query_translation.oql_parser import core_reason
+            msg, fix = core_reason(e.core_error)
             return jsonify(_parse_error_body(
-                [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e.core_error)))])), 200
+                [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", msg, fix))])), 200
         # The query is broken — re-run in recover mode to collect EVERY clause-level
         # parse error, so the editor squiggles the whole doc instead of just the first
         # error (oxjob #363, multi-error /validate). Always 200; verdict in the body.

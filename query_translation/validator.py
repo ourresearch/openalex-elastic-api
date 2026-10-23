@@ -798,10 +798,13 @@ class OQOValidator:
                 if props and m.column_id in props and \
                         "search" not in (props[m.column_id].operators or []):
                     return []
+            # in OQL's words (#1589's recheck, 2026-10-23: it named `summary_stats.h_index`)
+            from query_translation.oql_core import MEASURE_NAMES
+            word = MEASURE_NAMES.get(("value", m.column_id), m.column_id)
             return [ValidationError(
                 type="invalid_measure",
-                message=(f"'{m.column_id}' isn't a field of any split's groups; a "
-                         f"group's own field needs a split by things that have it."),
+                message=(f"`{word}` is a number of the groups' own: it needs a split by things "
+                         f"that have it (`get the count and {word} of works about kelp by author`)."),
                 location=f"{loc}.column_id")]
         if m.measure in ("count", "percent_of_those"):
             if m.column_id is not None:
@@ -812,7 +815,8 @@ class OQOValidator:
             if m.measure == "percent_of_those" and not has_split:
                 return [ValidationError(
                     type="invalid_measure",
-                    message="percent of those works needs a split (a group's share of its set).",
+                    message=("share needs a split: each row's share of its group "
+                             "(`get the share of works about kelp by year`)."),
                     location=loc)]
             return []
         entry = columns.get(m.column_id) if m.column_id else None
