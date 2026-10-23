@@ -118,19 +118,22 @@ def oql_vocabulary_route():
     return jsonify({"phrases": VOCABULARY}), 200
 
 
-@blueprint.route("/query/orders", methods=["GET"])
+@blueprint.route("/query/orders", methods=["GET", "POST"])
 def query_orders_route():
     """The orders one query can take, for the website's sort menu (oxjob #1658).
 
-    GET /query/orders?q=<oql> -> {order, order_default, options: [{words, sort_by,
-    default?}]}: `order` is the words for the order its rows come in (the default's own
-    name when the text writes none, with `order_default`); each option carries the
-    `sort_by` it sets, read by the parser, the default first with an empty `sort_by`.
-    Parse-only (no search runs), so it lives under /query, which the proxy doesn't charge.
-    Always 200; OQL that doesn't parse gets no options and an `error`."""
+    GET /query/orders?q=<oql> (or POST {"q": <oql>}, for a query too long for a URL) ->
+    {order, order_default, options: [{words, sort_by, default?}]}: `order` is the words for
+    the order its rows come in (the default's own name when the text writes none, with
+    `order_default`); each option carries the `sort_by` it sets, read by the parser, the
+    default first with an empty `sort_by`. Parse-only (no search runs), so it lives under
+    /query, which the proxy doesn't charge. Always 200; OQL that doesn't parse gets no
+    options and an `error`."""
     from query_translation.oql_orders import orders_for
+    body = request.get_json(silent=True) if request.method == "POST" else None
+    q = (body or {}).get("q") if isinstance(body, dict) else None
     try:
-        return jsonify(orders_for(request.args.get("q", ""))), 200
+        return jsonify(orders_for(q if isinstance(q, str) else request.args.get("q", ""))), 200
     except Exception as e:  # noqa: BLE001 (any parse failure: no menu, never a 500)
         return jsonify({"order": None, "order_default": False, "options": [],
                         "error": getattr(e, "message", None) or str(e)}), 200
