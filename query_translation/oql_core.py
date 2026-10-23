@@ -693,7 +693,7 @@ def _number_sentence(oqo, resolver):
     for m in oqo.calculate:
         n = _measure_name(m)
         names.append("count" if n == "count of works" else n)
-    join = "for" if names[-1] == "sum of APCs paid" else "of"
+    join = MEASURE_JOIN.get(names[-1], "of")     # `sum of citations to works`, as tables say it
     return f"get the {english_list(names)} {join} {w.text()}"
 
 
@@ -1288,6 +1288,8 @@ def _order(t, s: str, entity: str = "works") -> Tuple[str, List[SortBy]]:
     m = _AGE_ADJUSTED_RE.search(s)
     if m and (m.group(1) is None or t.restore(m.group(1)) == "(age-adjusted)"):
         return s[: m.start()], list(AGE_ADJUSTED)
+    if entity != "works" and entity not in _THINGS_DEFAULT_SORT and s.endswith(", most works first"):
+        return s[: -len(", most works first")], []      # the default order, written out
 
     def col_of(word: str, kinds) -> Optional[str]:
         if word in OWN_FIELD_BY_WORD and "num" in kinds:
@@ -1366,7 +1368,7 @@ def _parse_get(t, s, collection_type):
 def _parse_number(t, s, collection_type):
     # the measures end where a works phrase begins
     rest = None
-    for mm in re.finditer(r" (of|for) ", s):
+    for mm in re.finditer(r" (of|for|to) ", s):
         cand = s[: mm.start()]
         try:
             measures = _parse_measures(t, cand)
@@ -1490,7 +1492,21 @@ def _parse_things_list(t, s) -> OQO:
     _, _, items = _parse_things(t, s)
     for it in items:
         if isinstance(it, tuple):
-            raise NotCore("a count of works on a plain list")
+            _, op, n, ph = it
+            ph = ph.strip()
+            if ph.startswith("works where "):
+                # `authors with more than 1,000 works where last known institution is [KU]`: the
+                # `where` is the people's own fields (guide v8: conditions about people go on them)
+                rows += _old_filters(entity, t.restore(ph[len("works where "):]))
+                ph = "works"
+            if ph != "works":
+                raise NotCore("a count of matching works on a plain list",
+                              "a list filters on the things' own works count (`get authors with "
+                              "more than 1,000 works`); to count matching works, a table: `get the "
+                              "count of works about kelp by author. Only authors with at least 5 "
+                              "works about kelp.`")
+            # `authors with more than 1,000 works`: their own works count (#1589's recheck)
+            it = LeafFilter("works_count", n, op)
         rows.append(it)
     return OQO(get_rows=entity, filter_rows=rows)
 

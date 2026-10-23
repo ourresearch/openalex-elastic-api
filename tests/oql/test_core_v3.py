@@ -576,3 +576,29 @@ def test_todays_form_keeps_todays_error(text, says):
     with pytest.raises(Exception) as e:
         parse_oql_to_oqo(text)
     assert says in str(e.value) and "a works phrase reads like" not in str(e.value)
+
+
+@pytest.mark.parametrize("text, echo", [
+    # #1589's second recheck, 2026-10-23
+    ("get institutions in [Austria](AT), most works first", "get institutions in [Austria](AT)"),  # the default, written out
+    ("get topics in the field [CS](17), most works first", "get topics in the field [Computer Science](17)"),
+    ("get the sum of citations to works about kelp", "get the sum of citations to works about kelp"),
+    ("get the sum of citations of works about kelp", "get the sum of citations to works about kelp"),
+    ("get authors with more than 1,000 works where last known institution is [KU](I146416000)",
+     "get authors with a works count above 1000 where last known institution is (I146416000)"),
+])
+def test_second_recheck_forms_read_and_round_trip(text, echo):
+    from query_translation.oql_parser import parse_either
+    from query_translation.oqo_canonicalizer import canonicalize_oqo as canon
+    from query_translation.x_query import new_oql
+    o = parse_either(text)
+    e = new_oql(o)
+    assert e == echo
+    assert canon(parse_either(e)).to_dict() == canon(o).to_dict()
+
+
+def test_a_count_of_matching_works_on_a_plain_list_says_how():
+    from query_translation.oql_core import NotCore
+    with pytest.raises(NotCore) as e:
+        parse_core("get authors with more than 5 works about kelp")
+    assert "Only authors with at least 5 works about kelp" in str(e.value)
