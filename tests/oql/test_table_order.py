@@ -194,3 +194,71 @@ def test_an_own_field_sort_reads_every_group_once(monkeypatch):
     assert [r["key"] for r in body["group_by"]] == ["https://openalex.org/A2",
                                                     "https://openalex.org/A3"]
     assert calls == [3]          # every group looked up once, not again for the page
+
+
+# ---------------------------------------------------------------------------
+# Codes sorted by name (#1658): `alphabetical by country` sorted country codes, so
+# United Arab Emirates came before Albania and the reverse started with South Africa
+# ---------------------------------------------------------------------------
+def _coded(codes, level_i=0):
+    return [{"key": f"https://openalex.org/countries/{c}", "count": 1, "_raw": (level_i, c)}
+            for c in codes]
+
+
+def _named_lv(i, column_id):
+    return A.Level(i, None, "terms", column_id=column_id,
+                   name_vocab=A._name_vocab(column_id, "works"))
+
+
+def test_only_codes_whose_order_reads_alphabetical_sort_by_name():
+    assert A._name_vocab("authorships.countries", "works")
+    assert A._name_vocab("language", "works")
+    assert A._name_vocab("publication_year", "works") is None              # years
+    assert A._name_vocab("authorships.institutions.id", "works") is None   # ID order
+
+
+def test_a_key_sort_on_countries_goes_by_the_shown_name_with_unknown_last():
+    lv = _named_lv(0, "authorships.countries")
+    rows = _coded(["AE", "unknown", "ZA", "AL", "US"])
+    codes = lambda rs: [r["_raw"][1] for r in rs]   # noqa: E731
+    assert codes(A._sort_rows(rows, ("key", "asc"), lv)) == ["AL", "ZA", "AE", "US", "unknown"]
+    assert codes(A._sort_rows(rows, ("key", "desc"), lv)) == ["US", "AE", "ZA", "AL", "unknown"]
+    # a level with no names (or no level): key order as before
+    assert codes(A._sort_rows(rows, ("key", "asc")))[0] == "AE"
+
+
+def test_languages_sort_by_the_name_the_row_shows():
+    lv = _named_lv(0, "language")
+    rows = [{"key": k, "count": 1, "_raw": (0, k)} for k in ["zh-cn", "de", "ar"]]
+    assert [r["key"] for r in A._sort_rows(rows, ("key", "asc"), lv)] == ["ar", "zh-cn", "de"]
+    # Arabic, Chinese (zh-cn, shown as "Chinese"), German
+
+
+_COUNTRIES = [("AE", 4, {}), ("AL", 1, {}), ("AR", 207, {}), ("ZA", 437, {}), ("ZM", 3, {})]
+
+
+def test_alphabetical_by_country_reads_every_group_and_sorts_by_name(monkeypatch):
+    fake = FakeES(list(_COUNTRIES))
+    body = _run(monkeypatch, "get the count of works about kelp by country, alphabetical by country",
+                fake, per_page=2)
+    assert len(fake.bodies) == 1                             # no cardinality probe first
+    main = fake.bodies[-1]["aggs"]["s0"]["terms"]
+    assert main["size"] >= 247                               # every country, not a page of codes
+    assert [r["key"][-2:] for r in body["group_by"]] == ["AL", "AR"]   # Albania, Argentina
+    assert body["meta"]["groups_count"] == 5 and body["meta"]["more_groups"] is True
+
+
+def test_reverse_alphabetical_by_country_starts_with_z(monkeypatch):
+    fake = FakeES(list(_COUNTRIES))
+    body = _run(monkeypatch, "get the count of works about kelp by country, reverse alphabetical by country",
+                fake, per_page=2)
+    assert [r["key"][-2:] for r in body["group_by"]] == ["ZM", "AE"]   # Zambia, United Arab Emirates
+
+
+def test_two_splits_key_sort_orders_countries_by_name():
+    levels = [_named_lv(0, "authorships.countries"), _lv(1, "publication_year")]
+    rows = _coded(["AE", "AL"])
+    rows[0]["groups"] = [{"key": "2025", "count": 1}, {"key": "2023", "count": 1}]
+    out = A._order_levels(levels, rows, ("key", "asc"))
+    assert [r["_raw"][1] for r in out] == ["AL", "AE"]
+    assert [g["key"] for g in out[1]["groups"]] == ["2023", "2025"]   # inner: years oldest first

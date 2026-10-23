@@ -51,12 +51,24 @@ def test_build_x_query_flat_query_has_url_and_triple():
     )
     xq = build_x_query(oqo)
 
-    assert set(xq) == {"oql", "x_new_oql", "oqo", "url"}   # x_new_oql: oxjob #1555
+    # x_new_oql: oxjob #1555; order, order_default: the sort menu's words (#1658)
+    assert set(xq) == {"oql", "x_new_oql", "oqo", "url", "order", "order_default"}
     # A query that arrived as a URL is URL-expressible, so `url` is never None here.
     assert xq["url"] is not None
     assert xq["url"].startswith("/works?filter=")
     assert xq["oqo"]["get_rows"] == "works"
     assert isinstance(xq["oql"], str) and xq["oql"]
+    assert (xq["order"], xq["order_default"]) == ("most cited first", False)
+
+
+def test_build_x_query_names_the_default_order():
+    """No sort: the echo names the default (the text writes nothing), oxjob #1658."""
+    xq = build_x_query(parse_url_to_oqo(entity_type="works", filter_string="type:article"))
+    assert (xq["order"], xq["order_default"]) == ("most cited (age-adjusted) first", True)
+    xq = build_x_query(parse_url_to_oqo(entity_type="works", filter_string="title.search:kelp"))
+    assert (xq["order"], xq["order_default"]) == ("best matches first", True)
+    xq = build_x_query(parse_url_to_oqo(entity_type="authors", filter_string="works_count:>10"))
+    assert (xq["order"], xq["order_default"]) == ("most works first", True)
 
 
 def test_build_x_query_echo_sheds_view_keys():

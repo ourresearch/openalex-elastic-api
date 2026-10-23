@@ -566,6 +566,31 @@ def _is_default_order(sort_by, entity: str, has_search: bool) -> bool:
     return first == ("works_count", "desc") and len(sort_by) == 1
 
 
+# things whose default order isn't most works (execution._DEFAULT_SORT_OVERRIDES and
+# _resolve_entity; locations go by work, which has no words)
+_THINGS_DEFAULT_SORT = {"awards": SortBy("funded_outputs_count", "desc"), "locations": None}
+
+
+def default_order_words(oqo) -> Optional[str]:
+    """The name of a query's default order, never written in the text (Jason 2026-10-13),
+    for the website's sort menu (oxjob #1658): best matches with a search; works: most cited
+    (age-adjusted); things and tables: most works; years: oldest first (#1555 D4). None for
+    one number (no order) or a default with no words."""
+    if oqo.group_by:
+        return "oldest first" if oqo.group_by[0].column_id == "publication_year" \
+            else "most works first"
+    if oqo.calculate:
+        return None
+    if _has_search(oqo.filter_rows):
+        return "best matches first"
+    if oqo.get_rows == "works":
+        return AGE_ADJUSTED_WORDS
+    if oqo.get_rows in _THINGS_DEFAULT_SORT:
+        s = _THINGS_DEFAULT_SORT[oqo.get_rows]
+        return _sort_words(oqo.get_rows, s) if s else None
+    return "most works first"
+
+
 def _column_word(entity: str, cid: str) -> Optional[str]:
     """A column's OQL name on `entity`, only when it reads back as that column."""
     if entity != "works":
@@ -679,11 +704,18 @@ def _dim_words(g, word: str, w, resolver) -> str:
     return word
 
 
+def key_order_is_alphabetical(col: str) -> bool:
+    """A split's key order reads `alphabetical by <split>` (text, codes, yes/no), not
+    `in <split> ID order`. The engine sorts a split of codes by name on the same rule, so
+    the words stay true (oxjob #1658: `alphabetical by country` sorted country codes)."""
+    fld = L._BY_COLUMN.get(col)
+    return fld is not None and fld.kind in ("string", "enum", "bool")
+
+
 def _key_order(col: str, word: str, desc: bool) -> str:
     """A split's own-key order: `, alphabetical by type` or `, in institution ID order`
     (an ID column sorts by the ID, not the name)."""
-    fld = L._BY_COLUMN.get(col)
-    if fld is not None and fld.kind in ("string", "enum", "bool"):
+    if key_order_is_alphabetical(col):
         return f", {'reverse ' if desc else ''}alphabetical by {word}"
     return f", in {'reverse ' if desc else ''}{word} ID order"
 

@@ -320,6 +320,15 @@ def build_x_query(
         "oqo": oqo_dict,
         "url": url_form,
     }
+    # The words for the order the rows come in, so the website's sort menu names it
+    # without parsing OQL (oxjob #1658): `newest first`, or the default's own name with
+    # `order_default` (the text writes nothing); null for one number or an order OQL
+    # can't say. Decoration: it never breaks the echo.
+    try:
+        from query_translation.oql_orders import describe_order
+        out["order"], out["order_default"] = describe_order(canonical)
+    except Exception:  # noqa: BLE001
+        out["order"], out["order_default"] = None, False
     if oql_unavailable is not None:
         out["oql_unavailable"] = oql_unavailable
     return out

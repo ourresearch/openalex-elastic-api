@@ -9,6 +9,8 @@ playground's CodeMirror editor:
                                          for inline linting. Always 200.
   GET /oql-vocabulary                    every core v3 phrase with its hover help
                                          (oxjob #1597). Always 200.
+  GET /query/orders?q=<oql>              the orders a query can take, for the website's
+                                         sort menu (oxjob #1658). Always 200.
 
 Kept in a **separate blueprint** (not `query_translation/views.py`) so it doesn't
 collide with the in-flight execution/translation reorg in that file (#384). It reuses
@@ -114,6 +116,24 @@ def oql_vocabulary_route():
     tables, so hover help and autocomplete never disagree with the parser."""
     from query_translation.oql_core_context import VOCABULARY
     return jsonify({"phrases": VOCABULARY}), 200
+
+
+@blueprint.route("/query/orders", methods=["GET"])
+def query_orders_route():
+    """The orders one query can take, for the website's sort menu (oxjob #1658).
+
+    GET /query/orders?q=<oql> -> {order, order_default, options: [{words, sort_by,
+    default?}]}: `order` is the words for the order its rows come in (the default's own
+    name when the text writes none, with `order_default`); each option carries the
+    `sort_by` it sets, read by the parser, the default first with an empty `sort_by`.
+    Parse-only (no search runs), so it lives under /query, which the proxy doesn't charge.
+    Always 200; OQL that doesn't parse gets no options and an `error`."""
+    from query_translation.oql_orders import orders_for
+    try:
+        return jsonify(orders_for(request.args.get("q", ""))), 200
+    except Exception as e:  # noqa: BLE001 (any parse failure: no menu, never a 500)
+        return jsonify({"order": None, "order_default": False, "options": [],
+                        "error": getattr(e, "message", None) or str(e)}), 200
 
 
 @blueprint.route("/validate", methods=["GET"])

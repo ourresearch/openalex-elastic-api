@@ -351,6 +351,7 @@ class Level:
     paged_floor: bool = False                  # a count floor sorted and paged by ES
     works_filters: List[dict] = field(default_factory=list)  # own fields pushed down (#1617)
     all_groups: bool = False                   # read every group: a sort ES can't do (#1555)
+    name_vocab: Optional[dict] = None          # codes sorted by name, not code (#1658)
 
 
 def _label_bool(column_id: str, value: bool) -> str:
@@ -527,7 +528,8 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
         lv.order_keys = ["true", "false"]
         return lv
     es_field = fld.alias if getattr(fld, "alias", None) else fld.es_sort_field()
-    lv = Level(i, g, "terms", column_id=column_id, group_entity=group_entity)
+    lv = Level(i, g, "terms", column_id=column_id, group_entity=group_entity,
+               name_vocab=_name_vocab(column_id, oqo.get_rows))
     lv.agg = {"terms": {"field": es_field}}
     if "cited_by_percentile_year" in es_field:
         lv.agg["terms"]["format"] = "0.0"
@@ -1376,17 +1378,31 @@ def own_value(src: Optional[dict], path: str, entity: str):
     return "; ".join(str(v) for v in dict.fromkeys(vals))
 
 
-def _code_name(code: str, column_id: str, entity: str) -> str:
-    """A closed vocabulary's code as its name (`US` -> "United States"); else the code."""
+def _vocab_table(column_id: str, entity: str) -> Optional[dict]:
+    """A column's closed vocabulary, code -> name (countries, languages, types ...), or None."""
     try:
         from query_translation.oql_lang import entity_type_for_column
         from query_translation.oql_renderer import _config_table
         from query_translation.validator import CLOSED_VOCAB_NAMESPACE
         ns = CLOSED_VOCAB_NAMESPACE.get(entity_type_for_column(column_id, entity) or "")
-        name = (_config_table(ns) or {}).get(code.lower()) if ns else None
-    except Exception:  # noqa: BLE001 (no vocabulary table: the code itself)
-        name = None
-    return name or code
+        return (_config_table(ns) or None) if ns else None
+    except Exception:  # noqa: BLE001 (no vocabulary table)
+        return None
+
+
+def _code_name(code: str, column_id: str, entity: str) -> str:
+    """A closed vocabulary's code as its name (`US` -> "United States"); else the code."""
+    table = _vocab_table(column_id, entity)
+    return (table.get(code.lower()) if table else None) or code
+
+
+def _name_vocab(column_id: str, entity: str) -> Optional[dict]:
+    """A split of codes (`ZA`, `af`) whose key order the words call alphabetical
+    (`, alphabetical by country`): its vocabulary, so its groups sort by name and the words
+    stay true (#1658: by code, United Arab Emirates came before Albania). None for years,
+    IDs (`in institution ID order`) and open text, which keep key order."""
+    from query_translation.oql_core import key_order_is_alphabetical
+    return _vocab_table(column_id, entity) if key_order_is_alphabetical(column_id) else None
 
 
 def _order_value(v):
@@ -1401,15 +1417,20 @@ def _order_value(v):
         return (1, 0, s.lower())
 
 
-def _sort_rows(rows: List[dict], sort: Optional[Tuple[str, str]]):
+def _sort_rows(rows: List[dict], sort: Optional[Tuple[str, str]], lv: Optional["Level"] = None):
     """Rows by one column, either way; groups with no value last. Ties keep the order
-    they came in (the default: most works first), since Python's sort is stable."""
+    they came in (the default: most works first), since Python's sort is stable. A key
+    sort on a split of codes goes by the names the rows will show (`_name_vocab`)."""
     if not sort:
         return rows
     key, direction = sort
-    present = [r for r in rows if r.get(key) is not None]
-    missing = [r for r in rows if r.get(key) is None]
-    present.sort(key=lambda r: _order_value(r[key]), reverse=(direction == "desc"))
+    value = lambda r: r.get(key)   # noqa: E731
+    if key == "key" and lv is not None and lv.name_vocab is not None:
+        names = _display_names(lv, [r["_raw"][1] for r in rows if "_raw" in r], None)
+        value = lambda r: names.get(r["_raw"][1]) if "_raw" in r else None   # noqa: E731
+    present = [r for r in rows if value(r) is not None]
+    missing = [r for r in rows if value(r) is None]
+    present.sort(key=lambda r: _order_value(value(r)), reverse=(direction == "desc"))
     return present + missing
 
 
@@ -1436,7 +1457,7 @@ def _order_levels(levels: List["Level"], rows: List[dict], sort: Optional[Tuple[
     if sort is None or (sort[0] == "key" and level_i > 0):
         rows = _default_order(lv, rows)
     else:
-        rows = _sort_rows(rows, sort)
+        rows = _sort_rows(rows, sort, lv)
     for r in rows:
         if r.get("groups") and level_i + 1 < len(levels):
             r["groups"] = _order_levels(levels, r["groups"], sort, level_i + 1)
@@ -1509,6 +1530,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     if eff_sort and not nested:
         key, direction = eff_sort
         m = sort_m
+        by_name = key == "key" and bool(levels) and levels[0].name_vocab is not None
         if key == "count" or (m is not None and m.measure == "percent_of_those"):
             # a share of the whole set is the count over one number: the count's order
             sort_measure = {"_count": direction}
@@ -1520,13 +1542,14 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             m_aggs[f"h_{m.key}"] = {"max": {"script": {
                 "source": f"doc['{es_field}'].size() > 0 ? 1 : 0"}}}
             sort_measure = [{f"h_{m.key}": "desc"}, {path: direction}]
-        elif key == "key":
+        elif key == "key" and not by_name:
             sort_measure = {"_key": direction}
-        elif (m is not None and m.measure in ("percent", "value") and levels
+        elif ((by_name or (m is not None and m.measure in ("percent", "value"))) and levels
               and levels[0].kind == "terms" and levels[0].selector is None
               and levels[0].post_keep is None and oqo.cursor is None):
-            # a percent or a group's own field: ES can't order the split by it, so every
-            # group is read and sorted here (a filtered split already reads them all)
+            # a percent, a group's own field, or codes by name (`alphabetical by country`):
+            # ES can't order the split by it, so every group is read and sorted here (a
+            # filtered split already reads them all)
             _read_all_groups(levels[0], m, cards, index_name, connection, base_query,
                              deadline, oqo.get_rows)
     cursor = oqo.cursor
@@ -1663,7 +1686,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             if by_own:
                 fill_own_values(levels, group_rows, measures, deadline)
                 own_filled = True
-            group_rows = _sort_rows(group_rows, eff_sort)
+            group_rows = _sort_rows(group_rows, eff_sort, top)
             groups_count = len(group_rows)
             start = (page - 1) * per_page
             group_rows = group_rows[start:start + per_page]
@@ -1671,7 +1694,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         elif top.kind == "terms" and not filtered:
             # one page of groups straight from ES, in its order
             if eff_sort and sort_measure is None:
-                group_rows = _sort_rows(group_rows, eff_sort)
+                group_rows = _sort_rows(group_rows, eff_sort, top)
             start = (page - 1) * per_page
             n_rows = len(group_rows)
             group_rows = group_rows[start:start + per_page]
@@ -1705,7 +1728,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 fill_own_values(levels, group_rows, measures, deadline)
                 own_filled = True
             if eff_sort:
-                group_rows = _sort_rows(group_rows, eff_sort)
+                group_rows = _sort_rows(group_rows, eff_sort, top)
             groups_count = len(group_rows)
             if top.kind == "terms":
                 start = (page - 1) * per_page
@@ -1779,6 +1802,9 @@ def _read_all_groups(lv: Level, m: Measure, cards: Dict[int, int], index_name: s
         # a key set (`by author at [UBC]`) caps the groups; ES says after the request
         # whether more than the limit came back
         cards[lv.index] = min(len(lv.include - (lv.exclude or set())), ALL_GROUPS_SORT_LIMIT)
+    elif lv.name_vocab is not None:
+        # a closed vocabulary caps the groups (247 countries): no cardinality probe
+        cards[lv.index] = len(lv.name_vocab)
     else:
         # own fields pushed down to the works (#1617) narrow the groups too
         probe_query = ({"bool": {"filter": [base_query] + lv.works_filters}}
