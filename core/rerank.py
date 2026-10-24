@@ -3,7 +3,8 @@
 Jev (TypeSafe's decision model) reorders the top RERANK_WINDOW (100) results of a
 relevance-sorted works search: one request carrying the query and, per candidate,
 title, venue, year and type, with one yes/no question per candidate; the 100 are
-sorted by Jev's probability of yes. Everything after position 100 keeps the normal
+sorted by Jev's probability of yes, lifted by a citation prior that only applies to
+works Jev already rates relevant (blended()). Everything after position 100 keeps the normal
 order, so rerank never adds, removes or repeats a result and meta.count is unchanged.
 
 - Pages: positions are computed as usual. A page inside the first 100 reads the
@@ -37,7 +38,8 @@ from core.exceptions import APIQueryParamsError
 
 CACHE_PREFIX = "rerank:v1:"
 CURSOR_PREFIX = "rr."
-LIGHT_SOURCE = ["id", "display_name", "publication_year", "type", "primary_location.source.display_name"]
+LIGHT_SOURCE = ["id", "display_name", "publication_year", "type", "primary_location.source.display_name",
+                "cited_by_count"]
 INSTRUCTIONS = (
     "A researcher typed the search query shown in state into an academic search engine. "
     "Is candidate {i} a relevant result, i.e. a work this researcher would want to see near the top "
@@ -213,6 +215,23 @@ def jev_probabilities(query, cands):
     return [float(x) for x in p]
 
 
+def blended(p, cites):
+    """The sort key: Jev's p(relevant), lifted by citations only once Jev says the work is relevant.
+
+    Jev scores near-identical candidates within 0.01-0.04 of each other (and not the same twice), and it is
+    never shown citations, so a 78k-citation original and a 0-citation summary of it tie. The boost saturates
+    (bounded by 1 + CITATION_MAX_BOOST) and is scaled by how far p is above RERANK_CITATION_FLOOR, so a weak
+    match can't be lifted over a strong one: p=0.55 with 100k citations blends to 0.58, under p=0.80 with none.
+    rerank_score stays the raw p. RERANK_CITATION_PRIOR=false sorts by p alone.
+    """
+    if not settings.RERANK_CITATION_PRIOR:
+        return p
+    floor = min(settings.RERANK_CITATION_FLOOR, 0.99)
+    strength = max(0.0, (p - floor) / (1 - floor))
+    c = max(cites or 0, 0)
+    return p * (1 + settings.CITATION_MAX_BOOST * strength * c / (c + settings.CITATION_PIVOT))
+
+
 def _window(search, start, size):
     """from/size set explicitly: the Search arrives with extra(size=per_page), and
     slicing on top of that differs between elasticsearch-dsl versions."""
@@ -227,8 +246,13 @@ def cache_key(request, index_name, extra=None):
     if isinstance(extra, dict):
         extra = {k: v for k, v in extra.items() if k not in ("page", "per_page", "cursor", "select")}
     args = sorted((k, v) for k, v in request.args.items(multi=True) if k not in NOT_IN_CACHE_KEY)
+    # The prior settings are part of the key: they change the cached order, so retuning one must not serve
+    # orders cached under the old values. CACHE_PREFIX stays: in-flight rr. cursors carry a key under it,
+    # and a key with no entry just recomputes, as when the 24 h cache expires.
     raw = json.dumps([index_name, settings.JEV_MODEL, settings.RERANK_WINDOW, settings.CITATION_SCALING,
-                      settings.SEARCH_KEYWORDS, args, extra], sort_keys=True, default=str)
+                      settings.SEARCH_KEYWORDS, settings.RERANK_CITATION_PRIOR, settings.RERANK_CITATION_FLOOR,
+                      settings.CITATION_MAX_BOOST, settings.CITATION_PIVOT, args, extra],
+                     sort_keys=True, default=str)
     return CACHE_PREFIX + hashlib.sha1(raw.encode()).hexdigest()
 
 
@@ -262,7 +286,8 @@ def compute_order(base_search, params, key, query=None):
         src = h.get("_source") or {}
         venue = (((src.get("primary_location") or {}).get("source")) or {}).get("display_name") or ""
         cands.append({"id": src.get("id"), "title": src.get("display_name") or "", "venue": venue,
-                      "year": src.get("publication_year"), "type": src.get("type")})
+                      "year": src.get("publication_year"), "type": src.get("type"),
+                      "cites": src.get("cited_by_count") or 0})
     if not cands:
         record("no_results")
     entry = {"ids": [], "scores": [], "count": resp.hits.total.value,
@@ -271,7 +296,7 @@ def compute_order(base_search, params, key, query=None):
         p = jev_probabilities(query if query is not None else query_text(params), cands)
         if p is None:
             return None
-        order = sorted(range(len(cands)), key=lambda i: (-p[i], i))
+        order = sorted(range(len(cands)), key=lambda i: (-blended(p[i], cands[i]["cites"]), i))
         entry["ids"] = [cands[i]["id"] for i in order]
         entry["scores"] = [round(p[i], 4) for i in order]
     cache_set(key, entry)
