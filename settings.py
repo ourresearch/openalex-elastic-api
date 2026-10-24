@@ -86,6 +86,12 @@ SEARCH_KEYWORDS = os.environ.get("SEARCH_KEYWORDS", "true").lower() == "true"
 RERANK_ENABLED = os.environ.get("RERANK_ENABLED", "true").lower() == "true"
 RERANK_WINDOW = 100
 RERANK_TIMEOUT_S = float(os.environ.get("RERANK_TIMEOUT_S", "0.6"))
+# rerank=true final sort: Jev's p(relevant) lifted by citations, gated on p so citations only break near-ties
+# among works Jev already rates relevant (same shape as the semantic prior; CITATION_PIVOT and CITATION_MAX_BOOST
+# are shared with it). RERANK_CITATION_FLOOR is the p at which the boost is zero.
+# Set RERANK_CITATION_PRIOR=false to revert to the p-only order.
+RERANK_CITATION_PRIOR = os.environ.get("RERANK_CITATION_PRIOR", "true").lower() == "true"
+RERANK_CITATION_FLOOR = float(os.environ.get("RERANK_CITATION_FLOOR", "0.5"))
 RERANK_CACHE_SECONDS = 24 * 3600
 JEV_URL = os.environ.get("JEV_URL", "https://api.typesafe.ai/v1/systemone")
 JEV_MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
