@@ -664,6 +664,8 @@ Nothing joins this list silently: every default is documented wherever OQL is do
 
 **A query that can't do what it appears to do is refused before it runs, and the error says how to fix it.** Every error has a `type` (`parse_error`, `invalid_value`, `invalid_measure`, `query_too_slow`, ...) and a `message` that ends with the fix after `  Fix: `. The execute surface also gives the `position` and a `context` snippet when it knows them. The free check endpoint returns the same errors at no cost.
 
+**Codes, for editors.** `GET /validate?q=<oql>` returns the same errors as `diagnostics`, each with a stable `code`, the `message`, the `fixit` on its own, and the span when known. Mistakes in conditions have their own codes: `OQL_MISSING_ENTITY_ID` (a link with no ID), `OQL_CONTAINS_RENAMED`, `OQL_GROUP_VALUES_NEED_CONNECTIVE`, `OQL_UNKNOWN_FIELD`, `OQL_BAD_NUMBER`, `OQL_UNKNOWN_ENTITY` (a statement that doesn't start with `get`). Mistakes in a sentence or a search string come back as `OQL_PARSE_ERROR`, with the fix in the message.
+
 **Sentences:**
 
 | You wrote | OQL says |
