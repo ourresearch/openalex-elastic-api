@@ -20,6 +20,10 @@ USERS_API_URL = os.environ.get("USERS_API_URL")
 # Shared secret that exempts the collection resolver's server-to-server reads from
 # users-api's per-IP read limit (oxjob #646). Grants no access; see collection_resolver.
 COLLECTION_RESOLVER_KEY = os.environ.get("COLLECTION_RESOLVER_KEY")
+# Secret the api.openalex.org proxy sends in X-OpenAlex-Origin-Key, and whether a request
+# without it is only logged or refused (oxjob #1782; core/origin_key.py). Set on both apps.
+ORIGIN_SHARED_SECRET = os.environ.get("ORIGIN_SHARED_SECRET")
+ORIGIN_KEY_MODE = os.environ.get("ORIGIN_KEY_MODE")  # unset = "log"
 if USERS_API_URL and not COLLECTION_RESOLVER_KEY:
     import logging
     logging.getLogger(__name__).error(

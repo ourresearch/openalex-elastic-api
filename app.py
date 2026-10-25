@@ -44,6 +44,7 @@ import works
 import work_types
 from core.collection_resolver import CollectionUrlIdsInQuery
 from core.exceptions import APIError
+from core.origin_key import init_origin_key_check
 from extensions import cache
 from sentry_setup import init_sentry
 
@@ -52,6 +53,8 @@ def create_app(config_object="settings"):
     app = Flask(__name__)
     app.config.from_object(config_object)
 
+    # oxjob #1782: note (later refuse) requests that skip the api.openalex.org proxy.
+    init_origin_key_check(app)
     register_blueprints(app)
     register_extensions(app)
     register_errorhandlers(app)
