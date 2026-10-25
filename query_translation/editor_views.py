@@ -162,6 +162,7 @@ def validate_oql_route():
     oql = request.args.get("q", "")
     # Parse as production does (oql_parser.parse_either), keeping the engine's OQLError
     # (code + fixit + position) that parse_oql_to_oqo flattens away.
+    diags = None
     try:
         # a core v3 sentence or today's grammar, as the execute path reads it (oxjob #1555:
         # the site's new-OQL flag puts the new form in the editor)
@@ -171,16 +172,20 @@ def validate_oql_route():
         if getattr(e, "core_error", None) is not None:
             from query_translation.oql_parser import core_reason
             msg, fix = core_reason(e.core_error)
-            return jsonify(_parse_error_body(
-                [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", msg, fix))])), 200
-        # The query is broken — re-run in recover mode to collect EVERY clause-level
-        # parse error, so the editor squiggles the whole doc instead of just the first
-        # error (oxjob #363, multi-error /validate). Always 200; verdict in the body.
-        _oqo, diags = _engine_parse_collecting(oql)
-        return jsonify(_parse_error_body([parse_diagnostic(d) for d in diags])), 200
+            diags = [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", msg, fix))]
+        else:
+            # The query is broken — re-run in recover mode to collect EVERY clause-level
+            # parse error, so the editor squiggles the whole doc instead of just the first
+            # error (oxjob #363, multi-error /validate). Always 200; verdict in the body.
+            _oqo, collected = _engine_parse_collecting(oql)
+            diags = [parse_diagnostic(d) for d in collected]
     except Exception as e:  # any other engine failure -> one generic diagnostic
-        return jsonify(_parse_error_body(
-            [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e)))])), 200
+        diags = [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e)))]
+    if diags is not None:
+        body = _parse_error_body(diags)
+        if request.args.get("plain_words") in ("1", "true"):
+            _add_plain_words(oql, body)
+        return jsonify(body), 200
 
     vr = validate_oqo(oqo)
     # Validator errors/warnings flow through the shared registry, so they pick up the
@@ -222,6 +227,35 @@ def validate_oql_route():
         "oxurl": formats.get("oxurl"),
         "diagnostics": diagnostics,
     }), 200
+
+
+def _add_plain_words(oql, body):
+    """`?plain_words=1` (the IDE editor, oxjob #1597): on a statement that doesn't read, say
+    whether it holds plain words for the assistant or a typo with its fix
+    (oql_plain_words.find). Plain words add `plain_words: {start, end, text}` and leave one
+    info diagnostic; a typo leaves one error carrying `replacement`. Both codes are the
+    editor's own (OQL_PLAIN_WORDS, OQL_TYPO), never raised by the parser, so they stay out of
+    the diagnostics registry."""
+    from query_translation.diagnostics import Diagnostic
+    from query_translation.oql_plain_words import find
+    try:
+        found = find(oql, known_bad=True)
+    except Exception:  # noqa: BLE001 (never let the extra break linting)
+        found = None
+    if not found:
+        return
+    s, e = found["start"], found["end"]
+    if found["kind"] == "typo":
+        d = Diagnostic("OQL_TYPO", f"`{found['word']}` isn't an OQL word",
+                       f"did you mean `{found['fix']}`?", "error", s, e).to_dict()
+        body["diagnostics"] = [{**d, "replacement": found["fix"]}]
+        return
+    body["plain_words"] = {"start": s, "end": e, "text": found["text"]}
+    body["diagnostics"] = [Diagnostic(
+        "OQL_PLAIN_WORDS", PLAIN_WORDS_MESSAGE, None, "info", s, e).to_dict()]
+
+
+PLAIN_WORDS_MESSAGE = "Plain words, not OQL: Ask sends them to the assistant to work into the query"
 
 
 def _parse_error_body(diags):

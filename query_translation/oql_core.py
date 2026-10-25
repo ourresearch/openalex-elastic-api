@@ -1547,7 +1547,16 @@ def _paren_inner(t, tok: str, what: str) -> str:
 
 
 def _inner_links(inner: str) -> List[str]:
-    return [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner)]
+    """The IDs of a list of links, in order. Anything else in a list that has links is
+    refused, never dropped (`([IIT Bombay](I162827531), iit madras)` used to lose `iit
+    madras` silently; oxjob #1597)."""
+    ids = [m.group(2) or m.group(3) for m in _ANY_LINK.finditer(inner)]
+    if ids:
+        left = re.sub(r"[,\s]+|\b(?:and|or)\b", " ", _ANY_LINK.sub(" ", inner)).strip()
+        if left:
+            raise NotCore(f"unexpected {left!r} in a list of links",
+                          "every item in the list is a link, `[name](ID)`")
+    return ids
 
 
 _TABLE_ORDER_RE = re.compile(r", (?:(most|fewest) works first|(oldest|newest) first|"
