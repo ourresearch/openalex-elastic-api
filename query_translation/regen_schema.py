@@ -117,8 +117,9 @@ def build_schema() -> dict:
             "calculate": {
                 "type": "array",
                 "description": (
-                    "OQL's final `summarize using ...` step (oxjob #1530, #1555): the measures "
-                    "computed for each group and for the summary (the whole "
+                    "The numbers of a table of groups (OQL `get the count and mean FWCI of "
+                    "works ... by ...`; `summarize using ...` in the general form; oxjob #1530, "
+                    "#1555, #1589): the measures computed for each group and for the summary (the whole "
                     "starting set, and each split on its own), or for the whole set "
                     "when there is no split."
                 ),
@@ -374,9 +375,10 @@ def build_schema() -> dict:
             },
             {
                 "description": (
-                    "Calculations by listed values (oxjob #1530): get works where topic is "
-                    "(T10878); then group those works by institution in (I63966007, "
-                    "I97018004); then, summarize using count, mean FWCI, percent open access"),
+                    "Numbers by listed values (oxjob #1530): get the count, mean FWCI, and "
+                    "percent open access of works in the topic [CRISPR and Genetic "
+                    "Engineering](T10878) by institution in ([Massachusetts Institute of "
+                    "Technology](I63966007), [Stanford University](I97018004))"),
                 "value": {"get_rows": "works",
                           "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}],
                           "group_by": [{"column_id": "authorships.institutions.lineage",
@@ -386,8 +388,9 @@ def build_schema() -> dict:
             },
             {
                 "description": (
-                    "A group filter (oxjob #1530): ... then group those works by author "
-                    "where count of those works > (10) and h-index > (20)"),
+                    "A group filter (oxjob #1530): get the count of works with kelp in the "
+                    "title or abstract by author with an h-index above 20. Only authors with "
+                    "more than 10 works with kelp in the title or abstract."),
                 "value": {"get_rows": "works",
                           "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}],
                           "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [

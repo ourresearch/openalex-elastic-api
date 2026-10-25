@@ -1,998 +1,800 @@
-# OQL (OpenAlex Query Language) Specification — v2 **(FROZEN)**
+# OQL (OpenAlex Query Language) specification
 
-> **Status: frozen** (oxjob #330; v2.1, 2026-06-02 — adopted the mainstream
-> search model after a peer review: **space = AND, quotes = exact, `stemmed` =
-> stemmed phrase**; lowercase connectives. v2.2, 2026-07-04, oxjob #554 —
-> **a condition's value is always a parenthesized group** in canonical form
-> (`type is (article)`, `year >= (2019)`; bare singletons stay accepted on
-> input), **bare adjacency between values in an `is ( … )` group is a loud
-> error** (never implicit AND), and **`unknown` inside a group is the null
-> sentinel**). This is a cases-first
-> specification: the normative truth is the worked-example corpus
-> [`docs/oql/corpus.yaml`](./oql/corpus.yaml), machine-checked by
-> [`tests/oql/test_corpus_roundtrip.py`](../tests/oql/test_corpus_roundtrip.py).
-> **The rules in this prose are the generalization *under* the cases.** When prose
-> and a corpus case disagree, the case wins — fix the prose.
->
-> v2 supersedes v1.1. v1.1 (parser/renderer in `query_translation/oql_*.py`) was
-> designed months ago and never shipped; v2 is a "build one to throw away" rev
-> (Brooks) — the general idea survives, many local decisions changed. The
-> production translator is still v1.1; reconciling it to v2 is roadmap step 3 (see
-> [`docs/oql/gap_report.md`](./oql/gap_report.md)).
+> Generated from help.openalex.org/access/oql-spec/ (openalex-help `content/access/oql-spec.md`) by
+> oxjobs #1589 `work/make_upstream_guide.py`. Edit the help page, then regenerate.
 
-OQL is the **human-readable surface over OQO**. It is defined and validated *in
-terms of* OQO (the canonical query object, [`oqo-spec.md`](./oqo-spec.md)) — not
-in terms of OXURL. Its whole bet, versus Scopus / Web of Science / Dimensions, is
-that **a person who has never seen OQL reads a query and knows what they're looking
-at**: the echo is the plain-language summary at the top of every results page.
+> This is the **formal specification** of OQL. To get started, read the [overview](https://help.openalex.org/access/oql/) first.
+
+OQL, the OpenAlex Query Language, is the human-readable surface over OQO, the canonical query object (see the [OQO page](https://help.openalex.org/access/oqo-schema/)). A query is an English sentence that starts with `get`:
+
+```
+get works since 2020 about kelp, most cited first
+get the count of works about kelp by country
+```
+
+OQL is defined and validated in terms of OQO, not the classic URL syntax. Its bet, against Scopus, Web of Science and Dimensions, is that a researcher can **read a query aloud and understand it**.
 
 ---
 
-## 0. Design principles (priority order)
+## Design principles
 
-Later sections of this spec still show older forms (every value in parentheses,
-`calculate`); the corpus and the tests are the truth until #1589 rewrites them.
+In priority order:
 
-1. **Reads like English.** The echo is the plain-language summary at the top of
-   every results page; someone who has never seen OQL reads it and knows what
-   they're looking at. Protect this above all.
-2. **The parser carries the complexity, not the reader.** The OQO stays the tight,
-   exact structure underneath; OQL's job is to say it in English. When readable
-   English and a simple parser conflict, English wins.
-3. **Exact.** One meaning, one canonical text, and an exact round trip
-   (`OQO -> OQL -> OQO` is the identity, §1); a deterministic parser with no model
-   inside. Wherever English is ambiguous (and/or, negation on things a work has
-   many of), the echo picks wording that isn't.
-4. **Accept what people reach for; echo one form.** Input takes the forms people
-   and models naturally write (the "cow paths": Haiku is the cheap user test); the
-   echo shows one canonical form.
-5. **Loud, never silent.** A query that can't do what it appears to do is an
-   **error with a fix-it**, never a silent wrong answer.
-6. **Grounded in real needs and real tests.** Decisions rest on the questions
-   users actually bring (#1602's map, #1492's question bank) and on reading and
-   writing tests with people and models, not on what makes a grammar tidy. Cases
-   over rules: worked examples lead, rules come from them.
+1. **Reads like English.** A query is a sentence a reader understands aloud, in the order English puts things. Protect this above all.
+2. **The parser carries the complexity.** Writers type something close enough; the parser reads many spellings, and the echo gives back the one canonical form. The language a reader sees stays small.
+3. **Exact.** OQL maps tightly to OQO. Each word has one meaning, and the canonical text is a pure function of the OQO.
+4. **Loud, never silent.** A query that can't do what it appears to do is an **error with a fix**, never a silent wrong answer.
+5. **No hidden assumptions.** The text never hides a condition, value or order the query carries. The only exceptions are the [documented defaults](#documented-defaults).
 
-The cost, named so it stays watched: complexity moves, it doesn't vanish. The editor
-(#1597) must take its hints from this same parser rather than a second grammar; the
-docs must teach a richer language; English invites ambiguity, which principle 3
-guards. Few people write OQL from a blank page (models and the editor do most of
-the writing), so reading is what to optimize.
-
-## 1. The canonical triple and the round-trip invariant
+## The canonical triple
 
 ```
 URL  ↔  OQO  ↔  OQL          (OQO is canonical)
 ```
 
-- **`OQL → OQO` is semantically lossless and order-preserving.** It discards only
-  the **non-semantic text layer** — annotations/comments (display-name labels are a
-  special case) and whitespace — and **normalizes equivalent spellings** to one
-  canonical OQO (an implicit-AND space-run and an explicit `and` → one form; a
-  technical column-id and its display name → one column).
-- **`OQO → OQL` is deterministic** and *synthesizes* display-name labels.
-- **Round-trip identity holds on the OQO side:** **`OQO → OQL → OQO` is the
-  identity.** (`OQL-text → OQO → OQL-text` is *normalizing*, not identity —
-  canonical spelling, regenerated `[names]`, comments gone.) This is how comments
-  are allowed to exist without breaking "OQL is a pure function of OQO": they live
-  only in the text layer, exactly like whitespace.
-- **Operand order is the user's (decision 30, #363).** The order of clauses (the
-  implicit top-level AND of `filter_rows`) and of values inside `is ( … )` /
-  `has ( … )` groups is **preserved**, not alphabetized — for OQL-text and
-  builder/direct-OQO input alike. So the LEGO builder never jumps a freshly-added
-  clause to an alphabetical slot, and a systematic-review author's block order is
-  kept. **Consequence:** OQO is no longer a *single* canonical form on the OQL
-  side — `where A and B` and `where B and A` are distinct OQO (idempotence still
-  holds: `OQO → OQL → OQO` is a fixed point). **Exception — the legacy ox-URL and
-  NL→OQO paths sort operands alphabetically** into one canonical order: their input
-  order is machine-shaped, not author-meaningful, and a deterministic order keeps
-  their translation CI stable (this is also where decision 24's lower-bound-then-
-  upper-bound numeric ordering applies).
+- **`OQL → OQO` is semantically lossless.** It drops only the text layer: whitespace, letter case where case carries no meaning, and the names inside links (the ID counts, the name is regenerated). It normalizes equivalent spellings to one OQO: `year >= 2020` and `since 2020` are the same query.
+- **`OQO → OQL` is deterministic.** It writes the names in links, the canonical order of a sentence's parts, and the canonical spelling of every value.
+- **Round-trip identity holds on the OQO side:** `OQO → OQL → OQO` is the identity. `OQL → OQO → OQL` normalizes: whatever was typed comes back in the canonical form.
+- **Order inside conditions is the user's.** After `where`, the order of conditions and of values in a group is kept, not alphabetized: `where language is [English](en) and source type is [journal](journal)` and the reverse are two spellings that both echo as typed. The parts of a sentence before `where` have one canonical order instead ([the works phrase](#the-works-phrase)). Conditions on the same field gather into one clause ([merged same-field clauses](#merged-same-field-clauses)). The classic-URL and natural-language translation paths sort operands alphabetically, because their input order is machine-shaped.
 
-This invariant is the spec's runnable contract — see §9.
+This invariant is the spec's runnable contract (see [Conformance](#conformance)).
 
-## 2. Statement shape
+## Statement shapes
 
-The canonical form is the step form of §4.1 (`get works where ...; then group those works
-by ...; then, summarize using ...`). The classic statement below is still accepted on input, and is
-what §3's condition rules are written against:
+**Every statement starts with `get`, and every statement returns one of two shapes:**
+
+| Shape | Canonical sentence | Example |
+|---|---|---|
+| **A list of records**: one row per work, or per thing chosen by its own fields | `get <works>[, <order>]`, `get <things>[, <order>]` | `get authors at [University of British Columbia](I141945490) since 2022 with an h-index above 50` |
+| **A table of groups**: numbers about a set of works, one row per group | `get the <numbers> of <works> by <splits>[, <order>]` | `get the count of works about kelp by country` |
+
+A table with no split is one row, the smallest table: `get the count of [University of Kansas](I146416000)'s works`. Two short sentences can follow a table: `Show ...` adds the groups' own fields, and `Only ...` keeps the groups by a count of their works:
 
 ```
-<entity> [ where <conditions> ] [ group by <dims> ] [ sample <n> [ seed <s> ] ]
+get the count and mean FWCI of works about kelp by institution in [Sweden](SE), highest mean FWCI first. Only institutions with at least 10 works about kelp.
 ```
 
-- The entity type names the rows returned (`works`, `authors`, `institutions`,
-  `sources`, `publishers`, `funders`, `topics`, …). It is a sentence word →
-  lowercase canonically; any case accepted on input. (corpus rows **33**, **42–44**)
-- `where` introduces the conditions. With no conditions, the bare entity is a valid
-  query: `works` (corpus row **33**).
-- Directives (`group by`, `sample`) follow, each introduced by
-  its own keyword — no separating punctuation (oxjob #377). A leading `;` is still
-  accepted on **input** for back-compat, but the canonical form never emits one.
+The order is always the words after the last comma, so changing the order never changes the rest of the sentence.
 
-OQL covers exactly **OQO Stage A filtering + Stage B (group_by)**. Result-display
-concerns — **sort order** and **column projection** — are deliberately **not** part
-of the OQL surface (oxjob #504), and since the #661 query/view split they're not
-part of the OQO either: they travel as sibling request params on the execute
-surface (`?sort=` / `?select=`), driven by the GUI's own controls. There is
-deliberately **no Stage-C / HAVING syntax** (§10).
+### Sentences and the general form
 
-### 2.1 Canonical formatting (output layout)
+OQL has two ways to write a statement:
 
-`OQO → OQL` lays the canonical string out **width-aware and multi-line** when it
-is long, so a real systematic-review query (corpus row **78**, 114 search leaves)
-reads as an indented tree instead of one ~1,600-char line. Because the parser is
-**whitespace-blind** (whitespace is the non-semantic text layer, §1), the layout
-is **OQO-identity-preserving by construction** — it cannot change meaning or break
-any consumer. There is exactly **One Right Way** to lay a query out; it is a pure
-function of the query, never of the input's whitespace.
+- **The sentence form** ([below](#the-sentence-grammar)) says lists, and tables of groups with up to two splits.
+- **[The general form](#the-general-form)** says the rest: it starts `get works where <conditions>` and adds steps after semicolons.
 
-Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.py)
-(`format_oql`, reached via `render()` / `render_tree()`); the rules:
+**The echo uses a sentence whenever one can say the query, and the general form only when none can.** Both are fully supported. Today the echo falls back to the general form for:
 
-- **Target width 80 columns** (soft); **indent 2 spaces** per level.
-- **Recursive fits-or-explode** (the Black model): render a node flat; if it
-  fits at its starting column, keep it on one line; otherwise **explode its
-  direct children one level and recurse**. Breaking a parent does **not** force
-  its children to break.
-- **Top level.** A statement that fits stays on one line. Otherwise the entity
-  head, the `where` body, and **each directive** go on their own line(s); the
-  directives (`group by …`, `sample …`) sit at column 0.
-- **Leading connectives — everywhere (oxjob #363, decision 25).** When *anything*
-  explodes, `and` / `or` **begin** each continuation line (the first operand is
-  bare; every later one is prefixed by the connective). This holds at the boolean
-  `where` body **and** inside value/term groups — they read the same. A
-  parenthesized group puts `(` on the current line, its operands one level
-  deeper, and `)` back at the group's indent.
-- **Value/term groups** (`is ( … )`, `has ( … )`): inline if they fit; else
-  **> 8 items that all fit the width → fill/pack** (this is what tames row 78's
-  synonym blocks) — a *wrapped* line begins with the connective; otherwise **one
-  item per line**, and an item that is itself an over-width parenthesized
-  sub-group **explodes recursively** (a §3.2.2-merged clause nests whole OR-blocks
-  inside an AND; each block gets the same treatment, its open paren carrying the
-  leading connective).
-- **Why leading, not trailing.** `and`/`or` are **infix** — they can never sit on
-  the last line the way a trailing comma can — so the Python/Black trailing-comma
-  "clean append" trick doesn't transfer. With leading connectives, appending an
-  item dirties **one** line (the new one); a trailing form would dirty **two** (the
-  old last item gains a connective + the new line). The parser is whitespace-blind,
-  so either form re-parses to the identical OQO; leading just gives the cleaner
-  diff and a single rule across the whole tree.
-- **Idempotence is a hard invariant:** `format(format(x)) == format(x)`. Every
-  break decision is a pure function of *(content, width, depth)*.
-- **Hard ceiling 100 columns:** only a **single unbreakable atom** (one quoted
-  phrase, ID, or term longer than the budget) may exceed the target; nothing
-  with an internal ` or `/` and ` break point ever does.
+- comparing one thing against the rest, or conditions, searches or periods side by side (`compare country [India](IN) versus country is not [India](IN)`); named things side by side are a table (`by country in ([United States](US), [China](CN))`);
+- walks (each author of a set, then all their works);
+- number bins, samples, and three splits;
+- splits by continent, institution type, source type, license, keyword or global south, and by corresponding institution;
+- numbers outside the sentence's list (`mean reference count`, `min date`, `percent global south`), and counts of distinct things (`summarize all those authors using count`);
+- a filter on the groups by a number other than the count (`where mean FWCI of those works is at least 2`);
+- groups chosen by own fields a split can't say (`last known institution`, `co-author is not`, `institution type`);
+- a corpus other than the core (`(all corpora)`).
 
 ```
-works where year >= (2020)
-  and title has (
-    fat or obese or obesity or overweight or thin or "anti fat" or "being fat"
-    or "body esteem" or "body image" or "fat ideal" or "thin ideal"
-    or "weight bias"
-  )
+get works where published since 2015; then, compare country [India](IN) versus country is not [India](IN) using count and mean FWCI
 ```
 
-## 3. Conditions — the cases
+The general form has no order phrase. Its results come back in the default order.
 
-### 3.0 Optional leading `the` — ignorable determiner (input sugar)
+## The sentence grammar
 
-A bare `the` immediately before a **field name** is accepted on input and
-**dropped at parse**, so a clause can read like an English sentence:
-
-```
-works where the title has (cancer)     (input)  ->  works where title has (cancer)   (canonical)
-works where the type is (article)       (input)  ->  works where type is (article)     (canonical)
-```
-
-- It is **input-only sugar** — like `[…]` annotations (§3.1) and case, it carries
-  no meaning and **never round-trips**: the canonical `OQO → OQL` render omits it.
-- It is swallowed **only when a known field follows** (curated, faceted, or a raw
-  registry column). This is a semantic guard, not a grammatical one: a search
-  value that happens to open with "the" keeps it — `title has (the great gatsby)`
-  is unchanged, and a stray `the` with no field after it is still an
-  `OQL_UNKNOWN_FIELD` error (it is not silently eaten).
-- Exactly **one** leading determiner is dropped, once per clause, right before the
-  field. It is deliberately narrow (only `the`) — the goal is to let the
-  natural-language reading the #575 builder's leading-`the` chip implies actually
-  be typeable in the OQL pane, not to grow a stop-word list.
-
-### 3.1 Entity references: the ID is authoritative, `[…]` is ignored decoration
+### Lists
 
 ```
-works where institution is (I136199984 [Harvard])                         (row 1)
-works where institution is (I136199984 [those Harvard bastards, go Yale]) (row 2)
-```
-Both produce `{column_id: authorships.institutions.lineage, value: I136199984}`.
-
-- **`[ … ]` is a universal annotation slot.** Its contents are **ignored on input**
-  (never validated) and **regenerated as the entity's display name on output**. You
-  may write anything inside it. It attaches to the token before it.
-- The name **cannot lie**, because nothing reads it — this kills the v1.1
-  silent-mismatch bug (where `Stanford [I136199984]` resolved to Harvard).
-- The parser is **offline-pure**: no entity resolver in the parse path. A
-  best-effort "⚠ that ID isn't Harvard" is the editor/linter's job, never the
-  parser's, and never blocks.
-- An entity reference with **only** an annotation and no ID is a **loud error**:
-  `institution is [Harvard]` → `OQL_MISSING_ENTITY_ID` (corpus row **6**).
-- Values are **bare** (no `entity/id` prefix): `I136199984`, `de`, `article`, `13`,
-  `gold` — the column carries the namespace (per oqo-spec §2). A `col_…` collection
-  reference is also a valid bare value (corpus row **49**).
-
-**Which values get a `[display name]` on output is per-column (registry-driven):**
-the renderer synthesizes a name only when the bare value is **not human-readable** —
-opaque OpenAlex IDs (`I136199984` → `[Harvard University]`) and **country codes**
-(`de` → `[Germany]`). Already-readable slugs (`article`, `gold`, `en`) get **no**
-annotation — `article [article]` is noise. This is a column property in the
-properties registry (#294/#331), not an entity-vs-string distinction.
-
-**Value case is cosmetic, not semantic.** The engine is case-insensitive on values
-(verified live 2026-06-02: `US`==`us`, `Article`==`article`, `I136…`==`i136…`), so
-OQL canonicalizes case purely for readability: **enum slugs → lowercase**
-(`type is Article` → `type is article`), **ISO country codes → uppercase**
-(`country is us` → `country is US`), and **IDs / search text → verbatim** (an
-OpenAlex ID's uppercase prefix is conventional; search text is the user's literal
-words). `col_…` references are always preserved. (Per-column canonical case is a
-registry property.)
-
-### 3.2 Value groups: `is ( … )` — a condition's value is ALWAYS a parenthesized group (#363, #554)
-
-```
-works where institution is (I33213144 [Harvard] or I97018004 [Stanford])   (row 3)
-works where type is (article or review)                                    (row 5)
-works where type is (article)                                              (singleton — same shape)
-works where country is (us and uk)                                         (row 92, D7)
-works where institution is (not I33213144 and not I97018004)               (row 4)
+get <works phrase>[, <order>]
+get <things phrase>[, <order>]
 ```
 
-- **The parens rule (one rule, every condition operator — #554, zero
-  exceptions):** in canonical OQL a condition's **value slot is always a
-  parenthesized group**, whether it holds one atom or many: `type is (article)`,
-  `title has (cancer)`, `year >= (2019)`, `open access is (true)`,
-  `language is (unknown)`, `work is in collection (col_abc123)`,
-  `abstract is similar to ("…")`. An *atom* is one bare word, one quoted
-  phrase, or one parenthesized sub-group. This replaces the old conditional
-  arity rule ("parens when 2+, bare when single") — one shape, no exception for
-  the grammar, the editor, or the reader to carry. **Directives are not
-  condition values** and keep their own shapes (`group by topic, year`,
-  `sample 500 seed 7`).
-- **Bare singletons are accepted input only** (`type is article`,
-  `year >= 2019`, `title has cancer` all parse) and canonicalize to the
-  parenthesized form. They are part of the lenient input layer — normative in
-  the corpus, absent from user-facing teaching docs. **2+ bare values/terms
-  with no parens stay a loud error** (`type is article review` →
-  `OQL_UNDELIMITED_TERM_LIST`) — that is the rule that **kills the silent
-  keyword-truncation footgun**: a reserved word (`group by`, `and`, …) can only
-  "float" inside unquoted free text when there are 2+ unparenthesized terms.
-- **Inside an `is ( … )` group the join is ALWAYS explicit (#554):** `or` /
-  `and` / `not`, nesting allowed; the field + operator distribute over every
-  atom. **Bare space-adjacency between two values is a loud error**
-  (`type is (article review)` → `OQL_GROUP_VALUES_NEED_CONNECTIVE`, fix-it:
-  "add `or` between the values — or `and` if you mean both"), never a silent
-  implicit AND. (It used to silently parse as AND — for a single-valued field
-  like `type` that is the empty set: count 0, no error, the exact species of
-  silent misparse this language forbids. The `has ( … )` search side is the
-  one deliberate adjacency exception — a bare-word run there is ONE stemmed
-  node, §3.6.) `country is (us or uk)` is an OR-branch of equality leaves;
-  `country is (us and uk)` (explicit `and`) means works with **both** a US and
-  a UK authorship (corpus row 92 — D7; for a single-valued field it is the
-  empty set, which is coherent, not a footgun). Negation inside a group is
-  the bare prefix `not` binding the next atom (`has (cancer and not mouse)`,
-  §3.5).
-- **Scalar-domain operators take exactly ONE atom in their group:** a
-  comparison bound, a boolean, a collection ref, a semantic passage.
-  `year >= (2019 or 2020)`, `retracted is (true or false)`,
-  `work is in collection (col_a or col_b)` → `OQL_GROUP_NEEDS_ONE_VALUE` —
-  the syntax shape is uniform (always parens); what may go INSIDE the group
-  stays per-operator/domain. (`year is (2019 or 2020)` is fine — `is` on a
-  numeric column is an ordinary set.)
-- **Search values are the exception (D2 reversal, #363):** for a `has ( … )`
-  search group, a **maximal run of bare connective-free words is ONE value node**
-  (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
-  `title-abstract has (mental health)` is a single
-  `{title_and_abstract.search: "mental health"}` leaf. The engine adjacency-boosts
-  the whole run (`match_phrase`), so splitting it would silently change ranking;
-  recall is unaffected (cross-field AND, #399). Explicit `and`/`or`/`not` still build
-  the tree *between* such nodes (`(mental health or anxiety)` = two nodes OR'd). See
-  §3.6 and corpus rows 126–127. *(This reverses the earlier "space inside a group =
-  AND" rule for **search** values; it still holds for **enum/value** groups like
-  `country is (us and uk)` above.)*
-- `not (a or b)` negates the whole group: `NOT(a OR b)` = `(NOT a) AND (NOT b)` by
-  De Morgan — canonical NNF carries the negation on the leaves, and the canonical
-  render keeps the group together with the `not`s inside: `x is (not a and not b)`
-  (corpus row **4**; see §3.2.2 and §3.5). (`is not (a or b)` is an accepted input
-  spelling for the same thing.)
-- **`unknown` / `null` inside a group is the null sentinel (#554)** — exactly as
-  in the bare-scalar position (§3.8), so `language is (unknown)` is the
-  canonical null test and mixed groups are expressible:
-  `language is (en or unknown)` = language-is-English OR language-unknown.
-  (Before #554 an in-group `unknown` misparsed as a literal string.) A literal
-  value spelled "unknown" is written quoted (`is ("unknown")`), which is also
-  how the canonical render emits it.
-  - **One separator per level** — `or`/`and` inside a `( … )` group, not commas;
-    a comma in a group is `OQL_COMMA_IN_GROUP`.
-- **Removed:** the `any (…)` / `all (…)` / `any of` / `is in` list keywords and
-  comma-separated lists. `(a or b)` / `(a and b)` are strictly more expressive
-  (they nest; flat keyword lists can't) and lose no capability.
-- `( … )` does **double duty**: a clause-group at the clause level
-  (`(year >= (2020) or open access is (true))`) and a value/term group after an operator.
-  The position disambiguates (a group right after `is`/`has` is a value/term
-  group; one where a clause is expected is a clause group).
+A list of works returns one row per work. A list of things returns authors, institutions, journals and other things chosen by their own fields: what is on their own record, not counts of some works.
 
-### 3.2.1 Numeric bounds and ranges (#363, decision 24)
-
-A numeric field (`year`, `citation count`, `FWCI`) takes a single number, or a range
-written as **explicit endpoint clauses** with the comparison operators:
+### Tables of groups
 
 ```
-works where year >= (2019) and year <= (2023)     (closed range — two endpoint clauses)   (row 97)
-works where FWCI >= (1.5) and FWCI <= (3.0)       (floats allowed)                          (row 99)
-works where year >= (2019)                         (single-ended bound)
-works where year > (42) and year < (100)           (strict bounds — stay strict)             (row 100)
+get the <numbers> <of|to|for> <works phrase> by <split>[ and <split>][, <order>][. Show <own fields>.][ Only <things> with <count> <works phrase>.]
+get the <numbers> <of|to|for> <works phrase>
 ```
 
-A comparison's group takes **exactly one bound** (#554 — `year >= (2019 or
-2020)` is `OQL_GROUP_NEEDS_ONE_VALUE`, never a distribution); the bare form
-(`year >= 2019`) stays accepted input.
+A table takes a set of works, splits it into groups, and gives numbers for each group. With two splits there is one row per pair. A table has five parts, each with its own words: the works ([works phrase](#the-works-phrase)), the [splits](#splits), [which groups](#which-groups) to keep, the [numbers](#numbers), and the [order](#orders).
 
-- **There is no dash range literal.** The `year is 2019-2023` / open-ended `year is
-  2019-` / `year is -2023` spellings were **removed** as OQL surface syntax (decision
-  24): write the explicit endpoints instead. This makes the parser simpler (a numeric
-  value is a pure number, not a "mostly-int string"), buys clean type-checking, and
-  fits OQL's picky/precise philosophy. Typing a dash range on a num field is a **hard
-  error** (`OQL_RANGE_LITERAL_REMOVED`, row 179) with a fix-it echoing the endpoint
-  form — *not* a lenient parse, and *not* a generic "not a number".
-- **A closed range is the two-bound implicit-AND** `year >= (2019) and year <= (2023)`.
-  Because `filter_rows` is an implicit AND, the two clauses round-trip as two bound
-  leaves; the canonical render is lower-bound-then-upper-bound.
-- **Strict bounds stay strict — no inference.** `year > 42 and year < 100` renders
-  exactly as written; it is **not** rewritten to the inclusive `year >= 43 and year <=
-  99`. (The old ±1 strict-integer-pair collapse, which fed the removed dash literal,
-  was dropped with it.)
-- **The OpenAlex URL range form is unaffected.** `publication_year:2019-2023` (and
-  `fwci:1.5-3.0`, the open `:-2023`, strict `:>42`) still parse from URLs and still
-  render *to* URLs from the bound leaves — only the OQL *surface literal* went away, so
-  URL round-trip survives.
-
-### 3.2.2 Canonical render merges same-field structure (decision 20, #432/#363)
-
-Published systematic reviews are **search-term trees** — "this term and that term,
-but not that term" — written to be plugged whole into one text search; they are not
-filter-triple trees. Canonical OQL therefore renders all the boolean structure that
-belongs to **one field** as **one clause**, the tree inside the value group:
+The word before the works phrase depends on the last number: `to` after `sum of citations`, `for` after `sum of APCs paid`, `of` otherwise.
 
 ```
-works where title has ((vape or vaping) and (health or harm))
-works where title has (not dog and cat)
-works where country is (not FR and US)
-works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford])   (row 4)
+get the sum of citations to works about kelp by year
+get the sum of APCs paid for works about kelp by publisher
 ```
 
-- **The rule:** among the children of one boolean node — including the implicit
-  top-level AND of the filter rows — the items sharing one **(field,
-  base-operator)** pair merge into a single `field op ( tree )` clause, the boolean
-  structure preserved inside the parens. A negated leaf renders as a bare `not
-  <atom>` prefix (§3.5), merged or standalone alike — and since #554 the prefix
-  always sits INSIDE the value group (`title has (not dog)`,
-  `country is (not FR)`, `title has (not dog and cat)`), one position for both
-  the singleton and merged cases.
-- **All filter kinds**, not just search: `country is (not FR and US)` is canonical
-  exactly like its `has` twin. Search groups merge by **base field** (a
-  stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
-  mix is the row-78 expressiveness win); `is` groups merge by column.
-- **The principled boundary:** comparison operators live on the leaf (`>=`, `<`),
-  so mixed-comparator pairs never merge — bound endpoints stay as separate clauses
-  (`year >= 2019 and year <= 2023`, §3.2.1, decision 24). Null (`is unknown`),
-  collection membership, semantic search, and bool/date columns keep their own
-  surfaces and never merge. Cross-field structure necessarily stays multi-clause.
-- **OQO is untouched.** Canonical OQO remains maximally distributed (NNF,
-  leaf-level `is_negated`, top-level AND = `filter_rows`); the parser still
-  distributes the field over every atom (§3.2). This rule is **render-direction
-  only** — it makes OQO→OQL emit the same forms OQL→OQO already accepts, so the
-  round-trip identity (§1) is preserved by construction.
-- **Ordering inside the merged group** follows the same operand-order rule as
-  everything else (§1, decision 30): the user's given value order is preserved on
-  the OQL/builder path, and alphabetized only on the legacy-URL / NL paths. Merged
-  and hand-written groups therefore read the same.
-- Decided in **#432** (the SR branch/leaf "One Right Way"), charter decision 20,
-  grounded in the #434 survey of 732 real published SR search strings (the
-  dominant real-world shape is a flat AND of OR-groups over one field — which the
-  old canonical shattered into per-group clauses).
+### The works phrase
 
-### 3.3 Delimiters and the no-escaping result
+Lists and tables describe their works with the same words. The parts go in this order, and the echo puts them back in it whatever order they were typed in:
+
+| # | Part | Canonical words |
+|---|---|---|
+| 1 | Whose works | `[University of Kansas](I146416000)'s works`: one institution, country or author that defines the set |
+| 2 | Yes/no words | `open access`, `closed access`, `retracted`, `non-retracted`, `top 1% cited`, `top 10% cited` |
+| 3 | The type | `works`, `articles`, `reviews`, `preprints`, `books`, `book chapters`, `datasets`, `conference papers`, `dissertations`, `editorials`, `letters`, `reports`; `all works` in a table when nothing else narrows them |
+| 4 | Time | `since 2020`, `from 2022`, `before 2010`, `through 2010`, `from 2018–2025`; dates `since 2021-06-01`, `through 2021-09-30`, `from 2020-10-01 through 2021-09-30` |
+| 5 | Searches | `about kelp`; `with kelp in the title`, `in the abstract`, `in the full text`, `in the title or abstract` |
+| 6 | Citations | `citing [W](W2741809807)`, `cited by [W](W2741809807)`, `citing works in the collection [C](col_8yWKmRNyEr)` |
+| 7 | Places | `from [Kenya](KE)`, `from [Africa](Q15)`, `from A or B`, `from both A and B`, `from all of A, B, and C`; `co-authored with [institution]` |
+| 8 | People | `by [Jason R Priem](A5023888391)`, `co-authored by A and B`, `with [A](A5023888391) as corresponding author` |
+| 9 | Where the work sits | `in [Nature](S137773608)`, `in SDG [Climate action](13)`, `in the topic [..](T10878)`, `in the subfield`, `in the field`, `in the domain`, `in the collection [C](col_8yWKmRNyEr)` |
+| 10 | Publisher, funder, license | `published by [Elsevier BV](P4310320990)`, `funded by A or B`, `under the [CC-BY](cc-by) license` |
+| 11 | Anything else | `where <conditions>` ([Conditions](#conditions)) |
+
+All together:
+
+```
+get [University of British Columbia](I141945490)'s open access articles since 2020 about kelp, most cited first
+```
+
+Rules the echo follows:
+
+- **The possessive.** When exactly one institution, country or author narrows the works, it becomes the possessive: `where country is GB` echoes `get [United Kingdom](GB)'s works`. With two (an institution and an author), neither is: `get works from [Massachusetts Institute of Technology](I63966007) by [Jason R Priem](A5023888391)`. A table split by institution, country or author never uses the possessive.
+- **`co-authored with`** replaces `from` for an institution when the table splits by institution: `get the count of works since 2015 co-authored with [Christian-Albrechts-Universität zu Kiel](I32021983) by company`.
+- **Time.** Years are whole years: `year > 2019` echoes `since 2020`; a closed range uses an en dash (`from 2018–2025`). Full dates appear only when the query carries them. In a table split by year, the time follows `by year` instead (`by year since 2000`).
+- **Searches** go in the order about, title, abstract, full text, title or abstract.
+- **Kinds.** `in [X]` alone means a source (a journal or repository). Every other value whose kind isn't obvious names it: `SDG`, `the topic`, `the subfield`, `the field`, `the domain`, `the collection`, `the ... license`. A role other than an entity's default names its key (`with [A](A5023888391) as corresponding author`).
+- **Lists of values.** Several institutions, countries, sources or funders that any work may match read `A or B`. Works that must match all of several places read `from both A and B` or `from all of A, B, and C`.
+- **Work titles** in `citing` and `cited by` are cut at a word boundary within 48 characters, with an ellipsis: `get works citing [The state of OA: a large-scale analysis of the…](W2741809807)`. The ID is what counts.
+- **`where`** holds only what the phrase can't say: an `or` across fields, nested groups, negations, and fields with no phrase. The easy parts stay in the phrase.
+
+### The things phrase
+
+```
+get <things>[ <parts>][ <own thresholds>][ where <own-field conditions>][, <order>]
+```
+
+**Things:** `authors`, `institutions`, `companies`, `countries`, `sources`, `journals`, `repositories`, `publishers`, `funders`, `topics`, `fields`, `subfields`.
+
+| Part | Canonical words | Example |
+|---|---|---|
+| An author's own record | `at [institution]`, `in [country]`, each with an optional `in 2+ years` and a time | `get authors at [University of British Columbia](I141945490) in 2+ years since 2020` |
+| Never on the record | `never at [institution]`, `never in [country]` | `get authors never at [University of British Columbia](I141945490) where last known institution is [University of Washington](I201448701)` |
+| A thing's own place | `in [country]`, `in [continent]` (not for authors) | `get institutions in [Africa](Q15)` |
+| A classification | `in the field [X]`, `in the subfield [X]`, `in the domain [X]` | `get topics in the field [Computer Science](17)` |
+| Leaving some out | `except [X]`, `except ([A], [B])` | `get institutions in [Germany](DE) except [Max Planck Society](I149899117)` |
+| Own numbers | `with an h-index`, `an i10-index`, `a works count`, `a citation count`, then `above`, `at least`, `below` or `at most`, then a number | `get authors with a works count above 1000` |
+| Any other own field | `where <conditions>` | `get institutions where city is Vienna` |
+
+`at [X]` reads each author's own record (the institutions on their profile, with years), not the papers' affiliations. Bare `at [X]` means any year; a window is written out (`at [X] since 2022`). OpenAlex's best guess at where an author is now is the field `last known institution`.
+
+### Numbers
+
+Numbers are joined with `and`, with an Oxford comma for three or more. A number covers the matching works in each group.
+
+| Number | Meaning |
+|---|---|
+| `count` | how many works |
+| `share` | each row's slice of the group one level up: of the whole set with one split; of each year with `by year and country` |
+| `sum of citations`, `sum of APCs paid` | totals over the works |
+| `mean FWCI`, `median FWCI`, `mean citations`, `median citations` | averages over the works |
+| `percent <yes/no word>` | the rate within each row: `percent open access`, `percent retracted`, `percent top 1% cited`, `percent top 10% cited`, `percent with an abstract`, `percent with full text`, `percent with a DOI` |
+
+```
+get the percent open access, percent retracted, percent with an abstract, percent with full text, percent with a DOI, percent top 1% cited, and percent top 10% cited of works about kelp by year
+```
+
+A thing's own fields (`h-index`, `works count`) are not numbers about the works: they go in a [`Show` sentence](#show). `share` and the own fields need a split.
+
+### Splits
+
+One or two splits, joined with `and`, never the same split twice:
+
+- **Fields of the works:** `year`, `type`, `language`, `open access`, `open access status`, `retracted`, `topic`, `subfield`, `field`, `domain`, `SDG`.
+- **Things:** `author`, `corresponding author`, `institution`, `company`, `country`, `journal`, `source`, `repository`, `publisher`, `funder`.
+
+```
+get the count of works about kelp by year since 2000
+get the count of works about kelp by field and year
+```
+
+A yes/no split gives two groups (`open access` and `not open access`). `topic`, `subfield`, `field` and `domain` use each work's primary topic; `journal` and `source` use its primary location. Every other split is said in [the general form](#the-general-form).
+
+### Which groups
+
+Which groups is not which works. Words right after a split word choose the groups; the works phrase chooses the works.
+
+| Words after the split | Groups | Example |
+|---|---|---|
+| `in (<value>, ...)` | just these, in this order, up to 100 | `get the count of works about kelp by type in ([article](article), [review](review))` |
+| `in the collection [C]` | the members of a [collection](#collections) | `get the count of works about kelp by country in the collection [European Union (EU27)](col_LV29j8URoX)` |
+| `at [institution]`, `in [country]` (authors) | people whose own record has it | `get the count of works about kelp by author at [University of British Columbia](I141945490) since 2022` |
+| `in [country]`, `in [continent]` | the things' own country or continent | `get the count of works about kelp by institution in [Canada](CA)` |
+| `with an h-index above 40` | an own number | `get the count of works about kelp by author with an h-index above 40` |
+| `except [X]`, `except ([A], [B])` | everyone but these | `get the count of works about kelp by country except [Norway](NO)` |
+
+A list of journals echoes as `by source in (...)`. `by author at [X]` keeps the people whose record has X and counts all their matching works, wherever they wrote them; `from [X] by author` keeps the works with an X author and counts everyone on them:
+
+```
+get the count of works about kelp by author at [University of British Columbia](I141945490) since 2022
+get the count of works about kelp from [University of British Columbia](I141945490) by author
+```
+
+### Only
+
+`Only` keeps the groups with enough of the same works, as its own sentence after the table:
+
+```
+get the count of works about kelp by author. Only authors with at least 20 works about kelp.
+```
+
+- The words: `Only <things> with <more than | at least | fewer than | at most> <N> <works phrase>.`
+- `<things>` is the plural of a split by things in the table.
+- The works phrase is the table's own; the echo writes it out in full (`Only authors with at least 20 works.` echoes with `about kelp`). A count over other works is refused.
+- A threshold on an own field folds into the split: `Only authors with an h-index above 50.` echoes as `by author with an h-index above 50`.
+
+### Show
+
+`Show` adds a thing's own fields as columns: `Show h-index.`, `Show works count.`, `Show h-index and works count.` It needs a split by things that have the field. An order by an own field shows it without `Show`:
+
+```
+get the count of works about kelp by author, highest h-index first. Show works count.
+```
+
+When a table has both, `Show` comes before `Only`.
+
+### Orders
+
+The order is the words after the last comma. The echo leaves out a default order.
+
+**Lists of works:**
+
+| Order | Sorts by |
+|---|---|
+| `, most cited first` / `, least cited first` | citation count |
+| `, newest first` / `, oldest first` | publication date |
+| `, highest FWCI first` / `, lowest FWCI first` | field-weighted citation impact |
+| `, alphabetical by title` / `, reverse alphabetical by title` | title |
+| `, best matches first` | relevance; needs a search; the default when there is one |
+| `, most cited (age-adjusted) first` | citations for their year; the default without a search, so written only with one |
+
+Any other sortable field has words by its kind: a number `, highest reference count first` / `, lowest ... first`; a date `, latest updated date first` / `, earliest ... first`; a yes/no field `, open access first` / `, open access last`; text or a code `, alphabetical by type` / `, reverse alphabetical by type`; an ID `, in source ID order` / `, in reverse source ID order`.
+
+```
+get works about kelp, most cited (age-adjusted) first
+get works since 2020, highest reference count first
+```
+
+**Lists of things:** `, highest h-index first`, `, lowest h-index first`, `, highest i10-index first`, `, lowest i10-index first`, `, most cited first`, `, least cited first`, `, lowest works count first`. The default is most works first.
+
+```
+get authors with an h-index above 50, lowest i10-index first
+```
+
+**Tables:**
+
+| Order | Sorts by |
+|---|---|
+| `, highest <number> first` / `, lowest <number> first` | any number in the table (`, highest mean FWCI first`, `, highest share first`); with one number, `, highest first` |
+| `, most works first` / `, fewest works first` | count |
+| `, newest first` / `, oldest first` | years, when the first split is year |
+| `, alphabetical by <split>` / `, reverse alphabetical by <split>` | the group's name, for a split by text, a code or a yes/no field |
+| `, in <split> ID order` | the group's ID, for a split by things |
+| `, highest h-index first` / `, lowest ... first` | a thing's own field (`h-index`, `i10-index`, `works count`, `citation count`); shows it |
+
+```
+get the count of works about kelp by country, fewest works first
+get the count of works about kelp by year, newest first
+```
+
+An order sorts every group, not just the first page, and orders two splits as one flat table. With no order, a table comes back most works first, and a table whose first split is year comes back oldest first.
+
+## Conditions
+
+Conditions follow `where`: at the end of a works phrase, in a things phrase, in [the general form](#the-general-form), and inside [sets](#sets). They join with `and` and `or`, and group with parentheses:
+
+```
+get works where institution is [Harvard University](I136199984) or funder is [National Institutes of Health](F4320332161)
+```
+
+A clause is a field, a verb, and a value. The verbs:
+
+| Verb | Clause |
+|---|---|
+| `is`, `is not` | a value or a group of values: `type is not [review](review)` |
+| `is above`, `is at least`, `is below`, `is at most` | a number: `citation count is at least 100` |
+| `has` | a [search](#search): `title has kelp` |
+| `is similar to` | a semantic search: `title-abstract is similar to ("...")` |
+| `published since`, `before`, `after`, `in`, `through` | a year or date: `published before 2000` |
+| `it's`, `it has`, `it doesn't have` | a [yes/no field](#yesno-fields): `it has a DOI` |
+| `is in the collection`, `is not in the collection` | a [collection](#collections) |
+| `is in the set`, `is not in the set` | a [set](#sets) |
+| `it cites`, `it's cited by`, `it's related to` | the work's [relations](#relations) |
+
+A condition the works phrase can say moves into the phrase: `where year >= 2020` echoes `since 2020`, `where type is article` echoes `articles`, `where it's open access` echoes `open access works`.
+
+### Entity references
+
+An entity is a link: the name in brackets, the ID in parentheses.
+
+```
+get works where institution is [Harvard University](I136199984) or funder is [National Institutes of Health](F4320332161)
+```
+
+- **The ID is what counts.** The name is ignored on input and regenerated on output, so it can't lie: `[those Harvard folks](I136199984)` echoes `[Harvard University](I136199984)`. On input the name may be left out (`(I136199984)` in a sentence, a bare `I136199984` after `where`).
+- **A name with no ID is an error:** `institution is [Harvard]` is refused with the fix `[Harvard University](I136199984)`. The parser never looks names up.
+- **IDs are bare:** `I136199984`, `KE`, `Q15`, `col_LV29j8URoX`, no `https://openalex.org/` prefix needed.
+- **Closed vocabularies are links too**, with their code as the ID: `[article](article)`, `[English](en)`, `[gold](gold)`, `[journal](journal)`. Countries use their two-letter code (`[Kenya](KE)`), continents their Wikidata ID (`[Africa](Q15)`), fields, subfields, domains and SDGs their number (`[Computer Science](17)`).
+- **Value case is cosmetic.** Matching ignores case. The echo writes country codes in capitals (`KE`), vocabulary codes in lowercase (`article`), and IDs and search text as given.
+
+### Value groups
+
+One value needs no parentheses. Several values share one pair, joined with `or` or `and`:
+
+```
+get works where type is ([article](article) or [review](review))
+get works where institution type is ([company](company) and [government](government))
+```
+
+- **Inside a group, the join is always written.** `type is (article review)` is refused: add `or` between the values (or `and` if you mean both). Commas are refused too.
+- **Two or more values need parentheses.** `type is article review` is refused.
+- **`or`** matches any value; **`and`** matches works with all of them (for a field with one value per work, like `type`, that is no works, which is coherent, not an error).
+- **Groups nest:** `institution type is (([company](company) or [government](government)) and not [education](education))`.
+- **A comparison, a yes/no value, a collection and a semantic passage take exactly one value.** `year >= (2019 or 2020)` is refused; `citation count is (100 or 200)` is fine (`is` on a number is an ordinary set).
+- **`unknown`** in a group is the empty value: `language is ([English](en) or unknown)`.
+
+### Merged same-field clauses
+
+Conditions on one field gather into one clause, with the boolean structure inside the parentheses:
+
+```
+get works where funder is ([National Institutes of Health](F4320332161) and not [Wellcome Trust](F4320311904)) or type is [review](review)
+get works with (kelp NOT urchin) in the title
+```
+
+- Affirmed values gather into `is (A or B)` or `is (A and B)`. Negated values joined by `and` move the negation to the verb: `institution is not ([University of Florida](I33213144) or [Stanford University](I97018004))`. Any other group writes `not` before each negated value.
+- Search conditions on one place gather into one search string.
+- Comparisons stay separate clauses (`citation count is above 100 and citation count is below 1000`), as do collections, sets and semantic searches.
+- This is a rule about the text only: the OQO keeps one leaf per value.
+
+### Numbers and years
+
+A number field takes `is above`, `is at least`, `is below` or `is at most`, one clause per bound:
+
+```
+get works where citation count is above 100 and citation count is below 1000
+get works where FWCI is at least 1.5 and FWCI is at most 3
+```
+
+- **Bounds stay as written.** `year is above 42 and year is below 100` is not rewritten to inclusive bounds.
+- **Four-digit years are whole years.** In a works phrase they read as time words: `year >= 2019 and year <= 2023` echoes `from 2019–2023`, and `year > 2019` echoes `since 2020`. Inside a `where` that the phrase can't absorb, they read `published since 2015`, `published before 2000`, `published after 2020`, `published in 2015`, and dates the same way (`published since 2021-06-01`).
+- **There is no dash-range value.** `year is 2019-2023` is refused with the fix `year >= 2019 and year <= 2023`. (The classic URL form `publication_year:2019-2023` still works on URLs.)
+- **`after` a date is ambiguous** (does it include the day?) and is refused: write `published since 2021-06-02`, or `since 2021-06-01` to include it. `after` a year means the next year on.
+- **Numbers of 10,000 or more** take thousands commas in a things phrase (`with a citation count above 100,000`).
+
+### Booleans and precedence
+
+```
+get works where type is [article](article) or (type is [review](review) and language is [English](en))
+```
+
+- **`and` binds tighter than `or`**, and `not` binds tightest (`NOT > AND > OR`), the order of boolean algebra and of Web of Science and Scopus. A mix of `and` and `or` at one level is not an error.
+- **The echo always writes the parentheses**, so the grouping is never left to the reader.
+- **Two conditions with no `and` or `or` between them** are refused.
+- Between conditions and inside value groups, `and`, `or` and `not` are lowercase. Inside a search string, `AND`, `OR` and `NOT` are capitals ([Search](#search)).
+
+### Negation
+
+Negation goes on the verb:
+
+```
+get works where type is not ([review](review) or [editorial](editorial))
+```
+
+- **One negated value, or negated values joined by `and`:** `is not [X]`, `is not ([A] or [B])` (works with none of them).
+- **Any other group** writes `not` before each negated value: `funder is ([National Institutes of Health](F4320332161) and not [Wellcome Trust](F4320311904))`, `type is (not [article](article) or not [review](review))`.
+- **Yes/no fields negate by their word:** `closed access`, `non-retracted`, `it doesn't have an abstract`, `it's not retracted`.
+- **Searches negate with `NOT`** inside the search string: `(kelp NOT urchin)`.
+- **An author's record negates with `never`:** `never at [X]`, `never in [X]`.
+- **Collections and sets negate on the verb:** `is not in the collection`, `is not in the set`, `it doesn't cite any work in the set`.
+
+### Search
+
+**`has` searches; bare words are stemmed and quotes mean exact.**
+
+| Search string | Meaning |
+|---|---|
+| `cat` | one word, stemmed: also matches *cats* |
+| `"cat"` | exact: no stemming |
+| `(climate change OR warming)` | a run of bare words is one stemmed search node, ranked higher when the words are adjacent; `OR` joins two nodes |
+| `"climate change"` | the exact, adjacent phrase |
+| `(stemmed "whopper junior")` | an adjacent phrase that keeps stemming (matches *whoppers junior*) |
+| `"rock or roll"` | inside quotes, `or` is a word: one exact phrase |
+| `((climate AND change) OR warming)` | `AND` binds tighter than `OR`; the echo writes the parentheses |
+| `(kelp NOT urchin)` | `NOT` leaves works out |
+| `(road traffic "and" ghana)` | a quoted operator word is a literal word |
+
+```
+get works with (climate change OR warming) in the title
+get works with "climate change" in the title
+get works where title has kelp or abstract has urchin
+```
+
+- **The search string is portable**, as a systematic review would report it: capital `AND`, `OR` and `NOT`, parentheses for grouping. One word or one quoted phrase needs no parentheses; anything more does. Lowercase `and`, `or`, `not` and `&` work in a search string, and the echo writes capitals.
+- **Two or more bare words need parentheses or quotes** after `has`: `title has climate change` is refused, because a reserved word could otherwise be swallowed silently.
+- **Places:** `about` searches the title, the abstract and the keywords. A `with ... in the ...` phrase searches one place: `the title`, `the abstract`, `the full text` (title, abstract and full text), `the title or abstract`. After `where`, searches name their field: `title has`, `abstract has`, `title-abstract has`, `title-abstract-keywords has`, `full text has`, `raw affiliation has`, `byline has`.
+- **On `raw affiliation` and `byline`**, a quoted phrase and a proximity window each stay within one affiliation or one byline.
+- **Semantic search:** `title-abstract is similar to ("ocean acidification effects on coral reefs")` searches by meaning and returns the 50 closest works. It takes exactly one quoted passage. `title` and `abstract` take it too.
+- **OQL never adds words.** No synonyms, no expansions: the search is exactly the string.
+- **No other search syntax leaks through.** `~` (fuzzy matching or slop), `|` (the URL's OR) and `\` (an escape) are refused with a fix, never passed to the engine. Fuzzy matching is not in OQL yet.
+
+The openalex.org search box treats quotes differently: there a quoted phrase stays stemmed. The translator keeps the meaning: the URL `title_and_abstract.search:"climate models"` echoes `get works with (stemmed "climate models") in the title or abstract`.
+
+### Proximity and wildcards
+
+**Proximity** finds two or more terms within N words of each other, in any order:
+
+```
+get works with ("smart" and "phone" within 3 words of each other) in the title
+get works with (smart and phone within 3 words of each other) in the title
+get works with ("machine learning" and "neural network" within 5 words of each other) in the title
+get works where raw affiliation has (london and hospital within 5 words of each other)
+```
+
+- Three or more terms list with an Oxford comma: `("foo", "bar", and "baz" within 3 words of each other)`.
+- Terms are all bare (stemmed) or all quoted (exact). A mix is refused. A quoted term may be a phrase.
+- Proximity needs at least two terms.
+
+**Wildcards:** `*` matches any characters and `?` exactly one. A term with a wildcard runs on exact (unstemmed) text, so it matches the word forms as written:
+
+```
+get works with bar* in the title
+get works with wom?n in the title
+get works with "smart* phone" in the title
+get works with ("smart*" and "phone" within 3 words of each other) in the title
+```
+
+- A wildcard may sit inside a word (`foo*bar`) or a quoted phrase (`"smart* phone"`).
+- A wildcard may not start a word (`*cycle` is refused), and `*` needs at least 3 characters before it (`ab*` is refused).
+- In a proximity, a wildcard term must be quoted (and so all its terms are quoted).
+- `stemmed` and a wildcard contradict each other and are refused.
+
+### Null and unknown
+
+`unknown` is the empty value:
+
+```
+get works where language is unknown
+get works where language is not unknown
+get works where language is ([English](en) or unknown)
+get works from 2024 about kelp where institution is unknown
+```
+
+### Yes/no fields
+
+Yes/no fields read as words about the work. In the works phrase, the adjectives come before the type: `open access`, `closed access`, `retracted`, `non-retracted`, `top 1% cited`, `top 10% cited`.
+
+```
+get open access retracted articles
+get [Ghana](GH)'s works where it has a DOI and it doesn't have an abstract
+get works where type is ([article](article) or [review](review)) and (it's open access or it's retracted)
+```
+
+After `where`, the sentences are `it's open access`, `it's retracted`, `it's in the top 1% by citations`, `it's in the top 10% by citations`, `it's from the global south` (each with `it's not`), and `it has a DOI`, `it has an ORCID`, `it has an abstract`, `it has full text` (each with `it doesn't have`). A yes/no field takes exactly one value. A sentence the works phrase can say moves into it: `where it's open access` echoes `open access works`.
+
+### Collections
+
+A [collection](https://help.openalex.org/how-to/collections/) is a saved set of entities, addressed by a `col_...` ID, written as a link:
+
+```
+get works in the collection [Example: altmetrics papers](col_8yWKmRNyEr)
+get works where work is not in the collection [Example: altmetrics papers](col_8yWKmRNyEr)
+get works from 2024 about kelp where country is not in the collection [European Union (EU27)](col_LV29j8URoX)
+```
+
+- **What a collection means depends on what it holds.** `works in the collection [X]` is the works in a works collection, or the works from the members of a collection of countries, institutions or people.
+- **`citing works in the collection [X]`** is the works citing any work in a works collection.
+- **In a table**, `by country in the collection [X]` gives one row per member ([which groups](#which-groups)).
+- **One collection per clause.** Join several with `or` clauses.
+- **In a sentence, write the collection's ID as a link** (`[name](col_...)`, or `(col_...)` with the name left out); a bare `col_...` is an error.
+
+### Sets
+
+A set is a query inside a condition, written as a phrase with no `get` that names what it holds:
+
+```
+get works since 2025 where author is in the set (authors of works where title-abstract has kelp and published since 2022)
+get works about kelp where author is in the set (authors where last known institution is [University of Kansas](I146416000))
+get works where institution is in the set (institutions where country is [Kenya](KE))
+```
+
+- The phrase is `works where ...`, `authors of works where ...`, or `<things> where <their own fields>`.
+- **The set must hold what the field takes.** `author is in the set (works ...)` is refused: an author field takes authors.
+- **A set holds up to 450,000 IDs**, to stay inside about ten seconds; a bigger one is refused, with the fix to narrow it or save it as a collection.
+
+### Relations
+
+A work's citations read as verbs. In the works phrase: `citing [W]`, `cited by [W]`, `citing works in the collection [C]`. After `where`, a set or a related work:
+
+```
+get works citing [The state of OA: a large-scale analysis of the…](W2741809807)
+get works cited by [The state of OA: a large-scale analysis of the…](W2741809807)
+get works where it's related to ([The state of OA: a large-scale analysis of the prevalence and impact of Open Access articles](W2741809807))
+get the count of works where it cites a work in the set (works where institution is [University of Kansas](I146416000)) by year
+get works from 2024 in the topic [CRISPR and Genetic Engineering](T10878) where it doesn't cite any work in the set (works where institution is [University of Kansas](I146416000))
+get works since 2020 where it isn't cited by any work in the set (works where institution is [University of Kansas](I146416000) and published in 2023)
+```
+
+The set forms: `it cites a work in the set (...)`, `it doesn't cite any work in the set (...)`, `it's cited by a work in the set (...)`, `it isn't cited by any work in the set (...)`, `it's related to a work in the set (...)`, `it isn't related to any work in the set (...)`. To leave out works citing one paper, use the set form.
+
+### Delimiters
 
 | Delimiter | Meaning |
 |---|---|
-| `( … )` | boolean grouping: a group of clauses **and** a group of values/terms (`is (a or b)`, `has (a or b)`) |
-| `[ … ]` | annotation slot — ignored on input, regenerated as a display name on output |
-| `" … "` | literal text to match (a phrase) |
-| `{ … }` | **unused** — banked for later |
+| `[ … ]( … )` | a link: a name (ignored on input) and an ID |
+| `( … )` | a group of conditions, a group of values, a search group, a list of values or a set |
+| `" … "` | an exact phrase |
+| `,` | before the order; between listed values, bins and proximity terms |
+| `.` | ends a table's main sentence before `Show` or `Only`, and ends each of those |
+| `;` | between the general form's steps |
+| `{ … }` | unused |
 
-**The language has no escape sequences at all.** Two lexing rules buy this:
-1. **Strings are scanned opaquely** — any delimiter inside `" … "` (`[ ] ( ) ,`) is
-   inert.
-2. **An annotation runs to the first `]`** (no nesting, no `]` inside).
+**OQL has no escape sequences.** Two lexing rules make this work: strings are scanned whole (any delimiter inside `" … "` is inert), and a link's name runs to the first `]`. Only `"` delimits strings, so apostrophes are ordinary characters (`"parkinson's disease"`).
 
-Therefore **only `"` delimits strings** — `'` is *not* a delimiter, so apostrophes
-and contractions are ordinary characters: `"parkinson's disease"`, `child's`
-(corpus row **78**). A literal `"` inside a search term is unsupported (ES normalizes
-punctuation away, so it is meaningless anyway) and documented, not escaped.
+## The general form
 
-### 3.4 Booleans, casing, precedence
+The general form says what no sentence can. It starts with `get` and the works or things it is about, and adds steps after semicolons: `then,` before each step, and `finally,` before the last of two or more.
 
 ```
-works where title has (apple) and title has (banana or cherry)  (row 7)  ✓
-works where title has apple and banana or cherry      (row 8)   ✗ OQL_UNDELIMITED_TERM_LIST
-works where title has ("a" and "b" and "c")           (row 9)   ✓ (pure-AND, associative)
-works where title has FOO and (bar or baz)            (row 10)  ✓ (any case accepted on input)
+get works where <conditions>[; then, <step>]*[; finally, <step>]
 ```
 
-- **Operators always sit OUTSIDE quotes.** Inside quotes, even `or` is a literal
-  word (§3.6 governing law).
-- **`and` / `or` / `not` are lowercase canonically**, but **case-insensitive on
-  input** (`AND`, `And`, `and` all parse). Lowercase wins on output because
-  principle #1 is "reads aloud," and the rule "**`and`/`or`/`not` outside quotes are
-  *always* operators — quote them to search them literally**" removes any ambiguity
-  with content words, so the uppercase-for-disambiguation convention scholarly DBs
-  rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `has`,
-  `within`, `stemmed`, `and`/`or`/`not`.)
-- **`&` is an accepted input synonym for `and`** (`a & b` ≡ `a and b`, in both the
-  clause body and inside a `has ( … )` search group). It is **input-only**: the
-  canonical render always spells out `and`, never `&`. (Mirrors the long-standing
-  `title & abstract` field-name spelling, which canonicalizes to `title-abstract`; so do
-  `title/abstract` and `title/abstract/keywords`, the canonical words before 2026-10-03.)
-- **Mixed and/or at one grouping level resolves by the standard precedence
-  `NOT > AND > OR`** (oxjob #506) — it is **not** an error. `AND` binds tighter than
-  `OR`, so `a and b or c` = `(a and b) or c` and `a or b and c` = `a or (b and c)`.
-  This is the precedence boolean algebra and every programming language use, and —
-  since Scopus changed early 2026 — **both Web of Science and Scopus now agree on
-  it**, so honoring it (rather than throwing) matches the muscle memory of anyone
-  coming from those tools. Pure-and or pure-or runs are associative and stay flat.
-  **Canonical output always re-parenthesizes the precedence grouping**, so the
-  structure is never left to the reader's head: the AND group inside a top-level OR
-  renders parenthesized (`a or (b and c)`), while a single-connective level renders
-  paren-free. (This reverses the pre-#506 rule, which raised
-  `OQL_MIXED_BOOL_NEEDS_PARENS` and required hand-written parens — that code is
-  retired.)
-- **`not` is the prefix operator with the tightest precedence: it binds the single
-  value immediately after it** (`not a or b` = `(not a) or b`). To negate a group,
-  write `not (a or b)`. With AND/OR precedence now also in effect, the full operator
-  ordering is the conventional `NOT > AND > OR`.
-- **Adjacency (space) between *search words* = ONE value node, NOT AND** (§3.6, D2
-  reversal #363): `title has (climate change)` is a single stemmed
-  adjacency-boosted node, not climate AND change. At the top level a 2+ word value
-  must still be parenthesized (`title has climate change` →
-  `OQL_UNDELIMITED_TERM_LIST`, §3.6 row 17; the canonical render always
-  parenthesizes). Explicit `and`/`or`/`not` build the tree *between* nodes, so
-  `(climate change or warming)` = `node("climate change") OR node("warming")`.
-  Explicit `and` + `or` at one level no longer errors — it resolves by precedence
-  AND > OR (`(climate and change or warming)` = `(climate and change) or warming`),
-  and the canonical render re-parenthesizes it. Between *whole
-  clauses* at the top level a connective is still required (`year >= (2020) and
-  open access is (true)`); two full clauses jammed together with no `and` is
-  `OQL_IMPLICIT_ADJACENCY`. *(Adjacency-as-AND still holds for enum/value groups —
-  §3.2 `country is (us and uk)`.)*
+### Starts
 
-### 3.5 Negation — one mechanism
+- **Works:** `get works where <conditions>`. A corpus other than the core is written after the noun: `get works (all corpora) where title-abstract-keywords has (kelp)`, or `(expansion corpus)`.
+- **Things that did something:** `get <things>[ where <their own fields>] <verb> works where <conditions>`, one row per thing. The verbs: `who published` (authors), `that published` (institutions, sources, publishers, countries), `that funded` (funders), `of` (topics), and the roles `who were corresponding authors of`, `that were corresponding institutions of`. A count may precede `works`: `who published more than 5 works where ...`.
 
 ```
-works where title has covid and abstract has not pediatric
+get authors where last known institution is [University of Kansas](I146416000) who published works where title-abstract-keywords has (kelp); then, summarize each author using count
+get institutions that were corresponding institutions of works where title-abstract-keywords has (kelp); then, summarize each institution using count
 ```
-→ `{title has covid}` AND `{abstract has pediatric, is_negated: true}`.
 
-There is **one** negation mechanism, mapping to OQO's `is_negated` (NNF). On the
-surface it is the bare prefix keyword **`not`**, written immediately before the
-value it negates: `not FR`, `not dog`, `not col_abc`, `not unknown`. The predicate
-spellings `is not` / `does not have` / `is not in collection` are **accepted on
-input** as friendly aliases, but they are pure sugar — they lex straight to an
-`is_negated` leaf (the OQO has no "negated predicate": its leaf operators are
-strictly affirmative and negation only ever rides the `is_negated` bit), so they
-**never survive canonicalization** — the emitted form is always the bare `not`
-prefix.
+### Splits and bins
 
-**`not` binds the single value-node that follows it** — the tightest-binding
-operator in OQL's `NOT > AND > OR` precedence (§3.4). A run of bare words is one
-value-node (§3.6), so `not machine learning` negates the whole run. `not` binds only
-the next operand: **`not a or b` = `(not a) or b`.** To negate a group, write
-`not (a or b)`: the parens are an ordinary group and the canonicalizer pushes the
-negation down to the leaves by De Morgan — `not (a or b)` → `(not a and not b)`.
+```
+then, group those works by <split>[ and <split>][ where <group filter>]
+then, group those works into <number field> bins at (<edge>, <edge>, ...)
+then, group those works into <number field> bins of <width>
+```
 
-`not`'s tight binding is the conventional top of the precedence ladder (§3.4), and
-it is especially safe here because negation only ever applies to a **single value**
-(canonical NNF never negates a whole clause — §3.2.2): in everything OQL *emits*
-`not` always has exactly one value to its right, so there is no group for it to
-ambiguously scope over. The **block builder** (the primary on-ramp) makes this
-concrete — you negate an individual value brick, which prepends `not` to that one
-chip; there is no affordance to negate a sub-clause. The OQL text matches the brick
-1:1.
+- **Up to three splits, in one step:** `by continent and year`; three with an Oxford comma, `by continent, institution type, and year`. A split next to bins, or after a group filter, takes its own `by`: `into citation count bins at (1, 10, 100) and by year`, `by year and by citation count bins at (1, 10, 100)`.
+- **Any field splits**, including the ones a sentence can't (`continent`, `institution type`, `source type`, `license`, `keyword`, `global south`). A decimal field can't split by value: it needs bins.
+- **Bins** at edges `(1, 10, 100)` give `0`, `1-9`, `10-99` and `100+`; `bins of 0.5` gives equal widths.
+- **A group filter** after `where` keeps the groups by a number about their works (`mean FWCI of those works is at least 2`, `count of those works is above 5`) or by their own fields.
 
-Canonical output pushes negation **down to the leaf/value** (NNF) and renders it as
-a bare `not <value>` prefix — it **never** emits `not <whole clause>` (`not (country
-is FR)` is a readability trainwreck, and the canonicalizer's NNF guarantees a
-clause-level negation can't reach the surface). So:
-- a **standalone** negated leaf: `country is (not FR)`, `title has (not dog)`,
-  `work is in collection (not col_abc)`, `language is (not unknown)` — the
-  `not` sits inside the always-parenthesized value group (#554; the predicate
-  spellings `is not FR` / `has not dog` remain accepted input);
-- **in-group** negation prefixes each atom: `has (not a and b)`,
-  `country is (not FR and US)` (§3.2.2) — the same position as the standalone
-  case, one rule.
+```
+get works where title-abstract-keywords has (kelp); then, group those works by continent, institution type, and year; finally, summarize using count
+get works where title-abstract-keywords has (kelp); then, group those works into citation count bins at (1, 10, 100); finally, summarize using count
+get works where title-abstract-keywords has (kelp); then, group those works by year and by citation count bins at (1, 10, 100); finally, summarize using count
+get works where title-abstract-keywords has (kelp); then, group those works by author where mean FWCI of those works is at least 2 and count of those works is above 5; finally, summarize using count and mean FWCI
+```
 
-**Booleans negate by flipping the value, not a `not` prefix** — a boolean's value is
-just `true` or `false`, so the two polarities are `open access is (true)` /
-`open access is (false)` (the builder toggles the value brick). `is not true` folds to
-`is (false)` on input (§3.9). Negating a *group* value spells the same NNF either way:
-`title has not (dog or cat)` and `title has (not dog and not cat)` both
-canonicalize to `title has (not cat and not dog)` (two negated leaves on one
-field merge — §3.2.2).
+### Compare
 
-### 3.6 Search — the governing law
+`compare` puts conditions, searches or periods side by side, one group each, with its numbers and optional splits:
 
-> **The search operator is `has`** (`title has (cancer)`). It was renamed from
-> `contains` in #363 (charter decision 27 — shorter, friendlier, fits a monitor
-> better) for both the OQL surface keyword **and** the OQO `operator` value, in
-> lockstep. The old `contains` / `does not contain` spellings are a **hard error**
-> (`OQL_CONTAINS_RENAMED`, with a `has` fix-it) — greenfield, no lenient parse,
-> the same stance as decisions 23 & 24.
+```
+then, compare <condition> versus <condition>[ versus ...][ using <measures>][ by <split>]
+```
 
-> **Stemming is ON by default; quotes are the only thing that turns it off.**
-> A **run of bare words is ONE stemmed value node** (`(machine learning)` is one
-> adjacency-boosted search, not `machine` AND `learning` — D2 reversal, #363); the
-> engine matches each word across the field set (cross-field recall, #399) and
-> ranks adjacency higher (`match_phrase` boost). **Explicit `and`/`or`/`not` build
-> the boolean tree between such nodes.** **Quotes = an exact, adjacent phrase** (no
-> stemming) — single word or many. **`stemmed "…"`** is the bridge: an adjacent phrase
-> that *stays* stemmed (recall). A **quoted word embedded in a bare run** is an
-> *escape* — a literal stemmed word — so a reserved word can sit inside a value
-> (`road traffic safety "and" Ghana`). Outside quotes = structure; inside quotes =
-> literal text (even `or` is just a word there).
+```
+get works where title-abstract-keywords has (kelp); then, compare published before 2015 versus published since 2015 using count and mean FWCI
+get works where title-abstract-keywords has (kelp); then, compare open access versus type [article](article) using count by year
+get works where title-abstract-keywords has (kelp); then, compare title-abstract has salmon versus (urchin OR otter) using count
+```
 
-This is the mainstream model (Google, Bing, PubMed, Web of Science, Elasticsearch
-all do space=AND and quotes=exact), chosen after surveying peers — see the design
-note in `plans/oqlo.md` and oxjob #330's research. OQO has exactly **one** text
-operator, `has`; the *mode* is split across the **column** (stemmed vs exact
-vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); the
-**boolean** structure is the filter tree.
+- Each item is a condition. A yes/no field alone means true (`open access`); `is` may go unsaid before a value (`country [India](IN)`); a later item may drop the field it shares with the one before.
+- A comparison comes before any other split; further splits follow `by`.
+- Named things side by side are a table, and echo as one: `compare country [Norway](NO) versus [Canada](CA) using count by year` echoes `by country in ([Norway](NO), [Canada](CA)) and year`.
 
-> **Cross-surface note — quotes mean something different in the GUI search box.**
-> In OQL, **quotes = exact** (a quoted value routes to `.search.exact`, no stemming).
-> The openalex.org **search box** instead treats quotes as a **stemmed adjacency
-> phrase**: a quoted query stays on the stemmed `.search` field (stemming is a
-> separate explicit "Disable stemming" toggle, plus an unquoted wildcard auto-routes
-> to exact). So the same `"climate models"` is an *exact* phrase typed into OQL but a
-> *stemmed* phrase typed into the search box. Both surfaces are internally consistent
-> and consistent with the engine; they simply chose different defaults for the quote
-> character. The translator bridges them faithfully: a search-box (stemmed,
-> quoted) URL — `title_and_abstract.search:"climate models"` — renders to OQL as
-> **`stemmed "climate models"`** (stemmed adjacency), *not* `"climate models"` (which
-> would be exact and return a different result set). This is intentional, not a
-> translator bug. (oxjob #363, decided 2026-06-09: keep both, document the gap.)
+### Summaries
 
-| Axis | OQL surface | OQO encoding |
+```
+then, summarize[ each <thing> | all those <works or things>] using <measure>[, <measure>]*
+```
+
+The summary is always the last step. Its measures:
+
+| Measure | Meaning |
+|---|---|
+| `count` | how many |
+| `mean`, `median`, `sum`, `min`, `max` + a number field | over the works: `mean reference count`, `sum citation count`; `min` and `max` also of a date (`min date`) |
+| `percent` + a yes/no field | the rate: `percent open access`, `percent global south` |
+| `percent of those works` | each group's slice of its parent set |
+| a thing's own field | after a split by things: `h-index` |
+
+A bare field is not a measure: `summarize using authors count` is refused with the fix `mean authors count`.
+
+```
+get works where title-abstract-keywords has (kelp); then, group those works by continent; finally, summarize using median FWCI, max citation count, min date, and percent open access
+get works where author is [Jason R Priem](A5023888391); then, summarize all those works using min date and max date
+get authors who published works where topic is [CRISPR and Genetic Engineering](T10878); then, summarize all those authors using count
+```
+
+The last counts distinct authors.
+
+### Samples
+
+```
+get works where published in 2020; then, sample 500 of those works with seed 42
+```
+
+A sample with a seed is the same sample every time.
+
+### Walks
+
+A walk goes from the works to the things related to them (`then, get each author of those works`, one result per author; `then, get authors of those works`, one combined set), then back to everything those things did (`then, get all that author's works`, `then, get all those authors' works`):
+
+```
+get works where institution is [University of Kansas](I146416000) and published in 2023; then, get each author of those works; then, get all that author's works; finally, summarize each author using mean FWCI
+get works where institution is [University of Kansas](I146416000) and published in 2023; then, get authors of those works; then, get all those authors' works; finally, summarize all those works using count
+```
+
+The first is each Kansas 2023 author and the mean FWCI of all their works. One walk out and one walk back per query, before any split. A walk out starts from works; a walk from authors on to institutions is refused, with the fix to walk back to their works first.
+
+### Results
+
+A table has one row per group, with a column for each split and each number, plus a **summary** (`summary` in the JSON): the whole starting set (`summary.all`) and, with two or more splits, each split's groups on their own over the whole set (`summary.splits[i].groups`, in the order of `meta.splits`). Summary numbers are computed from the works, never from the group rows.
+
+### Limits and time
+
+The free check (`GET /query/oql/<query>`) applies every limit before anything runs, and gives the fix for each one: two splits in a sentence and three in the general form; 100 values in a list; with two splits, 10,000 groups per split (one split pages through any number); one walk out per query; a set of up to 450,000 IDs; about ten seconds a query (a query estimated over that is refused).
+
+## Documented defaults
+
+OQL's text never hides a condition the query carries, with these exceptions: sensible defaults it doesn't spell out.
+
+| Default | What it means |
+|---|---|
+| `about` | searches the title, the abstract and the keywords |
+| The core corpus | every query runs on OpenAlex's core corpus; the general form's `(all corpora)` or `(expansion corpus)`, or `include_xpac=true` on the API, adds the rest |
+| Authors with works | lists of authors leave out authors with no works |
+| Sub-units count | `from [institution]` and `[institution]'s works` include its sub-units (a university's hospitals and institutes) |
+| Primary topic | `in the topic / subfield / field / domain` and splits by them use each work's primary topic, not every topic it has |
+| Primary location | `in [journal]` and `by journal` / `by source` use each work's primary location |
+| Default orders | a list with a search: best matches first; a list without: most cited (age-adjusted) first; things: most works first; a table: most works first, years oldest first |
+
+Nothing joins this list silently: every default is documented wherever OQL is documented.
+
+## Diagnostics
+
+**A query that can't do what it appears to do is refused before it runs, and the error says how to fix it.** Every error has a `type` (`parse_error`, `invalid_value`, `invalid_measure`, `query_too_slow`, ...) and a `message` that ends with the fix after `  Fix: `. The execute surface also gives the `position` and a `context` snippet when it knows them. The free check endpoint returns the same errors at no cost.
+
+**Sentences:**
+
+| You wrote | OQL says |
+|---|---|
+| `by FWCI` | unknown split; lists the splits a table takes |
+| `the authors count of works ...` | unknown numbers; lists the numbers |
+| `, most popular first` | unknown order; lists the orders a list takes |
+| `by year and country and type` | three splits; a table splits two ways at most |
+| `by year and year` | the same split twice |
+| `, highest first` with two numbers | `highest first` with more than one number: name it |
+| `the share of works about kelp` (no split) | share needs a split |
+| `Show h-index` with no split by things | `h-index` needs a split by things that have it |
+| `Only ...` after a list | an `Only` sentence follows a table |
+| `Only authors ...` on a table split by country | names things the table doesn't split by |
+| `Only authors with at least 10 works about kelp since 2020` on a table of kelp works | an `Only` count over other works than the table counts |
+| `in [Africa](Q15)` | `in` needs its kind named (the topic, SDG, the collection) |
+| `rank ...`, `break down ...`, `workz ...` | unknown entity type: every query starts with `get` and names works, things, or a table's numbers |
+| `...; then, group those works by year` after a sentence | OQL has no steps after a sentence: write the table, `get the count of works about kelp by year` |
+
+**Conditions:**
+
+| You wrote | OQL says |
+|---|---|
+| `institution is [Harvard]` | needs its OpenAlex ID: `[Harvard University](I136199984)` |
+| `type is (article review)` | two values with no connective: add `or` (or `and` if you mean both) |
+| `type is article review` | more than one value needs parentheses |
+| `type is (article, review)` | values in a group are separated by `or`/`and`, not commas |
+| `type is article language is en` | two conditions with no AND/OR between them |
+| `year >= (2019 or 2020)` | a comparison takes exactly one bound |
+| `retracted is (true or false)` | a yes/no field takes exactly one value |
+| `work is in collection (col_a or col_b)` | one collection per clause |
+| `title-abstract is similar to kelp` | needs one quoted passage |
+| `year is 2019-2023` | numeric ranges were removed: `year >= 2019 and year <= 2023` |
+| `published after 2021-06-01` | ambiguous for a date: `published since 2021-06-02`, or `since 2021-06-01` to include it |
+| `title contains (cancer)` | `contains` was renamed: use `has` |
+| `pub_year is 2020` | unknown field |
+| `type is`, `type article`, `year is 20x` | a missing value, a missing operator, not a number |
+| a missing `)`, `"` or `]` | close it |
+
+**Searches:**
+
+| You wrote | OQL says |
+|---|---|
+| `title has climate change` | two or more search terms need parentheses or quotes |
+| `cancer~1` | `~` is not an OQL operator: for words near each other, `(smart and phone within 3 words of each other)` |
+| `dog\|cat` | `\|` is not an OQL operator: `(dog or cat)` |
+| `\kelp` | a backslash has no meaning: remove it |
+| `*cycle` | a leading wildcard is not supported |
+| `ab*` | a wildcard needs at least 3 leading characters |
+| `(smart* and phone within 3 words of each other)` | quote the wildcard term |
+| `("smart" and phone within 3 words of each other)` | proximity terms are all bare or all quoted |
+| `("smart" within 3 words of each other)` | proximity names at least two words and the distance |
+| `(stemmed "bar*")` | drop `stemmed` so the wildcard runs on exact text |
+
+**The general form:**
+
+| You wrote | OQL says |
+|---|---|
+| `then calculate count` | "calculate" doesn't start a step; lists the steps |
+| `then, keep groups where ...` | `keep` isn't a step: filter on a count in the start, or download the table |
+| a step after `summarize` | the summary must be the last step |
+| `group those authors by year` on works | this query holds works: write `those works` |
+| `group those works by FWCI` | a decimal can't split by value: use bins |
+| `summarize using authors count` | a field, not a calculation: `mean authors count` |
+| `compare ...` after a split | a comparison comes before any other split |
+| `h-index` with no split by author | `h-index` belongs to each author: split by author |
+| a walk from authors to institutions | a walk out starts from works: walk back to their works first |
+| a set of the wrong kind | the field takes one kind; the set returns another |
+| a set of over 450,000 IDs | narrow the set, or save it as a collection |
+
+**Values** (`invalid_value`): a value from a closed vocabulary must be a member of it, and an ID must have the right shape ([below](#value-domain-validation)).
+
+## Canonical formatting
+
+**A sentence is always one line**, however long. The API returns it as both `oql` and `oql_oneline`.
+
+**The general form fits 80 columns on one line when it can.** A longer one is laid out over several lines in `oql`, and `oql_oneline` keeps it on one line. The parser ignores whitespace, so both are the same query. The rules:
+
+- The start and each step go on their own lines, every line but the last ending in `;`.
+- A long `where` breaks at its top-level `and` and `or`, which lead each continuation line, indented 2 spaces.
+- A parenthesized group of conditions that doesn't fit opens with `(` at the end of its line, puts its members one level deeper (2 more spaces), each continuation led by its `and` or `or`, and closes with `)` on its own line at the group's indent.
+- A long thing-first start breaks before its verb (`who published`), indented 2 spaces.
+- A long `compare` puts `using ...` and `by ...` on their own lines, indented 2 spaces, and the compared items one per line (`versus ...`) if they still don't fit.
+- A long `summarize` step puts `using ...` on its own line, and a long group filter puts one condition per line (`  where ...`, `  and ...`).
+- A single clause never breaks, however long: a value group or a search string stays on its line.
+
+This is the `oql` field for a query one line can't hold:
+
+```
+get works where institution is [Harvard University](I136199984)
+  or funder is [National Institutes of Health](F4320332161);
+then, group those works by continent;
+finally, summarize using count
+```
+
+**Canonical spelling:**
+
+- Keywords are lowercase; search operators are capitals (`AND`, `OR`, `NOT`).
+- Entities and vocabulary values are links with names (`[English](en)`).
+- One value or one search word has no parentheses; several share one pair.
+- Numbers and years read in words (`is at least 100`, `since 2020`, `from 2018–2025` with an en dash).
+- Lists of three or more take an Oxford comma.
+- A default order is never written.
+
+## Attributes and values
+
+OQL field names, the columns they map to, value types and valid verbs are owned by the **properties registry** ([`/properties`](https://api.openalex.org/properties)), not by this spec. OQL's grammar is column-agnostic, as the OQO is. API column names work as fields too (`publication_year`, `primary_topic.id`); the echo uses the OQL names.
+
+### Value-domain validation
+
+OQL is **readable in form but strict in values**: a column whose values come from a *closed* vocabulary must carry a member of it. Name matching is a natural-language layer's job, never raw OQL's. So `country is Canada` (a name, not the code) and `country is 42` are errors (`invalid_value`), not queries that silently match nothing. They are not resolved to `CA`: the message offers "did you mean 'ca'?" and the query is still refused.
+
+The closed vocabularies (keyed by the property's `entity_type`; a value validates if and only if it can be rendered with a name):
+
+| `entity_type` | canonical value | valid / invalid |
 |---|---|---|
-| field scope | the field name (`title`, `title-abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
-| stemming | **default ON**; quotes turn it OFF | column suffix `.search` (stemmed) vs `.search.exact` |
-| stemmed phrase | `stemmed "…"` | `.search` with a quoted value |
-| semantic | `is similar to ("…")` | column suffix `.search.semantic` (2-phase) |
-| adjacency (phrase) | `" … "` | quotes in the value |
-| proximity | leading list form `within N (a, b, …)` | `"op1"~N~"op2"[~"op3"…]` in the value |
-| wildcard | bare `*` / `?` | `*` / `?` in the value |
-| not OQL syntax | `~` (fuzzy / slop), `\|` (URL OR-pipe), `\\` (engine escape) | **rejected** — `OQL_NO_FUZZY` / `OQL_CHAR_NOT_OPERATOR`; these never reach the engine from OQL (#865) |
-| boolean | infix `and`/`or`/`not` inside `( … )` (a bare-word run is ONE node, not AND) | the BranchFilter tree |
+| `countries` | ISO 2-letter code | `US`, `GB` / `UK`, `Canada`, `42` |
+| `languages` | ISO 2-letter code | `en` / `english` |
+| `sdgs` | number `1`–`17` | `13` / `99` |
+| `work-types` | type code | `article`, `review` / `boguskind` |
+| `oa-statuses` | status code | `gold`, `green` / `sparkly` |
+| `continents` | Wikidata ID | `Q15` |
+| `domains` | number (4 in all) | `2` / `99999`, `social sciences` |
+| `fields` | number (26 in all) | `27` / `99999`, `medicine` |
+| `subfields` | number (252 in all) | `2712` / `99999` |
 
-The gauntlet pins the consequences (all are corpus rows):
+`GB` is the code for the United Kingdom; `UK` is not a valid code. Every value in a group is checked on its own. Search text is never checked against a vocabulary.
 
-| row | OQL (`title has …`) | Result |
-|---|---|---|
-| 11 | `(climate change)` | **a bare-word run = ONE stemmed adjacency-boosted node** (D2 reversal, #363; corpus row 126), NOT climate AND change. The everyday default. Use explicit `and` for two separate nodes (row 11 oqo). |
-| 12 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
-| 13 | `stemmed "whopper junior"` | **`stemmed` = stemmed adjacent phrase** → matches "whoppers junior" |
-| 14 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
-| 15 | `cat` | bare word = stemmed (matches cats) — a single bare term is fine |
-| 16 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
-| 17 | `climate change or warming` | ✗ `OQL_UNDELIMITED_TERM_LIST` — 2+ bare terms must be parenthesized |
-| 18 | `(climate and change or warming)` | ✓ resolves by precedence → `(climate and change) or warming` (canonical re-parenthesizes) |
-| 19 | `"bar*"` | ✓ quoted wildcard = the sanctioned path → no-stem `.search.exact` (oxjob #364) |
-| 20 | `bar*` | ✗ `OQL_WILDCARD_NEEDS_EXACT` — bare wildcard is stemmed (wrong); fix-it: quote it `"bar*"` |
-| 203 | `cancer~1` | ✗ `OQL_NO_FUZZY` — `~` is search-engine syntax OQL does not expose; proximity is `within N (…)`, fuzzy matching is not available yet |
-| 204 | `dog\|cat` | ✗ `OQL_CHAR_NOT_OPERATOR` — the pipe is classic-URL OR; write `(dog or cat)` |
+### ID-shape validation
 
-**No search-engine syntax leaks through a value.** OQL is explicit pseudo-English:
-the only value micro-syntax is the table above (quotes, `within N (…)`, `*`/`?`
-wildcards inside quotes). Operator characters from other search languages — `~`
-(fuzzy / slop), `|` (the classic URL's OR), `\` (the engine's escape character) —
-are **rejected with a fix-it** rather than silently passed to the engine with their
-engine meaning. (Before #865, `title has (cancer~1)` quietly ran as fuzzy matching;
-`^`, `+`/`-`, `{}` and `&&` are literal text at every door since #633.) **Fuzzy
-matching is planned; ask us if you're interested.** A classic-URL query that uses
-the documented `term~N` fuzzy form still works on the classic door, but it has no
-OQL form: its `x_query.oql` leg is `null` with an `oql_unavailable` reason — never
-OQL that means something else.
-
-Key rules these encode:
-
-- **The canonical value is always the parenthesized group (#554)** — `title has
-  (cancer)`, `title has (climate change)`. A single bare term is accepted input
-  (`title has cancer` ✓ → canonicalizes to `has (cancer)`); a 2+ word value must
-  be parenthesized (`title has climate change` → `OQL_UNDELIMITED_TERM_LIST`,
-  row 17) — this is the rule that kills the silent
-  keyword-truncation footgun. **Inside a `( … )` group** a bare-word run is ONE node
-  (D2 reversal, #363), so `(climate change or warming)` = `node("climate change") OR
-  node("warming")`. **Mixing explicit `and` and `or` at one level resolves by the
-  standard precedence AND > OR** (#506) — `(climate and change or warming)` =
-  `(climate and change) or warming`; the canonical render re-parenthesizes it so the
-  grouping is always explicit. (Pure runs — all-`and` or all-`or` — stay flat with no
-  inner parens.) A literal reserved word inside a value is quoted as an escape
-  (`("road traffic" "and" ghana)` style — §3.6 governing law).
-- **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
-  change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
-  match" people already expect.
-- **`stemmed "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
-  when you want phrase precision without losing recall (corpus row **13**).
-  Without quotes you don't need `stemmed`: bare terms are already stemmed.
-- **Booleans are structural, never lexical.** `has "foo or bar"` searches the
-  literal phrase; the boolean is the tree (`has (foo or bar)`).
-- **`is similar to ("…")` is semantic** vector search (`.search.semantic`, corpus
-  row **30**); exactly one quoted passage in the group.
-- **A `( … )` group holds a boolean of terms** — canonical `has (a and (b or c))`;
-  items may themselves be `"exact"` or `stemmed "phrase"` phrases. Groups nest freely
-  (§3.2).
-- **A search value runs until the next field-clause.** `title has (a or b) and
-  year >= (2020)` is `(title has (a or b)) and year >= (2020)` — the `or` is the
-  has-group's, the `and` joins clauses. This is deterministic, not a precedence
-  choice: a `year >= …` clause can't live *inside* a `has`, so the value
-  boundary is forced. A genuinely mixed and/or *between clauses* resolves by
-  precedence AND > OR (§3.4).
-
-### 3.7 Proximity and wildcards — the edge matrix
-
-```
-works where title has (within 3 ("smart", "phone"))     (row 28)  ✓ exact list proximity → .search.exact, value "smart"~3~"phone"
-works where title has (within 3 (smart, phone))         (row 188) ✓ stemmed list proximity → .search
-works where title has (within 3 ("foo", "bar", "baz"))  (row 187) ✓ K-ary proximity (3+ operands)
-works where title has (within 3 ("smart", "phone*"))    (row 189) ✓ wildcard in a quoted operand → ES intervals (oxjob #355)
-works where title has ("foo*bar")                       (row 22)  ✓ mid-word * (quoted = no-stem .search.exact)
-works where title has ("wom?n")                         (row 23)  ✓ ? = exactly one char (quoted = no-stem)
-works where title has bar*                              (row 20)  ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
-works where title has *cycle                            (row 24)  ✗ OQL_LEADING_WILDCARD
-works where title has ab*                               (row 26)  ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
-works where title has "smart phone" within 3 words      (row 190) ✗ OQL_PROXIMITY_SUFFIX_REMOVED (write it BEFORE the terms)
-works where title has within 3 (smart*, phone)          (row 29)  ✗ OQL_WILDCARD_NEEDS_EXACT (quote a wildcard operand)
-works where title has within 3 ("only")                 (row 191) ✗ OQL_PROXIMITY_NEEDS_OPERANDS (need 2+)
-works where title has within 3 (foo, "bar")             (row 192) ✗ OQL_PROXIMITY_MIXED_OPERANDS (all bare or all quoted)
-```
-
-- **Proximity is the leading list form `within N (a, b, …)` — the ONE proximity
-  surface (oxjob #514):** K operands NEAR each other within an N-word window,
-  **unordered**. An operand may itself be a multi-word phrase (`within 5
-  ("machine learning", "neural network")`, row 80) — each operand is its own
-  adjacent sub-phrase. Operands are **all bare (stemmed, `.search`) or all
-  quoted (exact, `.search.exact`)** — mixing is `OQL_PROXIMITY_MIXED_OPERANDS`.
-  Compiles to an ES `intervals` query (ordered=false, max_gaps=N); the OQO value
-  encoding is `"op1"~N~"op2"[~"op3"…]`. The v2.0 *suffix* forms — `"smart
-  phone" within 3 words` and the binary `"a" within N words of "b"` — were
-  REMOVED with #514 and reject loudly (`OQL_PROXIMITY_SUFFIX_REMOVED`) with a
-  pointer to the list form. (The OXURL `~` notation is frozen and untouched: a
-  single-phrase slop value `"smart phone"~3` still parses/executes via
-  `?filter=`, it just has no round-tripping OQL form.)
-- On the multi-valued per-record search fields (`raw affiliation` /
-  `byline`), a quoted phrase — and each proximity window — **scopes to one
-  sub-record** (one affiliation / one byline) via ES `position_increment_gap`.
-  This is how a single `has` leaf expresses intra-affiliation co-occurrence
-  (corpus rows **65**, **75**, **77**, e.g. `raw affiliation has (within 5
-  (london, hospital))`).
-- **Wildcards require the no-stem (exact) field — quote them (oxjob #364).** A
-  wildcard matches indexed tokens literally, but the default search is *stemmed*
-  at index time, so a bare wildcard hunts for a prefix the index no longer holds
-  and returns near-nothing (`studies*` = 2.4k stemmed vs 2.2M no-stem). So a wildcard
-  on a single token must be **quoted** → it runs on `.search.exact`: `"bar*"`,
-  `"foo*bar"`, `"wom?n"`. A **bare** wildcard is `OQL_WILDCARD_NEEDS_EXACT` (fix-it:
-  quote it). `stemmed` keeps a phrase stemmed, so a wildcard there is the same error.
-  Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix → `OQL_SHORT_WILDCARD_PREFIX`,
-  measured on the word the engine actually expands: the tokenizer splits a
-  hyphen/slash term into separate words, so `"e-cigarette*"` is a prefix on
-  `cigarette` (fine; it runs as adjacent `e` + `cigarette*`, row 205) while
-  `"covid-19*"` is a prefix on `19` and is rejected with a fix-it that names the
-  split (row 206, oxjob #1260).
-  In a proximity list the same rule applies per operand: a wildcard needs a
-  *quoted* operand (row 189 ✓, row 29 ✗). Wildcard-heavy queries share an
-  expansion budget (#355): two-plus wildcards each need a ≥4-char prefix
-  (`OQL_MULTI_WILDCARD_SHORT_PREFIX`, row 81), and past the budget it's
-  `OQL_TOO_MANY_WILDCARDS` (row 82). Every unsupported combination is a loud
-  error with a fix-it — never a silent literal, never a false promise. (This
-  **reverses** #337's old `OQL_WILDCARD_IN_QUOTES` "move it out of the quotes"
-  guidance: quotes are now exactly where wildcards belong.) See
-  [`docs/oql/engine_findings.md`](./oql/engine_findings.md) for the engine behavior.
-
-> **Resolved (was an acknowledged limitation):** wildcard-in-a-phrase and
-> wildcard-in-proximity — `"smart* phone"` (row 79), `within 3 ("smart",
-> "phone*")` (rows 189, 58) — are now SUPPORTED via ES `intervals` queries
-> (oxjob #355; the old `query_string` path silently dropped the wildcard).
-> The remaining floors are deliberate guards, not gaps: no leading wildcards,
-> ≥3-char single-wildcard prefixes, and the multi-wildcard expansion budget
-> above.
-
-### 3.8 `null` / `unknown`
-
-`language is (unknown)` / `language is (not unknown)` → `value: null`
-(± `is_negated`). Emit `unknown` canonically; accept `null` and `unknown` on
-input, bare or parenthesized. Since #554 `unknown` is also the null sentinel
-**inside** a value group, so mixed groups work: `language is (en or unknown)`
-= English OR language-unknown (§3.2). A column value literally spelled
-"unknown" is quoted (`is ("unknown")`), on input and output alike.
-
-### 3.9 Booleans (`<flag> is (true|false)`)
-
-Boolean (yes/no) columns are ordinary subject-predicate-value clauses, exactly like
-every other filter — the subject is the flag's noun and the only values are `true`
-and `false`: `open access is (false)`, `retracted is (true)`, `has DOI is (true)`,
-`has ORCID is (true)` (corpus rows **37**, **40**, **50**, **53**). They compile to
-`{column: …, value: true|false}`. `is not true` / `is not false` / `is (not true)`
-are accepted on input and fold into the value, so the canonical form is always
-`is (true)` / `is (false)` (never a separate `not`). The group takes exactly one
-value — `is (true or false)` is `OQL_GROUP_NEEDS_ONE_VALUE` (#554). The old reads-aloud `it's …` / `it has …` surface was
-removed in #363 for BOOLEAN flags — there is now One Right Way, shared with all other
-clauses. (The row-subject pronoun forms `it cites (…)` / `it's cited by (…)` in §3.11
-are a different, later category — #557 — and are canonical for the relation columns
-only; they don't reintroduce a boolean `it's retracted` surface.)
-
-The flag's noun drops any helper verb (`is_retracted` → `retracted`,
-`open_access.is_oa` → `open access`); where the bare noun would collide with a
-value-bearing field it keeps a short `has` qualifier (`has DOI`, `has ORCID`,
-`has abstract`, `has ISSN`) so `DOI is …` stays the exact-DOI string filter.
-
-### 3.10 Collection membership: `is in collection`
-
-```
-works where work is in collection (col_abc123)                     (same-type: works in a Collection of works)
-works where author is in collection (col_xyz789)                   (cross-type: works by authors in a Collection of authors)
-works where country is in collection (col_eu27)                    (row 5x — predefined country set)
-works where work is in collection (not col_abc123)                 (negation: bare not prefix on the value, §3.5; is not in collection accepted on input)
-```
-
-A **Collection** is a named, predefined or user-saved set of entities, addressed by a
-`col_<base58>` id (`^col_[A-Za-z0-9]{1,48}$`). Membership is its own operator — distinct
-from `is` / `is (…)` — because the intent ("is a member of this named set") and its
-value space (a Collection picker) differ from value equality; this keeps the operator→value
-model clean for the editor and downstream tooling.
-
-- **Surface:** `<subject> is [not] in collection (<col_id>)` — exactly one
-  `col_…` ref in the group (`(col_a or col_b)` is `OQL_GROUP_NEEDS_ONE_VALUE`,
-  #554; the bare `… in collection col_id` form stays accepted input). `not`
-  negates via the single
-  `is_negated` mechanism (§3.5), never a separate operator.
-- **OQO:** `operator: "in collection"`, `value: <col_id>`, on a leaf. One collection per
-  clause (v1); union several via `or` clauses.
-- **Same-type** (the Collection is of the queried entity, e.g. works on `/works`): the subject
-  is the entity itself and the OQO uses `column_id: collection`, mirroring the dedicated
-  `filter=collection:<col_id>` API param.
-- **Cross-type** (the Collection is of a *referenced* entity, e.g. a set of authors/countries):
-  the OQO keeps the referenced entity's `column_id` (e.g. `authorships.countries`) and renders
-  to the bare `filter=<field>:<col_id>` URL surface. `col_…` ids are always preserved verbatim
-  (never case-folded), as elsewhere.
-- **URL round-trip:** a working prod URL carrying a `col_…` value (`collection:col_…` or
-  `<field>:col_…`) parses back to the canonical `is in collection` form, so the triple holds.
-
-### 3.11 Row-subject verb-phrase leaves: `it cites (…)` / `it's cited by (…)` (#557)
-
-```
-works where it cites (W123 [Some title…])                          (outgoing edge -> filter=referenced_works:W123)
-works where it's cited by (W456 […])                               (incoming edge -> filter=cited_by:W456)
-works where it's related to (W789 […])                             (related works -> filter=related_to:W789)
-works where title has (foo) and it cites (not W123 or W456)        (composes anywhere; value-level not, §3.5)
-```
-
-A grammar **category**, not a one-off: the subject is the queried row itself — the
-pronoun **`it`** — and a verb phrase names a relation column; the value is the usual
-parenthesized group. This exists because the citation edge's two directions are verbs,
-not nouns: `references is (W)` read as the wrong direction, and the two filters didn't
-look like the mirror images they are. The verb pair (`cites` / `cited by`) matches the
-GUI chips and the classic input alias `cites:` — one vocabulary across OQL, basic GUI,
-and advanced GUI. (`work is in collection …`, §3.10, is the noun-subject cousin;
-migrating it to `it's in collection …` is an open, separate decision.)
-
-- **Canonical renders (contraction included):** `it cites (…)` → `referenced_works`;
-  `it's cited by (…)` → `cited_by`; `it's related to (…)` → `related_to`. In OQO these
-  are ordinary `is` leaves on those columns — nothing new at the OQO layer.
-- **Forgiving input, one render:** `it is cited by`, `its cited by` (dropped apostrophe),
-  the legacy field-word forms (`cites is`, `references is`, `cited by is`,
-  `related to is`, plus the raw column ids), and the bare verb forms (`cites (W…)`,
-  `cited by (W…)`, `related to (W…)` — for these relation columns the field word IS
-  the verb, so a value group directly after it implies `is`) all parse and converge
-  on the renders above.
-- **Negation is value-level ONLY** (§3.5, decision 23): `it cites (not W123)`. There is
-  no `doesn't cite` / `isn't cited by` verb form — leaves stay affirmative;
-  `it doesn't …` is `OQL_BAD_VERB_PHRASE` with a fix-it.
-- **Word unification (#557):** `referenced_works`'s display word is **"cites"**
-  everywhere — filter verb, column header, sort ("references" survives as an accepted
-  input alias; `reference count` = `referenced_works_count` keeps its own word). GUI
-  chips stay bare: `cites` / `cited by` / `related to`.
-- **oxurl frozen:** rendered URLs keep `filter=referenced_works:` / `cited_by:` /
-  `related_to:` exactly — `filter=cites:` is never emitted (it stays a classic-REST
-  input alias only).
-
-## 4. Directives
-
-```
-works where year >= 1976 group by topic, year              (row 48)  (multi-dim: spec-level; live API single-dim → #297)
-works where … stemmed "genome editing" … sample 500                (row 63)
-```
-
-- **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).
-- **`sample <n> [seed <s>]`** → `sample` (+ optional reproducibility `seed`).
-
-**Not in the OQL surface (oxjob #504) — nor in the OQO (#661):** result *sort
-order* and *column projection* are view concerns, not query language. They travel
-as sibling request params on the execute surface (`?sort=` / `?select=`, or POST
-body siblings), populated by the GUI's own sort/column controls — OQL and OQO
-never read or emit them. (They are additive to re-introduce in a future version.)
-
-## 4.1 Steps: the pipeline language (oxjob #1530; syntax settled in #1512)
-
-The canonical form of every query is a series of **steps** joined by `; then`, each
-starting with a verb and doing one thing:
-
-```
-get <entity> [ where <conditions> ]
-  [ ; then sample (<n>) of those <entity> [ with seed (<s>) ] ]
-  [ ; then group those <entity> [again] by <split> [ where <group filter> ] ]   ×0-3
-  [ ; then group those <entity> [again] into <split> [ where <group filter> ] ]
-  [ ; then, summarize using <measure> [, <measure>]* ]                        last
-```
-
-- **Start:** `get <entity> where ...` is the classic statement with the verb `get`. The
-  bare-entity start (`works where ...`) and the classic `group by` / `sample` directives
-  stay accepted forever and canonicalize to steps.
-- **`those <entity>`** names what the query holds (the plural entity); a different noun is
-  `OQL_WRONG_SET`. Optional on input. **`again`** is on every split after the first in the
-  canonical form; optional on input.
-- **Splits** (the OQO's `group_by`, outermost first; up to 3, `OQL_TOO_MANY_SPLITS`):
-  - `by <field>`: one group per value. A yes/no field gives `true` / `false` groups,
-    labeled `<field>` / `not <field>`. A decimal field can't split by value
-    (`OQL_DECIMAL_NEEDS_BINS`).
-  - `by <field> in (<v>, <v>, ...)`: one group per listed value, in order, empty ones
-    included; or `in (col_...)`, the members of one collection. Up to 100
-    (`OQL_LIST_TOO_LONG`).
-  - `by <search field> search in ((<search>), (<search>), ...)`: one group per portable
-    search string; up to 100, at most 5 AND/OR/NOT each (`OQL_SEARCH_TOO_COMPLEX`).
-  - `into ((<conditions>), (<conditions>), ...)`: one group per condition, in order; up
-    to 100; no empty group (the summary's whole-set row is the baseline).
-  - `into <number field> bins at (<e1>, <e2>, ...)` (increasing edges; integer labels
-    `0`, `1-9`, `100+`, decimal labels `under 0.5`, `0.5-1`, `2+`) or `bins of (<w>)`.
-- **Group filters** (`where` after a split): a boolean of
-  - **measure conditions** on each group's works: `<measure> [of those <entity>] <op>
-    (<number>)`, e.g. `count of those works > (10)`, `mean FWCI of those works >= (2)`;
-  - **the group's own fields** (when the groups are entities): `h-index > (20)`,
-    `last known institution is (I...)`; `that <noun> is [not] in (<ids or col_...>)`;
-    `co-author is [not] (A...)` (author groups), `collaborator is [not] (I...)`
-    (institution groups). Fields a group doesn't have: `OQL_BAD_GROUP_FILTER`.
-  Measures and own fields combine with `and`; an `or` mixing the two kinds is refused at
-  execution.
-- **`summarize using`** is always the last step (`OQL_STEP_AFTER_SUMMARY`): `count`; `mean`,
-  `median`, `sum`, `min`, `max` of a number field (`min`/`max` also of a date); `percent`
-  of a yes/no field; `percent of those <entity>` (each group's share of its parent set);
-  after a split by entities, their own number fields (`h-index`), shown beside each group.
-  A bare works field (`summarize using authors count`) is `OQL_BAD_MEASURE` with the fix
-  `mean authors count`.
-- **Walks** (`get each author of those works`) are Rung 2: `OQL_WALK_NOT_YET`.
-
-**Results.** Every grouped result has one row per group (in the JSON, nested groups under
-their parents; on the website and in the CSV, flat, a column per split) with one column per
-measure, plus a **summary** (`summary` in the JSON): the whole starting set (`summary.all`)
-and, with two or more splits, each split's groups on their own over the whole set
-(`summary.splits[i].groups`, in the order of `meta.splits`). Summary numbers are computed
-from the works, never from the group rows.
-
-**Negation and search in the canonical form.** Filters negate on the verb: `type is not
-(review)`, `institution is not (I1 or I2)`, `topic is not in (col_x)`. A search renders as
-one portable string with capital operators: `title-abstract has ((asthma OR wheeze) NOT
-(child OR pediatric))`. Lowercase connectives and value-level `not` stay accepted on input.
-
-**Layout.** A query that fits 80 columns renders on one line; otherwise each step on its
-own line, every line but the last ending in `;`, and a long group filter one condition per
-line (`  where ...` / `  and ...`).
-
-**Limits and time** (checked by the free `GET /query/oql/<q>` before anything runs): up to
-3 splits; 100 items per list; 5 operators per listed search; a nested split up to 10,000
-groups per split and 65,536 combined groups; about 10 seconds a query (refused when the
-plan is estimated over 10 s; cancelled at 15 s).
-
-## 5. Diagnostics (codes + fix-its)
-
-Diagnostics are a **language-agnostic contract** (charter decision 5): every error
-is a stable **code** + a human message + a **fix-it**; consumers (parser, editor,
-NL) share codes and only localize prose. Every `✗` corpus row asserts its code.
-
-| Code | When | Fix-it |
-|---|---|---|
-| `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert an `and` or `or` |
-| `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
-| `OQL_WILDCARD_NEEDS_EXACT` | bare (stemmed) `*`/`?` wildcard — standalone or as a proximity operand | quote it: `"bar*"` (runs on no-stem `.search.exact`) |
-| `OQL_NO_FUZZY` | `~` typed in a search value (`term~N` fuzzy, `"phrase"~N` slop) — search-engine syntax with no OQL surface | proximity: `within N (…)`; fuzzy matching is not available in OQL yet — remove the `~` |
-| `OQL_CHAR_NOT_OPERATOR` | `\|` or `\\` typed in a search value — classic-URL OR-pipe / engine escape character | write alternatives with `or`; remove a backslash |
-| `OQL_LEADING_WILDCARD` | leading `*`/`?` | anchor it: `cycle*` |
-| `OQL_SHORT_WILDCARD_PREFIX` | `<3` chars before `*` | add characters: `abc*` |
-| `OQL_MULTI_WILDCARD_SHORT_PREFIX` | 2+ wildcards with a `<4`-char prefix | lengthen the prefixes (expansion budget, #355) |
-| `OQL_TOO_MANY_WILDCARDS` | too many wildcards in one query | drop some |
-| `OQL_PROXIMITY_SUFFIX_REMOVED` | the removed suffix form `X within N words [of Y]` | write it before the terms: `within N (a, b, …)` |
-| `OQL_PROXIMITY_NEEDS_OPERANDS` | proximity list with `<2` operands | e.g. `within 3 ("smart", "phone")` |
-| `OQL_PROXIMITY_MIXED_OPERANDS` | mixed bare + quoted proximity operands | quote every operand or none |
-| `OQL_GROUP_VALUES_NEED_CONNECTIVE` | two values in an `is ( … )` group with no connective (`is (article review)`) | add `or` between the values (or `and` if you mean both) |
-| `OQL_GROUP_NEEDS_ONE_VALUE` | 2+ atoms in a scalar-domain group (`year >= (2019 or 2020)`, `is (true or false)`, `in collection (col_a or col_b)`) | keep one value in the parens; combine with or-clauses |
-| `OQL_UNTERMINATED_STRING` / `OQL_UNTERMINATED_ANNOTATION` | missing `"` / `]` | close it |
-| `OQL_UNKNOWN_FIELD` / `OQL_UNKNOWN_ENTITY` | not in the registry | check the properties registry |
-| `OQL_MISSING_OPERATOR` / `OQL_MISSING_VALUE` / `OQL_BAD_NUMBER` | malformed clause | — |
-| `OQL_UNBALANCED_PARENS` | missing `)` | add `)` |
-| `OQL_BAD_SAMPLE` / `OQL_BAD_PROXIMITY` / `OQL_SEMANTIC_NEEDS_TEXT` / `OQL_TRAILING_TOKENS` | malformed directive/clause | — |
-
-(The diagnostics registry — `query_translation/diagnostics.py` — is the
-authoritative code list; every `✗` corpus row asserts its code against it.)
-
-## 6. Fields & values (the registry)
-
-OQL field names, the columns they map to, value types, and valid operators are owned
-by the **properties registry** (`/properties`; #294/#331), **not** by this spec.
-The reference impl carries a focused stand-in (`tests/oql/oql_v2.py:_FIELDS`)
-covering the corpus. Field validity ("is this column valid on this entity? what
-value type? which operators?") is a registry question; OQL's grammar is
-column-agnostic, exactly as the OQO dataclass is (oqo-spec §7).
-
-### 6.1 Value-domain validation (strict membership)
-
-OQL is **readable in form but strict in validation**: a column whose value is drawn
-from a *closed* vocabulary must carry a literal member of that vocabulary. Validation
-is not lenient on these — name-based or fuzzy matching is the **NL parser's** job
-(#344), never raw OQL. So `country is Canada` (the value is the name, not the code)
-and `country is 42` are **errors** (`invalid_value`), not silently-matches-nothing
-queries. They are NOT auto-resolved to `ca`; the validator offers a "did you mean
-'ca'?" fix-it but the query is still rejected. (oxjob #363.)
-
-The closed vocabularies (keyed by the property's `entity_type`, validated against the
-same `config/<vocab>.yaml` tables the renderer resolves display names from — a value
-validates **iff** it can also be rendered with a name):
-
-| `entity_type` | canonical value form | example valid / invalid |
-|---|---|---|
-| `countries`   | ISO 2-letter, uppercased | `us`, `gb` / `uk`, `Canada`, `42` |
-| `languages`   | ISO 2-letter code        | `en` / `english` |
-| `sdgs`        | numeric id `1`–`17`      | `3` / `99` |
-| `work-types`  | type slug                | `article`, `review` / `boguskind` |
-| `oa-statuses` | status slug              | `gold`, `green` / `sparkly` |
-| `continents`  | Wikidata Q-id            | `q15` |
-| `domains`     | numeric id (4 total)     | `2` / `99999`, `social sciences` |
-| `fields`      | numeric id (26 total)    | `27` / `99999`, `medicine` |
-| `subfields`   | numeric id (252 total)   | `2712` / `99999` |
-
-> The topic-hierarchy vocabs (`domains` / `fields` / `subfields`) are small,
-> fully-enumerable closed sets, so they validate the same way: `field is 99999`
-> (out-of-range) and `field is medicine` (a name) are rejected, with a "did you
-> mean '27'?" fix-it for the name. (Tier 1.5, oxjob #363.)
-
-> `gb` is the ISO code for the United Kingdom; `uk` is **not** a valid code and is
-> rejected (the NL phrasings "UK"/"Britain"/"United Kingdom" all resolve to `gb`).
-
-Membership descends into value groups, so each leaf of `country is (us or canada)`
-is checked independently. Free-text `*.search` / `phrase` values and raw strings are
-never membership-checked.
-
-### 6.2 ID-shape validation (open ID entities)
-
-The **open** ID entities — authors, works, institutions, sources, publishers,
-funders, topics, concepts, awards — have millions of members, so they can't be
-enumerated. Instead, an `openalex_id`-typed value is checked for the right
-**ID prefix/shape** for the column's `entity_type`. This catches the common slip of
-a correctly-shaped ID of the *wrong* type: `institution is W5` is an `invalid_value`
-error — `W5` is a Works ID, and `institution` expects an Institutions ID (`I…`). A
-non-ID value on an ID column (`institution is Canada`) is likewise rejected.
-
-The shape is **declared once**, in each entity's `idRegex` in
-`config/<entity>.yaml` (the same files the renderer reads for closed-vocab names),
-surfaced as a typed registry in `core/entities.py` — the server-side sibling of the
-properties registry, the thing a `Property.entity_type` resolves against. There is
-no hand-maintained prefix table: the native-entity set and their prefixes are
-derived from those `idRegex`. The OpenAlex URL/path forms a value may legitimately
-take (`I5`, `institutions/I5`, `https://openalex.org/I5`) all validate; only the
-entity letter is enforced.
+The open ID entities (authors, works, institutions, sources, publishers, funders, topics, concepts, awards) have millions of members, so a value is checked for the right **ID shape** instead. `institution is W5` is an `invalid_value` error: `W5` is a works ID, and institutions IDs start with `I`. A value that isn't an ID at all (`institution is Canada`) is refused the same way. The URL forms of an ID (`I5`, `institutions/I5`, `https://openalex.org/I5`) all validate; only the entity letter is enforced.
 
 | `entity_type` | prefix | `entity_type` | prefix |
 |---|---|---|---|
@@ -1002,64 +804,260 @@ entity letter is enforced.
 | `sources` | `S` | `awards` | `G` |
 | `publishers` | `P` | | |
 
-> `is in collection col_…` uses a distinct operator (not `is`), so a `col_…` value
-> on an ID column is **not** shape-checked. Slug-id entities (`keywords`) and
-> numeric-id entities (`fields` / `subfields` / `domains`) have no letter prefix and
-> are not shape-checked here.
+Collections use their own verb (`is in the collection`), so a `col_...` value is not shape-checked. Keywords and the numeric classifications have no letter prefix and are not shape-checked.
 
-## 7. The corpus (normative)
+## The case corpus
 
-[`docs/oql/corpus.yaml`](./oql/corpus.yaml) is the normative set of `(OQL, OQO)`
-pairs. It covers: every in-scope #284 worked-example row rendered to v2, the 9
-gauntlet cases, the proximity/wildcard matrix, and the entity/boolean/set cases.
-Each row is `ok` (round-trips), `error` (named diagnostic + fix-it), or `boundary`
-(documented non-representable: row `58` wildcard-in-proximity, row `68` acronym
-resolution, row `76` set-reference).
+This is a **cases-first** specification: the normative truth is a corpus of worked `(OQL, OQO)` pairs, machine-checked against the implementation. The rules in this prose generalize the cases; when the prose and a case disagree, the case wins. Each case either round-trips cleanly, raises a named [error](#diagnostics) with a fix, or documents a known boundary. Browse worked examples in the [cases browser](https://openalex.org/query/oql/cases).
 
-**v2 search encoding vs. #284** (noted per row in the corpus): under §3.6's
-mainstream model, a bare multi-word search is **stemmed AND** — exactly what the
-#284 OXURLs did (space = AND on `.search`), so `climate change` (row 38), `quantum
-computing` (row 72) etc. render as bare terms. A genuine adjacent phrase uses `stemmed
-"…"` (stemmed: rows 47, 51, 55, 56, 63, 65, 75, 77) or plain quotes when the
-intent is exact/no-lemmatization (`"oyster toadfish"`, row 59).
+## Not in the language yet
 
-## 8. Out of scope
+- `Only` and `Show` take counts and the groups' own fields, not other numbers (download the table to filter a mean).
+- A second walk out in one query, and splitting each walked thing's works further.
+- Three splits in a sentence, and an order in the general form.
+- Fuzzy matching.
+- Name lookup inside the parser: names in links are decoration, and IDs count.
 
-- **Stage C / HAVING** (filtering on group aggregates). OQL must not promise what
-  OQO can't execute (charter decision 2); the abandoned `get`/`summarize by`/`where
-  …;` dialect (#274) is the trap to avoid. Group ranking by an aggregate metric
-  (corpus row **74**) is `#297`.
-- **Multi-dimensional `group by`** is expressible in the spec (corpus row **48**) but
-  single-dimension in the live serving impl → `#297`.
-- **Acronym / name resolution** (corpus row **68**) and **set-references** (corpus
-  row **76**) are not query-language features.
+## Conformance
 
-## 9. Conformance & round-trip
+The [round-trip invariant](#the-canonical-triple) is the spec's runnable contract. A reference implementation is machine-checked over the [case corpus](#the-case-corpus): every round-trip case must go `OQO → OQL → OQO` to the identity, and every error case must raise its named error. An implementation conforms if it passes the corpus.
 
-The runnable contract:
+## Related documentation
 
-```bash
-cd ~/Documents/openalex-elastic-api
-python3 -m venv .venv-oql && .venv-oql/bin/pip install -q pyyaml requests pytest
-# round-trip identity (OQO -> OQL -> OQO) over the normative corpus:
-.venv-oql/bin/python -m pytest tests/oql/test_corpus_roundtrip.py -q --noconftest
-# gap report against the current v1.1 production translator:
-.venv-oql/bin/python tests/oql/gap_report.py    # -> docs/oql/gap_report.md
+- **[OQL overview](https://help.openalex.org/access/oql/)**: the readable tour, every construct with a copyable example.
+- **[OQO](https://help.openalex.org/access/oqo-schema/)**: the canonical query object OQL is written over, with its JSON Schema.
+- **[OQL API](https://help.openalex.org/api/oql/)**: running and translating OQL over HTTP.
+- **[Cases browser](https://openalex.org/query/oql/cases)**: worked examples, browsable.
+
+## Formal grammar
+
+The grammar below is in W3C-EBNF. It describes the **canonical form**, the text the echo writes, read from the parser and renderer. The parser reads more spellings than this (operators like `>=`, bare IDs, names left out of links, phrase parts in any order, any letter case of keywords), and every one comes back in this form. A quoted string of several words is that sequence of words.
+
+```ebnf
+/* OQL (OpenAlex Query Language): reference grammar, canonical form, 2026-10-23. */
+
+statement     ::= sentence | general
+
+/* ===================== Sentences ===================== */
+
+sentence      ::= list | table
+
+list          ::= 'get' works ( ',' worksOrder )?
+                | 'get' things ( ',' thingsOrder )?
+
+/* A table; with no `by`, one row (no order, no Show, no Only). The word before
+   the works phrase follows the last number: `to` after `sum of citations`,
+   `for` after `sum of APCs paid`, else `of`. */
+table         ::= 'get' 'the' numbers ( 'of' | 'to' | 'for' ) works
+                  ( 'by' splits ( ',' tableOrder )? ( '.' ( show only* | only+ ) )? )?
+
+show          ::= 'Show' ownField ( 'and' ownField )? '.'
+only          ::= 'Only' thingNoun 'with' countWords NUMBER works '.'
+countWords    ::= 'more than' | 'at least' | 'fewer than' | 'at most'
+
+/* ---------- The works phrase, in canonical order ---------- */
+works         ::= possessive? adjective* typeNoun time? search* citing* place*
+                  people? role? sits* published? funded? license?
+                  ( 'where' conditions )?
+
+possessive    ::= link "'s"                 /* one institution, country or author */
+adjective     ::= 'open access' | 'closed access' | 'retracted' | 'non-retracted'
+                | 'top 1% cited' | 'top 10% cited'
+typeNoun      ::= 'works' | 'all works' | 'articles' | 'reviews' | 'preprints' | 'books'
+                | 'book chapters' | 'datasets' | 'conference papers' | 'dissertations'
+                | 'editorials' | 'letters' | 'reports'
+time          ::= ( 'since' | 'from' | 'before' | 'through' ) YEAR
+                | 'from' YEAR '–' YEAR
+                | ( 'since' | 'through' ) DATE
+                | 'from' DATE 'through' DATE
+search        ::= 'about' searchString
+                | 'with' searchString 'in' searchPlace
+searchPlace   ::= 'the title' | 'the abstract' | 'the full text' | 'the title or abstract'
+citing        ::= 'citing' link | 'cited by' link | 'citing works in the collection' link
+place         ::= 'from' link ( 'or' link )*
+                | 'from both' link 'and' link
+                | 'from all of' linkList3
+                | 'co-authored with' link
+people        ::= 'by' link | 'co-authored by' ( link 'and' link | linkList3 )
+role          ::= 'with' link 'as corresponding author'
+sits          ::= 'in' link ( 'or' link )*              /* a source */
+                | 'in' kindKey link ( 'or' link )*
+                | 'in the collection' link
+kindKey       ::= 'SDG' | 'the topic' | 'the subfield' | 'the field' | 'the domain'
+published     ::= 'published by' link ( 'or' link )*
+funded        ::= 'funded by' link ( 'or' link )*
+license       ::= 'under the' link 'license'
+linkList3     ::= link ( ',' link )+ ',' 'and' link
+
+/* ---------- The things phrase ---------- */
+things        ::= thingNoun thingPart* threshold* ( 'where' conditions )?
+thingNoun     ::= 'authors' | 'institutions' | 'companies' | 'countries' | 'sources'
+                | 'journals' | 'repositories' | 'publishers' | 'funders' | 'topics'
+                | 'fields' | 'subfields'
+thingPart     ::= record | except
+                | 'in' link                              /* own country or continent */
+                | 'in' ( 'the subfield' | 'the field' | 'the domain' ) link
+record        ::= ( 'at' | 'in' ) link ( 'in' DIGIT '+' 'years' )? time?
+                | ( 'never at' | 'never in' ) link
+                /* an author's own record: `at` an institution, `in` a country */
+except        ::= 'except' ( link | '(' link ( ',' link )* ')' )
+threshold     ::= 'with' ownNumber numberWords NUMBER
+ownNumber     ::= 'an h-index' | 'an i10-index' | 'a works count' | 'a citation count'
+numberWords   ::= 'above' | 'at least' | 'below' | 'at most'
+ownField      ::= 'h-index' | 'works count'
+
+/* ---------- Numbers ---------- */
+numbers       ::= number | number 'and' number | number ( ',' number )+ ',' 'and' number
+number        ::= 'count' | 'share' | 'sum of citations' | 'sum of APCs paid'
+                | ( 'mean' | 'median' ) ( 'FWCI' | 'citations' )
+                | 'percent' yesNoNumber
+yesNoNumber   ::= 'open access' | 'retracted' | 'top 1% cited' | 'top 10% cited'
+                | 'with an abstract' | 'with full text' | 'with a DOI'
+
+/* ---------- Splits and which groups ---------- */
+splits        ::= split ( 'and' split )?            /* two different splits at most */
+split         ::= 'year' time?
+                | fieldSplit valueSet?
+                | thingSplit ( valueSet | groupPart* )
+fieldSplit    ::= 'type' | 'language' | 'open access' | 'open access status' | 'retracted'
+                | 'topic' | 'subfield' | 'field' | 'domain' | 'SDG' | 'corresponding author'
+thingSplit    ::= 'author' | 'institution' | 'company' | 'country' | 'journal' | 'source'
+                | 'repository' | 'publisher' | 'funder'
+valueSet      ::= 'in' '(' value ( ',' value )* ')'    /* up to 100 */
+                | 'in the collection' link
+groupPart     ::= record | except | 'in' link | threshold
+
+/* ---------- Orders ---------- */
+worksOrder    ::= 'most cited first' | 'least cited first' | 'most cited (age-adjusted) first'
+                | 'newest first' | 'oldest first' | 'best matches first'
+                | 'highest FWCI first' | 'lowest FWCI first'
+                | 'alphabetical by title' | 'reverse alphabetical by title'
+                | fieldOrder
+thingsOrder   ::= ( 'highest' | 'lowest' ) ( 'h-index' | 'i10-index' ) 'first'
+                | 'lowest works count first' | 'most cited first' | 'least cited first'
+                | fieldOrder
+fieldOrder    ::= ( 'highest' | 'lowest' ) field 'first'          /* a number field */
+                | ( 'latest' | 'earliest' ) field 'first'         /* a date field */
+                | field ( 'first' | 'last' )                      /* a yes/no field */
+                | 'reverse'? 'alphabetical by' field              /* text or a code */
+                | 'in' 'reverse'? field 'ID order'                /* an ID field */
+tableOrder    ::= ( 'highest' | 'lowest' ) tableColumn? 'first'   /* no name: one number */
+                | ( 'most' | 'fewest' ) 'works first'
+                | ( 'newest' | 'oldest' ) 'first'                 /* first split is year */
+                | 'reverse'? 'alphabetical by' splitWord
+                | 'in' 'reverse'? splitWord 'ID order'
+tableColumn   ::= number | 'h-index' | 'i10-index' | 'works count' | 'citation count'
+splitWord     ::= fieldSplit | thingSplit
+
+/* ===================== Conditions ===================== */
+
+conditions    ::= operand ( ( 'and' | 'or' ) operand )*
+                /* and binds tighter than or; the echo writes every grouping */
+operand       ::= '(' conditions ')' | clause
+
+clause        ::= field ( 'is' | 'is not' ) valueOrGroup
+                | field 'is' numberWords NUMBER
+                | searchField 'has' searchString
+                | searchField 'is similar to' '(' STRING ')'
+                | 'published' ( 'since' | 'before' | 'after' | 'in' | 'through' ) ( YEAR | DATE )
+                | dateField 'since' DATE                          /* `added since`, `updated since` */
+                | yesNoClause
+                | field ( 'is' | 'is not' ) 'in the collection' link
+                | field ( 'is' | 'is not' ) 'in the set' '(' setPhrase ')'
+                | relationClause
+
+valueOrGroup  ::= value | valueGroup
+valueGroup    ::= '(' valueItem ( ( 'and' | 'or' ) valueItem )+ ')'
+valueItem     ::= 'not'? ( value | valueGroup )
+value         ::= link | NUMBER | WORD | 'unknown'
+
+yesNoClause   ::= "it's" 'not'? yesNoWord
+                | 'it' ( 'has' | "doesn't have" ) flagNoun
+yesNoWord     ::= 'open access' | 'retracted' | 'top 1% cited' | 'top 10% cited'
+                | 'from the global south'
+flagNoun      ::= 'a DOI' | 'an ORCID' | 'an abstract' | 'full text'
+
+relationClause ::= 'it cites a work in the set' '(' setPhrase ')'
+                | "it doesn't cite any work in the set" '(' setPhrase ')'
+                | "it's cited by a work in the set" '(' setPhrase ')'
+                | "it isn't cited by any work in the set" '(' setPhrase ')'
+                | "it's related to a work in the set" '(' setPhrase ')'
+                | "it isn't related to any work in the set" '(' setPhrase ')'
+                | "it's related to" '(' link ')'
+                | 'it cites' '(' valueItem ( ( 'and' | 'or' ) valueItem )* ')'
+
+/* A set: a query with no `get`, named by what it holds. */
+setPhrase     ::= ( 'works' | 'authors of works' | thingNoun ) 'where' conditions
+
+/* ---------- Search strings ---------- */
+searchField   ::= 'title' | 'abstract' | 'title-abstract' | 'title-abstract-keywords'
+                | 'full text' | 'raw affiliation' | 'byline'
+searchString  ::= term | proximity | '(' searchExpr ')'
+searchExpr    ::= 'NOT'? searchOperand ( ( 'AND' | 'OR' | 'NOT' ) searchOperand )*
+searchOperand ::= term | '(' searchExpr ')' | proximity
+term          ::= WORD+                  /* a run of bare words: one stemmed node */
+                | STRING                 /* exact */
+                | 'stemmed' STRING       /* an adjacent phrase, stemmed */
+proximity     ::= '(' proxTerms 'within' NUMBER 'words of each other' ')'
+proxTerms     ::= proxTerm 'and' proxTerm | proxTerm ( ',' proxTerm )+ ',' 'and' proxTerm
+proxTerm      ::= WORD+ | STRING         /* all bare or all quoted */
+
+/* ===================== The general form ===================== */
+
+general       ::= start ( ';' ( 'then,' | 'finally,' ) step )*
+                /* `then,` before each step, `finally,` before the last of two or more */
+
+start         ::= 'get' 'works' corpus? ( 'where' conditions )?
+                | 'get' thingNoun ( 'where' conditions )? thingVerb
+                  ( countWords NUMBER )? 'works' 'where' conditions
+corpus        ::= '(' ( 'all corpora' | 'expansion corpus' ) ')'
+thingVerb     ::= 'who published' | 'that published' | 'that funded' | 'of'
+                | 'who were corresponding authors of' | 'that were corresponding institutions of'
+
+step          ::= splitStep | compareStep | summaryStep | sampleStep | walkStep
+
+splitStep     ::= 'group those works' firstSplit ( ( ',' | ','? 'and' ) laterSplit )*
+firstSplit    ::= ( 'by' field | 'into' field bins ) groupFilter?
+laterSplit    ::= ( 'by'? field | 'by' field bins ) groupFilter?   /* up to three splits */
+bins          ::= 'bins at' '(' NUMBER ( ',' NUMBER )* ')' | 'bins of' NUMBER
+groupFilter   ::= 'where' groupCondition ( ( 'and' | 'or' ) groupCondition )*
+groupCondition ::= measure 'of those works' 'is' numberWords NUMBER
+                | clause                                   /* the groups' own fields */
+
+compareStep   ::= 'compare' compared ( 'versus' compared )+
+                  ( 'using' measures )? ( 'by' laterSplit ( 'and' laterSplit )* )?
+                | 'compare each' field 'in the collection' link ( 'using' measures )?
+compared      ::= conditions
+                /* a yes/no field alone is true; `is` may go unsaid before a value;
+                   a later item may drop the field it shares with the one before */
+
+summaryStep   ::= 'summarize' scope? 'using' measures         /* always the last step */
+scope         ::= 'each' WORD | 'all those' WORD               /* `each author`, `all those works` */
+measures      ::= measure | measure 'and' measure | measure ( ',' measure )+ ',' 'and' measure
+measure       ::= 'count'
+                | ( 'mean' | 'median' | 'sum' | 'min' | 'max' ) field
+                | 'percent' field
+                | 'percent of those works'
+                | ownField
+
+sampleStep    ::= 'sample' NUMBER 'of those works' ( 'with seed' ( NUMBER | WORD ) )?
+
+walkStep      ::= 'get each' WORD 'of those works' ( 'where' conditions )?
+                | 'get' WORD 'of those works'
+                | 'get all that' WORD "'s works" ( 'where' conditions )?
+                | 'get all those' WORD "' works"
+
+/* ===================== Tokens ===================== */
+
+link          ::= '[' NAME ']' '(' ID ')'
+field         ::= WORD+                  /* an OQL field name from the properties registry */
+dateField     ::= WORD
+YEAR          ::= DIGIT DIGIT DIGIT DIGIT
+DATE          ::= YEAR '-' DIGIT DIGIT '-' DIGIT DIGIT
+NUMBER        ::= DIGIT+ ( ',' DIGIT DIGIT DIGIT )* ( '.' DIGIT+ )?
+DIGIT         ::= [0-9]
+ID            ::= [A-Za-z0-9_.-]+
+NAME          ::= [^#x5D]*               /* runs to the first `]`; ignored on input */
+STRING        ::= '"' [^"]* '"'
+WORD          ::= [^#x20#x22#x28#x29#x5B#x5D#x2C]+
 ```
-
-The reference implementation (`tests/oql/oql_v2.py`) is the **executable spec** —
-it is *not* the production translator (`query_translation/oql_*.py`, still v1.1).
-Reconciling the two is roadmap step 3 (gated on #323); the gap report is its
-work-list.
-
-## 10. Related documentation
-
-- [`oqo-spec.md`](./oqo-spec.md) — the canonical query object OQL is sugar over.
-- [`oql-addressing.md`](./oql-addressing.md) — decimal addressing (outline
-  coordinates `1`, `3.1`, `4.1.2`) over this filter tree, for diagnostics, the
-  builder, and human reference (oxjob #474). Additive; changes no language surface.
-- [`oql/corpus.yaml`](./oql/corpus.yaml) — the normative cases.
-- [`oql/gap_report.md`](./oql/gap_report.md) — v1.1 → v2 work-list.
-- [`oql/engine_findings.md`](./oql/engine_findings.md) — engine reality behind the
-  wildcard/proximity errors.
-- `plans/oqlo.md` (oxjobs) — the OQLO charter (architecture, roadmap, decisions).
