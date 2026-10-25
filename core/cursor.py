@@ -1,3 +1,4 @@
+import ast
 import base64
 import json
 
@@ -17,16 +18,27 @@ def decode_cursor(encoded_cursor, return_json=True):
     if encoded_cursor == "null" or encoded_cursor.lower() == "none":
         raise APIPaginationError("Cursor is null. Likely reached end of results.")
 
+    # encode_cursor writes json.dumps(str(value)): a JSON string holding a Python
+    # literal (the sort values' list repr, or a group-by bucket key). Read it back
+    # as one. Swapping quote characters to make JSON broke on any value with an
+    # apostrophe or a quote in it ("...Lonnie Athens' Theories" under
+    # sort=display_name, O'Brien, a bucket key like "children's health") and on
+    # True/False sort values (oxjob #687, ZD 6418 / 4515).
     try:
-        decoded_cursor = base64.b64decode(encoded_cursor)
-        cursor_utf8 = decoded_cursor.decode("utf8")
-        cursor_str = cursor_utf8.replace('"', "").replace("'", '"').replace("None", "null")
+        text = json.loads(base64.b64decode(encoded_cursor).decode("utf8"))
+        if return_json and isinstance(text, list):  # plain JSON, as the old decode also took
+            return text
+        if not isinstance(text, str):
+            raise ValueError("not an encoded cursor")
+        if not return_json:
+            return "null" if text == "None" else text
+        values = ast.literal_eval(text)
+        if not isinstance(values, (list, tuple)):
+            raise ValueError("not a list of sort values")
+        return list(values)
 
-        if return_json:
-            return list(json.loads(cursor_str))
-        return cursor_str
-
-    except (json.decoder.JSONDecodeError, ValueError):
+    except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+        # (binascii.Error, UnicodeDecodeError and JSONDecodeError are ValueErrors)
         raise APIPaginationError("Invalid cursor value")
 
 
