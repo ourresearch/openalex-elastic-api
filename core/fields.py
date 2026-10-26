@@ -483,6 +483,14 @@ class BooleanField(Field):
                     | Q("exists", field="ids.doi")
                     | Q("exists", field="ids.arxiv")
                 )
+        elif self.param == "locations.is_published" and self.value.lower().strip() == "false":
+            # A copy whose version is unknown is stored with is_published null (and
+            # is_accepted false) in locations_full, so a term on false missed it:
+            # 87,456,898 works matched where 192,943,740 have a copy that isn't the
+            # published version (oxjob #1870). is_published means version ==
+            # publishedVersion, and a copy that isn't accepted isn't published, so false
+            # also matches is_accepted:false. `true` stays a plain term.
+            q = Q("term", **{self.es_field(): False}) | Q("term", **{"locations_full.is_accepted": False})
         elif self.value == "null":
             q = ~Q("exists", field=self.es_sort_field())
         elif self.value == "!null":

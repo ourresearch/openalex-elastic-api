@@ -256,6 +256,19 @@ class LocationSchema(Schema):
             data.pop("id")
         return data
 
+    @post_dump
+    def fill_version_flags(self, data, **kwargs):
+        """is_published / is_accepted are booleans read off `version` (help: Locations).
+        A copy whose version is unknown is stored with is_published null inside
+        `locations` but false as primary_location / best_oa_location, so the same copy
+        disagreed with itself on 28% of works (oxjob #1870). Serve false in all three."""
+        version = data.get("version")
+        if data.get("is_published") is None:
+            data["is_published"] = version == "publishedVersion"
+        if data.get("is_accepted") is None:
+            data["is_accepted"] = version in ("acceptedVersion", "publishedVersion")
+        return data
+
     class Meta:
         ordered = True
 
