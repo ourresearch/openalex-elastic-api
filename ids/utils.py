@@ -233,17 +233,42 @@ def is_wikidata(wikidata):
         return True
 
 
+def wikidata_forms(qid):
+    """Every form an entity index may store Wikidata id `qid` in (oxjob #1884): the indexes mix /entity/
+    and /wiki/ URLs, with and without www, and bare Q ids, so a lookup that builds one form misses the rest."""
+    return [qid] + [
+        f"{scheme}{host}/{path}/{qid}"
+        for scheme in ("https://", "http://", "")
+        for host in ("www.wikidata.org", "wikidata.org")
+        for path in ("wiki", "entity")
+    ]
+
+
+def wikidata_query(field, value):
+    """A terms query on `field` matching the Wikidata id in `value` (wikidata:Q42 or a Wikidata URL) in every stored
+    form, or None when `value` holds no Q id."""
+    qid = normalize_wikidata(value)
+    return Q("terms", **{field: wikidata_forms(qid)}) if qid else None
+
+
 def normalize_wikidata(wikidata):
     if not wikidata:
         return None
     wikidata = wikidata.strip().upper()
-    p = re.compile(r"Q\d*")
+    p = re.compile(r"Q\d+")
     matches = re.findall(p, wikidata)
     if len(matches) == 0:
         return None
     wikidata = matches[0]
     wikidata = wikidata.replace("\0", "")
     return wikidata
+
+
+def is_pubmed_url(value):
+    """https://pubmed.ncbi.nlm.nih.gov/<n> (the served ids.pmid form) or the legacy www.ncbi.nlm.nih.gov/pubmed/<n>.
+    Substring match because the path router may collapse the // after the scheme (oxjob #850)."""
+    value = value.lower()
+    return "pubmed.ncbi.nlm.nih.gov/" in value or "ncbi.nlm.nih.gov/pubmed/" in value
 
 
 def normalize_pmid(pmid):

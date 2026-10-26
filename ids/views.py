@@ -32,9 +32,11 @@ from ids.utils import (
     is_funder_openalex_id,
     is_institution_openalex_id,
     is_openalex_id,
+    is_orcid,
     is_publisher_openalex_id,
     is_source_openalex_id,
     is_topic_openalex_id,
+    is_pubmed_url,
     is_work_openalex_id,
     normalize_doi,
     normalize_issn,
@@ -44,8 +46,8 @@ from ids.utils import (
     normalize_pmcid,
     normalize_ror,
     normalize_scopus_id,
-    normalize_wikidata,
     process_id_only_fields,
+    wikidata_query,
 )
 from institution_types.schemas import InstitutionTypesSchema
 from institution_types.views import DESCRIPTIONS as INSTITUTION_TYPE_DESCRIPTIONS
@@ -77,6 +79,13 @@ def redirect_if_merged(endpoint, short_id, connection):
     if winner:
         return redirect(url_for(endpoint, id=winner, **request.args), code=301)
     return None
+
+
+def most_works_first(s):
+    """Several records can hold one external id: an ORCID on a profile and its splinters, a ROR on a funder and
+    its sub-unit. Return the best-scoring one (only the ORCID query scores; filters score 0), then the one with
+    the most works; the id breaks ties so the pick is stable (oxjob #1884)."""
+    return s.sort("_score", "-works_count", "id").extra(size=1)
 
 
 # works
@@ -139,9 +148,11 @@ def works_id_get(id):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
         return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
-    elif id.startswith("pmid:"):
+    elif id.startswith("pmid:") or is_pubmed_url(id):
         id = id.replace("pmid:", "")
         clean_pmid = normalize_pmid(id)
+        if not clean_pmid:
+            abort(404)
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
         query = Q("term", ids__pmid=full_pmid)
         s = s.filter(query)
@@ -216,9 +227,11 @@ def works_v2_id_get(id):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
         return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
-    elif id.startswith("pmid:"):
+    elif id.startswith("pmid:") or is_pubmed_url(id):
         id = id.replace("pmid:", "")
         clean_pmid = normalize_pmid(id)
+        if not clean_pmid:
+            abort(404)
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
         query = Q("term", ids__pmid=full_pmid)
         s = s.filter(query)
@@ -298,15 +311,20 @@ def authors_id_get(id):
         clean_id = id.replace("mag:", "")
         clean_id = f"A{clean_id}"
         return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
-    elif id.startswith("orcid:") or id.startswith("https://orcid.org"):
+    elif is_orcid(id):
         clean_orcid = normalize_orcid(id)
         if not clean_orcid:
             return abort(404)
         full_orcid = f"https://orcid.org/{clean_orcid}"
-        query = Q("term", ids__orcid=full_orcid) | Q(
-            "term", ids__observed_orcids=full_orcid
+        # the profile holding it as its primary ORCID (score 2 or 3) beats one that only observed it (1)
+        query = Q(
+            "bool",
+            should=[
+                Q("constant_score", filter=Q("term", ids__orcid=full_orcid), boost=2),
+                Q("constant_score", filter=Q("term", ids__observed_orcids=full_orcid)),
+            ],
         )
-        s = s.filter(query)
+        s = s.query(query)
     elif id.startswith("scopus:") or id.startswith("https://www.scopus.com"):
         scopus_id = id.replace("scopus:", "")
         clean_scopus = normalize_scopus_id(scopus_id)
@@ -316,7 +334,7 @@ def authors_id_get(id):
         s = s.filter(query)
     else:
         abort(404)
-    response = s.execute()
+    response = most_works_first(s).execute()
     if not response:
         if is_openalex_id(id):
             merged = redirect_if_merged("ids.authors_id_get", f"A{author_id}", connection)
@@ -365,12 +383,6 @@ def institutions_id_get(id):
         full_openalex_id = f"https://openalex.org/I{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-
-        # Execute search and check if document exists
-        response = s.execute()
-        if not response.hits:  # Check if any hits were returned
-            abort(404)
-
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"I{clean_id}"
@@ -382,20 +394,16 @@ def institutions_id_get(id):
         full_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ror=full_ror)
         s = s.filter(query)
-        response = s.execute()
     elif id.startswith("wikidata:") or ("wikidata" in id):
-        clean_wikidata = normalize_wikidata(id)
-        if not clean_wikidata:
+        query = wikidata_query("ids.wikidata", id)
+        if not query:
             abort(404)
-        full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
-        query = Q("term", ids__wikidata=full_wikidata)
         s = s.filter(query)
-        response = s.execute()
     else:
         abort(404)
 
-    # Remove the duplicate response execution since we handle it above
-    if not response.hits:  # Use response.hits instead of just response
+    response = most_works_first(s).execute()
+    if not response.hits:
         abort(404)
 
     institutions_schema = InstitutionsSchema(
@@ -443,16 +451,14 @@ def concepts_id_get(id):
         clean_id = f"C{clean_id}"
         return redirect(url_for("ids.concepts_id_get", id=clean_id, **request.args))
     elif id.startswith("wikidata:") or ("wikidata" in id):
-        clean_wikidata = normalize_wikidata(id)
-        if not clean_wikidata:
+        # several concepts can share a Wikidata id (Q420: Biology and Biological sciences)
+        query = wikidata_query("wikidata", id)
+        if not query:
             abort(404)
-        full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
-        query = Q("term", wikidata=full_wikidata)
-        # several concepts can share a Wikidata id (Q420: Biology and Biological sciences); return the most used
-        s = s.filter(query).sort("-works_count")
+        s = s.filter(query)
     else:
         abort(404)
-    response = s.execute()
+    response = most_works_first(s).execute()
     if not response:
         abort(404)
     concepts_schema = ConceptsSchema(
@@ -515,17 +521,26 @@ def funders_id_get(id):
         full_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ids__ror=full_ror)
         s = s.filter(query)
-
     elif id.startswith("wikidata:") or ("wikidata" in id):
-        clean_wikidata = normalize_wikidata(id)
-        if not clean_wikidata:
+        query = wikidata_query("ids.wikidata", id)
+        if not query:
             abort(404)
-        full_wikidata = f"https://www.wikidata.org/entity/{clean_wikidata}"
-        query = Q("term", ids__wikidata=full_wikidata)
         s = s.filter(query)
+    elif id.startswith("doi:") or ("doi.org/" in id.lower()):
+        # the Funder DOI, stored bare (10.13039/100000001)
+        clean_doi = normalize_doi(id, return_none_if_error=True)
+        if not clean_doi:
+            abort(404)
+        s = s.filter(Q("term", ids__doi__keyword=clean_doi))
+    elif id.startswith("crossref:"):
+        # the Crossref Funder Registry id, a number (100000001)
+        crossref_id = id[len("crossref:"):].strip()
+        if not crossref_id.isdigit() or len(crossref_id) > 18:
+            abort(404)
+        s = s.filter(Q("term", ids__crossref=int(crossref_id)))
     else:
         abort(404)
-    response = s.execute()
+    response = most_works_first(s).execute()
     if not response:
         if is_openalex_id(id):
             merged = redirect_if_merged("ids.funders_id_get", f"F{clean_id}", connection)
@@ -571,11 +586,16 @@ def publishers_id_get(id):
         full_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ids__ror=full_ror)
         s = s.filter(query)
+    elif id.startswith("wikidata:") or ("wikidata" in id):
+        query = wikidata_query("ids.wikidata", id)
+        if not query:
+            abort(404)
+        s = s.filter(query)
     else:
         abort(404)
-        
-    response = s.execute()
-        
+
+    response = most_works_first(s).execute()
+
     if not response:
         abort(404)
     publishers_schema = PublishersSchema(
@@ -649,8 +669,7 @@ def sources_id_get(id):
         if not clean_issn:
             abort(404)
         query = Q("term", ids__issn__lower=clean_issn)
-        s = s.filter(query)
-        response = s.execute()
+        response = most_works_first(s.filter(query)).execute()
         if response:
             record_id = response[0].id
             clean_id = normalize_openalex_id(record_id)
@@ -662,8 +681,7 @@ def sources_id_get(id):
         if not clean_issn:
             abort(404)
         query = Q("term", ids__issn_l__lower=clean_issn)
-        s = s.filter(query)
-        response = s.execute()
+        response = most_works_first(s.filter(query)).execute()
         if response:
             record_id = response[0].id
             clean_id = normalize_openalex_id(record_id)
