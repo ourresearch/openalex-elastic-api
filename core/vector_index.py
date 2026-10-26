@@ -13,10 +13,11 @@ import math
 from collections import OrderedDict
 
 from elasticsearch.exceptions import ConnectionTimeout
-from elasticsearch_dsl import connections
+from elasticsearch_dsl import Search, connections
 
 import settings
 from core.exceptions import APIQueryParamsError, SemanticSearchBusyError
+from core.filter import filter_records
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.utils import get_full_openalex_id
 
@@ -312,43 +313,38 @@ def _has_id_filter(params):
 
 # oxjob #1649: the vector index holds core and xpac works alike (99.9% of a random xpac sample is in it) and has no
 # is_xpac field, so the corpus (corpus=core is the /works default) is checked on the works index for a wider pool of
-# nearest works. On 30 test queries ~20% of today's top 50 was xpac; the 300 nearest held 50 core works for 29 of
-# them and the 1,000 nearest for all 30. Cold kNN latency is the same at k = 50, 300 and 1,000 (disk reads dominate);
-# the id check costs ~150 ms per 1,000 ids. (Pools filtered after the kNN reuse POST_FILTER_POOLS.)
-CORPUS_POOLS = (300, 1000)
+# nearest works. On 30 test queries ~20% of today's top 50 was xpac (28 of 30 had at most 19), so the 100 nearest
+# hold 50 core works for nearly all of them, at today's num_candidates (300); the 1,000 nearest held 50 for all 30.
+# Single-query kNN latency is flat across k (cold: 730 / 718 / 626 ms median at k = 50 / 300 / 1,000), but the
+# vector cluster is disk-bound and runs near saturation, so the first pass keeps today's candidate count. The
+# works-index check costs ~150 ms per 1,000 ids.
+CORPUS_POOLS = (100, 1000)
 
 
 def _pop_corpus_clause(params):
-    """Take the is_xpac filters out of params["filters"] and return them as one works-index clause, or None when
-    they allow both corpora. Values as the URL filter writes them: false, true, !true, true|false."""
-    if not params.get("filters"):
+    """Take the is_xpac filters (the corpus, incl. the /works default is_xpac:false) out of params["filters"] and
+    return the works-index query /works builds for them, or None when there are none."""
+    filters = params.get("filters") or []
+    corpus = [f for f in filters if "is_xpac" in f]
+    if not corpus:
         return None
-    allowed = {True, False}
-    kept = []
-    for f in params["filters"]:
-        if "is_xpac" not in f:
-            kept.append(f)
-            continue
-        value = str(f["is_xpac"]).strip().lower()
-        values = {v.strip() == "true" for v in value.lstrip("!").split("|") if v.strip()}
-        allowed &= ({True, False} - values) if value.startswith("!") else values
-    params["filters"] = kept
-    if allowed == {True, False}:
-        return None
-    if not allowed:
-        return {"bool": {"must_not": [{"match_all": {}}]}}
-    return {"term": {"is_xpac": allowed.pop()}}
+    params["filters"] = [f for f in filters if "is_xpac" not in f]
+    from works.fields import fields_dict  # here, not at the top: importing works.fields at load time is circular
+    return filter_records(fields_dict, corpus, Search()).to_dict()["query"]
 
 
-def _in_corpus(vector_results, corpus_clause, connection):
-    """The vector results whose works-index record passes corpus_clause, in their order."""
+def _ids_query(ids, works_filter):
+    return {"bool": {"filter": [{"ids": {"values": ids}}, works_filter]}}
+
+
+def _passing(vector_results, works_filter, connection):
+    """The vector results whose current works-index record passes works_filter, in their order."""
     if not vector_results:
         return []
-    ids = [r[0] for r in vector_results]
     response = connections.get_connection(connection).search(index=settings.WORKS_INDEX, body={
-        "query": {"bool": {"filter": [{"ids": {"values": ids}}, corpus_clause]}},
+        "query": _ids_query([r[0] for r in vector_results], works_filter),
         "_source": False,
-        "size": len(ids),
+        "size": len(vector_results),
     })
     passing = {h["_id"] for h in response["hits"]["hits"]}
     return [r for r in vector_results if r[0] in passing]
@@ -359,26 +355,31 @@ def _works_filter(filter_dict, corpus_clause):
     works_filter = _translate_filter_for_works(filter_dict)
     if corpus_clause is None:
         return works_filter
-    if works_filter is None:
-        return {"bool": {"must": [corpus_clause]}}
+    works_filter = works_filter or {"bool": {}}
     works_filter["bool"].setdefault("must", []).append(corpus_clause)
     return works_filter
 
 
-def _nearest(query_vector, filter_dict, params, k, corpus_clause=None, connection="walden"):
-    """The k nearest works that pass the request's filters and, when set, the corpus.
+def _nearest(query_vector, filter_dict, id_filter, k, recheck, connection):
+    """The k nearest works that pass the request's filters.
 
     Broad filters without an id clause run over a pool of nearest works, then the bigger pool, before falling back
-    to the pre-filtered kNN (oxjob #1433); id filters are pre-filtered. With a corpus clause each pass keeps only the
-    in-corpus works and is judged on how many of those it kept, so a corpus never pushes a search onto the slow
-    pre-filter path that the same search without it would have avoided.
+    to the pre-filtered kNN (oxjob #1433); id filters are pre-filtered. recheck (the works-index filter, set when a
+    corpus applies: only the works index knows it) is applied to every pass, and each pass is judged on the works
+    that pass it, so a corpus never pushes a search onto the slow pre-filter path it would otherwise have avoided.
     """
-    def keep(results):
-        return (_in_corpus(results, corpus_clause, connection) if corpus_clause else results)[:k]
+    found = {}  # with recheck: every passing work any pass found, so a later pass never returns fewer
 
-    if filter_dict and not _has_id_filter(params):
+    def keep(results):
+        if not recheck:
+            return results[:k]
+        for r in _passing(results, recheck, connection):
+            found.setdefault(r[0], r)
+        return sorted(found.values(), key=lambda r: r[1], reverse=True)[:k]
+
+    if filter_dict and not id_filter:
         for i, pool in enumerate(POST_FILTER_POOLS):
-            size = pool if corpus_clause else k
+            size = min(pool, CORPUS_POOLS[-1]) if recheck else k
             results, complete = execute_vector_search(query_vector, filter_dict, k=size, post_filter_pool=pool)
             kept = keep(results)
             if len(kept) >= k or (complete and len(results) < size):
@@ -386,8 +387,15 @@ def _nearest(query_vector, filter_dict, params, k, corpus_clause=None, connectio
             bigger = POST_FILTER_POOLS[i + 1] if i + 1 < len(POST_FILTER_POOLS) else None
             if not bigger or len(kept) * bigger / pool < k:
                 break
-    for size in (CORPUS_POOLS if corpus_clause else (k,)):
-        results = execute_vector_search(query_vector, filter_dict, k=size,
+    if filter_dict:
+        # shortcut: the filtered kNN stays at k, so a corpus can leave it short of k: on bbq_disk it takes 4.5 s
+        # median at k=300 vs 0.4 s at k=50 (an institution with 972K works, #1649). Only the exact path, whose cost
+        # doesn't depend on its size, widens. The lasting fix is an is_xpac field in the vector index.
+        return keep(execute_vector_search(query_vector, filter_dict, k=k,
+                                          num_candidates=max(k * 2, 75, settings.VECTOR_NUM_CANDIDATES),
+                                          exact_size=CORPUS_POOLS[-1] if recheck else None))
+    for size in (CORPUS_POOLS if recheck else (k,)):
+        results = execute_vector_search(query_vector, None, k=size,
                                         num_candidates=max(size * 2, 75, settings.VECTOR_NUM_CANDIDATES))
         kept = keep(results)
         if len(kept) >= k or len(results) < size:
@@ -395,12 +403,13 @@ def _nearest(query_vector, filter_dict, params, k, corpus_clause=None, connectio
     return kept
 
 
-def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, post_filter_pool=None):
+def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, post_filter_pool=None, exact_size=None):
     """Run kNN search on settings.WORKS_VECTOR_INDEX.
 
     Returns list of (work_id, score, cited_by_count) tuples sorted by score descending. With post_filter_pool=N,
     filter_dict is applied to the N nearest works instead of inside the kNN, and the return is (results, complete):
     complete is False when that pool was full but kept fewer than k works, i.e. more matches may lie further out.
+    exact_size: how many works the exact path (a restrictive pre-filter scored by script_score) returns; default k.
     """
     es = connections.get_connection("vector")
 
@@ -433,6 +442,7 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, po
                 "query": {"bool": {"filter": filter_dict}}, "size": 0, "track_total_hits": exact_max + 1})
             if count["hits"]["total"]["value"] <= exact_max:
                 body.pop("knn")
+                body["size"] = exact_size or k
                 body["query"] = {"script_score": {
                     "query": {"bool": {"filter": filter_dict}},
                     # kNN's cosine _score is (1 + cos) / 2, and its similarity floor 0.5 is cos >= 0.5
@@ -630,7 +640,7 @@ def hydrate_results(vector_results, connection="walden", works_filter=None):
         response = es.search(
             index=settings.WORKS_INDEX,
             body={
-                "query": {"bool": {"filter": [{"ids": {"values": work_ids}}, works_filter]}},
+                "query": _ids_query(work_ids, works_filter),
                 "size": len(work_ids),
                 "_source": {"excludes": source_excludes},
             },
@@ -709,8 +719,12 @@ def vector_semantic_search(params, index_name, connection):
 
     # Execute kNN on vector index
     works_filter = _works_filter(filter_dict, corpus_clause)
+    # With a corpus every kNN pass is checked against works_filter (vector and text-boost hits alike pass it), so
+    # hydration doesn't check it again.
+    recheck = works_filter if corpus_clause else None
     try:
-        vector_results = _nearest(query_vector, filter_dict, params, MAX_SEMANTIC_RESULTS, corpus_clause, connection)
+        vector_results = _nearest(query_vector, filter_dict, _has_id_filter(params), MAX_SEMANTIC_RESULTS, recheck,
+                                  connection)
     except Exception as e:
         import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
         if isinstance(e, ConnectionTimeout):
@@ -745,7 +759,7 @@ def vector_semantic_search(params, index_name, connection):
 
     # Hydrate full docs from works-v34, re-applying the filters to the current records
     try:
-        hits = hydrate_results(vector_results, connection, works_filter=works_filter)
+        hits = hydrate_results(vector_results, connection, works_filter=None if recheck else works_filter)
     except Exception as e:
         import traceback; print(f"VECTOR_ERR hydrate: {type(e).__name__}: {e}", flush=True)
         raise
