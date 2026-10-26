@@ -54,3 +54,7 @@ values:
   display_name: book-review
 - id: types/data-paper
   display_name: data-paper
+- id: types/software-paper
+  display_name: software-paper
+- id: types/physical-object
+  display_name: physical-object
