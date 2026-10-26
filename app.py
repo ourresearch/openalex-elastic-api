@@ -1,6 +1,7 @@
 import json
 import time
 
+import sentry_sdk
 from elasticsearch.exceptions import ConnectionTimeout as ESConnectionTimeout
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify, request
@@ -178,7 +179,9 @@ def register_errorhandlers(app):
     app.errorhandler(APIError)(handle_exception)
 
     def handle_es_timeout(err):
-        """Elasticsearch didn't answer within the client timeout (7 s)."""
+        """Elasticsearch didn't answer within the client timeout (7 s). Still sent to
+        Sentry, where these timeouts are a health signal (a handled error isn't)."""
+        sentry_sdk.capture_exception(err)  # a no-op when Sentry isn't set up
         return handle_exception(QueryTimeoutError(
             "This query took too long and was stopped before it finished. Narrow it "
             "(a shorter year range, a smaller institution or topic, fewer group_by "
