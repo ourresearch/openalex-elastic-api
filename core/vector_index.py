@@ -19,6 +19,7 @@ import settings
 from core.exceptions import APIQueryParamsError, SemanticSearchBusyError
 from core.filter import filter_records
 from core.semantic_search import embed_query, VECTOR_FIELD
+from core.merged_ids import with_winners
 from core.utils import get_full_openalex_id
 
 logger = logging.getLogger(__name__)
@@ -186,7 +187,7 @@ def _build_single_filter(key, field_name, value):
     if "|" in str(value):
         values = [v.strip() for v in str(value).split("|") if v.strip()]
         if key in _ID_FIELDS:
-            values = [get_full_openalex_id(v) or v for v in values]
+            values = with_winners([get_full_openalex_id(v) or v for v in values])  # oxjob #1124
         elif key in _LICENSE_FIELDS:
             values = [_normalize_license(v) for v in values]
         elif key in _LOWERCASE_FIELDS:
@@ -195,7 +196,10 @@ def _build_single_filter(key, field_name, value):
 
     str_value = str(value)
     if key in _ID_FIELDS:
-        str_value = get_full_openalex_id(str_value) or str_value
+        ids = with_winners([get_full_openalex_id(str_value) or str_value])  # oxjob #1124
+        if len(ids) > 1:
+            return {"terms": {field_name: ids}}
+        str_value = ids[0]
     elif key in _LICENSE_FIELDS:
         str_value = _normalize_license(str_value)
     elif key in _LOWERCASE_FIELDS:

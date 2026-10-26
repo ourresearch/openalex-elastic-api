@@ -2,6 +2,7 @@ import re
 
 from elasticsearch_dsl import Q
 
+from core import merged_ids
 from core.exceptions import APIQueryParamsError
 from core.fields import CollectionField, OpenAlexIDField, TermField, any_of_terms, collection_ids_query
 from core.collection_resolver import (
@@ -15,6 +16,9 @@ from settings import MAX_IDS_IN_FILTER
 
 def filter_records(fields_dict, filter_params, s, sample=None):
     if filter_params:
+        # one merge-index lookup for every author / source / funder ID in the request (oxjob #1124)
+        merged_ids.prefetch([v for f in filter_params for k, v in f.items()
+                             if type(fields_dict.get(k)) is OpenAlexIDField])
         s, filter_params = _apply_collection_filters(fields_dict, filter_params, s)
         s, filter_params = _apply_cross_type_collection_filters(fields_dict, filter_params, s)
     for filter in filter_params:

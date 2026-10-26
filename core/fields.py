@@ -19,6 +19,7 @@ from core.search import (
     validate_wildcard_requires_exact,
     validate_wildcards,
 )
+from core.merged_ids import with_winners
 from core.utils import get_full_openalex_id, normalize_openalex_id
 import settings
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
@@ -577,6 +578,14 @@ class OpenAlexIDField(Field):
     field_type = "openalex_id"
     operators = ["eq", "or", "not", "null"]
 
+    @staticmethod
+    def _id_query(field, value):
+        """`term` on `field` for one OpenAlex ID. A merged-away author, source or funder ID also
+        matches its winner, so a filter on a stored pre-merge ID finds the surviving record's works
+        (oxjob #1124)."""
+        ids = with_winners([get_full_openalex_id(value)])
+        return Q("term", **{field: ids[0]}) if len(ids) == 1 else Q("terms", **{field: ids})
+
     def build_query(self):
         if self.param in ("authorships.institutions.id", "authorships.institutions.lineage"):
             field_name = self.es_field().replace("__", ".")
@@ -605,14 +614,12 @@ class OpenAlexIDField(Field):
             return q
         elif self.value.startswith("!") and self.value != "!null":
             self.validate(self.value[1:])
-            query = get_full_openalex_id(self.value[1:])
-            kwargs = {self.es_field(): query}
             if self.param == "repository":
-                q = ~Q("term", locations_full__source__id=query)
+                q = ~self._id_query("locations_full__source__id", self.value[1:])
             elif self.param == "journal":
-                q = ~Q("term", primary_location__source__id=query)
+                q = ~self._id_query("primary_location__source__id", self.value[1:])
             else:
-                q = ~Q("term", **kwargs)
+                q = ~self._id_query(self.es_field(), self.value[1:])
             return q
         elif self.param == "cited_by":
             self.validate(self.value)
@@ -633,8 +640,7 @@ class OpenAlexIDField(Field):
                 )
             else:
                 self.validate(self.value)
-                kwargs = {self.custom_es_field: get_full_openalex_id(self.value)}
-                q = Q("term", **kwargs) & Q(
+                q = self._id_query(self.custom_es_field, self.value) & Q(
                     "term", **{"locations_full.source.type": "repository"}
                 )
         elif self.param == "journal":
@@ -648,15 +654,12 @@ class OpenAlexIDField(Field):
                 )
             else:
                 self.validate(self.value)
-                kwargs = {self.custom_es_field: get_full_openalex_id(self.value)}
-                q = Q("term", **kwargs) & Q(
+                q = self._id_query(self.custom_es_field, self.value) & Q(
                     "term", **{"primary_location.source.type": "journal"}
                 )
         else:
             self.validate(self.value)
-            query = get_full_openalex_id(self.value)
-            kwargs = {self.es_field(): query}
-            q = Q("term", **kwargs)
+            q = self._id_query(self.es_field(), self.value)
         return q
 
     def es_field(self) -> str:
@@ -728,6 +731,8 @@ class OpenAlexIDField(Field):
                     f"'{val}' is not a valid OpenAlex ID."
                 )
             formatted_values.append(formatted)
+        # merged-away author / source / funder IDs also match their winners (oxjob #1124)
+        formatted_values = with_winners(formatted_values)
         if self.param in (
             "authorships.institutions.id",
             "authorships.institutions.lineage",

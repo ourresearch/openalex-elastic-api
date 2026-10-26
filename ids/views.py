@@ -8,6 +8,7 @@ from flask import Blueprint, abort, redirect, request, url_for, jsonify
 from urllib.parse import quote
 
 import settings
+from core.merged_ids import merged_winner
 from works import lakebase
 
 logger = logging.getLogger(__name__)
@@ -67,22 +68,14 @@ from works.schemas import WorksSchema
 blueprint = Blueprint("ids", __name__)
 
 
-def get_merged_into_id(connection, merge_index, full_id):
-    """Resolve a merged entity id to its winner via a merge-* mapping index.
+def redirect_if_merged(endpoint, short_id, connection):
+    """301 to the winner when `short_id` (author, source or funder) was merged away, else None.
 
-    Merge losers are removed from the entity index (e.g. MergeFunders.ipynb in
-    openalex-walden tombstones the mid.funder row and deletes the ES doc); the
-    mapping index holds {id, merge_into_id} docs keyed by the loser's full
-    OpenAlex URL. Returns the winner's short id (e.g. "F4320311904"), or None
-    when the id was never merged or the mapping index doesn't exist.
-    """
-    try:
-        s = Search(index=merge_index, using=connection).filter("ids", values=[full_id])
-        response = s.execute()
-        if response:
-            return normalize_openalex_id(response[0].merge_into_id.rsplit("/", 1)[-1])
-    except Exception:
-        return None
+    Merge losers have no doc in the entity index; the merge-* indexes name the winner
+    (core.merged_ids, oxjob #1124). The proxy follows the 301, so API callers get the winner's record."""
+    winner = merged_winner(short_id, connection)
+    if winner:
+        return redirect(url_for(endpoint, id=winner, **request.args), code=301)
     return None
 
 
@@ -325,6 +318,10 @@ def authors_id_get(id):
         abort(404)
     response = s.execute()
     if not response:
+        if is_openalex_id(id):
+            merged = redirect_if_merged("ids.authors_id_get", f"A{author_id}", connection)
+            if merged:
+                return merged
         abort(404)
     authors_schema = AuthorsSchema(
         context={"display_relevance": False}, only=only_fields
@@ -530,18 +527,10 @@ def funders_id_get(id):
         abort(404)
     response = s.execute()
     if not response:
-        # merged funders: the loser doc is deleted from the entity index, and the
-        # merge-funders mapping (written by MergeFunders.ipynb) carries the winner —
-        # answer with the documented 301 instead of a 404
         if is_openalex_id(id):
-            merged_into = get_merged_into_id(
-                connection, "merge-funders", f"https://openalex.org/F{clean_id}"
-            )
-            if merged_into:
-                return redirect(
-                    url_for("ids.funders_id_get", id=merged_into, **request.args),
-                    code=301,
-                )
+            merged = redirect_if_merged("ids.funders_id_get", f"F{clean_id}", connection)
+            if merged:
+                return merged
         abort(404)
     funders_schema = FundersSchema(
         context={"display_relevance": False}, only=only_fields
@@ -685,8 +674,12 @@ def sources_id_get(id):
         abort(404)
         
     response = s.execute()
-        
+
     if not response:
+        if is_openalex_id(id):
+            merged = redirect_if_merged("ids.sources_id_get", f"S{clean_id}", connection)
+            if merged:
+                return merged
         abort(404)
     sources_schema = SourcesSchema(
         context={"display_relevance": False}, only=only_fields
