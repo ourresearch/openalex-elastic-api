@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 
 from elasticsearch_dsl import Search, Q
@@ -10,7 +11,9 @@ from core.exceptions import APIQueryParamsError
 blueprint = Blueprint("raw_affiliation_strings", __name__)
 
 PER_PAGE = 100
+MAX_PER_PAGE = 1000  # for cursor walks (full CSV exports); offset pages stay within MAX_OFFSET_ROWS
 MAX_OFFSET_PAGE = 100  # 100 pages * 100 per page = 10,000 max with offset paging
+MAX_OFFSET_ROWS = 10000  # the index's max_result_window
 
 
 def parse_institution_id(id_str):
@@ -117,7 +120,10 @@ def raw_affiliation_strings():
     - unmatched-institutions: comma-separated institution IDs to exclude (must NOT be in institution_ids_final)
     - works_count: filter by works count (e.g., 42, 42-, -42, 42-100)
     - page: page number (1-indexed, max 100)
-    - cursor: cursor for cursor-based pagination (use * to start)
+    - per_page: rows per page (default 100, max 1,000; offset pages must stay within the first 10,000 rows)
+    - cursor: cursor for cursor-based pagination (use * to start). Every non-sample
+      response carries meta.next_cursor, so a walk can start from any offset page
+      (the editor pages by number to 100, then follows cursors; oxjob #1823).
     - sample: random sample size (max 10,000)
     - seed: seed for reproducible random sampling
     """
@@ -129,6 +135,7 @@ def raw_affiliation_strings():
     unmatched_institutions_param = request.args.get("unmatched-institutions", "").strip()
     works_count_param = request.args.get("works_count", "").strip()
     page_param = request.args.get("page", "1")
+    per_page_param = request.args.get("per_page", request.args.get("per-page", str(PER_PAGE)))
     cursor = request.args.get("cursor")
     sample_param = request.args.get("sample", "").strip()
     seed = request.args.get("seed", "").strip()
@@ -140,6 +147,13 @@ def raw_affiliation_strings():
             raise APIQueryParamsError("page must be at least 1.")
     except ValueError:
         raise APIQueryParamsError("page must be an integer.")
+
+    try:
+        per_page = int(per_page_param)
+    except ValueError:
+        raise APIQueryParamsError("per_page must be an integer.")
+    if not 1 <= per_page <= MAX_PER_PAGE:
+        raise APIQueryParamsError(f"per_page must be between 1 and {MAX_PER_PAGE}.")
     
     # Validate sample
     sample = None
@@ -165,6 +179,11 @@ def raw_affiliation_strings():
     if not cursor and page > MAX_OFFSET_PAGE:
         raise APIQueryParamsError(
             f"Maximum page is {MAX_OFFSET_PAGE}. Use cursor pagination for deeper results."
+        )
+    if not cursor and page * per_page > MAX_OFFSET_ROWS:
+        raise APIQueryParamsError(
+            f"Page {page} at per_page={per_page} goes past row {MAX_OFFSET_ROWS:,}. "
+            "Use cursor pagination for deeper results."
         )
     
     # Parse works_count filter
@@ -266,7 +285,7 @@ def raw_affiliation_strings():
         s = s.query(base_query)
     
     # Set size
-    s = s.extra(size=PER_PAGE)
+    s = s.extra(size=per_page)
     
     # Sort by works_count descending (highest first), with _doc as tiebreaker for cursor pagination
     if not sample:
@@ -280,18 +299,28 @@ def raw_affiliation_strings():
         s = s.extra(search_after=decoded)
     elif not cursor:
         # Offset-based pagination (works for both regular and sample queries)
-        offset = (page - 1) * PER_PAGE
-        s = s[offset:offset + PER_PAGE]
+        # from + size set directly: slicing after extra(size=...) sends size 0
+        # under elasticsearch-dsl 8.18 (prod pins 8.9.0, where both work).
+        offset = (page - 1) * per_page
+        s = s.extra(**{"from": offset, "size": per_page})
     
     # Limit size for sample - cap at sample size if it's less than remaining results
     if sample:
-        offset = (page - 1) * PER_PAGE
+        offset = (page - 1) * per_page
         remaining = max(0, sample - offset)
-        s = s.extra(size=min(remaining, PER_PAGE))
+        s = s.extra(size=min(remaining, per_page))
     
+    # The same search always reads the same shard copies: _doc (the tiebreaker)
+    # differs between copies, so pages and cursor walks that hopped copies
+    # repeated and skipped rows (a walk of INRAE's 128,949 linked strings
+    # returned 128,245 distinct; oxjob #1823). Sorting ties by the string
+    # instead was 3-10x slower on deep pages.
+    preference = "ras-" + hashlib.sha1(json.dumps(
+        [q, matched_institution_ids, unmatched_institution_ids, works_count_param]).encode()).hexdigest()[:16]
+
     # Execute search
     try:
-        s = s.params(timeout='10s')
+        s = s.params(timeout='10s', preference=preference)
         response = s.execute()
     except Exception as e:
         raise APIQueryParamsError(f"Search error: {str(e)}")
@@ -335,14 +364,15 @@ def raw_affiliation_strings():
         "count": sample if sample and sample < total else total,
         "db_response_time_ms": took,
         "page": page if not cursor else None,
-        "per_page": PER_PAGE,
+        "per_page": per_page,
         "q": q if q else None
     }
     
-    # Add next_cursor for cursor-based pagination
-    if cursor is not None:
+    # next_cursor on every non-sample page, offset pages included, so a cursor
+    # walk can pick up after any page (oxjob #1823).
+    if not sample:
         next_cursor = None
-        if len(response.hits) == PER_PAGE:
+        if len(response.hits) == per_page:
             last_hit = response.hits[-1]
             if hasattr(last_hit.meta, 'sort') and last_hit.meta.sort:
                 next_cursor = encode_cursor(list(last_hit.meta.sort))
