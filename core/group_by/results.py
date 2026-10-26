@@ -61,7 +61,9 @@ def get_group_by_results(
         "primary_topic.field.id",
         "primary_topic.subfield.id",
     ):
-        results = get_topics_group_by_results(group_by, response, index_name, connection)
+        results = get_topics_group_by_results(
+            group_by, response, index_name, connection, get_metric_result_key(params)
+        )
     else:
         results = get_default_group_by_results(
             group_by, response, index_name, connection, get_metric_result_key(params)
@@ -145,12 +147,13 @@ def get_nested_group_by_results(
     bucket_key = get_bucket_keys(outer_group_by)["default"]
     buckets = response.aggregations[bucket_key].buckets
     return _build_nested_level(
-        buckets, dimensions, 0, index_name, fields_dict, connection
+        buckets, dimensions, 0, index_name, fields_dict, connection,
+        get_metric_result_key(params),
     )
 
 
 def _build_nested_level(
-    buckets, dimensions, level, index_name, fields_dict, connection
+    buckets, dimensions, level, index_name, fields_dict, connection, metric_key=None
 ):
     group_by, include_unknown = dimensions[level]
     field = get_field(fields_dict, group_by)
@@ -168,7 +171,7 @@ def _build_nested_level(
 
     results = []
     for b in buckets:
-        result = get_result(b, key_display_names, group_by, index_name)
+        result = get_result(b, key_display_names, group_by, index_name, metric_key)
         if not result:
             continue
         if has_child:
@@ -180,6 +183,7 @@ def _build_nested_level(
                 index_name,
                 fields_dict,
                 connection,
+                metric_key,
             )
         results.append(result)
 
@@ -262,21 +266,12 @@ def get_default_group_by_results(
     return group_by_results
 
 
-def get_topics_group_by_results(group_by, response, index_name, connection='default'):
-    group_by_results = []
-    buckets = get_default_buckets(group_by, response)
-    buckets = buckets_to_keep(buckets, group_by)
-
-    if requires_display_name_conversion(group_by):
-        keys = [b.key for b in buckets]
-        key_display_names = get_display_name_mapping(keys, group_by, connection)
-    else:
-        key_display_names = {}
-
-    for b in buckets:
-        result = get_result(b, key_display_names, group_by, index_name)
-        if result:
-            group_by_results.append(result)
+def get_topics_group_by_results(
+    group_by, response, index_name, connection='default', metric_key=None
+):
+    group_by_results = get_default_group_by_results(
+        group_by, response, index_name, connection, metric_key
+    )
 
     # format single integer keys as URLs
     entity = f"{group_by.split('.')[1]}s"

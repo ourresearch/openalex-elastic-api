@@ -235,7 +235,7 @@ def works_filters(params):
 @blueprint.route("/works/stats/")
 def works_stats():
     stats_fields = [
-        "apc_payment.price_usd",
+        "apc_paid.value_usd",  # was apc_payment.price_usd, a field the index no longer has (oxjob #1513)
         "authors_count",
         "cited_by_count",
         "referenced_works_count",

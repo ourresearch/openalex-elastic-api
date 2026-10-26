@@ -53,3 +53,11 @@ class SemanticSearchBusyError(APIError):
     semantic ladder counts it as overload and the caller gets Retry-After instead of a hung request."""
     code = 503
     description = "Semantic search is busy"
+
+
+class QueryTimeoutError(APIError):
+    """Elasticsearch didn't answer within the client timeout: a query too broad to
+    finish, answered as a JSON 504 instead of an HTML 500 (oxjob #1513)."""
+    code = 504
+    description = "Query timeout"
+    error_code = "query_timeout"

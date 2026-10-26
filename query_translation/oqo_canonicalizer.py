@@ -159,7 +159,8 @@ def _drop_redundant_default_sort(filter_rows: List[FilterType], sort_by) -> List
             and sort_by[0].direction == "desc"
             and _any_search_leaf(filter_rows)):
         return []
-    return [SortBy(s.column_id, s.direction) for s in sort_by]
+    # copy every field: rebuilding SortBy by hand dropped `aggregate` (oxjob #1513)
+    return [replace(s) for s in sort_by]
 
 
 def _canonicalize_tree(f, sort_operands: bool = True):

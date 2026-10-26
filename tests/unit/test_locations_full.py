@@ -57,7 +57,10 @@ def test_no_works_filter_reads_capped_locations():
 
 
 VALID_VALUE = {"doi": "10.1038/nature14539", "best_open_version": "published", "version": "acceptedVersion",
-               "locations.version": "acceptedVersion"}
+               "locations.version": "acceptedVersion",
+               # a host organization is a publisher or an institution, never a source (oxjob #1513)
+               "locations.source.host_organization": "P4310320990",
+               "locations.source.host_organization_lineage": "I205783295"}
 
 
 def test_every_location_filter_reads_locations_full():

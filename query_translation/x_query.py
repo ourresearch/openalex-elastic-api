@@ -20,7 +20,7 @@ from typing import Callable, Dict, List, Optional
 
 from core.utils import get_display_name as _get_display_name
 from query_translation import oql_lang
-from query_translation.oqo import OQO
+from query_translation.oqo import OQO, metric_sort_as_table
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.diagnostics import OQLError
@@ -268,6 +268,12 @@ def build_x_query(
         # Not URL-expressible (e.g. nested boolean tree). url stays None; the
         # client treats null as an "advanced query" it can't render as chips.
         pass
+
+    # A group sorted by a metric (`sort=cited_by_count.mean:desc`) keeps that URL
+    # form (above), but OQL says it as the table that returns the same rows, and the
+    # OQO and order words below follow the OQL (oxjob #1513). So the echoed `oqo`
+    # runs as a table (analytics.py) while the `url` runs the classic group path.
+    canonical = metric_sort_as_table(canonical)
 
     oql_form = None
     oql_unavailable = None

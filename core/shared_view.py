@@ -1,3 +1,5 @@
+import dataclasses
+import urllib.parse
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
@@ -185,10 +187,33 @@ def attach_x_query(result, request, index_name):
             # time a result exists to attach x_query to.
             corpus=request.args.get("corpus"),
         )
-        result["meta"]["x_query"] = build_x_query(oqo)
+        group_bys = request.args.get("group_bys") or request.args.get("group-bys")
+        if group_bys and "," in group_bys and group_by_string == group_bys:
+            # independent groups per field: the parser read them as one nested split
+            result["meta"]["x_query"] = _independent_groups_echo(
+                build_x_query(dataclasses.replace(oqo, group_by=[])), group_bys)
+        else:
+            result["meta"]["x_query"] = build_x_query(oqo)
     except Exception:
         # Additive metadata only — never let it break the results response.
         pass
+
+
+def _independent_groups_echo(x_query, group_bys):
+    """The echo of `group_bys=a,b` (one list of groups per field, side by side),
+    built from the query without the split. OQL has no form for independent groups
+    (`by a and b` nests them; #1512, 2026-10-03), so it carries no OQL and says why
+    (oxjob #1513); the URL keeps `group_bys`."""
+    x_query = dict(
+        x_query, oql=None, x_new_oql=None, order=None, order_default=False,
+        oql_unavailable="group_bys returns separate groups for each field; OQL has no "
+                        "form for that (`by a and b` nests the groups). Ask for each "
+                        "field on its own.",
+    )
+    if x_query.get("url"):
+        sep = "&" if "?" in x_query["url"] else "?"
+        x_query["url"] += f"{sep}group_bys={urllib.parse.quote(group_bys, safe=':, |')}"
+    return x_query
 
 
 def construct_query(params, fields_dict, index_name, default_sort, connection):

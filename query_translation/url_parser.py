@@ -221,14 +221,22 @@ def parse_url_to_oqo(
         corpus=corpus,
         filter_rows=filter_rows,
         sort_by=sort_by,
-        sample=sample,
+        sample=_url_int(sample),
         group_by=group_by,
         select=select,
         seed=seed,
-        per_page=per_page,
-        page=page,
+        per_page=_url_int(per_page),
+        page=_url_int(page),
         cursor=cursor,
     ))
+
+
+def _url_int(value):
+    """A URL's `sample` / `per_page` / `page` text (`"100"`) as the integer the OQO
+    holds (ticket 26042, oxjob #1513); anything else is left for the validator."""
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return value
 
 
 def parse_select_string(select_string: str) -> List[str]:
@@ -1021,7 +1029,7 @@ def parse_sort_string(sort_string: str) -> List[SortBy]:
         else:
             column = segment
             direction = "asc"
-        column, aggregate = _split_metric_sort_column(column)
+        column, aggregate = split_metric_sort_column(column)
         sort_by.append(
             SortBy(column_id=column, direction=direction, aggregate=aggregate)
         )
@@ -1031,7 +1039,7 @@ def parse_sort_string(sort_string: str) -> List[SortBy]:
 # Public metric names valid in the dotted `<column>.<metric>` group-sort form
 # (oxjob #389). Mirrors core.group_by.buckets.GROUP_BY_METRICS keys; kept local so
 # the pure URL parser stays free of the elasticsearch-importing buckets module.
-def _split_metric_sort_column(column):
+def split_metric_sort_column(column):
     """Peel a trailing `.<metric>` off a sort column, returning
     `(column_id, aggregate)`. `(column, None)` when there is no metric suffix.
     Only the LAST dotted segment is considered the metric, so a column like

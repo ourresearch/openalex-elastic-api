@@ -1,6 +1,7 @@
 import json
 import time
 
+from elasticsearch.exceptions import ConnectionTimeout as ESConnectionTimeout
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify, request
 
@@ -43,7 +44,7 @@ import topics
 import works
 import work_types
 from core.collection_resolver import CollectionUrlIdsInQuery
-from core.exceptions import APIError
+from core.exceptions import APIError, QueryTimeoutError
 from core.origin_key import init_origin_key_check
 from extensions import cache
 from sentry_setup import init_sentry
@@ -175,6 +176,16 @@ def register_errorhandlers(app):
         return jsonify(response), err.code, headers
 
     app.errorhandler(APIError)(handle_exception)
+
+    def handle_es_timeout(err):
+        """Elasticsearch didn't answer within the client timeout (7 s)."""
+        return handle_exception(QueryTimeoutError(
+            "This query took too long and was stopped before it finished. Narrow it "
+            "(a shorter year range, a smaller institution or topic, fewer group_by "
+            "fields) and try again."
+        ))
+
+    app.errorhandler(ESConnectionTimeout)(handle_es_timeout)
 
 
 if __name__ == '__main__':

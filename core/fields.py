@@ -7,6 +7,7 @@ from typing import FrozenSet, List, Optional
 from elasticsearch_dsl import Q, Search
 
 import country_list
+from core.entities import accepted_id_entities, entity_for_id_prefix
 from core.exceptions import APIQueryParamsError
 from core.search import (
     SearchOpenAlex,
@@ -614,9 +615,11 @@ class OpenAlexIDField(Field):
                 q = ~Q("term", **kwargs)
             return q
         elif self.param == "cited_by":
+            self.validate(self.value)
             openalex_ids = self.get_ids(self.value, "referenced_works")
             q = Q("terms", id=openalex_ids)
         elif self.param == "related_to":
+            self.validate(self.value)
             openalex_ids = self.get_ids(self.value, "related_works")
             q = Q("terms", id=openalex_ids)
         elif self.param == "repository":
@@ -686,6 +689,17 @@ class OpenAlexIDField(Field):
             raise APIQueryParamsError(
                 "Use a publisher ID with this convenience filter (OpenAlex ID that starts with P)."
             )
+        # A wrong-type ID matches nothing: `authorships.author.id:I27837315` (an
+        # institution) answered count 0 instead of an error (oxjob #1513).
+        accepted = accepted_id_entities(self.param, self.entity_type)
+        if accepted:
+            short_id = normalize_openalex_id(query)
+            given = entity_for_id_prefix(short_id[0])
+            if given and given not in accepted:
+                raise APIQueryParamsError(
+                    f"'{short_id}' is an OpenAlex {given} ID; "
+                    f"{self.param} takes {' or '.join(accepted)} IDs."
+                )
 
     def _get_formatted_value(self):
         """Return the indexed value for self.value, or None if invalid.

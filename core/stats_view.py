@@ -62,8 +62,9 @@ def shared_stats_view(request, fields_dict, index_name, stats_fields, entity_nam
             .items()
         ):
             key_display = int(float(key))
-            value = int(value)
-            percentiles[key_display] = value
+            # A field no matching work carries has no percentiles: ES returns
+            # null, which used to crash int() into an HTTP 500 (oxjob #1513).
+            percentiles[key_display] = int(value) if value is not None else None
         result["stats"].append(
             {
                 "key": field,

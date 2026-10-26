@@ -195,3 +195,30 @@ def entity_for_id_prefix(prefix: Optional[str]) -> Optional[str]:
 def native_id_entities() -> Dict[str, EntityType]:
     """All entities with a native single-letter ID prefix (the Tier-2 set)."""
     return {n: e for n, e in _registry().items() if e.is_native_id}
+
+
+# ID columns whose declared entity type doesn't say which IDs they hold (oxjob
+# #1513): the citation relations hold work IDs but declare none; a host
+# organization is a publisher or, for a repository, an institution (Cornell,
+# I205783295), but declares `publishers`.
+_HOST_ORGANIZATION = ("publishers", "institutions")
+ID_COLUMN_ENTITY_OVERRIDES: Dict[str, Tuple[str, ...]] = {
+    "cites": ("works",),
+    "cited_by": ("works",),
+    "related_to": ("works",),
+    "referenced_works": ("works",),
+    **{
+        f"{prefix}{col}": _HOST_ORGANIZATION
+        for prefix in ("", "locations.source.", "primary_location.source.",
+                       "best_oa_location.source.", "repositories.")
+        for col in ("host_organization", "host_organization_lineage")
+    },
+}
+
+
+def accepted_id_entities(column: str, declared: Optional[str]) -> Tuple[str, ...]:
+    """The entity types whose IDs `column` holds: its override, else its declared
+    type, else none (no check)."""
+    if column in ID_COLUMN_ENTITY_OVERRIDES:
+        return ID_COLUMN_ENTITY_OVERRIDES[column]
+    return (declared,) if declared else ()

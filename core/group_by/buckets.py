@@ -139,50 +139,39 @@ def create_sorted_group_by_buckets(
     sort_params,
     fields_dict=None,
 ):
-    for key, order in sort_params.items():
-        if key in ["count", "key"]:
-            order_key = f"_{key}"
-            a = A(
-                "terms",
-                field=group_by_field,
-                order={order_key: order},
-                size=per_page,
-                shard_size=shard_size,
-            )
-            if include_unknown:
-                a.missing = missing
-            if "cited_by_percentile_year" in group_by_field:
-                a.format = "0.0"
-            s.aggs.bucket(bucket_keys["default"], a)
+    for key, direction in sort_params.items():
+        spec = _group_order(fields_dict, key, direction)
+        if spec is None:
             continue
-
-        # Metric-aggregate sort (oxjob #389): order the buckets by a metric
-        # sub-aggregation (mean/sum/min/max of a numeric field). ES computes the
-        # sub-agg per bucket and orders the terms agg by its path natively.
-        metric_field, metric = parse_metric_sort_key(key)
-        if metric_field and metric:
-            metric_es_field = resolve_metric_es_field(fields_dict, metric_field)
-            a = A(
-                "terms",
-                field=group_by_field,
-                order={GROUP_BY_METRIC_AGG_NAME: order},
-                size=per_page,
-                shard_size=shard_size,
-            )
-            if include_unknown:
-                a.missing = missing
-            if "cited_by_percentile_year" in group_by_field:
-                a.format = "0.0"
-            # Attach the metric sub-agg the terms agg orders by; its value is also
-            # surfaced per group (core.group_by.results.get_result reads it back).
-            a.metric(
-                GROUP_BY_METRIC_AGG_NAME,
-                GROUP_BY_METRICS[metric],
-                field=metric_es_field,
-            )
-            s.aggs.bucket(bucket_keys["default"], a)
-            continue
+        a = A("terms", field=group_by_field, size=per_page, shard_size=shard_size)
+        if include_unknown:
+            a.missing = missing
+        _apply_field_hints(a, group_by_field)
+        _apply_group_order(a, spec)
+        s.aggs.bucket(bucket_keys["default"], a)
     return s
+
+
+def _group_order(fields_dict, key, direction):
+    """How one sort key orders groups: `count` / `key`, or a metric
+    (`cited_by_count.mean`, oxjob #389). Returns (terms order, metric sub-agg as
+    (es agg, es field) or None), or None for a key that doesn't order groups."""
+    if key in ("count", "key"):
+        return {f"_{key}": direction}, None
+    metric_field, metric = parse_metric_sort_key(key)
+    if metric_field and metric:
+        es_field = resolve_metric_es_field(fields_dict, metric_field)
+        return {GROUP_BY_METRIC_AGG_NAME: direction}, (GROUP_BY_METRICS[metric], es_field)
+    return None
+
+
+def _apply_group_order(a, spec):
+    """Order a terms agg by `spec` (from `_group_order`). ES orders by the metric
+    sub-agg natively; get_result reads its value back per group."""
+    order, metric = spec
+    a.order = order
+    if metric:
+        a.metric(GROUP_BY_METRIC_AGG_NAME, metric[0], field=metric[1])
 
 
 def resolve_metric_es_field(fields_dict, metric_field):
@@ -282,10 +271,26 @@ def create_default_group_by_buckets(
     )
     if include_unknown:
         a.missing = missing
-    if "cited_by_percentile_year" in group_by_field:
-        a.format = "0.0"
+    _apply_field_hints(a, group_by_field)
     s.aggs.bucket(bucket_keys["default"], a)
     return s
+
+
+# `referenced_works` and `related_works` carry no eager global ordinals, so a plain
+# terms agg builds them on every request: about 10 s even on 3,827 works (#1512),
+# past the 7 s client timeout, so `group_by=cites` answered HTTP 500 (oxjob #1513).
+# `map` reads the matching works' values directly: 0.4 s, the same buckets.
+# shortcut: map's cost grows with the matching set; on tens of millions of works
+# the search's 5 s soft timeout (execute_search) cuts it off. If broad sets get
+# common, eager global ordinals on the mapping are the fix (Casey owns mappings).
+_MAP_HINT_FIELDS = ("referenced_works", "related_works")
+
+
+def _apply_field_hints(a, group_by_field):
+    if "cited_by_percentile_year" in group_by_field:
+        a.format = "0.0"
+    if group_by_field in _MAP_HINT_FIELDS:
+        a.execution_hint = "map"
 
 
 def _reject_unsupported_nested_field(field):
@@ -345,6 +350,10 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
 
     preference_seed = ",".join(group_by for group_by, _ in dimensions)
     s = s.params(preference=clean_preference(preference_seed))
+    # every level takes the sort's order, as a single-field group does (the last
+    # key that orders groups wins); it used to be ignored (oxjob #1513)
+    specs = [spec for key, direction in (params.get("sort") or {}).items()
+             if (spec := _group_order(fields_dict, key, direction))]
 
     parent = s.aggs
     for group_by, include_unknown in dimensions:
@@ -359,8 +368,9 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
         a = A("terms", field=group_by_field, size=per_page, shard_size=shard_size)
         if include_unknown:
             a.missing = get_missing(field)
-        if "cited_by_percentile_year" in group_by_field:
-            a.format = "0.0"
+        _apply_field_hints(a, group_by_field)
+        if specs:
+            _apply_group_order(a, specs[-1])
 
         parent = parent.bucket(bucket_key, a)
     return s

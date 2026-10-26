@@ -273,6 +273,9 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
     (#498) — done FIRST and import-independently, so the redirect runs on every
     construction boundary even if the column-id canonicalization below degrades."""
     oqo = redirect_is_xpac_to_corpus(oqo)
+    if oqo.calculate:
+        # a table sorts by a measure it returns, however the sort arrived (oxjob #1513)
+        oqo = metric_sort_as_table(oqo)
     try:
         from core.properties import canonicalize_column_id
     except Exception:
@@ -764,6 +767,26 @@ VALID_OPERATORS = {
 # data-model module) so neither the validator nor the URL parser imports the
 # elasticsearch-heavy buckets module — and so they can't drift from each other.
 VALID_SORT_AGGREGATES = frozenset({"mean", "sum", "min", "max"})
+
+
+def metric_sort_as_table(oqo: "OQO") -> "OQO":
+    """A group_by sorted by a metric (`sort=cited_by_count.mean:desc`) as the table
+    of groups with the same rows: the count plus that measure, ordered by it (`get
+    the count and mean citations of ... by subfield, highest mean citations first`;
+    same response key, `mean_cited_by_count`). Anything else comes back unchanged."""
+    if not oqo.group_by or not any(s.aggregate for s in oqo.sort_by):
+        return oqo
+    calculate = list(oqo.calculate) or [Measure("count")]
+    sort_by = []
+    for s in oqo.sort_by:
+        if s.aggregate is None:
+            sort_by.append(s)
+            continue
+        m = Measure(s.aggregate, s.column_id)
+        if all(c.key != m.key for c in calculate):
+            calculate.append(m)
+        sort_by.append(SortBy(m.key, s.direction))
+    return replace(oqo, calculate=calculate, sort_by=sort_by)
 
 # Valid corpus selections (#481). "core" is the default; "expansion" is the
 # expansion corpus alone (subsumes the retired `is_xpac` filter); "all" is both.

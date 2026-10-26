@@ -40,9 +40,10 @@
 # can't be graded by execution equivalence on the live API:
 #   * row 30 (`abstract is similar to …`, semantic vector search) — its gold column
 #     `abstract.search.semantic` isn't in the validator catalog.
-#   * row 48 (`group by topic, year`) — MULTI-dimensional group_by is in the OQO spec
-#     but the live `/query` rejects it (HTTP 400, single-dim only; see oxjob #297),
-#     so neither pred nor gold can execute for Tier-2 grading.
+#   * row 48 (`group by topic, year`) — omitted when the live API ran one dimension
+#     only (oxjob #297). Nested group_by (up to three) executes since #387
+#     (2026-06-07), so the row can come back once its NL paraphrases are written
+#     (noted by oxjob #1513, 2026-10-26).
 #
 # Lint with:  work/validate_nl_eval.py
 version: 1
@@ -290,8 +291,7 @@ cases:
     - {text: "macrocystis pyrifera research counted per author", difficulty: hard}
     - {text: "group works about Macrocystis pyrifera by author", difficulty: hard}
 
-# row 48 (group by topic, year) intentionally omitted — multi-dim group_by isn't
-# executable on the live /query (HTTP 400), so it can't be Tier-2 graded. See header.
+# row 48 (group by topic, year) not yet added back: see the header.
 
 - ref: 49  # country is col_eu27 and country is US group by topic
   # EXEMPT from the graded score (decision 4): col_eu27 is a COLLECTION, which NL

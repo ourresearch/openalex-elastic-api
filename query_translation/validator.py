@@ -21,7 +21,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from core.entities import entity_for_id_prefix, get_entity_type
+from core.entities import accepted_id_entities, entity_for_id_prefix, get_entity_type
 from core.fields import CollectionField, Property
 from core.properties import (
     CAP_GROUP_BY,
@@ -1084,24 +1084,27 @@ class OQOValidator:
         `config/<entity>.yaml`), so this never hand-maintains a prefix list. A
         column whose entity isn't a native-ID entity (unknown, or a slug/numeric
         id) has no shape to check and passes through."""
-        ent = get_entity_type(entry.entity_type)
-        if ent is None or not ent.is_native_id or ent.id_shape_ok(f.value):
+        # Most columns hold one entity's IDs; a few say it only through the
+        # override table (citations hold works, host organizations hold publishers
+        # or institutions; oxjob #1513).
+        accepted = accepted_id_entities(f.column_id, entry.entity_type)
+        ents = [e for e in map(get_entity_type, accepted) if e is not None and e.is_native_id]
+        if not ents or any(e.id_shape_ok(f.value) for e in ents):
             return []
+        names = " or ".join(e.name for e in ents)
+        prefixes = " or ".join(f"'{e.id_prefix}'" for e in ents)
         # Name the wrong type when the value is itself a valid OpenAlex ID of
         # another kind (the common slip, `institution is W5`) for a precise fix-it.
-        hint = f" {entry.entity_type} IDs start with '{ent.id_prefix}' (e.g. {ent.id_prefix}12345)."
-        if isinstance(f.value, str):
-            m = re.match(r"\s*(?:https?://openalex\.org/)?([A-Za-z])\d+\s*\Z", f.value)
-            other = entity_for_id_prefix(m.group(1)) if m else None
-            if other and other != entry.entity_type:
-                hint = (
-                    f" {f.value!r} is an OpenAlex {other} ID; "
-                    f"{entry.entity_type} IDs start with '{ent.id_prefix}'."
-                )
+        hint = f" {names} IDs start with {prefixes} (e.g. {ents[0].id_prefix}12345)."
+        m = re.match(r"\s*(?:https?://openalex\.org/)?([A-Za-z])\d+\s*\Z", f.value) \
+            if isinstance(f.value, str) else None
+        other = entity_for_id_prefix(m.group(1)) if m else None
+        if other and other not in accepted:
+            hint = f" {f.value!r} is an OpenAlex {other} ID; {names} IDs start with {prefixes}."
         return [ValidationError(
             type="invalid_value",
             message=(
-                f"Value {f.value!r} is not a valid {entry.entity_type} ID "
+                f"Value {f.value!r} is not a valid {names} ID "
                 f"for column '{f.column_id}'.{hint}"
             ),
             location=f"{location}.value",

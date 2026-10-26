@@ -40,6 +40,7 @@ from core.utils import get_data_version_connection, map_filter_params, map_sort_
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
 from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
+from query_translation.url_parser import split_metric_sort_column
 from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
@@ -379,10 +380,16 @@ def _merge_view_params(oqo: OQO, request, body_params=None) -> OQO:
         # Insertion order preserved (Py3.7+ dict) → multi-column tiebreaker
         # priority survives, exactly like the legacy URL path.
         words = [p.split(":")[0].strip() for p in raw_sort.split(",")]
-        updates["sort_by"] = [
-            SortBy(column_id=_sort_column(col, word, oqo), direction=direction)
-            for (col, direction), word in zip(sort_map.items(), words)
-        ]
+        sort_by = []
+        for (col, direction), word in zip(sort_map.items(), words):
+            # `cited_by_count.mean:desc` sorts the groups by a metric, as on the URL
+            # path (it reached the validator as a column, oxjob #1513)
+            metric_col, aggregate = split_metric_sort_column(col)
+            if aggregate and oqo.group_by:
+                sort_by.append(SortBy(metric_col, direction, aggregate))
+            else:
+                sort_by.append(SortBy(column_id=_sort_column(col, word, oqo), direction=direction))
+        updates["sort_by"] = sort_by
 
     raw_select = body.get("select")
     if raw_select is None:
