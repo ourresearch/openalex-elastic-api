@@ -1047,7 +1047,8 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
                     "Sort the groups so the ones you want come first, or page through "
                     "every group with cursor=* (in key order).")
         terms["size"] = size
-        terms["shard_size"] = max(size * 2, 3000)
+        # a long single split needs deeper shard lists, as on the URL path (oxjob #1513)
+        terms["shard_size"] = max(size * 2, 10_000 if size > 50 and not nested else 3000)
         lv.size = size
         order = [{"_count": "desc"}, {"_key": "asc"}]
         if sort_measure and not nested and (lv.selector is None or lv.paged_floor):

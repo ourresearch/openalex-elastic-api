@@ -81,7 +81,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
     bucket_keys = get_bucket_keys(group_by)
 
     missing = get_missing(field)
-    shard_size = determine_shard_size(q)
+    shard_size = determine_shard_size(q, per_page)
 
     s = filter_by_repository_or_journal(field, s)
 
@@ -376,8 +376,18 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
     return s
 
 
-def determine_shard_size(q):
-    return 5000 if q else 3000
+def determine_shard_size(q, per_page=None):
+    """How many top keys each shard sends. A long list of high-cardinality groups
+    needs deeper shard lists: top-200 authors of Medicine 2024 left out 28 who
+    belonged at 3,000 and 5 at 10,000, for 820 ms of ES time instead of 528 (oxjob
+    #1513; going higher bought nothing). Nested group_bys keep 3,000 (the call
+    passes no per_page): there the size multiplies across levels."""
+    if q:
+        return 5000
+    return LONG_LIST_SHARD_SIZE if (per_page or 0) > 50 else 3000
+
+
+LONG_LIST_SHARD_SIZE = 10_000
 
 
 def get_missing(field):

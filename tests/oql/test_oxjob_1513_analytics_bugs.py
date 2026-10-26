@@ -242,3 +242,19 @@ def test_url_sample_and_paging_become_integers():
     oqo = parse_url_to_oqo("works", sample="100", per_page="5", page="2", seed="3")
     assert (oqo.sample, oqo.per_page, oqo.page, oqo.seed) == (100, 5, 2, "3")
     assert parse_url_to_oqo("works", sample="abc").sample == "abc"     # left for the validator
+
+
+# --- bug 5: long single-field group lists take deeper shard lists ---------------
+
+@pytest.mark.parametrize("per_page,shard_size", [(200, 10_000), (51, 10_000), (50, 3000), (25, 3000), (None, 3000)])
+def test_a_long_group_list_asks_each_shard_for_more_keys(per_page, shard_size):
+    from elasticsearch_dsl import Search
+    from core.group_by.buckets import create_group_by_buckets
+    s = create_group_by_buckets(fields_dict, "authorships.author.id", False, Search(),
+                                {"sort": None, "per_page": per_page, "q": None, "cursor": None})
+    (agg,) = s.to_dict()["aggs"].values()
+    assert agg["terms"]["shard_size"] == shard_size
+
+
+def test_nested_groups_keep_the_short_shard_lists():
+    assert _nested_outer_agg({})["terms"]["shard_size"] == 3000
