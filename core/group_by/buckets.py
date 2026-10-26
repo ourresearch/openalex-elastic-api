@@ -1,15 +1,13 @@
-from elasticsearch_dsl import A, Q, AttrDict
+from elasticsearch_dsl import A, AttrDict
 from flask import current_app as app
 
 
-import settings
 from core.cursor import decode_group_by_cursor
 from core.exceptions import APIQueryParamsError
-from core.group_by.utils import get_bucket_keys, is_works_version_group_by
+from core.group_by.utils import get_bucket_keys, is_boolean_field, is_works_version_group_by
 from core.validate import validate_group_by
 from core.preference import clean_preference
 from core.utils import get_field
-from country_list import GLOBAL_SOUTH_COUNTRIES
 
 
 # Multi-dimensional (nested) group_by — oxjob #387. ES nests terms aggs natively
@@ -76,9 +74,13 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
     ):
         return s
 
-    group_by_field = field.alias if field.alias else field.es_sort_field()
-
     bucket_keys = get_bucket_keys(group_by)
+    if is_boolean_field(field):
+        return create_boolean_group_by_buckets(
+            field, bucket_keys, include_unknown, s, sort_params, fields_dict
+        )
+
+    group_by_field = field.alias if field.alias else field.es_sort_field()
 
     missing = get_missing(field)
     shard_size = determine_shard_size(q, per_page)
@@ -97,15 +99,6 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
             sort_params,
             fields_dict,
         )
-    elif "is_global_south" in field.param:
-        create_global_south_group_by_buckets(bucket_keys, group_by_field, s)
-    elif (
-        field.param in settings.EXTERNAL_ID_FIELDS
-        or field.param in settings.BOOLEAN_TEXT_FIELDS
-    ):
-        create_boolean_group_by_buckets(bucket_keys, group_by_field, s)
-    elif field.param == "mag_only":
-        create_mag_only_group_by_buckets(bucket_keys, s)
     elif cursor:
         if cursor and cursor != "*":
             after_key = decode_group_by_cursor(cursor)
@@ -152,6 +145,16 @@ def create_sorted_group_by_buckets(
     return s
 
 
+def last_group_sort(sort_params):
+    """The (key, direction) that orders groups: the last `count`, `key` or metric
+    sort key, as on a nested group_by (oxjob #1513). None when none orders groups."""
+    last = None
+    for key, direction in (sort_params or {}).items():
+        if key in ("count", "key") or parse_metric_sort_key(key)[1]:
+            last = (key, direction)
+    return last
+
+
 def _group_order(fields_dict, key, direction):
     """How one sort key orders groups: `count` / `key`, or a metric
     (`cited_by_count.mean`, oxjob #389). Returns (terms order, metric sub-agg as
@@ -194,45 +197,29 @@ def resolve_metric_es_field(fields_dict, metric_field):
     return field.es_field()
 
 
-def create_global_south_group_by_buckets(bucket_keys, group_by_field, s):
-    country_codes = [c["country_code"] for c in GLOBAL_SOUTH_COUNTRIES]
-    exists = A("filter", Q("terms", **{group_by_field: country_codes}))
-    not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
-    s.aggs.bucket(bucket_keys["exists"], exists)
-    s.aggs.bucket(bucket_keys["not_exists"], not_exists)
-    return s
-
-
-def create_mag_only_group_by_buckets(bucket_keys, s):
-    exists = A(
-        "filter",
-        (
-            Q("exists", field="ids.mag")
-            & ~Q("exists", field="ids.pmid")
-            & ~Q("exists", field="ids.pmcid")
-            & ~Q("exists", field="ids.doi")
-            & ~Q("exists", field="ids.arxiv")
-        ),
+def create_boolean_group_by_buckets(
+    field, bucket_keys, include_unknown, s, sort_params, fields_dict
+):
+    """A yes/no group_by counts what its own filter matches: group "true" = the works
+    `filter=<field>:true` returns, "false" = those `<field>:false` returns, and with
+    include_unknown, "unknown" = works neither matches (ES's other bucket). It used to
+    run a terms agg on the raw field or an `exists` on it, which disagreed with the
+    filter: every work carries `has_abstract`, so group_by put all 328M under true
+    while the filter found 148.7M without one; columns with no ES field of their own
+    (has_oa_accepted_or_published_version) came back empty (oxjob #1859)."""
+    a = A(
+        "filters",
+        filters={"true": field.query_for("true"), "false": field.query_for("false")},
     )
-    not_exists = A(
-        "filter",
-        (
-            Q("exists", field="ids.pmid")
-            | Q("exists", field="ids.pmcid")
-            | Q("exists", field="ids.doi")
-            | Q("exists", field="ids.arxiv")
-        ),
-    )
-    s.aggs.bucket(bucket_keys["exists"], exists)
-    s.aggs.bucket(bucket_keys["not_exists"], not_exists)
-    return s
-
-
-def create_boolean_group_by_buckets(bucket_keys, group_by_field, s):
-    exists = A("filter", Q("exists", field=group_by_field))
-    not_exists = A("filter", ~Q("exists", field=group_by_field))
-    s.aggs.bucket(bucket_keys["exists"], exists)
-    s.aggs.bucket(bucket_keys["not_exists"], not_exists)
+    if include_unknown:
+        a.other_bucket_key = "unknown"
+    # a metric sort (`cited_by_count.mean:desc`) returns its value per group;
+    # get_boolean_group_by_results orders the groups
+    order = last_group_sort(sort_params)
+    spec = _group_order(fields_dict, *order) if order else None
+    if spec and spec[1]:
+        a.metric(GROUP_BY_METRIC_AGG_NAME, spec[1][0], field=spec[1][1])
+    s.aggs.bucket(bucket_keys["default"], a)
     return s
 
 
@@ -294,8 +281,7 @@ def _apply_field_hints(a, group_by_field):
 
 
 def _reject_unsupported_nested_field(field):
-    """The exotic single-dim group_by shapes (boolean exists/not-exists pairs,
-    external-id booleans, global-south, mag_only, continent, version,
+    """The exotic single-dim group_by shapes (yes/no columns, continent, version,
     best_open_version) use bespoke bucket builders + result paths that don't
     nest. Multi-dim group_by supports the plain `terms`-agg fields only — reject
     the rest with a clear 400 rather than silently producing wrong buckets."""
@@ -313,11 +299,7 @@ def _reject_unsupported_nested_field(field):
         "primary_topic.subfield.id",
     )
     if (
-        field.param in settings.EXTERNAL_ID_FIELDS
-        or field.param in settings.BOOLEAN_TEXT_FIELDS
-        or type(field).__name__ == "BooleanField"
-        or "is_global_south" in field.param
-        or field.param == "mag_only"
+        is_boolean_field(field)
         or "continent" in field.param
         or field.param == "best_open_version"
         or is_works_version_group_by(field)
@@ -393,7 +375,6 @@ LONG_LIST_SHARD_SIZE = 10_000
 def get_missing(field):
     if (
         type(field).__name__ == "RangeField"
-        or type(field).__name__ == "BooleanField"
         or field.param == "ids.crossref"
     ):
         missing = -111
@@ -460,19 +441,6 @@ def keep_institution_buckets(buckets):
 
 def keep_publisher_buckets(buckets):
     return filter_buckets_by_key_start(buckets, "https://openalex.org/P")
-
-
-def get_bucket_doc_count(group_by, response, bucket_key):
-    bucket_keys = get_bucket_keys(group_by)
-    return response.aggregations[bucket_keys[bucket_key]].doc_count
-
-
-def exists_bucket_count(group_by, response):
-    return get_bucket_doc_count(group_by, response, "exists")
-
-
-def not_exists_bucket_count(group_by, response):
-    return get_bucket_doc_count(group_by, response, "not_exists")
 
 
 def create_apc_sum(params, index_name, s):

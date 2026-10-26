@@ -34,7 +34,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from elasticsearch_dsl import Q, Search
 
-import settings
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
 from query_translation.analytics_csv import split_meta
@@ -154,11 +153,8 @@ def _es_number_field(fields_dict, column_id: str) -> str:
 
 def _true_query(fields_dict, column_id: str):
     """The field's own query for `true` (yes/no columns)."""
-    import copy
     from core.utils import get_field
-    f = copy.copy(get_field(fields_dict, column_id))
-    f.value = "true"
-    return f.build_query()
+    return get_field(fields_dict, column_id).query_for("true")
 
 
 def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
@@ -423,7 +419,6 @@ def _row_key(k, lv: "Level", index_name: str) -> str:
 
 
 def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> Level:
-    import copy
     from core.utils import get_field
     from query_translation.oqo_to_es import _translate
     from query_translation.oql_lang import _group_entity
@@ -521,16 +516,11 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
             "split_not_available",
             f"Splitting by {fld.param} isn't available in calculations yet.",
             "Group by it without a calculation (today's group by), or split by another field.")
-    if (ftype == "BooleanField" or fld.param in settings.EXTERNAL_ID_FIELDS
-            or fld.param in settings.BOOLEAN_TEXT_FIELDS or "is_global_south" in fld.param):
+    if ftype == "BooleanField":
+        # the same true/false queries the filter and group_by run (oxjob #1859)
         lv = Level(i, g, "filters", column_id=column_id)
-        t = copy.copy(fld)
-        t.value = "true"
-        f_true = t.build_query()
-        f = copy.copy(fld)
-        f.value = "false"
-        f_false = f.build_query()
-        lv.agg = {"filters": {"filters": {"true": f_true.to_dict(), "false": f_false.to_dict()}}}
+        lv.agg = {"filters": {"filters": {"true": fld.query_for("true").to_dict(),
+                                          "false": fld.query_for("false").to_dict()}}}
         lv.labels = {"true": ("true", _label_bool(column_id, True)),
                      "false": ("false", _label_bool(column_id, False))}
         lv.order_keys = ["true", "false"]

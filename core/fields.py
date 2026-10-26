@@ -1,3 +1,4 @@
+import copy
 import datetime
 import re
 from abc import ABC, abstractmethod
@@ -400,6 +401,14 @@ class BooleanField(Field):
     field_type = "boolean"
     operators = ["eq", "null"]
 
+    def query_for(self, value):
+        """The query `filter=<param>:<value>` runs, for "true" or "false". group_by
+        and analytics splits count with it, so they always match the filter (oxjob
+        #1859). build_query rewrites `value` on some columns, so it runs on a copy."""
+        f = copy.copy(self)
+        f.value = value
+        return f.build_query()
+
     def build_query(self):
         q = None
         if self.param in EXTERNAL_ID_FIELDS:
@@ -448,12 +457,15 @@ class BooleanField(Field):
                 q = ~Q("terms", **{self.es_field(): country_codes})
             return q
         elif self.param == "has_old_authors":
+            self.validate_true_false()
             q = (
                 Q("prefix", authorships__author__id="https://openalex.org/A4")
                 | Q("prefix", authorships__author__id="https://openalex.org/A3")
                 | Q("prefix", authorships__author__id="https://openalex.org/A2")
                 | Q("prefix", authorships__author__id="https://openalex.org/A1")
             )
+            if self.value.lower().strip() == "false":
+                q = ~q  # `false` ran the same query as `true` (oxjob #1859)
         elif self.param == "mag_only":
             self.validate_true_false()
             if self.value.lower().strip() == "true":

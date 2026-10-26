@@ -122,13 +122,8 @@ EXTERNAL_ID_FIELDS = [
     "has_ror",
     "has_wikidata",
     "primary_location.source.has_issn",
-]
-
-BOOLEAN_TEXT_FIELDS = [
-    "has_abstract",
-    "has_pdf_url",
-    "has_raw_affiliation_strings",
-    "has_references",
+    # an exists test like the one above; a term on "true" matched no work (oxjob #1859)
+    "locations.source.has_issn",
 ]
 
 CONTINENT_PARAMS = {

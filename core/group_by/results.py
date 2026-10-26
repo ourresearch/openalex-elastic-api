@@ -1,10 +1,10 @@
-import settings
+from elasticsearch_dsl import AttrDict
+
 from core.group_by.buckets import (
     get_bucket_keys,
     get_default_buckets,
     buckets_to_keep,
-    not_exists_bucket_count,
-    exists_bucket_count,
+    last_group_sort,
     parse_metric_sort_key,
     GROUP_BY_METRIC_AGG_NAME,
 )
@@ -16,6 +16,7 @@ from core.group_by.custom_results import (
 from core.group_by.utils import (
     parse_group_by,
     get_all_groupby_values,
+    is_boolean_field,
     is_works_version_group_by,
 )
 
@@ -42,8 +43,8 @@ def get_group_by_results(
     Top level function for getting boolean, custom, or default group by results.
     """
     field = get_field(fields_dict, group_by)
-    if is_boolean_group_by(group_by):
-        return get_boolean_group_by_results(response, group_by)
+    if is_boolean_field(field):
+        return get_boolean_group_by_results(response, group_by, params)
     elif "continent" in field.param:
         results = group_by_continent(field, index_name, params, fields_dict)
     elif is_works_version_group_by(field):
@@ -199,32 +200,44 @@ def calculate_nested_group_by_count(params, response):
     return len(response.aggregations[bucket_key].buckets)
 
 
-def is_boolean_group_by(group_by):
-    return (
-        group_by in settings.EXTERNAL_ID_FIELDS
-        or group_by in settings.BOOLEAN_TEXT_FIELDS
-        or "is_global_south" in group_by
-        or "mag_only" in group_by
-    )
+def get_boolean_group_by_results(response, group_by, params=None):
+    """A yes/no group_by: keys "true" and "false" (the values its filter takes), and
+    "unknown" with include_unknown when some works have no value. Most works
+    first, or as `sort` says (oxjob #1859; keys were "1"/"0" on most fields)."""
+    buckets = response.aggregations[get_bucket_keys(group_by)["default"]].buckets
+    metric_key = get_metric_result_key(params)
+    results = []
+    for key in ("true", "false", "unknown"):
+        b = buckets[key] if key in buckets else None
+        if b is None or (key == "unknown" and not b.doc_count):
+            continue
+        result = {"key": key, "key_display_name": key, "doc_count": b.doc_count}
+        if metric_key and GROUP_BY_METRIC_AGG_NAME in b:
+            result[metric_key] = b[GROUP_BY_METRIC_AGG_NAME].value
+        results.append(result)
+    return order_boolean_results(results, (params or {}).get("sort"), metric_key)
 
 
-def get_boolean_group_by_results(response, group_by):
-    exists_count = exists_bucket_count(group_by, response)
-    not_exists_count = not_exists_bucket_count(group_by, response)
+def is_boolean_group_by_response(response, group_by):
+    """A yes/no group_by answers with keyed `filters` buckets, not a bucket list."""
+    aggs = getattr(response, "aggregations", None)
+    key = get_bucket_keys(group_by)["default"]
+    return aggs is not None and key in aggs and isinstance(aggs[key].buckets, AttrDict)
 
-    group_by_results = [
-        {
-            "key": "true",
-            "key_display_name": "true",
-            "doc_count": exists_count,
-        },
-        {
-            "key": "false",
-            "key_display_name": "false",
-            "doc_count": not_exists_count,
-        },
-    ]
-    return group_by_results
+
+def order_boolean_results(results, sort_params, metric_key=None):
+    """Order yes/no groups the way ES orders a terms agg: most works first by
+    default, else by the sort key that orders groups. Groups without a metric
+    value go last."""
+    key, direction = last_group_sort(sort_params) or ("count", "desc")
+    reverse = direction == "desc"
+    if key == "count":
+        return sorted(results, key=lambda r: r["doc_count"], reverse=reverse)
+    if key == "key":
+        return sorted(results, key=lambda r: r["key"], reverse=reverse)
+    valued = [r for r in results if r.get(metric_key) is not None]
+    return (sorted(valued, key=lambda r: r[metric_key], reverse=reverse)
+            + [r for r in results if r.get(metric_key) is None])
 
 
 def get_metric_result_key(params):
@@ -364,13 +377,9 @@ def add_zero_values(results, include_unknown, index_name, field, params, connect
 def calculate_group_by_count(params, response):
     group_by, _ = parse_group_by(params["group_by"])
     bucket_keys = get_bucket_keys(group_by)
-    if (
-        group_by in settings.EXTERNAL_ID_FIELDS
-        or group_by in settings.BOOLEAN_TEXT_FIELDS
-    ):
-        return 2
-    if "is_global_south" in group_by or "mag_only" in group_by:
-        return 2
+    # before the "version" test below: has_oa_submitted_version is a yes/no column
+    if is_boolean_group_by_response(response, group_by):
+        return len(get_boolean_group_by_results(response, group_by))
     if any(
         keyword in group_by for keyword in ["continent", "version", "best_open_version"]
     ):

@@ -22,10 +22,7 @@ class TestSort:
         )
 
     def test_sort_external_id_group_by(self, client):
+        # yes/no groups sort like any others since oxjob #1859 (was a 400)
         res = client.get("/works?group-by=has_doi&sort=key:desc")
         json_data = res.get_json()
-        assert json_data["error"] == "Invalid query parameters error."
-        assert (
-            json_data["message"]
-            == "Cannot sort when grouping by external ID boolean field."
-        )
+        assert [g["key"] for g in json_data["group_by"]] == ["true", "false"]

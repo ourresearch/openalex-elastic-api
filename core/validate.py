@@ -323,11 +323,7 @@ def validate_group_by(field, params):
     rejection = group_by_rejection(field)
     if rejection:
         raise APIQueryParamsError(rejection)
-    elif (
-        field.param in settings.BOOLEAN_TEXT_FIELDS
-        or field.param in settings.EXTERNAL_ID_FIELDS
-        or type(field).__name__ == "BooleanField"
-    ) and params.get("cursor"):
+    elif type(field).__name__ == "BooleanField" and params.get("cursor"):
         raise APIQueryParamsError(
             "Cannot use cursor pagination when grouping fields that return true or false."
         )

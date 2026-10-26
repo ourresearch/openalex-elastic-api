@@ -16,12 +16,14 @@ def is_works_version_group_by(field):
     return field.param == "version" and field.es_field() == "locations_full.version"
 
 
+def is_boolean_field(field):
+    """A yes/no column. Its group_by counts the works its own filter's `:true` and
+    `:false` match, so the two always agree (oxjob #1859)."""
+    return type(field).__name__ == "BooleanField"
+
+
 def get_bucket_keys(group_by):
-    return {
-        "default": format_key("groupby", group_by),
-        "exists": format_key("exists", group_by),
-        "not_exists": format_key("not_exists", group_by),
-    }
+    return {"default": format_key("groupby", group_by)}
 
 
 def format_key(base, group_by):

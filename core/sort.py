@@ -1,6 +1,5 @@
 from elasticsearch_dsl import Q
 
-import settings
 from core.exceptions import APIQueryParamsError
 from core.group_by.buckets import parse_metric_sort_key
 from core.utils import get_field
@@ -10,15 +9,8 @@ from core.preference import clean_preference
 def get_sort_fields(fields_dict, group_by, sort_params):
     sort_fields = []
     for key, value in sort_params.items():
-        # group by
+        # group by (yes/no groups sort like any others since oxjob #1859)
         if (
-            group_by in settings.EXTERNAL_ID_FIELDS
-            or group_by in settings.BOOLEAN_TEXT_FIELDS
-        ):
-            raise APIQueryParamsError(
-                "Cannot sort when grouping by external ID boolean field."
-            )
-        elif (
             group_by
             and (key == "key" and (value == "desc" or value == "asc"))
             or group_by

@@ -63,7 +63,8 @@ def test_group_bys_aggregate_on_authorships_full():
         assert '"field": "authorships_full.countries"' in group_by_body("authorships.countries", include_unknown)
         for param in ("authorships.is_corresponding", "is_corresponding"):
             body = group_by_body(param, include_unknown)
-            assert '"field": "authorships_full.is_corresponding"' in body, body
+            # a yes/no group_by counts its filter's true and false (oxjob #1859)
+            assert '{"term": {"authorships_full.is_corresponding": "true"}}' in body, body
             assert not CAPPED.search(body), body
 
 

@@ -31,7 +31,6 @@ sys.modules['settings'].ES_URL_WALDEN = 'http://localhost:9200'
 sys.modules['settings'].DEBUG = False
 sys.modules['settings'].USE_VECTOR_INDEX = False
 sys.modules['settings'].DO_NOT_GROUP_BY = []
-sys.modules['settings'].BOOLEAN_TEXT_FIELDS = []
 sys.modules['settings'].EXTERNAL_ID_FIELDS = []
 
 from core.validate import validate_search_param, _parse_search_param_name
