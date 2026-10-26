@@ -130,3 +130,5 @@ values:
   display_name: Dongbi Index (China), D
 - id: source-lists/ddh
   display_name: Diamond Discovery Hub
+- id: source-lists/oarl
+  display_name: International OA Journal Recommended List (OARL)
