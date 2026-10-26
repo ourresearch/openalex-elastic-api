@@ -1427,6 +1427,8 @@ class TermField(Field):
             # Same DOI forms as the positive path; the plain term below matched only the short form, which is
             # never stored, so `doi:!10.x/y` excluded nothing (oxjob #1573)
             q = ~self._doi_query(self.value[1:])
+        elif self.value.startswith("!") and self.param in ("pmcid", "ids.pmcid"):
+            q = ~Q("term", **{self.es_field(): self._pmcid_url(self.value[1:])})  # oxjob #1862
         elif self.value.startswith("!"):
             query = self.value[1:]
             if (
@@ -1609,10 +1611,8 @@ class TermField(Field):
             self.param == "pmid" or self.param == "ids.pmid"
         ) and "pubmed.ncbi.nlm.nih.gov" not in self.value:
             formatted = f"https://pubmed.ncbi.nlm.nih.gov/{self.value}"
-        elif (
-            self.param == "pmcid" or self.param == "ids.pmcid"
-        ) and "ncbi.nlm.nih.gov/pmc/articles" not in self.value:
-            formatted = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{self.value}"
+        elif self.param == "pmcid" or self.param == "ids.pmcid":
+            formatted = self._pmcid_url(self.value)
         elif (
             self.param in ["author.orcid", "authorships.author.orcid", "orcid", "authorships.raw_orcid"]
             and "orcid.org" not in self.value
@@ -1640,6 +1640,15 @@ class TermField(Field):
         else:
             formatted = self.value
         return formatted
+
+    @staticmethod
+    def _pmcid_url(value):
+        """Works serve ids.pmcid in the legacy digits form, which /works/pmcid: also builds (oxjob #1862), so
+        PMC1078728, 1078728, PMC1078728.2 and either NCBI URL all become .../pmc/articles/1078728."""
+        from ids.utils import normalize_pmcid
+
+        digits = normalize_pmcid(value)
+        return f"https://www.ncbi.nlm.nih.gov/pmc/articles/{digits}" if digits else value
 
     def get_country_codes(self):
         if self.value.startswith("!"):
