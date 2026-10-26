@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "431d28a82d257d7fe4f33f1c07f7bc876ab628b009f041128f349c49b426f1fe",
-    "property_count": 921,
-    "version": "17.3.0"
+    "fingerprint": "fcb36ac4ae12d1e7971efab5ac806f9a75c34ec58d8bbd44966cce64f28d20c6",
+    "property_count": 923,
+    "version": "17.4.0"
   },
   "properties": {
     "authors": {
@@ -7617,6 +7617,54 @@
         "supported_by": [
           "gui"
         ],
+        "type": "number"
+      },
+      "works_count_with_children": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "works count with child institutions",
+        "entity_type": null,
+        "name": "works_count_with_children",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [],
+        "type": "number"
+      },
+      "works_count_with_children_and_predecessors": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "works count with child and predecessor institutions",
+        "entity_type": null,
+        "name": "works_count_with_children_and_predecessors",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [],
         "type": "number"
       },
       "x_concepts": {

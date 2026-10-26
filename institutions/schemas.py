@@ -81,6 +81,10 @@ class InstitutionsSchema(Schema):
     display_name_alternatives = fields.List(fields.Str())
     repositories = fields.List(fields.Nested(RepositoriesSchema))
     works_count = fields.Int()
+    # Also counting child institutions (all levels), then also the
+    # institutions this one replaced: what the lineage filter returns (#1823).
+    works_count_with_children = fields.Int()
+    works_count_with_children_and_predecessors = fields.Int()
     cited_by_count = fields.Int()
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     ids = fields.Nested(IDsSchema)

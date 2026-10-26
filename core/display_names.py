@@ -209,6 +209,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'summary_stats.h_index': {"display_name": 'h-index'},
         'summary_stats.i10_index': {"display_name": 'i10-index'},
         'type': {"display_name": 'institution type'},
+        'works_count_with_children': {"display_name": 'works count with child institutions'},
+        'works_count_with_children_and_predecessors': {"display_name": 'works count with child and predecessor institutions'},
         'x_concepts.id': {"display_name": 'concepts'},
     },
     'keywords': {

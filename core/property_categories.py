@@ -247,6 +247,8 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "geo.city": "geo",
         "geo.region": "geo",
         "display_name_acronyms": "other",
+        "works_count_with_children": "citation",
+        "works_count_with_children_and_predecessors": "citation",
         "summary_stats.2yr_mean_citedness": "citation",
         "summary_stats.h_index": "citation",
         "summary_stats.i10_index": "citation",

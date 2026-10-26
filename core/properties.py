@@ -405,7 +405,10 @@ CAP_COLUMN = "column"
 # id, short or full form) and `recipients.ror` (bare or https://ror.org/ form) on the existing `recipients` field, against
 # the `recipients_full` keyword sibling already in the awards-v4 mapping (walden PatchAwardsV4FundingFlows). Purely
 # additive = MINOR. Ships after 17.2.0; if another bump lands on master first, rebase and take the next MINOR.
-PROPERTIES_VERSION = "17.3.0"
+# 17.4.0 (oxjob #1823, 2026-10-26): institutions gain range filters/sorts `works_count_with_children` (works linked to
+# the institution or its child institutions, all levels) and `works_count_with_children_and_predecessors` (also the
+# institutions it replaced: what the lineage filter returns). Purely additive = MINOR.
+PROPERTIES_VERSION = "17.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

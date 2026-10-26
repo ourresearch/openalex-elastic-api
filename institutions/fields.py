@@ -112,6 +112,8 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
+    RangeField(param="works_count_with_children"),
+    RangeField(param="works_count_with_children_and_predecessors"),
     SearchField(param="text.search", index="institutions"),
     SearchField(param="default.search", index="institutions", alternate_of="text.search"),
     SearchField(
