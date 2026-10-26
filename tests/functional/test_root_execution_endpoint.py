@@ -430,7 +430,7 @@ class TestSemanticOqoExecution:
         filters = captured["params"]["filters"]
         assert {"publication_year": ">2020"} in filters
         assert {"type": "article"} in filters
-        # works-walden default applied (vector_semantic_search strips it itself).
+        # works-walden default applied (vector_semantic_search checks it on the works index, #1649).
         assert {"is_xpac": "false"} in filters
 
     def test_semantic_oqo_respects_include_xpac(self, client):

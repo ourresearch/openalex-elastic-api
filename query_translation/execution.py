@@ -1072,10 +1072,9 @@ def _execute_semantic_oqo(
 
     # Corpus selection on the semantic path (#481) — same _effective_corpus
     # precedence as the normal path, rendered to the params filter-dict form.
-    # Caveat: the vector index holds only non-xpac works, so the prod vector path
-    # can't surface the expansion corpus regardless — that's a known index
-    # limitation, not this selector's concern; the single-index fallback honors
-    # the kNN pre-filter correctly.
+    # The vector index holds both corpora but has no is_xpac field, so the prod
+    # vector path checks this filter on the works index (core/vector_index.py,
+    # oxjob #1649); the single-index fallback honors it in the kNN pre-filter.
     corpus = _effective_corpus(oqo, connection)
     if corpus is not None:
         filters = filters + [{"is_xpac": "false" if corpus == "core" else "true"}]
