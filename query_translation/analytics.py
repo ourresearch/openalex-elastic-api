@@ -61,6 +61,14 @@ MAX_PAGE_DEPTH = 10_000        # page x per_page on a single split
 ALL_GROUPS_SORT_LIMIT = 10_000
 CSV_PAGE_GROUPS = 10_000       # groups in one page of an export (format=csv with a cursor, #1550)
 ROWS_PER_PRICE = 100           # an export costs the query's price per 100 rows, like works (#1550)
+# A cursor page over a big set reads only the works holding its next keys (oxjob #1598): a range on the split's
+# key, bounded by the field's own sorted term list, instead of every work in the set (a 10,000-author page over
+# all 328M works: 6.9 s read whole, 0.4 s on its range; EXPLORE.md in the job).
+PARTITION_MIN_WORKS = int(os.environ.get("OQL_PARTITION_MIN_WORKS", "2000000"))
+PARTITION_MIN_TERMS = 1_000     # keys listed for one range, at least
+PARTITION_MAX_TERMS = 100_000   # and at most (terms-enum lists 50,000 in 0.4 s)
+PARTITION_RESERVE_S = 5.0       # a page stops reading keys when less than this is left of its deadline (naming
+                                # 10,000 sources takes ~4 s), and returns what it has
 ID_PREFIX = "https://openalex.org/"
 
 
@@ -1465,6 +1473,111 @@ def _order_levels(levels: List["Level"], rows: List[dict], sort: Optional[Tuple[
     return rows
 
 
+def _terms_after(index, connection, field: str, after, size: int,
+                 deadline: Deadline) -> Optional[Tuple[List[str], bool]]:
+    """The next `size` keys of a keyword field after `after` (exclusive), in key order, from the field's term list
+    (Elasticsearch terms-enum: no works read; index-wide, so it also lists keys the set doesn't hold). Returns
+    (keys, complete); None when the field can't list its keys (not a keyword) or the call fails."""
+    from elasticsearch_dsl.connections import get_connection
+    params = {"field": field, "size": size, "timeout": "2s"}
+    if after is not None:
+        params["search_after"] = after
+    timeout = deadline.timeout("listing the next keys")
+    try:
+        res = get_connection(connection).terms_enum(index=index, request_timeout=timeout, **params)
+    except Exception:
+        return None
+    terms = res.get("terms") or []
+    if not all(isinstance(t, str) for t in terms):
+        return None
+    return terms, bool(res.get("complete", True))
+
+
+def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: Deadline,
+                 per_page: int, pref: str) -> dict:
+    """One cursor page of a single split (#1550), read range by range over a big set (oxjob #1598). Returns a search
+    response shaped like the one request's: hits and the whole-set aggregations, with `s0` holding the page and an
+    `after_key` exactly when groups remain (`exact_after`).
+
+    A group's numbers come from the works that hold its key, so a query that keeps every work holding a key in
+    (lo, hi] gives every group in that range exactly; the other keys those works hold (co-authors) come after hi in
+    key order and are dropped. hi is the K-th key after lo in the field's term list. A small set (or a field that
+    can't list its keys) is one range with no bounds, read as one request read it. The whole-set row and the group
+    count are the same on every page, so after the first page Elasticsearch's request cache answers them.
+    A page can come back short, even empty (it stops reading when PARTITION_RESERVE_S is left of the deadline, as a
+    count filter keeps few of the keys it reads); its cursor is the last key read, exclusive, like every page's."""
+    s0 = body["aggs"]["s0"]
+    comp = {k: v for k, v in s0["composite"].items() if k != "after"}
+    after = s0["composite"].get("after", {}).get("k")
+    field = comp["sources"][0]["k"]["terms"]["field"]
+    whole = _search(index_name, connection,
+                    {**body, "aggs": {k: v for k, v in body["aggs"].items() if k != "s0"}},
+                    deadline, "calculating the whole set", preference=pref)
+    aggs = dict(whole.get("aggregations") or {})
+    took = whole.get("took") or 0
+    n_groups = _groups_count(lv, aggs)
+    ranged = (whole["hits"]["total"]["value"] >= PARTITION_MIN_WORKS
+              and not (n_groups is not None and n_groups * 2 < per_page))
+    def clamp(n: float) -> int:
+        return int(min(PARTITION_MAX_TERMS, max(PARTITION_MIN_TERMS, n)))
+
+    kept: List[dict] = []
+
+    def page(next_key) -> dict:
+        out = {"buckets": kept[:per_page], "exact_after": True}
+        if next_key is not None:
+            out["after_key"] = {"k": next_key}
+        aggs["s0"] = out
+        return {"hits": whole["hits"], "took": took, "aggregations": aggs}
+
+    pos, n_terms = after, clamp(2 * per_page)
+    while True:
+        if (kept or pos != after) and deadline.remaining() < PARTITION_RESERVE_S:
+            return page(pos)          # a short (even empty) page; its cursor has moved on
+        terms, hi = None, None
+        if ranged:
+            listed = _terms_after(index_name, connection, field, pos, n_terms, deadline)
+            if listed is None:
+                ranged = False        # the field can't list its keys: the rest is one range
+            else:
+                terms, complete = listed
+                if not terms:
+                    return page(None)  # no keys after pos anywhere
+                if len(terms) >= n_terms or not complete:
+                    hi = terms[-1]
+        rng = {**({"gt": pos} if pos is not None else {}), **({"lte": hi} if hi is not None else {})}
+        query = {"bool": {"filter": [body["query"], {"range": {field: rng}}]}} if terms and rng \
+            else body["query"]
+        start, cur = len(kept), pos
+        while True:
+            # a count filter keeps few of the groups it reads: read a full page each time (one request per
+            # range, sized to the range, measured slower: 65,535 groups 3.7 s vs 10,000 in 0.4 s)
+            size = per_page if lv.selector else per_page - len(kept)
+            c = {**comp, "size": size, **({"after": {"k": cur}} if cur is not None else {})}
+            res = _search(index_name, connection, {"size": 0, "query": query, "aggs": {"s0": {**s0, "composite": c}}},
+                          deadline, "calculating the groups", preference=pref)
+            took += res.get("took") or 0
+            raw = res["aggregations"]["s0"]
+            kept.extend(b for b in raw["buckets"] if hi is None or b["key"]["k"] <= hi)
+            last = (raw.get("after_key") or {}).get("k")
+            read = (last is None or (hi is not None and last >= hi)
+                    or (not lv.selector and len(raw["buckets"]) < size))   # no keys left in the range
+            if len(kept) > per_page:
+                return page(kept[per_page - 1]["key"]["k"])
+            if read:
+                break
+            cur = last                # more keys may be left in the range
+            if len(kept) == per_page or deadline.remaining() < PARTITION_RESERVE_S:
+                return page(cur)
+        if hi is None:
+            return page(None)
+        if len(kept) == per_page:
+            return page(hi)
+        pos = hi
+        # size the next range from what this one held (index-wide keys the set lacks read nothing)
+        n_terms = clamp((per_page - len(kept)) / (max(len(kept) - start, 1) / len(terms)) * 1.2)
+
+
 def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         per_page: Optional[int] = None, page: Optional[int] = None,
         sort: Optional[Tuple[str, str]] = None, deadline: Optional[Deadline] = None) -> dict:
@@ -1629,8 +1742,11 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         body["aggs"]["pushed"] = {"filter": {"bool": {"filter": pushed}}, "aggs": moved}
     # same shards for the same query, so approximate counts repeat exactly
     pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
-    res = _search(index_name, connection, body, deadline, "calculating the groups",
-                  preference=pref)
+    if levels and not nested and levels[0].composite and not pushed:
+        res = _cursor_page(levels[0], body, index_name, connection, deadline, per_page, pref)
+    else:
+        res = _search(index_name, connection, body, deadline, "calculating the groups",
+                      preference=pref)
     total_count = res["hits"]["total"]["value"]
     aggs = res.get("aggregations", {})
     if pushed:
@@ -1677,7 +1793,10 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         elif top.composite:
             raw = aggs["s0"]
             after = raw.get("after_key")
-            if after and (len(raw["buckets"]) >= per_page or top.selector is not None):
+            # a cursor page says itself whether groups remain (#1598); one request can only tell by
+            # coming back full
+            if after and (raw.get("exact_after") or len(raw["buckets"]) >= per_page
+                          or top.selector is not None):
                 next_cursor = _encode_cursor(after["k"])
             more_groups = next_cursor is not None
             groups_count = _groups_count(top, aggs)
