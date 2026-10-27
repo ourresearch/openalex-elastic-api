@@ -849,7 +849,10 @@ class TestSplitWildcardToken:
 
     @pytest.mark.parametrize("terms", ["e-cigarette*", "x-ray*", "t-cell*", "APP/PS1*", "wom-?n"])
     def test_has_split_wildcard_token_true(self, terms):
-        assert SearchOpenAlex(search_terms=terms).has_split_wildcard_token()
+        # On the exact field: on a stemmed one, the `?` after the hyphen in `wom-?n` is a
+        # question mark, not a wildcard (oxjob #1327).
+        oa = SearchOpenAlex(search_terms=terms, primary_field="display_name.no_stem")
+        assert oa.has_split_wildcard_token()
 
     @pytest.mark.parametrize(
         "terms",

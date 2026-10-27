@@ -45,6 +45,7 @@ from query_translation.oqo import (  # noqa: E402
 # and fills in the canonical fix-it when a site doesn't supply one.
 # ---------------------------------------------------------------------------
 from query_translation.diagnostics import OQLError, OQLHint, oql_error  # noqa: E402
+from core.search_question_marks import question_marks_as_punctuation  # noqa: E402  (pure; #1327)
 
 
 # ---------------------------------------------------------------------------
@@ -3744,7 +3745,9 @@ class _Parser:
                            "", t.pos if t else None)
         if t.kind == "STRING":
             _reject_engine_chars(t.val, t.pos)
-            text = t.val
+            # A quoted title's `?` is a question mark, as on the URL (oxjob #1327):
+            # `"Should we ditch impact factors?"`; one quoted word keeps it (`"psoriati?"`).
+            text = question_marks_as_punctuation(t.val).strip() or t.val
             self.next()
             # A wildcard inside quotes is accepted: a quoted phrase is exact (no-stem),
             # which is where wildcards belong (#364 reversed #337's old
@@ -3766,8 +3769,7 @@ class _Parser:
             # parens) we do NOT merge — the D1 arity rule still requires 2+ terms
             # to be parenthesized (the canonical render always parenthesizes).
             _reject_engine_chars(t.val, t.pos)
-            _validate_wildcards(t.val, t.pos)
-            words = [t.val]
+            run = [(t.val, t.pos)]  # wildcard shapes are checked once the run is read
             self.next()
             if in_group:
                 while True:
@@ -3781,8 +3783,7 @@ class _Parser:
                         break
                     if nt.kind == "WORD" and not self._is_run_break_word(nt.val):
                         _reject_engine_chars(nt.val, nt.pos)
-                        _validate_wildcards(nt.val, nt.pos)
-                        words.append(nt.val)
+                        run.append((nt.val, nt.pos))
                         self.next()
                         continue
                     # quoted escape -> a literal stemmed word, but ONLY a lone reserved
@@ -3791,11 +3792,20 @@ class _Parser:
                     # reads as survey AND the exact phrase, the same as the other
                     # order (#1494's report, oxjob #1555, 2026-10-11).
                     if nt.kind == "STRING" and nt.val.lower() in _SEARCH_RUN_RESERVED:
-                        words.append(nt.val)
+                        run.append((nt.val, nt.pos))
                         self.next()
                         continue
                     break
-            text = " ".join(words)
+            # A run of 2+ bare words is text, so a `?` that ends a word or stands alone is
+            # a question mark (oxjob #1327): `(Should we ditch impact factors?)`. One bare
+            # word keeps it as a wildcard (`psoriati?`, #1555's exact reading below).
+            words = []
+            for v, p in run:
+                v = question_marks_as_punctuation(v, as_text=len(run) > 1).strip()
+                if v:
+                    _validate_wildcards(v, p)
+                    words.append(v)
+            text = " ".join(words) or t.val
             phrase = False
         # quoted => exact (.exact column) unless `stemmed` keeps it stemmed —
         # degraded to the stemmed column on entities with no exact sibling

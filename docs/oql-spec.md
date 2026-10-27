@@ -452,6 +452,7 @@ get works with ("smart*" and "phone" within 3 words of each other) in the title
 - A wildcard may not start a word (`*cycle` is refused), and `*` needs at least 3 characters before it (`ab*` is refused).
 - In a proximity, a wildcard term must be quoted (and so all its terms are quoted).
 - `stemmed` and a wildcard contradict each other and are refused.
+- In two or more words (bare, or a quoted phrase), a `?` at the end of a word or on its own is a question mark, not a wildcard: `get works with (Should we ditch impact factors?) in the title` reads the same as without the `?`. One word keeps it as a wildcard (`psoriati?`).
 
 ### Null and unknown
 

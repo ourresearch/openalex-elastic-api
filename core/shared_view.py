@@ -32,7 +32,7 @@ from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, combine_preferences, set_preference_for_filter_search
-from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, works_citation_scaling, works_keyword_search_query, strip_singleton_wildcard_quotes, validate_search_terms, validate_top_level_search_wildcard
+from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, works_citation_scaling, works_keyword_search_query, question_marks_as_punctuation, strip_singleton_wildcard_quotes, validate_search_terms, validate_top_level_search_wildcard
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import (
     get_sort_fields,
@@ -333,6 +333,9 @@ def _build_one_search_operand(
     index_name, query_str, search_scope, search_type, skip_citation_boost
 ):
     """Validate + build the query for ONE search operand (no `!`/`|` operators left)."""
+    # A title's `?` is a question mark, not a wildcard (oxjob #1327); done first so the
+    # validators, the text query and the keyword lookup all read the same text.
+    query_str = question_marks_as_punctuation(query_str)
     validate_search_terms(query_str)
 
     if search_scope and not index_name.lower().startswith("works"):

@@ -5,6 +5,7 @@ from elasticsearch_dsl import Q
 from core.exceptions import APIQueryParamsError
 from core.knn import KNNQuery
 from core.search_negation import has_leading_not, whole_query_negation_operand
+from core.search_question_marks import question_marks_as_punctuation
 import requests
 
 import settings
@@ -70,6 +71,9 @@ MULTI_WILDCARD_MIN_PREFIX = 4
 # mid-token (MidNumLet: `don't`, `1.5`, `o'brien`), `_` (ExtendNumLet: `pre_print`),
 # and the `*`/`?` metachars themselves.
 ANALYZER_SPLIT_RE = re.compile(r"[^\w*?'.\u2019]+")
+# A `*` between two word characters (`Oncology*Biology*Physics`, `chem*stry`): see
+# SearchOpenAlex.words_joined_by_star (oxjob #1327).
+STAR_BETWEEN_WORDS_RE = re.compile(r"(?<=\w)\*(?=\w)")
 
 
 def analyzer_subtokens(word):
@@ -132,7 +136,8 @@ def _has_unquoted_wildcard(search_terms):
     A wildcard inside quotes is handled by validate_wildcards (rejected unless it
     carries a proximity slop `~N`, which the engine routes to a no-stem
     `intervals` query — oxjob #355). Only an UNQUOTED wildcard lands on the
-    stemmed `.search` field, so that is the shape #364 gates.
+    stemmed `.search` field, so that is the shape #364 gates. Both callers get text
+    the doors already ran through question_marks_as_punctuation (oxjob #1327).
     """
     if not search_terms or not isinstance(search_terms, str):
         return False
@@ -522,11 +527,58 @@ class SearchOpenAlex:
         # Works searches pass works_citation_scaling() ("sat" since oxjob #1521);
         # every other entity keeps sqrt.
         self.citation_scaling = citation_scaling
+        # A title's `?` is a question mark, not a wildcard (oxjob #1327). The doors
+        # (shared_view, SearchField) apply it before validating; this covers every other
+        # caller (group_by recompute, stats, autocomplete). Idempotent.
+        if not is_semantic_query:
+            self.search_terms = question_marks_as_punctuation(self.search_terms)
+
+    def _with_terms(self, search_terms):
+        """A copy of this search with other terms (same fields and settings)."""
+        return SearchOpenAlex(
+            search_terms=search_terms,
+            primary_field=self.primary_field,
+            secondary_field=self.secondary_field,
+            tertiary_field=self.tertiary_field,
+            is_author_name_query=self.is_author_name_query,
+            combine_fields=self.combine_fields,
+            citation_scaling=self.citation_scaling,
+        )
+
+    def words_joined_by_star(self):
+        """The terms with each `*` between two word characters made a space, when the
+        search has one and is a plain stemmed search; else None (oxjob #1327).
+
+        A name like `International Journal of Radiation Oncology*Biology*Physics` reads
+        as one wildcard term (`oncology*biology*physics`) that no indexed token can
+        match, since the tokenizer splits at the `*`: the sources search returned 0. The
+        words-only reading is ORed in, so a real infix wildcard (`chem*stry`) still
+        matches what it did. Not on the exact (no-stem) search, where a wildcard is the
+        reason to be there (#364), nor on raw affiliation strings (their exact filter
+        shares the field), nor on Boolean or quoted searches.
+        """
+        t = self.search_terms
+        if (
+            "*" not in t or not STAR_BETWEEN_WORDS_RE.search(t) or '"' in t
+            or self.is_semantic_query or self._is_no_stem() or self.is_boolean_search()
+            or self.primary_field == "authorships.raw_affiliation_strings"
+        ):
+            return None
+        return STAR_BETWEEN_WORDS_RE.sub(" ", t)
 
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
 
+        words = self.words_joined_by_star()
+        if words is not None:
+            raw_query = self._build_as_typed(True) | self._with_terms(words)._build_as_typed(True)
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
+        return self._build_as_typed(skip_citation_boost)
+
+    def _build_as_typed(self, skip_citation_boost):
         # Whole-query negation `NOT <one operand>` (oxjob #857): build the
         # positive query exactly as usual and take its complement. Done here,
         # above every branch, so each door's own builder (single-field, cross-
@@ -539,15 +591,7 @@ class SearchOpenAlex:
             else whole_query_negation_operand(self.search_terms)
         )
         if negated_operand is not None:
-            positive = SearchOpenAlex(
-                search_terms=negated_operand,
-                primary_field=self.primary_field,
-                secondary_field=self.secondary_field,
-                tertiary_field=self.tertiary_field,
-                is_author_name_query=self.is_author_name_query,
-                combine_fields=self.combine_fields,
-                citation_scaling=self.citation_scaling,
-            ).build_query(skip_citation_boost=True)
+            positive = self._with_terms(negated_operand).build_query(skip_citation_boost=True)
             raw_query = Q("bool", must=[self.match_all()], must_not=[positive])
             if skip_citation_boost:
                 return raw_query
@@ -1179,7 +1223,8 @@ class SearchOpenAlex:
         Matches (with minimum 3-character prefix to prevent expensive expansions):
         - * after 3+ word characters: machin*, chem*stry (but NOT a*, th*)
         - * before 3+ word characters: *machine (blocked by ES, but detected)
-        - ? between two word characters only: wom?n (avoids 'therapy?' false positive)
+        - ? (or ??) between two word characters only: wom?n, wo??n (avoids 'therapy?'
+          false positive; question_marks_as_punctuation already dropped a title's `?`)
         - ~ after 3+ word characters: term~2, machine~1 (but NOT a~2)
         - ~ after closing quote: "phrase"~5 (proximity search)
 
@@ -1194,7 +1239,7 @@ class SearchOpenAlex:
         multi-word intervals paths (#355) already honor any `?`, so this aligns
         the single-token path with them.
         """
-        if re.search(r'\w{3,}\*|\*\w{3,}|\w\?\w|\w{3,}~|"~', self.search_terms):
+        if re.search(r'\w{3,}\*|\*\w{3,}|\w\?+\w|\w{3,}~|"~', self.search_terms):
             return True
         return self._is_no_stem() and bool(re.search(r"\w\?", self.search_terms))
 
