@@ -4,6 +4,7 @@ from elasticsearch_dsl import Search
 
 import settings
 from core.exceptions import APIQueryParamsError
+from core.filter_split import split_filter_string
 
 
 def get_data_version_connection(request):
@@ -26,36 +27,6 @@ def get_field(fields_dict, key):
         raise APIQueryParamsError(
             f"{key} is not a valid field. Valid fields are underscore or hyphenated versions of: {', '.join(valid_fields)}"
         )
-
-
-def split_filter_string(filter_string):
-    """
-    Split a filter string by commas, but respect quoted strings.
-    Commas inside double quotes are not treated as separators.
-
-    Example:
-        'type:article,raw_affiliation_strings.search:"Dept of Chemistry, UCLA"'
-        -> ['type:article', 'raw_affiliation_strings.search:"Dept of Chemistry, UCLA"']
-    """
-    parts = []
-    current = ""
-    in_quotes = False
-
-    for char in filter_string:
-        if char == '"':
-            in_quotes = not in_quotes
-            current += char
-        elif char == "," and not in_quotes:
-            if current:
-                parts.append(current)
-            current = ""
-        else:
-            current += char
-
-    if current:
-        parts.append(current)
-
-    return parts
 
 
 def map_filter_params(filter_params):

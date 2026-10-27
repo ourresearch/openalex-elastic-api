@@ -3,6 +3,7 @@ import re
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
+from core.keyword_search import STOP_EN
 from core.knn import KNNQuery
 from core.search_negation import has_leading_not, whole_query_negation_operand
 from core.search_punctuation import wildcard_chars_as_punctuation
@@ -77,6 +78,38 @@ STAR_BETWEEN_WORDS_RE = re.compile(r"(?<=\w)\*(?=\w)")
 # A straight apostrophe inside a word (`hartmann's`): see
 # SearchOpenAlex.curly_apostrophe_spelling (oxjob #1882).
 IN_WORD_APOSTROPHE_RE = re.compile(r"(?<=\w)'(?=\w)")
+
+# oxjob #1883: the stemmed works fields drop stop words (STOP_EN), so inside quotes a stop
+# word matched any word ("vitamin A deficiency" found "vitamin D deficiency") and a phrase
+# of only stop words matched nothing. Short phrases with one run on the `.no_stem`
+# subfields instead (no stemming, no stop words).
+# shortcut: title and abstract only; fulltext `.no_stem` phrases cost 5x the ES time.
+# Adding "fulltext" here is all it takes once a cheap stop-word phrase field exists.
+NO_STEM_TEXT_FIELDS = ("display_name", "abstract")
+# shortcut: longer phrases (pasted titles) are pinned down by their other words: 51 of 52
+# real ones found the same works either way, at 5x the ES time.
+MAX_CONTENT_WORDS_FOR_EXACT = 4
+# Words as the standard tokenizer cuts them, for counting stop words: `it's` stays one
+# word and `a.` is `a` (ANALYZER_SPLIT_RE keeps the `.`, which suits wildcards, not this).
+WORD_RE = re.compile(r"[\w'’]+")
+
+
+def needs_exact_phrase(search_terms):
+    """True when a quoted phrase in the search holds an English stop word and at most
+    MAX_CONTENT_WORDS_FOR_EXACT other words: the stemmed field would read its stop words
+    as "any word" (or drop the whole phrase)."""
+    for phrase in QUOTED_PHRASE_RE.findall(search_terms or ""):
+        words = WORD_RE.findall(phrase.lower())
+        stops = sum(w in STOP_EN for w in words)
+        if stops and len(words) - stops <= MAX_CONTENT_WORDS_FOR_EXACT:
+            return True
+    return False
+
+
+def only_stop_words(search_terms):
+    """True when every word of the search is an English stop word ("It", "To be")."""
+    text = (search_terms or "").lower()
+    return WORD_RE.search(text) is not None and all(m.group() in STOP_EN for m in WORD_RE.finditer(text))
 
 
 def analyzer_subtokens(word):
@@ -510,8 +543,12 @@ class SearchOpenAlex:
         is_semantic_query=False,
         combine_fields=False,
         citation_scaling="sqrt",
+        works_text=False,
     ):
         self.search_terms = normalize_search_input(search_terms)
+        # A works search: its text fields have the `.no_stem` siblings stop-word phrases
+        # use (oxjob #1883). Other indexes search display_name too, without them.
+        self.works_text = works_text
         self.primary_field = primary_field if primary_field else "display_name"
         self.secondary_field = secondary_field
         self.tertiary_field = tertiary_field
@@ -536,16 +573,66 @@ class SearchOpenAlex:
         if not is_semantic_query:
             self.search_terms = wildcard_chars_as_punctuation(self.search_terms)
 
-    def _with_terms(self, search_terms):
-        """A copy of this search with other terms (same fields and settings)."""
-        return SearchOpenAlex(
-            search_terms=search_terms,
+    def _copy(self, **changes):
+        """A copy of this search with some settings changed."""
+        settings_now = dict(
+            search_terms=self.search_terms,
             primary_field=self.primary_field,
             secondary_field=self.secondary_field,
             tertiary_field=self.tertiary_field,
             is_author_name_query=self.is_author_name_query,
             combine_fields=self.combine_fields,
             citation_scaling=self.citation_scaling,
+            works_text=self.works_text,
+        )
+        return SearchOpenAlex(**{**settings_now, **changes})
+
+    def _with_terms(self, search_terms):
+        """A copy of this search with other terms (same fields and settings)."""
+        return self._copy(search_terms=search_terms)
+
+    def _on_stemmed_works_text(self):
+        """True when this works search reads only stemmed text fields that have a
+        `.no_stem` sibling (oxjob #1883)."""
+        fields = [f for f in (self.primary_field, self.secondary_field, self.tertiary_field) if f]
+        return self.works_text and all(f in NO_STEM_TEXT_FIELDS for f in fields)
+
+    def _quote_kwargs(self):
+        """query_string args that run quoted phrases on the `.no_stem` fields when a short
+        one holds a stop word, so the stop words count ("To be or not to be", "vitamin A
+        deficiency"). Applies to every quoted phrase of that search: ES's
+        quote_field_suffix is per query, not per phrase (oxjob #1883)."""
+        if self._on_stemmed_works_text() and needs_exact_phrase(self.search_terms):
+            return {"quote_field_suffix": ".no_stem"}
+        return {}
+
+    def _query_string(self, **kwargs):
+        """A query_string clause of the match builders: AND between words, no leading
+        wildcard, and the stop-word phrase rule (_quote_kwargs)."""
+        return Q(
+            "query_string",
+            query=self.search_terms,
+            default_operator="AND",
+            allow_leading_wildcard=False,
+            **self._quote_kwargs(),
+            **kwargs,
+        )
+
+    def _stop_words_only_search(self):
+        """A plain search made only of stop words ("It", "To be") matched nothing: the
+        stemmed fields drop every word. Return the same search on the `.no_stem` fields,
+        else None (oxjob #1883)."""
+        if (
+            not self._on_stemmed_works_text()
+            or self.has_phrase()
+            or self.is_boolean_search()
+            or not only_stop_words(self.search_terms)
+        ):
+            return None
+        return self._copy(
+            primary_field=f"{self.primary_field}.no_stem",
+            secondary_field=f"{self.secondary_field}.no_stem" if self.secondary_field else None,
+            tertiary_field=f"{self.tertiary_field}.no_stem" if self.tertiary_field else None,
         )
 
     def words_joined_by_star(self):
@@ -598,6 +685,10 @@ class SearchOpenAlex:
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
+
+        stop_words_only = self._stop_words_only_search()
+        if stop_words_only is not None:
+            return stop_words_only.build_query(skip_citation_boost=skip_citation_boost)
 
         words = self.words_joined_by_star()
         curly = self.curly_apostrophe_spelling()
@@ -936,12 +1027,8 @@ class SearchOpenAlex:
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
         if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
             self.clean_search_terms()
-            return Q(
-                "query_string",
-                query=self.search_terms,
+            return self._query_string(
                 default_field=self.primary_field,
-                default_operator="AND",
-                allow_leading_wildcard=False,
             )
         else:
             return Q(
@@ -962,26 +1049,14 @@ class SearchOpenAlex:
                 # whose halves split across title↔abstract still matches. Preserves the
                 # full query_string parser (phrases, wildcards, leading-wildcard disallow).
                 # The `^0.1` keeps the secondary field's original 0.10 boost weight.
-                return Q(
-                    "query_string",
-                    query=self.search_terms,
+                return self._query_string(
                     fields=[self.primary_field, f"{self.secondary_field}^0.1"],
-                    default_operator="AND",
-                    allow_leading_wildcard=False,
                 )
-            return Q(
-                "query_string",
-                query=self.search_terms,
+            return self._query_string(
                 default_field=self.primary_field,
-                default_operator="AND",
-                allow_leading_wildcard=False,
-            ) | Q(
-                "query_string",
-                query=self.search_terms,
+            ) | self._query_string(
                 default_field=self.secondary_field,
                 boost=0.10,
-                default_operator="AND",
-                allow_leading_wildcard=False,
             )
         else:
             same_field = (
@@ -1056,40 +1131,24 @@ class SearchOpenAlex:
                 # plain-path cross_fields shape below so `a b` == `a AND b` ==
                 # two-filter on default.search/fulltext.search (oxjob #399). Per-field
                 # `^` boosts keep the original secondary/tertiary weights.
-                return Q(
-                    "query_string",
-                    query=self.search_terms,
+                return self._query_string(
                     fields=[
                         self.primary_field,
                         f"{self.secondary_field}^0.5",
                         f"{self.tertiary_field}^{tertiary_match_boost}",
                     ],
-                    default_operator="AND",
-                    allow_leading_wildcard=False,
                 )
             return (
-                Q(
-                    "query_string",
-                    query=self.search_terms,
+                self._query_string(
                     default_field=self.primary_field,
-                    default_operator="AND",
-                    allow_leading_wildcard=False,
                 )
-                | Q(
-                    "query_string",
-                    query=self.search_terms,
+                | self._query_string(
                     default_field=self.secondary_field,
                     boost=0.5,
-                    default_operator="AND",
-                    allow_leading_wildcard=False,
                 )
-                | Q(
-                    "query_string",
-                    query=self.search_terms,
+                | self._query_string(
                     default_field=self.tertiary_field,
                     boost=tertiary_match_boost,
-                    default_operator="AND",
-                    allow_leading_wildcard=False,
                 )
             )
         else:
@@ -1543,6 +1602,7 @@ def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=Fa
             search_terms=search_terms,
             primary_field=field,
             citation_scaling=works_citation_scaling(),
+            works_text=True,
         )
     elif scope == "title_and_abstract":
         primary = "display_name.no_stem" if is_exact else "display_name"
@@ -1555,6 +1615,7 @@ def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=Fa
             # title_and_abstract.search filter (#191.7 boolean + #399 plain).
             combine_fields=True,
             citation_scaling=works_citation_scaling(),
+            works_text=True,
         )
     else:
         raise ValueError(f"Unknown search scope: {scope}")

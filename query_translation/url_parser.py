@@ -7,6 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
+from core.filter_split import split_filter_string  # same split as the filter door (oxjob #1883)
 from core.search_punctuation import wildcard_chars_as_punctuation
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids, normalize_corpus
 from query_translation.oql_lang import (
@@ -326,34 +327,22 @@ def parse_filter_string(
     return filters
 
 
-def split_filter_string(filter_string: str) -> List[str]:
-    """
-    Split a filter string by commas, but respect quoted strings.
-    Commas inside double quotes are not treated as separators.
+_DIGIT_COMMA_RE = re.compile(r"\d,\d")
 
-    Example:
-        'type:article,raw_affiliation_strings.search:"Dept of Chemistry, UCLA"'
-        -> ['type:article', 'raw_affiliation_strings.search:"Dept of Chemistry, UCLA"']
-    """
-    parts = []
-    current = ""
-    in_quotes = False
 
-    for char in filter_string:
-        if char == '"':
-            in_quotes = not in_quotes
-            current += char
-        elif char == "," and not in_quotes:
-            if current:
-                parts.append(current)
-            current = ""
-        else:
-            current += char
-
-    if current:
-        parts.append(current)
-
-    return parts
+def _search_value_commas(value: str) -> str:
+    """A search value's commas outside quotes: a word with a comma between two digits
+    is quoted (one phrase, as the analyzer reads it); any other comma becomes a space."""
+    parts = value.split('"')
+    for k in range(0, len(parts), 2):  # even parts are outside quotes
+        words = []
+        for word in parts[k].split(" "):
+            if _DIGIT_COMMA_RE.search(word):
+                words.append('"' + word.strip(",") + '"')
+            else:
+                words.append(word.replace(",", " "))
+        parts[k] = " ".join(words)
+    return " ".join('"'.join(parts).split())
 
 
 def parse_single_filter(
@@ -387,13 +376,11 @@ def parse_single_filter(
     # result-preserving, live-verified on both column types (stemmed 238,632
     # and no-stem 224,070, identical either way). Commas INSIDE quotes are
     # kept: the engine's quote-aware clause splitter handles them. (#633)
+    # A comma between two digits ("3,4-dimethyl", "1,000") is inside a token the
+    # analyzer keeps, so its word is quoted instead (oxjob #1883: "3 4-..." echoed
+    # 233 works for a filter that found 1,180).
     if field.endswith((".search", ".search.exact")) and "," in value:
-        chars, in_quotes = [], False
-        for ch in value:
-            if ch == '"':
-                in_quotes = not in_quotes
-            chars.append(ch if (ch != "," or in_quotes) else " ")
-        normalized = " ".join("".join(chars).split())
+        normalized = _search_value_commas(value)
         if normalized:
             value = normalized
     # A title's `?` (or a lone `*`) is punctuation, as the engine reads it (oxjob #1327), so the
