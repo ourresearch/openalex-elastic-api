@@ -74,6 +74,9 @@ ANALYZER_SPLIT_RE = re.compile(r"[^\w*?'.\u2019]+")
 # A `*` between two word characters (`Oncology*Biology*Physics`, `chem*stry`): see
 # SearchOpenAlex.words_joined_by_star (oxjob #1327).
 STAR_BETWEEN_WORDS_RE = re.compile(r"(?<=\w)\*(?=\w)")
+# A straight apostrophe inside a word (`hartmann's`): see
+# SearchOpenAlex.curly_apostrophe_spelling (oxjob #1882).
+IN_WORD_APOSTROPHE_RE = re.compile(r"(?<=\w)'(?=\w)")
 
 
 def analyzer_subtokens(word):
@@ -566,17 +569,49 @@ class SearchOpenAlex:
             return None
         return STAR_BETWEEN_WORDS_RE.sub(" ", t)
 
+    def curly_apostrophe_spelling(self):
+        """The terms with each in-word `'` written `’`, when the search has one; else
+        None (oxjob #1882).
+
+        normalize_search_input makes every typed `’` a straight `'`, but the indexes keep
+        a title's own glyph inside its token (standard tokenizer, no char filter):
+        `Hartmann’s procedure` is indexed `hartmann’s`. So the 4.4M works whose title has
+        a curly apostrophe were found by none of those words, even by their own pasted
+        title. The `’` spelling is ORed in, so either glyph finds both.
+        shortcut: one extra clause per apostrophe search; drop it once the works index
+        maps apostrophes itself (#1882 phase 2, rebuild with a char filter).
+        Not under NOT, where ORing two spellings would let the other one through; not on
+        semantic search, which reads meaning, not tokens.
+        """
+        t = self.search_terms
+        if (
+            "'" not in t or self.is_semantic_query
+            or not IN_WORD_APOSTROPHE_RE.search(t)
+            or " NOT " in t or has_leading_not(t)
+        ):
+            return None
+        variant = self._with_terms(t)
+        # Set after construction: __init__ would normalize the `’` straight again.
+        variant.search_terms = IN_WORD_APOSTROPHE_RE.sub("’", t)
+        return variant
+
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
 
         words = self.words_joined_by_star()
+        curly = self.curly_apostrophe_spelling()
+        if words is None and curly is None:
+            return self._build_as_typed(skip_citation_boost)
+        raw_query = self._build_as_typed(True)
         if words is not None:
-            raw_query = self._build_as_typed(True) | self._with_terms(words)._build_as_typed(True)
-            if skip_citation_boost:
-                return raw_query
-            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
-        return self._build_as_typed(skip_citation_boost)
+            raw_query = raw_query | self._with_terms(words)._build_as_typed(True)
+        if curly is not None:
+            # dis_max: a work holding both glyphs scores as its best spelling, not twice.
+            raw_query = Q("dis_max", queries=[raw_query, curly._build_as_typed(True)])
+        if skip_citation_boost:
+            return raw_query
+        return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
     def _build_as_typed(self, skip_citation_boost):
         # Whole-query negation `NOT <one operand>` (oxjob #857): build the

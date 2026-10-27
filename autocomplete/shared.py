@@ -71,9 +71,16 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
             exact_fields = ["display_name.keyword"]
             tier_functions = None  # None: the default primary tier below
             if index_name.startswith("author"):
-                primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
-                autocomplete_query = primary_query | Q(
-                    "match_phrase_prefix", display_name_alternatives__autocomplete=q
+                # The .folded subfields (lowercase + asciifolding) let a name typed
+                # without accents match: "jose garcia" finds José García (oxjob #1882).
+                # Author search has used them since 2022; autocomplete never did.
+                primary_query = Q(
+                    "match_phrase_prefix", display_name__autocomplete=q
+                ) | Q("match_phrase_prefix", display_name__folded=q)
+                autocomplete_query = (
+                    primary_query
+                    | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
+                    | Q("match_phrase_prefix", display_name_alternatives__folded=q)
                 )
             elif index_name.startswith("institution"):
                 primary_query = Q(
