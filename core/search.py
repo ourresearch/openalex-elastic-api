@@ -526,6 +526,105 @@ def escape_undocumented_lucene(text):
     return "".join(out)
 
 
+def _unescaped(text, i):
+    """True when text[i] is not escaped by a backslash."""
+    return i == 0 or text[i - 1] != "\\"
+
+
+def _blank(text, positions):
+    """`text` with the characters at `positions` made spaces."""
+    if not positions:
+        return text
+    return "".join(" " if i in positions else ch for i, ch in enumerate(text))
+
+
+def pair_quotes(text):
+    """`text` with each double quote that has no partner made a space.
+
+    Only an odd count is repaired, so a well-formed search is never touched. Inside a
+    phrase, a quote followed by a letter or digit can't close it, so it is text: the
+    `"Putting the "Visual Back"` of a title whose curly quote normalize_search_input
+    made straight. A phrase still open at the end loses its opening quote.
+    """
+    if text.count('"') % 2 == 0 and '\\"' not in text:
+        return text
+    quotes = [i for i, ch in enumerate(text) if ch == '"' and _unescaped(text, i)]
+    if len(quotes) % 2 == 0:
+        return text
+    stray, open_at = set(), None
+    for i in quotes:
+        if open_at is None:
+            open_at = i
+        elif i + 1 == len(text) or not text[i + 1].isalnum():
+            open_at = None
+        else:
+            stray.add(i)
+    if open_at is not None:
+        stray.add(open_at)
+    return _blank(text, stray)
+
+
+def pair_parens(text):
+    """`text` with each parenthesis outside quotes that has no partner made a space:
+    a `)` with nothing open (truncated `..., China)`), a `(` never closed."""
+    if "(" not in text and ")" not in text:
+        return text
+    stray, opened, in_quote = set(), [], False
+    for i, ch in enumerate(text):
+        if ch not in '"()' or not _unescaped(text, i):
+            continue
+        if ch == '"':
+            in_quote = not in_quote
+        elif in_quote:
+            continue
+        elif ch == "(":
+            opened.append(i)
+        elif opened:
+            opened.pop()
+        else:
+            stray.add(i)
+    stray.update(opened)
+    return _blank(text, stray)
+
+
+# Lucene syntax the API doesn't offer, made text: HTML tags (`<i>`, `</sup>`), then
+# `/` (regex), `:` (field), `[ ]` (range) and a lone `<` or `>`.
+NOT_OFFERED_SYNTAX_RE = re.compile(r"</?[A-Za-z][^<>]*>|[/:\[\]<>]")
+_OPERATORS = ("AND", "OR", "NOT")
+
+
+def _trim_dangling(text):
+    """`text` without what the parser can't end or start on: trailing AND/OR/NOT and
+    backslashes, leading AND/OR. Only whole words count (`Finland` keeps its `and`); a
+    trailing lowercase and/not goes too, as it always has. Inner spacing is kept:
+    keyword_search adds keywords only when the cleaned text equals the typed text.
+    Returns `text` as typed when nothing would be left, so ES rejects it (a JSON 400)."""
+    parts = re.split(r"(\s+)", text.strip())
+    while parts:
+        last = parts[-1].rstrip("\\")
+        if last and last not in _OPERATORS and last.lower() not in ("and", "not"):
+            parts[-1] = last
+            break
+        del parts[-2:]
+    while parts and parts[0] in ("AND", "OR"):
+        del parts[:2]
+    return "".join(parts) or text
+
+
+def clean_query_string_text(text):
+    """User search text made safe for ES `query_string` (oxjob #1889), keeping the
+    documented syntax: AND/OR/NOT, quotes, parentheses, `~N`, `*`/`?` wildcards.
+
+    Every query_string built from user text runs this. What the parser would read as
+    syntax the API doesn't offer becomes text, as the analyzer reads it on the plain
+    path; before, each of these reached ES raw and came back as HTTP 500.
+    """
+    text = NOT_OFFERED_SYNTAX_RE.sub(" ", text)
+    text = _trim_dangling(pair_parens(pair_quotes(text)))
+    # Last, so it sees the final token boundaries (oxjob #633).
+    return escape_undocumented_lucene(text)
+
+
 def normalize_search_input(text):
     if not text or not isinstance(text, str):
         return text
@@ -796,9 +895,11 @@ class SearchOpenAlex:
         return Q("match_all")
 
     def query_string_query(self):
+        """Raw affiliation strings: query_string on the cleaned text, or the pasted
+        string as a phrase (analyzed, so it needs no cleaning)."""
         return Q(
             "query_string",
-            query=escape_undocumented_lucene(self.search_terms),
+            query=clean_query_string_text(self.search_terms),
             default_operator="AND",
             default_field=self.primary_field,
             allow_leading_wildcard=False,
@@ -1346,24 +1447,9 @@ class SearchOpenAlex:
         )
 
     def clean_search_terms(self):
-        self.search_terms = (
-            self.search_terms.strip()
-            .replace("/", " ")
-            .replace(":", " ")
-            .replace("[", "")
-            .replace("]", "")
-        )
-        if self.search_terms.lower().endswith(
-            "and"
-        ) or self.search_terms.lower().endswith("not"):
-            self.search_terms = self.search_terms[:-3].strip()
-        # strip html
-        self.search_terms = self.search_terms.replace("<", "").replace(">", "")
-        # Undocumented Lucene operators (`-`/`+` token-leading, `^`, `{}`, `&`) ->
-        # literal text. Last, so it sees the final token boundaries. Only the
-        # query_string branches call this method, so the analyzed plain branch and
-        # the #355 intervals builders are untouched by construction (oxjob #633).
-        self.search_terms = escape_undocumented_lucene(self.search_terms)
+        # Only the query_string branches call this method, so the analyzed plain branch
+        # and the #355 intervals builders are untouched by construction (oxjob #633).
+        self.search_terms = clean_query_string_text(self.search_terms)
 
 
 def full_search_query(index_name, search_terms, skip_citation_boost=False):
@@ -1526,7 +1612,7 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             # Use query_string for advanced query support
             return Q(
                 "query_string",
-                query=search_terms,
+                query=clean_query_string_text(search_terms),
                 default_field="html",
                 default_operator="AND",
             )

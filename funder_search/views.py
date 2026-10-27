@@ -6,6 +6,7 @@ from core.shared_view import shared_view
 from core.utils import get_flattened_fields, get_valid_fields, is_cached, process_only_fields
 from core.params import parse_params
 from core.preference import clean_preference
+from core.search import clean_query_string_text
 from extensions import cache
 
 blueprint = Blueprint("funder_search", __name__)
@@ -103,7 +104,7 @@ def build_fulltext_query(search_terms, index_name):
         # Use query_string for advanced query support
         return Q(
             "query_string",
-            query=search_terms,
+            query=clean_query_string_text(search_terms),
             default_field="fulltext",
             default_operator="AND",
         )

@@ -9,9 +9,9 @@ except two kinds of user mistakes that would otherwise flood it:
 - APIError responses (bad filters, bad pagination: 4xx), which app.py's error handler
   logs at ERROR through app.logger, ~110 a minute. That logger is ignored.
 - Elasticsearch rejecting a user's query text (unbalanced quotes, query_string syntax,
-  too many clauses). The API still answers those with a 500 today; they are dropped
-  here so a real 500 stays visible. Any other BadRequestError (a query our code built
-  wrongly, a missing mapping) is still reported.
+  too many clauses). app.py answers those with a JSON 400 (oxjob #1889), so they never
+  arrive here as unhandled; the filter stays as a backstop. Any other BadRequestError
+  (a query our code built wrongly, a missing mapping) is still reported.
 """
 import os
 
@@ -19,31 +19,9 @@ import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.logging import ignore_logger
 
+from core.user_query_errors import is_user_query_error
+
 _initialized = False
-
-# Text Elasticsearch puts in a 400 when the *user's* query can't be parsed or is too big.
-_USER_QUERY_MARKERS = (
-    "token_mgr_error",
-    "Failed to parse query",
-    "Cannot parse",
-    "parse_exception",
-    "too_many_clauses",
-    "too_many_nested_clauses",
-    "maxClauseCount",
-    "Valid edit distances are",  # a title's "1920~1952" read as fuzzy distance 1952
-    "too_complex_to_determinize",
-)
-
-
-def _is_user_query_error(exc):
-    try:
-        from elasticsearch import BadRequestError
-    except ImportError:  # pragma: no cover
-        return False
-    if not isinstance(exc, BadRequestError):
-        return False
-    text = f"{exc} {getattr(exc, 'body', '')}"
-    return any(marker in text for marker in _USER_QUERY_MARKERS)
 
 
 def _before_send(event, hint):
@@ -51,7 +29,7 @@ def _before_send(event, hint):
     if not exc_info:
         return event
     exc = exc_info[1]
-    if _is_user_query_error(exc):
+    if is_user_query_error(exc):
         return None
     # Sentry titles an elasticsearch ApiError by its .message, which is only the
     # error type ("search_phase_execution_exception") for every ES 400; use str(exc),

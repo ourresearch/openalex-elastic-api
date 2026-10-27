@@ -2,6 +2,7 @@ import json
 import time
 
 import sentry_sdk
+from elasticsearch.exceptions import BadRequestError as ESBadRequestError
 from elasticsearch.exceptions import ConnectionTimeout as ESConnectionTimeout
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify, request
@@ -45,8 +46,9 @@ import topics
 import works
 import work_types
 from core.collection_resolver import CollectionUrlIdsInQuery
-from core.exceptions import APIError, QueryTimeoutError
+from core.exceptions import APIError, APIQueryParamsError, QueryTimeoutError
 from core.origin_key import init_origin_key_check
+from core.user_query_errors import user_query_error_message
 from extensions import cache
 from sentry_setup import init_sentry
 
@@ -189,6 +191,18 @@ def register_errorhandlers(app):
         ))
 
     app.errorhandler(ESConnectionTimeout)(handle_es_timeout)
+
+    def handle_es_bad_request(err):
+        """Elasticsearch rejected the request. When it rejected the user's own search
+        text, answer a JSON 400 that says what to fix (core/user_query_errors.py).
+        Anything else is our bug: re-raised, so it stays a 500 and reaches Sentry."""
+        message = user_query_error_message(err)
+        if message is None:
+            raise err
+        app.logger.warning("search text rejected by Elasticsearch: %s", str(err)[:500])
+        return handle_exception(APIQueryParamsError(message))
+
+    app.errorhandler(ESBadRequestError)(handle_es_bad_request)
 
 
 if __name__ == '__main__':
