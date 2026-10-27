@@ -5,7 +5,7 @@ from elasticsearch_dsl import Q
 from core.exceptions import APIQueryParamsError
 from core.knn import KNNQuery
 from core.search_negation import has_leading_not, whole_query_negation_operand
-from core.search_question_marks import question_marks_as_punctuation
+from core.search_punctuation import wildcard_chars_as_punctuation
 import requests
 
 import settings
@@ -137,7 +137,7 @@ def _has_unquoted_wildcard(search_terms):
     carries a proximity slop `~N`, which the engine routes to a no-stem
     `intervals` query — oxjob #355). Only an UNQUOTED wildcard lands on the
     stemmed `.search` field, so that is the shape #364 gates. Both callers get text
-    the doors already ran through question_marks_as_punctuation (oxjob #1327).
+    the doors already ran through wildcard_chars_as_punctuation (oxjob #1327).
     """
     if not search_terms or not isinstance(search_terms, str):
         return False
@@ -527,11 +527,11 @@ class SearchOpenAlex:
         # Works searches pass works_citation_scaling() ("sat" since oxjob #1521);
         # every other entity keeps sqrt.
         self.citation_scaling = citation_scaling
-        # A title's `?` is a question mark, not a wildcard (oxjob #1327). The doors
+        # A title's `?` (or a lone `*`) is punctuation, not a wildcard (oxjob #1327). The doors
         # (shared_view, SearchField) apply it before validating; this covers every other
         # caller (group_by recompute, stats, autocomplete). Idempotent.
         if not is_semantic_query:
-            self.search_terms = question_marks_as_punctuation(self.search_terms)
+            self.search_terms = wildcard_chars_as_punctuation(self.search_terms)
 
     def _with_terms(self, search_terms):
         """A copy of this search with other terms (same fields and settings)."""
@@ -1224,7 +1224,7 @@ class SearchOpenAlex:
         - * after 3+ word characters: machin*, chem*stry (but NOT a*, th*)
         - * before 3+ word characters: *machine (blocked by ES, but detected)
         - ? (or ??) between two word characters only: wom?n, wo??n (avoids 'therapy?'
-          false positive; question_marks_as_punctuation already dropped a title's `?`)
+          false positive; wildcard_chars_as_punctuation already dropped a title's `?`)
         - ~ after 3+ word characters: term~2, machine~1 (but NOT a~2)
         - ~ after closing quote: "phrase"~5 (proximity search)
 

@@ -45,7 +45,7 @@ from query_translation.oqo import (  # noqa: E402
 # and fills in the canonical fix-it when a site doesn't supply one.
 # ---------------------------------------------------------------------------
 from query_translation.diagnostics import OQLError, OQLHint, oql_error  # noqa: E402
-from core.search_question_marks import question_marks_as_punctuation  # noqa: E402  (pure; #1327)
+from core.search_punctuation import wildcard_chars_as_punctuation  # noqa: E402  (pure; #1327)
 
 
 # ---------------------------------------------------------------------------
@@ -3747,7 +3747,7 @@ class _Parser:
             _reject_engine_chars(t.val, t.pos)
             # A quoted title's `?` is a question mark, as on the URL (oxjob #1327):
             # `"Should we ditch impact factors?"`; one quoted word keeps it (`"psoriati?"`).
-            text = question_marks_as_punctuation(t.val).strip() or t.val
+            text = wildcard_chars_as_punctuation(t.val).strip() or t.val
             self.next()
             # A wildcard inside quotes is accepted: a quoted phrase is exact (no-stem),
             # which is where wildcards belong (#364 reversed #337's old
@@ -3801,7 +3801,7 @@ class _Parser:
             # word keeps it as a wildcard (`psoriati?`, #1555's exact reading below).
             words = []
             for v, p in run:
-                v = question_marks_as_punctuation(v, as_text=len(run) > 1).strip()
+                v = wildcard_chars_as_punctuation(v, as_text=len(run) > 1).strip()
                 if v:
                     _validate_wildcards(v, p)
                     words.append(v)

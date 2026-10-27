@@ -17,7 +17,7 @@ from core.filter import handle_or_query
 from core.search import (
     SearchOpenAlex,
     full_search_query,
-    question_marks_as_punctuation,
+    wildcard_chars_as_punctuation,
     validate_top_level_search_wildcard,
     validate_wildcard_requires_exact,
 )
@@ -55,26 +55,36 @@ class TestQuestionMarksAsPunctuation:
             ("What? is wom?n life?", "What is wom?n life"),
             ("堆肥と化学肥料、何が違う?(上)", "堆肥と化学肥料、何が違う(上)"),  # no spaces in Japanese
             ("같은 자연어 문장을 해석은 없을까?", "같은 자연어 문장을 해석은 없을까"),
+            # an uppercase AND in a title: still a title (one client retried this 39 times)
+            ("Can Coding Agents Produce Patches That Are Correct, Secure AND Efficient?",
+             "Can Coding Agents Produce Patches That Are Correct, Secure AND Efficient"),
+            ("psoriati? AND skin", "psoriati AND skin"),
+            ("NOT dog?", "NOT dog"),
+            # a lone `*` is a footnote mark
+            ("Journalism Education Yun Hao 1, * , Yuxin Lin2", "Journalism Education Yun Hao 1,  , Yuxin Lin2"),
+            ("* KIKO MILANO. (2026). The KIKO Show", "KIKO MILANO. (2026). The KIKO Show"),
+            ("HYPOXIA-INDUCIBLE FACTORS 1 AND 2 *", "HYPOXIA-INDUCIBLE FACTORS 1 AND 2"),
         ],
     )
-    def test_a_titles_question_mark_becomes_a_space(self, given, expected):
-        assert question_marks_as_punctuation(given) == expected
+    def test_punctuation_is_dropped(self, given, expected):
+        assert wildcard_chars_as_punctuation(given) == expected
 
     @pytest.mark.parametrize(
         "terms",
         [
             "wom?n", "wo??n", "behavio?r", "M?ller", "colo?r AND dog",  # inside a word
-            "psoriati?", "Really??", "psoriati? AND skin", "NOT dog?",  # word-final, one word or Boolean
+            "psoriati?", "Really??", '"psoriati?"',  # word-final in a one-word search
             "?cycle", "some ?cycle",  # start of a word: the validators refuse it
+            "machin* learning", "chem*stry", "Nanoring**", '"*"',  # `*` touching a word or quote
         ],
     )
-    def test_a_wildcard_question_mark_stays(self, terms):
-        assert question_marks_as_punctuation(terms) == terms
+    def test_a_wildcard_stays(self, terms):
+        assert wildcard_chars_as_punctuation(terms) == terms
 
     def test_as_text_overrides_the_guess(self):
         # The OQL parser checks a run of bare words one word at a time.
-        assert question_marks_as_punctuation("factors?", as_text=True) == "factors"
-        assert question_marks_as_punctuation("factors?", as_text=False) == "factors?"
+        assert wildcard_chars_as_punctuation("factors?", as_text=True) == "factors"
+        assert wildcard_chars_as_punctuation("factors?", as_text=False) == "factors?"
 
     @pytest.mark.parametrize(
         "terms",
@@ -85,22 +95,23 @@ class TestQuestionMarksAsPunctuation:
         ],
     )
     def test_question_mark_inside_a_url_is_its_separator(self, terms):
-        assert "?" not in question_marks_as_punctuation(terms)
+        assert "?" not in wildcard_chars_as_punctuation(terms)
 
-    def test_a_search_of_only_question_marks_stays_non_empty(self):
+    def test_a_search_of_only_punctuation_stays_non_empty(self):
         # An empty string would build match_all (every record); a blank matches
         # nothing, like `search=.` does today.
-        assert question_marks_as_punctuation("?") == " "
-        assert question_marks_as_punctuation(" ?? ") == " "
+        assert wildcard_chars_as_punctuation("?") == " "
+        assert wildcard_chars_as_punctuation("*") == " "
+        assert wildcard_chars_as_punctuation(" ?? ") == " "
 
     @pytest.mark.parametrize("terms", [None, "", "machine learning", "machin*"])
     def test_no_question_mark_is_unchanged(self, terms):
-        assert question_marks_as_punctuation(terms) == terms
+        assert wildcard_chars_as_punctuation(terms) == terms
 
     @pytest.mark.parametrize("terms", [TITLE, "What? is wom?n life?", "?", "psoriati?"])
     def test_idempotent(self, terms):
-        once = question_marks_as_punctuation(terms)
-        assert question_marks_as_punctuation(once) == once
+        once = wildcard_chars_as_punctuation(terms)
+        assert wildcard_chars_as_punctuation(once) == once
 
 
 class TestValidators:
@@ -151,6 +162,8 @@ class TestDoors:
             ("Mehr Demokratie durch Volksentscheid?", "Mehr Demokratie durch Volksentscheid"),
             ("Challenge validation. https://www.google.com/url?opi=89978449&q=https://x",
              "Challenge validation. https://www.google.com/url opi=89978449&q=https://x"),
+            ("Patches That Are Correct, Secure AND Efficient?", "Patches That Are Correct, Secure AND Efficient"),
+            ("Journalism Education Yun Hao 1, * , Yuxin Lin2", "Journalism Education Yun Hao 1,  , Yuxin Lin2"),
         ],
     )
     @pytest.mark.parametrize("scope, stype", [(None, None), ("title", "default"),
@@ -203,7 +216,7 @@ class TestEcho:
 
         parsed = parse_single_filter(column, value, "works")
         got = leaves(parsed if isinstance(parsed, list) else [parsed])
-        want = parse_single_filter(column, question_marks_as_punctuation(value), "works")
+        want = parse_single_filter(column, wildcard_chars_as_punctuation(value), "works")
         assert all("?" not in leaf.value for leaf in got)
         assert got == leaves(want if isinstance(want, list) else [want])
 

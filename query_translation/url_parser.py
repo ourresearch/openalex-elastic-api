@@ -7,7 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from core.search_question_marks import question_marks_as_punctuation
+from core.search_punctuation import wildcard_chars_as_punctuation
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids, normalize_corpus
 from query_translation.oql_lang import (
     canonical_exact_search_value,
@@ -396,10 +396,10 @@ def parse_single_filter(
         normalized = " ".join("".join(chars).split())
         if normalized:
             value = normalized
-    # A title's `?` is a question mark, as the engine reads it (oxjob #1327), so the
+    # A title's `?` (or a lone `*`) is punctuation, as the engine reads it (oxjob #1327), so the
     # echoed OQL runs the same query as the URL.
     if field.endswith((".search", ".search.exact")):
-        value = question_marks_as_punctuation(value)
+        value = wildcard_chars_as_punctuation(value)
     # Lucene-style boolean inside a search value (AND/OR/NOT keywords,
     # optionally with parens) lifts to a BranchFilter tree of has-leaves.
     # See _parse_search_boolean for grammar. Applies to `.search.exact` too
