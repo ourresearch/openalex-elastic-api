@@ -264,7 +264,8 @@ def test_the_page_shows_the_whole_answers_rows_in_order(monkeypatch, per_page, p
     assert _norm(_leaves(body["group_by"])) == whole[(page - 1) * per_page:page * per_page]
     m = body["meta"]
     assert m["more_groups"] is True and m["next_cursor"] is None
-    assert m["groups_count"] == len(whole)            # the combined keys' count (the script, on a small set)
+    assert m["rows_count"] == len(whole)              # the combined keys' count (the script, on a small set)
+    assert m["groups_count"] == 13                    # the outer split's groups, as within the limits
     outer = body["summary"]["splits"][0]["groups"]    # the outer split on its own: its first groups
     assert [r["key"] for r in outer][:3] == [_a(2), _a(1), _a(9)]
 
@@ -274,8 +275,26 @@ def test_the_page_view_of_a_count_floored_split_has_no_combination_count(monkeyp
     body = A.run(parse_either("get the count of all works by year and author. Only authors with at least 2 works."),
                  index_name="works", connection=None, fields_dict=fields_dict, base_query={"match_all": {}},
                  per_page=3)
-    assert body["meta"]["groups_count"] is None
+    assert body["meta"]["rows_count"] is None         # how many combinations pass the count isn't known
     assert all(r["count"] >= 2 for o in body["group_by"] for r in o["groups"])
+
+
+def test_within_the_limits_rows_count_every_combination_and_groups_the_outer_split(monkeypatch):
+    fields_dict = _setup(monkeypatch, FakeES(WORKS))
+    monkeypatch.setattr(A, "MAX_LEVEL_GROUPS", 10_000)   # one answer holds it
+
+    def one_answer(index, connection, body, deadline, what, **params):
+        aggs = body.get("aggs") or {}
+        if "s0" not in aggs:
+            return FakeES(WORKS).search(index, connection, body, deadline, what, **params)
+        fake = FakeES(WORKS)
+        s0 = fake._terms_agg(WORKS, aggs["s0"])
+        return {"hits": {"total": {"value": len(WORKS)}}, "took": 1, "aggregations": {"s0": s0}}
+    monkeypatch.setattr(A, "_search", one_answer)
+    body = A.run(parse_either(OQL), index_name="works", connection=None, fields_dict=fields_dict,
+                 base_query={"match_all": {}}, per_page=5)
+    assert body["meta"]["more_groups"] is False
+    assert body["meta"]["groups_count"] == 13 and body["meta"]["rows_count"] == len(_whole_answer(WORKS))
 
 
 def test_leaf_slice_keeps_outer_rows_around_the_leaves():

@@ -1768,13 +1768,16 @@ def _whole_set_row(oqo: OQO, measures: List[Measure], aggs: dict, total_count: i
 
 
 def _meta(oqo: OQO, measures: List[Measure], deadline: Deadline, *, count, took, page, per_page, groups_count,
-          more_groups, next_cursor) -> dict:
+          rows_count, more_groups, next_cursor) -> dict:
+    """`groups_count`: the groups of the outer split (of the only split); `rows_count`: the table's rows, the
+    rows an export writes (a nested split's combinations; None when not known, oxjob #1598)."""
     return {
         "count": count,
         "db_response_time_ms": took,
         "page": page,
         "per_page": per_page,
         "groups_count": groups_count,
+        "rows_count": rows_count,
         "more_groups": more_groups,
         "next_cursor": next_cursor,
         "measures": [_measure_meta(m, oqo.get_rows) for m in measures],
@@ -1952,13 +1955,15 @@ def _nested_big(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: 
         fill_own_values(levels, group_rows, measures, deadline)
         for i, rs in margins.items():
             fill_own_values(levels, rs, measures, deadline, start_level=i)
-        groups_count = estimate.value()
+        rows_count = estimate.value()
     summary = {"all": _whole_set_row(oqo, measures, aggs, total_count)}
     if oqo.cursor is None:
         summary["splits"] = [{"groups": margins.get(lv.index, []), "more_groups": split_more[lv.index]}
                              for lv in levels]
+    # the outer split's groups, as within the limits: the run's probe (approximate past 3,000; a later cursor page
+    # skips the probe)
     meta = _meta(oqo, measures, deadline, count=total_count, took=took, page=page, per_page=per_page,
-                 groups_count=groups_count,
+                 groups_count=(cards or {}).get(levels[0].index), rows_count=rows_count,
                  more_groups=next_cursor is not None if oqo.cursor is not None else True, next_cursor=next_cursor)
     return {"meta": meta, "summary": summary, "group_by": group_rows, "results": []}
 
@@ -2295,9 +2300,15 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 # exist over the whole set than the summary lists
                 "more_groups": bool(lv.kind == "terms" and lv.size and isinstance(buckets, list)
                                     and len(buckets) >= lv.size)})
+    rows_count = groups_count
+    if nested:
+        # every combination is in a nested answer within the limits
+        from query_translation.analytics_csv import _leaves
+        rows_count = sum(1 for _ in _leaves(group_rows, 0, len(levels), []))
     meta = _meta(oqo, measures, deadline, count=total_count, took=res.get("took"),
                  page=page if levels else None, per_page=per_page if levels else None,
-                 groups_count=groups_count, more_groups=more_groups, next_cursor=next_cursor)
+                 groups_count=groups_count, rows_count=rows_count if levels else None,
+                 more_groups=more_groups, next_cursor=next_cursor)
     return {"meta": meta, "summary": summary, "group_by": group_rows, "results": []}
 
 

@@ -941,15 +941,17 @@ def _csv_response(oqo, body: dict, cost: dict, paging: bool = False):
     headers = {"Content-Disposition": f'attachment; filename="{name}"',
                "X-Credits-Cost": str(price["credits"]), "X-Rows": str(rows)}
     meta = body["meta"]
-    if meta.get("groups_count") is not None:
-        headers["X-Groups-Count"] = str(meta["groups_count"])
+    # the rows the export writes (the worker's progress total): a nested split's combinations (oxjob #1598)
+    rows_total = meta.get("rows_count", meta.get("groups_count"))
+    if rows_total is not None:
+        headers["X-Groups-Count"] = str(rows_total)
     if paging:
         if meta.get("next_cursor"):
             headers["X-Next-Cursor"] = meta["next_cursor"]
     elif table == "groups" and meta.get("more_groups"):
         headers["X-Groups-Note"] = (
             f"the first {analytics.MAX_PAGE_DEPTH:,} groups only"
-            + (f" of about {meta['groups_count']:,}" if meta.get("groups_count") else "")
+            + (f" of about {rows_total:,}" if rows_total else "")
             + "; add cursor=* and follow X-Next-Cursor for every group")
     capped = [s.get("oql") for s, part in zip(meta.get("splits") or [],
                                                (body.get("summary") or {}).get("splits") or [])
