@@ -44,7 +44,9 @@ def source_types():
         return export_group_by(result, request)
     message_schema = MessageSchema(only=only_fields)
     dumped = message_schema.dump(result)
-    inject_descriptions(dumped["results"])
+    # A group_by response carries no "results" (core.shared_view.format_response), so this
+    # raised KeyError -> HTTP 500 on every ?group_by= since 11 Mar 2026 (oxjob #1882).
+    inject_descriptions(dumped.get("results") or [])
     return dumped
 
 
