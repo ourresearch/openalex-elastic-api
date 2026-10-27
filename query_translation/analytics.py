@@ -35,6 +35,7 @@ from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
+from core.group_by.buckets import SINGLE_LIST_SHARD_SIZE, _MAP_HINT_FIELDS
 from core.preference import clean_preference
 from query_translation.analytics_csv import split_meta
 from query_translation.oqo import (
@@ -1045,8 +1046,11 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
                     "Sort the groups so the ones you want come first, or page through "
                     "every group with cursor=* (in key order).")
         terms["size"] = size
-        # a long single split needs deeper shard lists, as on the URL path (oxjob #1513)
-        terms["shard_size"] = max(size * 2, 10_000 if size > 50 and not nested else 3000)
+        # a single split takes deep shard lists at any size, as on the URL path
+        # (buckets.determine_shard_size, oxjob #1513)
+        terms["shard_size"] = max(size * 2, 3000 if nested else SINGLE_LIST_SHARD_SIZE)
+        if terms.get("field") in _MAP_HINT_FIELDS:
+            terms["execution_hint"] = "map"   # as on the URL path: 10 s -> ~1 s
         lv.size = size
         order = [{"_count": "desc"}, {"_key": "asc"}]
         if sort_measure and not nested and (lv.selector is None or lv.paged_floor):

@@ -312,8 +312,10 @@ def group_by_rejection(field):
             f"Cannot group by {field.param}: it is looked up from the related "
             f"{field.target_entity} at query time. Group by {field.local_field} instead."
         )
-    if field.param == "referenced_works":
-        return "Group by referenced_works is not supported at this time."
+    # referenced_works was refused here from 2022 "because it times out"; its alias
+    # `cites` always grouped. With execution_hint map (buckets._MAP_HINT_FIELDS,
+    # analytics.plan_levels) MIT 2023 answers in ~1 s, so the canonical column
+    # groups too and the `group_by=cites` echo runs (oxjob #1513).
     if field.param in settings.DO_NOT_GROUP_BY:
         return f"Cannot group by {field.param}."
     return None

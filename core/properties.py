@@ -408,7 +408,10 @@ CAP_COLUMN = "column"
 # 17.4.0 (oxjob #1823, 2026-10-26): institutions gain range filters/sorts `works_count_with_children` (works linked to
 # the institution or its child institutions, all levels) and `works_count_with_children_and_predecessors` (also the
 # institutions it replaced: what the lineage filter returns). Purely additive = MINOR.
-PROPERTIES_VERSION = "17.4.0"
+# 17.5.0 (oxjob #1513, 2026-10-27): works `referenced_works` gains group_by (its alias `cites` always grouped; the 2022
+# "times out" refusal is gone now that cited-work groups use execution_hint map). Purely additive = MINOR. Under Jason's
+# standing authority (as 17.4.0 was).
+PROPERTIES_VERSION = "17.5.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

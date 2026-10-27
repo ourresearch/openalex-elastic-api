@@ -83,7 +83,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
     group_by_field = field.alias if field.alias else field.es_sort_field()
 
     missing = get_missing(field)
-    shard_size = determine_shard_size(q, per_page)
+    shard_size = determine_shard_size(q)
 
     s = filter_by_repository_or_journal(field, s)
 
@@ -328,7 +328,7 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
 
     q = params.get("q")
     per_page = 500 if q else params.get("per_page")
-    shard_size = determine_shard_size(q)
+    shard_size = determine_shard_size(q, nested=True)
 
     preference_seed = ",".join(group_by for group_by, _ in dimensions)
     s = s.params(preference=clean_preference(preference_seed))
@@ -358,18 +358,23 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
     return s
 
 
-def determine_shard_size(q, per_page=None):
-    """How many top keys each shard sends. A long list of high-cardinality groups
-    needs deeper shard lists: top-200 authors of Medicine 2024 left out 28 who
-    belonged at 3,000 and 5 at 10,000, for 820 ms of ES time instead of 528 (oxjob
-    #1513; going higher bought nothing). Nested group_bys keep 3,000 (the call
-    passes no per_page): there the size multiplies across levels."""
+def determine_shard_size(q, nested=False):
+    """How many top keys each shard sends for a terms group list. Works sit on 72
+    shards, so an author with ~100 works has one or two per shard and ties there
+    with thousands of collaboration-paper authors; a short shard list drops them
+    on some shards and the author is undercounted or missing. On 20 big
+    institutions' 2023 works plus Medicine 2024, the top 10 authors had 85 wrong
+    counts and 37 wrong people at 3,000 keys, 9 and 3 at 10,000, 2 and 0 at
+    20,000; top 200: 253 wrong people at 10,000, 19 at 20,000; ES time ~0.4 s,
+    ~0.55 s, ~0.6 s (oxjob #1513, 2026-10-27). Only high-cardinality fields pay:
+    a field with fewer keys per shard sends what it has. Nested group_bys keep
+    3,000: there the size multiplies across levels."""
     if q:
         return 5000
-    return LONG_LIST_SHARD_SIZE if (per_page or 0) > 50 else 3000
+    return 3000 if nested else SINGLE_LIST_SHARD_SIZE
 
 
-LONG_LIST_SHARD_SIZE = 10_000
+SINGLE_LIST_SHARD_SIZE = 20_000
 
 
 def get_missing(field):

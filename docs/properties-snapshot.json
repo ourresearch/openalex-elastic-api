@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "fcb36ac4ae12d1e7971efab5ac806f9a75c34ec58d8bbd44966cce64f28d20c6",
+    "fingerprint": "6f9a77efa6bd178c8fc3d9c825a590d27b14de43eb442b501794115d8b09d88b",
     "property_count": 923,
-    "version": "17.4.0"
+    "version": "17.5.0"
   },
   "properties": {
     "authors": {
@@ -18995,6 +18995,7 @@
         "actions": [
           "column",
           "filter",
+          "group_by",
           "sort"
         ],
         "aliases": [

@@ -129,6 +129,31 @@ def test_group_by_cites_uses_map_execution():
     assert agg["terms"]["execution_hint"] == "map"
 
 
+def test_the_canonical_cited_work_column_groups_too():
+    """`group_by=cites` echoes `group_by=referenced_works` and OQL `group those works
+    by cites`; both used to be refused, so the echo didn't run (2026-10-27)."""
+    from elasticsearch_dsl import Search
+    from core.group_by.buckets import create_group_by_buckets
+    from query_translation.oqo import OQO, GroupBy
+    from query_translation.validator import validate_oqo
+    s = create_group_by_buckets(fields_dict, "referenced_works", False, Search(),
+                                {"sort": None, "per_page": 25, "q": None, "cursor": None})
+    (agg,) = s.to_dict()["aggs"].values()
+    assert agg["terms"]["execution_hint"] == "map"
+    result = validate_oqo(OQO(get_rows="works", group_by=[GroupBy(column_id="referenced_works")]))
+    assert result.valid, result.errors
+
+
+def test_an_oql_split_by_cited_work_uses_map_execution_and_deep_shard_lists():
+    from query_translation.analytics import Level, plan_levels
+    from query_translation.oqo import GroupBy
+    lv = Level(index=0, split=GroupBy(column_id="referenced_works"), kind="terms",
+               agg={"terms": {"field": "referenced_works"}})
+    plan_levels([lv], {}, False, 10, 1, None)
+    assert lv.agg["terms"]["execution_hint"] == "map"
+    assert lv.agg["terms"]["shard_size"] == 20_000
+
+
 # --- bug 6: /works/stats on a field no work carries -----------------------------
 
 def test_stats_with_no_values_answer_null_percentiles(monkeypatch):
@@ -244,10 +269,11 @@ def test_url_sample_and_paging_become_integers():
     assert parse_url_to_oqo("works", sample="abc").sample == "abc"     # left for the validator
 
 
-# --- bug 5: long single-field group lists take deeper shard lists ---------------
+# --- bug 5: single-field group lists take deep shard lists at any page size ------
+# (short lists too: the connector asks for 10-25 authors; 2026-10-27)
 
-@pytest.mark.parametrize("per_page,shard_size", [(200, 10_000), (51, 10_000), (50, 3000), (25, 3000), (None, 3000)])
-def test_a_long_group_list_asks_each_shard_for_more_keys(per_page, shard_size):
+@pytest.mark.parametrize("per_page,shard_size", [(200, 20_000), (51, 20_000), (50, 20_000), (10, 20_000), (None, 20_000)])
+def test_a_group_list_asks_each_shard_for_deep_lists(per_page, shard_size):
     from elasticsearch_dsl import Search
     from core.group_by.buckets import create_group_by_buckets
     s = create_group_by_buckets(fields_dict, "authorships.author.id", False, Search(),
