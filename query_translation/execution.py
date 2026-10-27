@@ -763,10 +763,13 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
         # column comes CSV_PAGE_GROUPS groups at a time in key order (follow X-Next-Cursor);
         # everything else has all its groups in one answer, so the cursor is dropped. With
         # no cursor, a single split holds its first MAX_PAGE_DEPTH groups.
+        # Nested splits by columns page the same way once they pass what one answer holds
+        # (oxjob #1598); within the limits they come whole, in their sort.
         paging = (_table_asked() == "groups" and oqo.cursor is not None
                   and analytics.pages_by_cursor(oqo, fields_dict, index_name))
         if paging:
-            sort = None   # cursor pages go in key order
+            if len(oqo.group_by) == 1:
+                sort = None   # cursor pages go in key order
             per_page, page = analytics.CSV_PAGE_GROUPS, 1
         else:
             oqo = replace(oqo, cursor=None)
@@ -779,7 +782,7 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
             base_query=base_query, per_page=per_page, page=page, sort=sort,
-            deadline=deadline)
+            deadline=deadline, summary_only=csv_export and _table_asked() == "summary")
     except analytics.AnalyticsError as e:
         return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
                         "oqo": _echo_oqo(oqo).to_dict()}), e.status
