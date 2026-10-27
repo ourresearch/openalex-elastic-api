@@ -26,6 +26,7 @@ from core.search import (  # noqa: E402
     clean_query_string_text,
     pair_parens,
     pair_quotes,
+    tilde_as_text,
 )
 from tests.unit.test_lucene_undocumented_escape import _query_strings  # noqa: E402
 
@@ -73,6 +74,36 @@ def test_pair_quotes_leaves_paired_or_escaped_quotes(raw):
 ])
 def test_pair_parens(raw, expected):
     assert _words(pair_parens(raw)) == expected
+
+
+# --- a ~ that is neither fuzzy nor proximity --------------------------------------
+# Live before: `Victo~,,,S.` and `100~MHz` answered HTTP 500 "fuzziness cannot be" on 79 of
+# 82 .search filters (Sentry OPENALEX-SEARCH-API-2: 2,295 events in 7 days).
+
+@pytest.mark.parametrize("raw,expected", [
+    ("Nonlinear Dynamics Victo~,,,S. L'vov", "Nonlinear Dynamics Victo ,,,S. L'vov"),
+    ("Antenna for 100~MHz band", "Antenna for 100 MHz band"),
+    ("The War of 1914~1918", "The War of 1914 1918"),          # fuzziness > 2 is a range
+    ("~cancer research", "cancer research"),
+    ("cancer ~ research", "cancer research"),
+    ("cancer~AUTO research", "cancer AUTO research"),
+])
+def test_tilde_that_means_nothing_is_text(raw, expected):
+    assert _words(tilde_as_text(raw)) == expected
+
+
+@pytest.mark.parametrize("raw", [
+    "cancer~ research",               # default fuzziness
+    "cancer~1 research",
+    "colour~2",
+    '"heart failure"~5 drug',         # proximity, any distance
+    '"heart failure"~12',
+    '(cancer~1 OR tumour~) AND x',
+    '"a~b" AND c',                    # inside quotes: text already
+    "no tilde here",
+])
+def test_documented_tilde_is_kept(raw):
+    assert tilde_as_text(raw) == raw
 
 
 # --- the whole cleaner --------------------------------------------------------------

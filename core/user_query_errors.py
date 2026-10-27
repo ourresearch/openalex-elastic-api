@@ -29,6 +29,7 @@ _USER_QUERY_ERRORS = (
     ("maxClauseCount", _TOO_BIG),
     ("too_complex_to_determinize", _TOO_BIG),
     ("Valid edit distances are", _EDIT_DISTANCE),  # a title's "1920~1952" read as fuzzy distance 1952
+    ("fuzziness cannot be", _EDIT_DISTANCE),  # "100~MHz": what follows a ~ read as a fuzziness
     ("token_mgr_error", _UNREADABLE),
     ("Failed to parse query", _UNREADABLE),
     ("Cannot parse", _UNREADABLE),

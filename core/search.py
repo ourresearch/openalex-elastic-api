@@ -587,6 +587,37 @@ def pair_parens(text):
     return _blank(text, stray)
 
 
+FUZZY_OR_SLOP_RE = re.compile(r"\d+(?:\.\d+)?")
+
+
+def tilde_as_text(text):
+    """`text` with each `~` outside quotes that is neither fuzzy (`word~`, `word~1`) nor
+    proximity (`"a b"~5`) made a space. ES reads whatever follows a `~` as a fuzziness:
+    `Victo~,,,S.` or `100~MHz` failed with "fuzziness cannot be" (2,295 HTTP 500s in a
+    week, oxjob #1889). A word's fuzziness above 2 is a range like `1914~1918`, so text."""
+    if "~" not in text:
+        return text
+    stray, in_quote = set(), False
+    for i, ch in enumerate(text):
+        if ch == '"' and _unescaped(text, i):
+            in_quote = not in_quote
+        if ch != "~" or in_quote or not _unescaped(text, i):
+            continue
+        before = text[i - 1] if i else ""
+        number = FUZZY_OR_SLOP_RE.match(text, i + 1)
+        end = number.end() if number else i + 1
+        ends_term = end == len(text) or text[end].isspace() or text[end] == ")"
+        if before == '"':
+            ok = ends_term
+        else:
+            ok = (before.isalnum() or before in "*?") and ends_term and (
+                not number or float(number.group()) <= 2
+            )
+        if not ok:
+            stray.add(i)
+    return _blank(text, stray)
+
+
 # Lucene syntax the API doesn't offer, made text: HTML tags (`<i>`, `</sup>`), then
 # `/` (regex), `:` (field), `[ ]` (range) and a lone `<` or `>`.
 NOT_OFFERED_SYNTAX_RE = re.compile(r"</?[A-Za-z][^<>]*>|[/:\[\]<>]")
@@ -620,7 +651,7 @@ def clean_query_string_text(text):
     path; before, each of these reached ES raw and came back as HTTP 500.
     """
     text = NOT_OFFERED_SYNTAX_RE.sub(" ", text)
-    text = _trim_dangling(pair_parens(pair_quotes(text)))
+    text = _trim_dangling(tilde_as_text(pair_parens(pair_quotes(text))))
     # Last, so it sees the final token boundaries (oxjob #633).
     return escape_undocumented_lucene(text)
 

@@ -35,6 +35,7 @@ def _es_error(reason, cls=BadRequestError, status=400):
     "token_mgr_error: Lexical error at line 1, column 7173.  Encountered: <EOF> (in lexical state 2)",
     "parse_exception: Cannot parse 'a AND (OR b)'",
     "Valid edit distances are [0, 1, 2] but was [1952]",
+    "failed to create query: fuzziness cannot be [MHz].",
     "too_many_clauses: maxClauseCount is set to 4096",
 ])
 def test_user_query_errors_are_recognised(reason):
