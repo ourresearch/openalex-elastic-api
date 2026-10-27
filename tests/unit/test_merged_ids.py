@@ -11,7 +11,8 @@ import core.merged_ids as merged_ids
 from core.filter import filter_records
 from works.fields import fields_dict as works_fields_dict
 
-MERGES = {"A5107411446": "A5107863564", "S4306502279": "S4306502280", "F4320307874": "F4320311904"}
+MERGES = {"A5107411446": "A5107863564", "S4306502279": "S4306502280", "F4320307874": "F4320311904",
+          "W4251036366": "W1623399274"}
 
 
 class FakeES:
@@ -92,8 +93,27 @@ def test_funder_filter(es):
 def test_other_entity_ids_never_looked_up(es):
     _body([{"authorships.institutions.id": "I27837315"}])
     _body([{"primary_topic.id": "T10001"}])
-    _body([{"ids.openalex": "W2741809807"}])
     assert es.calls == []
+
+
+def test_work_id_filters_also_match_the_winner(es):
+    for param in ("openalex_id", "ids.openalex", "cites"):
+        body = _body([{param: "W4251036366"}])
+        assert "https://openalex.org/W1623399274" in body, param
+    body = _body([{"openalex_id": "W4251036366|W2741809807"}])
+    assert "https://openalex.org/W1623399274" in body and "https://openalex.org/W2741809807" in body
+    assert es.calls[-1] == ("merge-works", ["https://openalex.org/W2741809807"])  # the merged one is cached
+
+
+def test_cited_by_on_a_merged_work_reads_the_winner(es):
+    seen = []
+
+    def fake_execute(self):
+        seen.append(self.to_dict())
+        return []
+    with mock.patch("elasticsearch_dsl.Search.execute", fake_execute):
+        _body([{"cited_by": "W4251036366"}])
+    assert "https://openalex.org/W1623399274" in json.dumps(seen)
 
 
 def test_cache_answers_repeat_lookups(es):
@@ -144,15 +164,19 @@ def app_client(monkeypatch):
     ("/people/A5107411446", "/authors/A5107863564"),
     ("/sources/S4306502279", "/sources/S4306502280"),
     ("/funders/F4320307874", "/funders/F4320311904"),
+    ("/works/W4251036366?select=id", "/works/W1623399274?select=id"),
 ])
 def test_get_on_loser_redirects_301(es, app_client, path, location):
-    with mock.patch("elasticsearch_dsl.Search.execute", return_value=[]):
+    with mock.patch("elasticsearch_dsl.Search.execute", return_value=[]), \
+            mock.patch("works.lakebase.should_route", return_value=False):
         r = app_client.get(path)
     assert r.status_code == 301
     assert r.headers["Location"].endswith(location)
 
 
 def test_get_on_unmerged_missing_id_is_404(es, app_client):
-    with mock.patch("elasticsearch_dsl.Search.execute", return_value=[]):
+    with mock.patch("elasticsearch_dsl.Search.execute", return_value=[]), \
+            mock.patch("works.lakebase.should_route", return_value=False):
+        assert app_client.get("/works/W2741809807").status_code == 404
         assert app_client.get("/authors/A5000000001").status_code == 404
         assert app_client.get("/sources/S1").status_code == 404

@@ -1,9 +1,10 @@
-"""Merged author, source and funder IDs resolve to the surviving record (oxjob #1124).
+"""Merged work, author, source and funder IDs resolve to the surviving record, best effort with no
+permanence promise (oxjob #1124; works and the no-promise wording, Jason 2026-10-27, #1037).
 
 A merged-away entity has no doc in its entity index. One ES index per entity holds a doc per loser,
-keyed by its full URL: {id, merge_into_id}. `merge-authors` and `merge-sources` are written daily by
-openalex-walden `notebooks/elastic/sync_merged_ids` from the merge ledgers (chains already followed
-to a live winner); `merge-funders` by `MergeFunders.ipynb`.
+keyed by its full URL: {id, merge_into_id}. `merge-works`, `merge-authors` and `merge-sources` are
+written daily by openalex-walden `notebooks/elastic/sync_merged_ids` from the merge ledgers (chains
+already followed to a live winner); `merge-funders` by `MergeFunders.ipynb`.
 
 Two callers: the single-record GET answers a loser ID with a 301 to the winner (ids/views.py), and
 ID filters also match the winner (core.fields.OpenAlexIDField), so `filter=authorships.author.id:<loser>`
@@ -22,7 +23,7 @@ from core.rerank import Breaker
 
 logger = logging.getLogger(__name__)
 
-MERGE_INDEXES = {"A": "merge-authors", "S": "merge-sources", "F": "merge-funders"}
+MERGE_INDEXES = {"W": "merge-works", "A": "merge-authors", "S": "merge-sources", "F": "merge-funders"}
 URL_PREFIX = "https://openalex.org/"
 
 # Longer ID lists are not looked up: saved collections can carry 260K source IDs, built from live IDs.
@@ -37,13 +38,13 @@ _lock = threading.Lock()
 # fail open: after repeated errors on an index, skip it for a minute and serve IDs as given
 _breakers = {index: Breaker(failures=3, window_s=30, open_s=60) for index in MERGE_INDEXES.values()}
 
-_ID_TOKEN = re.compile(r"(?<![A-Za-z0-9])[ASFasf]\d{2,}(?![0-9])")
+_ID_TOKEN = re.compile(r"(?<![A-Za-z0-9])[WASFwasf]\d{2,}(?![0-9])")
 
 
 def merged_winners(short_ids, connection="default"):
     """{loser: winner} (short IDs) for the given IDs that were merged away.
 
-    Takes canonical short IDs (`A5107411446`). Only author, source and funder IDs are looked up;
+    Takes canonical short IDs (`A5107411446`). Only work, author, source and funder IDs are looked up;
     IDs that were never merged, or of other types, are absent from the result."""
     now = time.time()
     out, todo = {}, {}
@@ -106,7 +107,7 @@ def with_winners(full_ids):
 
 
 def prefetch(raw_values):
-    """Warm the cache with every author / source / funder ID in raw filter values, in one lookup per
+    """Warm the cache with every work / author / source / funder ID in raw filter values, in one lookup per
     index, so a filter that resolves its IDs one by one (AND lists, negated ORs) doesn't make N calls."""
     ids = {m.group(0).upper() for v in raw_values for m in _ID_TOKEN.finditer(v)}
     if len(ids) > 1:

@@ -21,7 +21,7 @@ from core.search import (
     validate_wildcard_requires_exact,
     validate_wildcards,
 )
-from core.merged_ids import with_winners
+from core.merged_ids import merged_winner, with_winners
 from core.utils import get_full_openalex_id, normalize_openalex_id
 import settings
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
@@ -770,6 +770,9 @@ class OpenAlexIDField(Field):
             raise APIQueryParamsError(
                 "Invalid OpenAlex ID in cited_by or related_to filter."
             )
+        winner = merged_winner(full_openalex_id.removeprefix(ID_URL_PREFIX))  # merged-away work (#1037)
+        if winner:
+            full_openalex_id = ID_URL_PREFIX + winner
         openalex_ids = []
         s = Search(index=WORKS_INDEX).extra(size=1)
         s = s.filter("term", id=full_openalex_id)

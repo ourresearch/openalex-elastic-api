@@ -71,7 +71,8 @@ blueprint = Blueprint("ids", __name__)
 
 
 def redirect_if_merged(endpoint, short_id, connection):
-    """301 to the winner when `short_id` (author, source or funder) was merged away, else None.
+    """301 to the winner when `short_id` (work, author, source or funder) was merged away, else None.
+    Best effort, no permanence promise (Jason 2026-10-27, #1037).
 
     Merge losers have no doc in the entity index; the merge-* indexes name the winner
     (core.merged_ids, oxjob #1124). The proxy follows the 301, so API callers get the winner's record."""
@@ -203,6 +204,10 @@ def works_id_get(id):
     response = s.execute()
 
     if not response:
+        if is_openalex_id(id):
+            merged = redirect_if_merged("ids.works_id_get", f"W{clean_id}", connection)
+            if merged:
+                return merged
         abort(404)
     works_schema = WorksSchema(
         context={"display_relevance": False, "single_record": True}, only=only_fields
