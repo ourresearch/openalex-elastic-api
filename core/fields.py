@@ -1006,11 +1006,13 @@ class SearchField(Field):
             )
             q = search_oa.build_query()
         elif self.param == "semantic.search":
-            search_oa = make_search(
-                search_terms=self.value,
-                is_semantic_query=True,
+            # The filter form ran a kNN on the old in-index vectors through an ES ML model that no longer exists, so
+            # every call was an HTML 500 (oxjob #1886). Semantic search is the search.semantic parameter, which runs on
+            # the vector index and takes filters alongside it.
+            raise APIQueryParamsError(
+                "semantic.search is not a filter. For semantic search use the search.semantic parameter, which "
+                "works with filters: /works?search.semantic=coral reef bleaching&filter=publication_year:2020"
             )
-            q = search_oa.build_query()
         else:
             search_oa = make_search(search_terms=self.value)
             q = search_oa.build_query()
