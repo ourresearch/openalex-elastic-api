@@ -297,6 +297,8 @@ def group_by_rejection(field):
     each property's `group_by` capability from the SAME rule the request-time
     validator enforces — the two cannot drift. Request-dependent rules (the
     cursor × boolean interaction) stay in `validate_group_by`."""
+    if field.filter_refusal:  # no record stores it: its groups were silently empty (oxjob #1901)
+        return f"Cannot group by {field.param}: {field.filter_refusal}"
     if (
         type(field).__name__ == "DateField"
         or type(field).__name__ == "DateTimeField"

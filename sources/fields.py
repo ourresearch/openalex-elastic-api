@@ -27,6 +27,10 @@ DOCUMENTATION_LINKS = {
     "type": "https://developers.openalex.org/api-reference/sources",
 }
 
+# OpenAlex holds no J-STAGE membership for sources; these filters answered a silent 0 (oxjob #1901).
+JSTAGE_REFUSAL = ("OpenAlex doesn't record which sources are in J-STAGE. The source lists it does hold are in "
+                  "listed_in (group_by=listed_in shows them).")
+
 fields = [
     BooleanField(param="has_issn", custom_es_field="ids.issn_l"),
     BooleanField(
@@ -66,7 +70,7 @@ fields = [
     BooleanField(
         param="is_in_jstage",
         docstring="The source is in J-STAGE, the Japan Science and Technology Information Aggregation Service",
-        sortable=False,
+        filter_refusal=JSTAGE_REFUSAL,
     ),
     DateField(
         param="from_created_date",
@@ -139,7 +143,7 @@ fields = [
     RangeField(param="cited_by_count"),
     RangeField(param="is_in_doaj_since_year"),
     RangeField(param="is_high_oa_rate_since_year"),
-    RangeField(param="is_in_jstage_since_year", sortable=False),
+    RangeField(param="is_in_jstage_since_year", filter_refusal=JSTAGE_REFUSAL),
     RangeField(param="last_publication_year"),
     RangeField(param="first_publication_year"),
     RangeField(param="oa_flip_year"),

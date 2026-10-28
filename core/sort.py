@@ -79,6 +79,8 @@ def sort_refusal(key, field):
         return f"Cannot sort by {key}: it is not a value the results have."
     if getattr(field, "sortable", True):
         return None
+    if field.filter_refusal:  # no record stores it (oxjob #1901)
+        return f"Cannot sort by {key}: {field.filter_refusal}"
     if getattr(field, "target_entity", None):  # JoinField (#1526)
         return f"Cannot sort by {key}: it is a filter on a related entity, looked up at query time."
     instead = SORT_INSTEAD.get(key)

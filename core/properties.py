@@ -416,7 +416,12 @@ CAP_COLUMN = "column"
 # summary_stats.*; institutions x_concepts.id; awards lead_investigator.* and continents). Every one of those sorts
 # answered HTTP 500, so no working query changes; they now answer a JSON 400 (core.sort.sort_refusal). Removing an
 # action is MAJOR per classify_properties_diff.py. Under Jason's standing authority.
-PROPERTIES_VERSION = "18.0.0"
+# 19.0.0 (oxjob #1901, 2026-10-28): 8 filters on values no record stores leave the catalog and answer a JSON 400
+# (Field filter_refusal): authors scopus; concepts summary_stats.2yr_mean_citedness / h_index / i10_index;
+# institutions x_concepts.id (with its concept.id / concepts.id keys); sources is_in_jstage, is_in_jstage_since_year;
+# works topics_count. Each answered a silent 0 for every value (the field isn't in the index), so no query that
+# found anything changes. Removing a property is MAJOR per classify_properties_diff.py. Under Jason's standing authority.
+PROPERTIES_VERSION = "19.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

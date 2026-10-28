@@ -39,6 +39,7 @@ fields = [
     OpenAlexIDField(param="lineage"),
     OpenAlexIDField(
         param="openalex",
+        custom_es_field="ids.openalex.lower",  # its default openalex.lower isn't in the index (oxjob #1901)
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),

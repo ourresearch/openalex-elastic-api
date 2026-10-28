@@ -5,6 +5,7 @@ from core.fields import (
     RangeField,
     SearchField,
     TermField,
+    TextTermField,
     JoinField,
 )
 
@@ -72,8 +73,8 @@ fields = [
         docstring="The DOI of the funding organization"
     ),
     TermField(
-        param="doi", 
-        custom_es_field="doi",
+        param="doi",
+        custom_es_field="doi.keyword",  # `doi` is text: a whole DOI never matched (oxjob #1901)
         docstring="The Digital Object Identifier for the project",
         sort_field="doi.keyword",
     ),
@@ -87,14 +88,14 @@ fields = [
     TermField(
         param="provenance"
     ),
-    TermField(
-        param="lead_investigator.given_name", 
+    TextTermField(  # text, no keyword copy: a term query never matched (oxjob #1901)
+        param="lead_investigator.given_name",
         custom_es_field="lead_investigator.given_name",
         docstring="The given name of the lead investigator",
         sortable=False,
     ),
-    TermField(
-        param="lead_investigator.family_name", 
+    TextTermField(  # text, no keyword copy: a term query never matched (oxjob #1901)
+        param="lead_investigator.family_name",
         custom_es_field="lead_investigator.family_name",
         docstring="The family name of the lead investigator",
         sortable=False,
@@ -104,8 +105,8 @@ fields = [
         custom_es_field="lead_investigator.orcid",
         docstring="The ORCID identifier of the lead investigator"
     ),
-    TermField(
-        param="lead_investigator.affiliation.name", 
+    TextTermField(  # text, no keyword copy: a term query never matched (oxjob #1901)
+        param="lead_investigator.affiliation.name",
         custom_es_field="lead_investigator.affiliation.name",
         docstring="The institutional affiliation of the lead investigator",
         sortable=False,

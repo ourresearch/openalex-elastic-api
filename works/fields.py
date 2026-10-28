@@ -212,7 +212,7 @@ fields = [
     BooleanField(param="has_oa_submitted_version", sortable=False),
     BooleanField(
         param="has_old_authors",
-        custom_es_field="authorships.uthor.id",
+        custom_es_field="authorships.author.id",
         sortable=False,
     ),
     BooleanField(param="has_pdf_url", custom_es_field="locations_full.pdf_url"),
@@ -683,7 +683,9 @@ fields = [
     ),
     RangeField(param="referenced_works_count"),
     RangeField(param="sustainable_development_goals.score"),
-    RangeField(param="topics_count", sortable=False),
+    RangeField(param="topics_count",
+               filter_refusal="works don't store how many topics they have (at most 3). For works with a topic "
+                              "use topics.id:!null; with none, topics.id:null."),
     SearchField(
         param="abstract.search",
         index="works",
@@ -880,7 +882,10 @@ fields = [
         custom_es_field="best_oa_location.license_id.keyword",
     ),
     TermField(param="best_oa_location.source.type"),
-    TermField(param="best_oa_location.raw_type", sort_field="best_oa_location.raw_type.keyword"),
+    # raw_type is text + .keyword in the index (no .lower): the default .lower answered 0 (oxjob #1901).
+    # .keyword is case-sensitive: the value as the record has it, as group_by shows it.
+    TermField(param="best_oa_location.raw_type", custom_es_field="best_oa_location.raw_type.keyword",
+              sort_field="best_oa_location.raw_type.keyword"),
     TermField(
         param="best_oa_location.version",
         docstring="The version of the work that is available Open Access",
@@ -986,7 +991,8 @@ fields = [
         alternate_of="locations.license",
     ),
     TermField(param="locations.source.type", alias="locations_full.source.type"),
-    TermField(param="locations.raw_type", alias="locations_full.raw_type", sort_field="locations_full.raw_type.keyword"),
+    TermField(param="locations.raw_type", alias="locations_full.raw_type", custom_es_field="locations_full.raw_type.keyword",
+              sort_field="locations_full.raw_type.keyword"),  # .keyword, see best_oa_location.raw_type (oxjob #1901)
     TermField(param="locations.version", alias="locations_full.version"),
     TermField(param="mag", custom_es_field="ids.mag", alternate_of="ids.mag"),
     TermField(
@@ -1029,7 +1035,8 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["source.type"],
         alternate_names=ALTERNATE_NAMES.get("source.type", None),
     ),
-    TermField(param="primary_location.raw_type", sort_field="primary_location.raw_type.keyword"),
+    TermField(param="primary_location.raw_type", custom_es_field="primary_location.raw_type.keyword",
+              sort_field="primary_location.raw_type.keyword"),  # .keyword, see best_oa_location.raw_type (oxjob #1901)
     TermField(param="primary_location.version"),
     TermField(
         param="primary_topic.domain.id", custom_es_field="primary_topic.domain.id"

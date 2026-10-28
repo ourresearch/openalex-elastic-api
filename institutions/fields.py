@@ -28,6 +28,10 @@ DOCUMENTATION_LINKS = {
 }
 
 
+# The institutions index has no x_concepts; every concept filter answered a silent 0 (oxjob #1901).
+CONCEPTS_REFUSAL = ("institutions no longer carry concepts. Concepts are deprecated; filter institutions by "
+                    "topics.id (e.g. topics.id:T10017) or topic_share.id.")
+
 fields = [
     BooleanField(
         param=f"is_global_south",
@@ -53,7 +57,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
         alternate_of="x_concepts.id",
-        sortable=False,
+        filter_refusal=CONCEPTS_REFUSAL,
     ),
     OpenAlexIDField(
         param="concepts.id",
@@ -62,7 +66,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
         alternate_of="x_concepts.id",
-        sortable=False,
+        filter_refusal=CONCEPTS_REFUSAL,
     ),
     OpenAlexIDField(
         param="id",
@@ -109,7 +113,7 @@ fields = [
         docstring=DOCSTRINGS["concept"],
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
-        sortable=False,
+        filter_refusal=CONCEPTS_REFUSAL,
     ),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),

@@ -317,6 +317,7 @@ class Field(ABC):
         unlisted=False,
         sort_field=None,
         sortable=None,
+        filter_refusal=None,
     ):
         self.param = param
         self.alias = alias
@@ -324,6 +325,14 @@ class Field(ABC):
         self.sort_field = sort_field
         if sortable is not None:
             self.sortable = sortable
+        # A filter on a value no record stores (oxjob #1901): the index has no such field, so every
+        # query on it answered a silent 0 (topics_count:>2, is_in_jstage:true, authors scopus:...).
+        # `filter_refusal` says why and what to use instead; the filter answers it as a JSON 400 on
+        # every path (URL filter, OR list, OQL, group_by), and /properties stops listing it.
+        self.filter_refusal = filter_refusal
+        if filter_refusal:
+            self.sortable = False
+            self.build_query = self.build_terms_query = self.validate = self._refuse_filter
         self.value = None
         self.unique_id = unique_id
         self.index = index
@@ -342,7 +351,7 @@ class Field(ABC):
         # Soft-deprecation (#498): keep the column live + executable but drop it
         # from the PUBLIC `/properties` catalog. See Property.unlisted for the full
         # contract. Used for `is_xpac` (superseded by the `corpus` selector, #481).
-        self.unlisted = unlisted
+        self.unlisted = unlisted or bool(filter_refusal)
         # Cross-type collection filter (#266): when set, allows
         # `<param>:col_xxx` to resolve a collection of this entity type and
         # apply it as a terms clause. None means the field does not support
@@ -353,6 +362,9 @@ class Field(ABC):
     @abstractmethod
     def build_query(self):
         pass
+
+    def _refuse_filter(self, *args, **kwargs):
+        raise APIQueryParamsError(f"{self.param} can't be used as a filter: {self.filter_refusal}")
 
     def validate(self, query):
         pass
@@ -489,14 +501,12 @@ class BooleanField(Field):
                     & ~Q("exists", field="ids.pmid")
                     & ~Q("exists", field="ids.pmcid")
                     & ~Q("exists", field="ids.doi")
-                    & ~Q("exists", field="ids.arxiv")
                 )
             else:
                 q = (
                     Q("exists", field="ids.pmid")
                     | Q("exists", field="ids.pmcid")
                     | Q("exists", field="ids.doi")
-                    | Q("exists", field="ids.arxiv")
                 )
         elif self.param == "locations.is_published" and self.value.lower().strip() == "false":
             # A copy whose version is unknown is stored with is_published null (and
@@ -1098,7 +1108,7 @@ class TermField(Field):
 
             # For DOI, we need to handle both v1 (full URL) and v2 (short form)
             # DOIs are stored lowercase, so we must lowercase the query values
-            if self.param == "doi":
+            if self.param == "doi" and not self._doi_on_keyword():
                 expanded_values = []
                 for val in values:
                     if "doi.org" in val:
@@ -1112,7 +1122,9 @@ class TermField(Field):
                 formatted_values = expanded_values
 
         terms_query = None
-        if values:
+        if values and self.param == "doi" and self._doi_on_keyword():
+            terms_query = Q("bool", should=[self._doi_keyword_query(v) for v in values], minimum_should_match=1)
+        elif values:
             kwargs = {self.es_field(): formatted_values}
             terms_query = Q("terms", **kwargs)
             if self.alias == "ids.doi":  # works: any location's DOI, not just the work's own (oxjob #1573)
@@ -1199,7 +1211,9 @@ class TermField(Field):
         neg = ""
         if value.startswith("!"):
             neg, value = "!", value[1:]
-        if self.param == "sustainable_development_goals.id":
+        if self.param in ("topics.id", "topic_share.id") and value != "null":
+            value = self._topic_id_url(value)
+        elif self.param == "sustainable_development_goals.id":
             value = self._normalize_sdg_value(value)
         elif self.param == "study_designs.id":
             value = self._normalize_study_design_value(value)
@@ -1330,10 +1344,7 @@ class TermField(Field):
         elif self.param == "display_name":
             return self.value
         elif self.param == "topics.id" or self.param == "topic_share.id":
-            if self.value.startswith("https://openalex.org/"):
-                return self.value
-            else:
-                return f"https://openalex.org/{self.value}"
+            return self._topic_id_url(self.value)
         elif (
             self.param == "topics.domain.id"
             or self.param == "primary_topic.domain.id"
@@ -1546,11 +1557,6 @@ class TermField(Field):
         elif self.param == "language":
             kwargs = {self.es_field(): self.value.lower()}
             q = Q("term", **kwargs)
-        elif self.param == "topics.id" or self.param == "topic_share.id":
-            if "https://openalex.org/" not in self.value:
-                formatted_version = f"https://openalex.org/{self.value}"
-                kwargs = {self.es_field(): formatted_version}
-                q = Q("term", **kwargs)
         elif (
             self.param == "topics.domain.id"
             or self.param == "primary_topic.domain.id"
@@ -1610,11 +1616,35 @@ class TermField(Field):
             q = Q("term", **kwargs)
         return q
 
+    @staticmethod
+    def _topic_id_url(value):
+        """https://openalex.org/T<n> for T<n>, t<n> or the full URL: the form every index stores
+        (authors / institutions topic_share.id are case-sensitive keywords). A full URL used to leave
+        the query unset (an HTML 500) and !T<n> excluded nothing (oxjob #1901)."""
+        return get_full_openalex_id(value) or value
+
+    def _doi_on_keyword(self):
+        """The DOI sits in a raw keyword field that keeps each record's own spelling (awards
+        `doi.keyword`), not in a lowercased `.lower` one."""
+        return self.es_field().endswith(".keyword")
+
+    def _doi_keyword_query(self, value):
+        """A DOI on a raw keyword field: https://doi.org/, http://dx.doi.org/ or bare, any case
+        (oxjob #1901). The awards `doi` text field it used to query never matched a whole DOI."""
+        from ids.utils import normalize_doi
+
+        bare = normalize_doi(value, return_none_if_error=True) or value.strip()
+        forms = (bare, f"https://doi.org/{bare}", f"http://dx.doi.org/{bare}")
+        return Q("bool", should=[Q("term", **{self.es_field(): {"value": v, "case_insensitive": True}})
+                                 for v in forms], minimum_should_match=1)
+
     def _doi_query(self, value):
         # Special handling for DOI to support both data versions:
         # v1: stores full URL like "https://doi.org/10.1590/..."
         # v2: stores short form like "10.1590/..."
         # DOIs are stored lowercase, so we must lowercase the query value
+        if self._doi_on_keyword():
+            return self._doi_keyword_query(value)
         if "doi.org" in value:
             short_doi = value.replace("https://doi.org/", "").lower()
             full_doi = value.lower()
@@ -1769,6 +1799,23 @@ class TermField(Field):
             raise APIQueryParamsError(
                 f"Value for {self.param} must be one of {', '.join(valid_values)} and not {self.value}."
             )
+
+
+class TextTermField(TermField):
+    """A string filter on a text field that has no keyword copy (awards lead_investigator names,
+    oxjob #1901). A term query on it never matched: the index holds the analyzed words ("hayashi"),
+    not the value ("Hayashi"), so family_name:Hayashi answered 0. The value matches as a phrase,
+    so case doesn't matter and "Kent State University" finds that affiliation. It keeps the string
+    type and operators of a TermField; the query is PhraseField's."""
+
+    build_query = PhraseField.build_query
+
+    def build_terms_query(self, values):
+        clauses = []
+        for v in values:
+            self.value = v
+            clauses.append(self.build_query())
+        return Q("bool", should=clauses, minimum_should_match=1)
 
 
 class OrcidField(TermField):

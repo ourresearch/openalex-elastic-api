@@ -42,6 +42,7 @@ BOOLEAN_COLUMNS = [
     for module, fields_dict in ENTITY_FIELDS.items()
     for param, field in fields_dict.items()
     if type(field).__name__ == "BooleanField"
+    and not field.filter_refusal  # no stored value: the filter answers a JSON 400 (oxjob #1901)
 ]
 
 

@@ -98,3 +98,10 @@ jobs:
             <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View failed workflow>
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Filters query fields the index has (no silent 0)
+        # oxjob #1901: every filter's query names only fields in docs/index-fields.json (the live
+        # indexes' field list) and never runs an exact-value query on an analyzed text field. 20
+        # filters answered a silent 0 that way (topics_count, primary_location.raw_type, awards doi...).
+        # After an index rebuild: PYTHONPATH=. python scripts/filter_sweep.py --write-index-fields
+        run: PYTHONPATH=. python scripts/filter_sweep.py --check-index-fields

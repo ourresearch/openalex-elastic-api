@@ -21,6 +21,10 @@ DOCUMENTATION_LINKS = {
     "openalex": "https://developers.openalex.org/guides/get",
 }
 
+# summary_stats isn't in the concepts index; every filter on it answered a silent 0 (oxjob #1901).
+CONCEPT_STATS_REFUSAL = ("concepts have no summary_stats (they are null on every concept). Concepts are deprecated; "
+                         "filter by works_count or cited_by_count, or use topics.")
+
 fields = [
     BooleanField(param="has_wikidata", custom_es_field="ids.wikidata"),
     DateField(
@@ -56,10 +60,10 @@ fields = [
         alternate_of="ids.openalex",
         sort_field="ids.openalex",
     ),
-    RangeField(param="summary_stats.2yr_mean_citedness", sortable=False),
+    RangeField(param="summary_stats.2yr_mean_citedness", filter_refusal=CONCEPT_STATS_REFUSAL),
     RangeField(param="cited_by_count"),
-    RangeField(param="summary_stats.h_index", sortable=False),
-    RangeField(param="summary_stats.i10_index", sortable=False),
+    RangeField(param="summary_stats.h_index", filter_refusal=CONCEPT_STATS_REFUSAL),
+    RangeField(param="summary_stats.i10_index", filter_refusal=CONCEPT_STATS_REFUSAL),
     RangeField(
         param="level",
         docstring="The concept's level. Lower-level concepts are more general, and higher-level concepts are more specific.",

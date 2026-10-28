@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "a11bbcb2bff329fa0ebfa0f5dd8edbb33b3645e7228baed362089efb9a22eef2",
-    "property_count": 923,
-    "version": "18.0.0"
+    "fingerprint": "9362d8394db67e341a101c0e0ec02059d1a3525b3dc03eea2c6d9fec366043a5",
+    "property_count": 915,
+    "version": "19.0.0"
   },
   "properties": {
     "authors": {
@@ -841,28 +841,6 @@
         "operators": [],
         "supported_by": [],
         "type": null
-      },
-      "scopus": {
-        "actions": [
-          "filter",
-          "group_by"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "scopus",
-        "entity_type": null,
-        "name": "scopus",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [],
-        "type": "string"
       },
       "summary_stats": {
         "actions": [
@@ -3449,81 +3427,6 @@
         "operators": [],
         "supported_by": [],
         "type": null
-      },
-      "summary_stats.2yr_mean_citedness": {
-        "actions": [
-          "filter",
-          "group_by"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "citation",
-        "display_name": "2-year mean citedness",
-        "entity_type": null,
-        "name": "summary_stats.2yr_mean_citedness",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or",
-          "range"
-        ],
-        "supported_by": [
-          "gui"
-        ],
-        "type": "number"
-      },
-      "summary_stats.h_index": {
-        "actions": [
-          "filter",
-          "group_by"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "citation",
-        "display_name": "h-index",
-        "entity_type": null,
-        "name": "summary_stats.h_index",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or",
-          "range"
-        ],
-        "supported_by": [
-          "gui"
-        ],
-        "type": "number"
-      },
-      "summary_stats.i10_index": {
-        "actions": [
-          "filter",
-          "group_by"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "citation",
-        "display_name": "i10 index",
-        "entity_type": null,
-        "name": "summary_stats.i10_index",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or",
-          "range"
-        ],
-        "supported_by": [
-          "gui"
-        ],
-        "type": "number"
       },
       "text.search": {
         "actions": [
@@ -7673,31 +7576,6 @@
         "operators": [],
         "supported_by": [],
         "type": null
-      },
-      "x_concepts.id": {
-        "actions": [
-          "filter",
-          "group_by"
-        ],
-        "aliases": [],
-        "alternate_keys": [
-          "concept.id",
-          "concepts.id"
-        ],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "other",
-        "display_name": "concepts",
-        "entity_type": null,
-        "name": "x_concepts.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [],
-        "type": "openalex_id"
       }
     },
     "keywords": {
@@ -12082,50 +11960,6 @@
         "display_name": "is in doaj since year",
         "entity_type": null,
         "name": "is_in_doaj_since_year",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or",
-          "range"
-        ],
-        "supported_by": [],
-        "type": "number"
-      },
-      "is_in_jstage": {
-        "actions": [
-          "column",
-          "filter",
-          "group_by"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "is in jstage",
-        "entity_type": null,
-        "name": "is_in_jstage",
-        "operators": [
-          "eq",
-          "null"
-        ],
-        "supported_by": [],
-        "type": "boolean"
-      },
-      "is_in_jstage_since_year": {
-        "actions": [
-          "column",
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "dates",
-        "display_name": "is in jstage since year",
-        "entity_type": null,
-        "name": "is_in_jstage_since_year",
         "operators": [
           "eq",
           "not",
@@ -19577,28 +19411,6 @@
           "oxurl"
         ],
         "type": "string"
-      },
-      "topics_count": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "topics count",
-        "entity_type": null,
-        "name": "topics_count",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or",
-          "range"
-        ],
-        "supported_by": [],
-        "type": "number"
       },
       "type": {
         "actions": [

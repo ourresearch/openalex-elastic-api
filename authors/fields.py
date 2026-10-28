@@ -181,13 +181,15 @@ fields = [
         alias="ids.orcid",
         docstring="The author's ORCID. Matches the primary orcid or any entry of observed_orcids (there is no separate observed_orcids filter; the field stays in the response)",
     ),
-    TermField(param="scopus", alias="ids.scopus.keyword", sortable=False),
+    TermField(param="scopus", alias="ids.scopus.keyword",
+              filter_refusal="authors carry no Scopus IDs. Find an author by orcid:, by display_name.search:, "
+                             "or with search=."),
     TermField(param="topics.id", custom_es_field="topics.id"),
     # oxjob #1526: the author's top topics carry their subfield, field and domain (bare keyword in authors-v19).
     TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),
     TermField(param="topics.field.id", custom_es_field="topics.field.id"),
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
-    TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword", sort_field="topic_share.id"),
+    TermField(param="topic_share.id", custom_es_field="topic_share.id", sort_field="topic_share.id"),  # a keyword; no .keyword copy (oxjob #1901)
     CollectionField(entity_type="authors"),
     # oxjob #1526: region and city of the current institution, looked up in the institutions index (filter only).
     JoinField(param="last_known_institutions.geo.region", target_entity="institutions", target_param="geo.region",
