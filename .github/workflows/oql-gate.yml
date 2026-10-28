@@ -40,8 +40,9 @@ jobs:
         # (psycopg2 isn't on the test import path anyway). pytest + pyyaml for the
         # harness itself.
         run: |
-          sed 's/^psycopg2==/psycopg2-binary==/' requirements/prod.txt > /tmp/oql-gate-requirements.txt
-          pip install -r /tmp/oql-gate-requirements.txt pytest pyyaml
+          # written next to prod.txt so its `-c constraints.txt` line resolves (oxjob #1831)
+          sed 's/^psycopg2==/psycopg2-binary==/' requirements/prod.txt > requirements/.oql-gate-requirements.txt
+          pip install -r requirements/.oql-gate-requirements.txt pytest pyyaml
 
       - name: Run OQL conformance harness
         # tests/conftest.py does `from app import create_app` at import time, which

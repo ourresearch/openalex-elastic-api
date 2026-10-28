@@ -45,8 +45,9 @@ jobs:
         # need a libpq toolchain on the runner (psycopg2 isn't on the catalog import
         # path anyway). The bump classifier is stdlib-only.
         run: |
-          sed 's/^psycopg2==/psycopg2-binary==/' requirements/prod.txt > /tmp/gate-requirements.txt
-          pip install -r /tmp/gate-requirements.txt
+          # written next to prod.txt so its `-c constraints.txt` line resolves (oxjob #1831)
+          sed 's/^psycopg2==/psycopg2-binary==/' requirements/prod.txt > requirements/.gate-requirements.txt
+          pip install -r requirements/.gate-requirements.txt
 
       - name: Snapshot staleness check
         run: PYTHONPATH=. python scripts/render_properties.py --check
