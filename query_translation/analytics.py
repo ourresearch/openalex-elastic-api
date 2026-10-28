@@ -907,6 +907,8 @@ def _combined_groups(levels: List[Level], index, connection, base_query, deadlin
             other *= max(len(lv.order_keys), 1)
         elif lv.kind == "histogram":
             other *= 100
+    if len(fields) == 1 and cards and cards.get(terms[0].index):
+        return cards[terms[0].index] * other
     if len(fields) > 1 and n_works is not None and n_works > COMBO_SCRIPT_MAX_WORKS \
             and cards and cards.get(terms[0].index):
         return _sampled_combos(fields, cards[terms[0].index], index, connection, base_query,
@@ -986,15 +988,10 @@ def _count_survivors(lv: Level, index, connection, base_query, deadline) -> set:
     return keys
 
 
-def _cards_product(levels: List[Level], cards: Dict[int, int]) -> int:
+def _cards_product(levels: List[Level], cards: Optional[Dict[int, int]]) -> int:
     p = 1
     for lv in levels:
-        if lv.kind == "terms":
-            p *= max(cards.get(lv.index) or 1, 1)
-        elif lv.kind in ("filters", "range"):
-            p *= max(len(lv.order_keys), 1)
-        else:
-            p *= 100
+        p *= 100 if lv.kind == "histogram" else max(_level_groups(lv, cards) or 1, 1)
     return p
 
 
@@ -1253,11 +1250,9 @@ def _bucket_rows(lv: Level, agg: dict) -> List[Tuple[str, dict]]:
              "percentile" in lv.column_id else b["key"], b) for b in buckets]
 
 
-def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
-                  total_count: int, index_name: str) -> Tuple[List[dict], Dict[int, List[dict]]]:
-    """Rows for every level, unnamed (`name_rows` names the ones that are returned),
-    and each inner split's groups on their own over the whole set (for the summary)."""
-
+def level_rows(levels: List[Level], measures: List[Measure], level_i: int, agg: dict, parent_count: Optional[int],
+               index_name: str) -> List[dict]:
+    """One level's aggregation result as rows, unnamed, with the levels under it (`s<i+1>` in each bucket)."""
     def rows(level_i: int, agg: dict, parent_count: int) -> List[dict]:
         lv = levels[level_i]
         out = []
@@ -1272,11 +1267,7 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 key = _row_key(k, lv, index_name)
                 label, raw = None, k
             elif lv.kind == "filters":
-                key, label = lv.labels[k]
-                raw = None
-                if label is None:
-                    raw = key
-                    key = _row_key(raw, lv, index_name)
+                key, label, raw = _small_key(lv, k, index_name)
                 if lv.post_keep is not None and key not in lv.post_keep:
                     continue
                 if lv.include is not None and key not in lv.include:
@@ -1284,7 +1275,7 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 if lv.exclude and key in lv.exclude:
                     continue
             elif lv.kind == "range":
-                key, label = lv.labels[k]
+                key, label, _ = _small_key(lv, k, index_name)
             else:  # histogram
                 lo = k
                 w = lv.split.bins["of"]
@@ -1305,9 +1296,15 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 row["groups"] = rows(level_i + 1, b[nxt], count)
             out.append(row)
         return out
+    return rows(level_i, agg, parent_count)
 
-    out = rows(0, agg_root["s0"], total_count)
-    margins = {lv.index: rows(lv.index, agg_root[f"m{lv.index}"], total_count)
+
+def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
+                  total_count: int, index_name: str) -> Tuple[List[dict], Dict[int, List[dict]]]:
+    """Rows for every level, unnamed (`name_rows` names the ones that are returned),
+    and each inner split's groups on their own over the whole set (for the summary)."""
+    out = level_rows(levels, measures, 0, agg_root["s0"], total_count, index_name)
+    margins = {lv.index: level_rows(levels, measures, lv.index, agg_root[f"m{lv.index}"], total_count, index_name)
                for lv in levels[1:] if f"m{lv.index}" in agg_root}
     return out, margins
 
@@ -1494,18 +1491,22 @@ def _default_order(lv: "Level", rows: List[dict]) -> List[dict]:
 
 
 def _order_levels(levels: List["Level"], rows: List[dict], sort: Optional[Tuple[str, str]],
-                  level_i: int = 0) -> List[dict]:
+                  level_i: int = 0, small_only: bool = False) -> List[dict]:
     """Every level of a nested table in the asked order (oxjob #1555 D4): a sort on the
     key orders the outer split's groups (inner groups keep their default); a sort on a
-    number orders the groups at every level by it; no sort, each level's default."""
+    number orders the groups at every level by it; no sort, each level's default.
+    `small_only`: only the small splits' rows (a page view past the limits read its
+    column splits in this order already, oxjob #1598)."""
     lv = levels[level_i]
-    if sort is None or (sort[0] == "key" and level_i > 0):
+    if small_only and not _small(lv):
+        pass
+    elif sort is None or (sort[0] == "key" and level_i > 0):
         rows = _default_order(lv, rows)
     else:
         rows = _sort_rows(rows, sort, lv)
     for r in rows:
         if r.get("groups") and level_i + 1 < len(levels):
-            r["groups"] = _order_levels(levels, r["groups"], sort, level_i + 1)
+            r["groups"] = _order_levels(levels, r["groups"], sort, level_i + 1, small_only)
     return rows
 
 
@@ -1656,21 +1657,62 @@ NESTED_SUMMARY_GROUPS = 2_000
 _PAST_EVERY_KEY = {"keyword": "\U0010ffff", "number": 2 ** 63 - 1, "date": 253402300799999}
 
 
+def _small(lv: Level) -> bool:
+    """A split with a fixed, short list of groups (listed values, searches, conditions, `at` bins, yes/no): each group
+    is a query, so a nested split past the limits reads all of them for every key of its column splits."""
+    return lv.kind in ("filters", "range")
+
+
+# t = a split by a column, s = a small split
+_SHAPES = {"tt": (0, 0), "ttt": (0, 0), "ts": (0, 1), "tts": (0, 1), "tss": (0, 2), "st": (1, 0), "stt": (1, 0)}
+
+
+def _shape(levels: List[Level]) -> Optional[Tuple[int, int]]:
+    """How a nested split pages: (small splits before its column splits, small splits after them), or None when it
+    can't. The column splits page in a composite (key order); small splits after them ride under each combination
+    (every group, as in one answer); one small split before them is walked a group at a time (oxjob #1598)."""
+    return _SHAPES.get("".join("t" if lv.kind == "terms" else "s" if _small(lv) else "x" for lv in levels))
+
+
+def _group_queries(lv: Level) -> List[Tuple[str, dict]]:
+    """A small split's groups in their listed order, each as (bucket key, the query that keeps its works)."""
+    if lv.kind == "filters":
+        f = lv.agg["filters"]["filters"]
+        return [(k, f[k]) for k in (lv.order_keys or list(f))]
+    field = lv.agg["range"]["field"]
+    return [(r["key"], {"range": {field: {**({"gte": r["from"]} if "from" in r else {}),
+                                          **({"lt": r["to"]} if "to" in r else {})}}})
+            for r in lv.agg["range"]["ranges"]]
+
+
+def _small_agg(lv: Level, m_aggs: Dict[str, dict], inner: Optional[dict] = None) -> dict:
+    """A small split's own aggregation (every group, in its order) with the measures and the next level under it."""
+    sub = {**m_aggs, **(inner or {})}
+    return {**lv.agg, "aggs": sub} if sub else dict(lv.agg)
+
+
+def _level_groups(lv: Level, cards: Optional[Dict[int, int]]) -> Optional[int]:
+    """A split's groups over the set: the probe's count for a column (approximate past 3,000), the list's length
+    for a small split."""
+    return len(lv.order_keys) if _small(lv) else (cards or {}).get(lv.index)
+
+
 def _nested_pages_ok(levels: List[Level], measures: List[Measure], sort, cursor) -> bool:
-    """Can this nested split page past the limits? First version (2026-10-27): two or three splits by a column,
-    no key-set group filters, a count floor only on the innermost split; on a cursor page no share of the parent
-    group (its count isn't read) and no sort; on the page, the default order, by count or by the outer key.
+    """Can this nested split page past the limits? Two or three splits by a column, or one or two of them with small
+    splits (listed values, conditions, `at` bins, yes/no) after them, or one before them (`_shape`); no key-set group
+    filters, a count floor only on the innermost split when it is by a column; on a cursor page no share of the
+    parent group (its count isn't read) and no sort; on the page, the default order, by count or by the outer key.
     Anything else keeps today's refusal."""
-    if not 2 <= len(levels) <= 3:
+    if _shape(levels) is None:
         return False
     for lv in levels:
-        if lv.kind != "terms" or lv.include is not None or lv.exclude or lv.post_keep is not None \
+        if lv.include is not None or lv.exclude or lv.post_keep is not None \
                 or lv.works_filters or lv.all_groups or "format" in lv.agg.get("terms", {}):
             return False
     if any(lv.split.where is not None for lv in levels[:-1]):
         return False
     last = levels[-1]
-    if last.split.where is not None and not _count_floor_only(last.split.where):
+    if last.split.where is not None and (_small(last) or not _count_floor_only(last.split.where)):
         return False
     if cursor is not None:
         # cursor pages go in key order (a sort orders the one answer within the limits)
@@ -1735,27 +1777,49 @@ def _leaf_slice(rows: List[dict], n: int, start: int, stop: int, depth: int = 0,
 
 
 def _nested_cursor_rows(levels: List[Level], measures: List[Measure], buckets: List[dict], names: List[str],
-                        index_name: str) -> List[dict]:
+                        index_name: str, first: int = 0) -> List[dict]:
     """Composite buckets (key order) back into the nested shape: outer rows carry their key and name, their own
-    numbers aren't read on a cursor page; each combination is a leaf with its numbers."""
+    numbers aren't read on a cursor page; each combination is a leaf with its numbers. `names[j]` keys level
+    `first + j`; small splits after the column splits come under each combination from its own aggregation (every
+    group, as in one answer)."""
+    cols = levels[first:first + len(names)]
+    tail = first + len(names)
     rows: List[dict] = []
     for b in buckets:
         at = rows
-        for i, lv in enumerate(levels):
-            k = b["key"][names[i]]
-            if i < len(levels) - 1:
+        for j, lv in enumerate(cols):
+            k = b["key"][names[j]]
+            if j < len(cols) - 1 or tail < len(levels):
                 if not (at and at[-1]["_raw"][1] == k):
                     at.append({"key": _row_key(k, lv, index_name), "key_display_name": None, "count": None,
-                               "_raw": (i, k), "groups": []})
+                               "_raw": (lv.index, k), "groups": []})
                 at = at[-1]["groups"]
                 continue
             count = b["doc_count"]
-            leaf = {"key": _row_key(k, lv, index_name), "key_display_name": None, "count": count, "_raw": (i, k)}
+            leaf = {"key": _row_key(k, lv, index_name), "key_display_name": None, "count": count, "_raw": (lv.index, k)}
             for m in measures:
                 if m.measure != "count":
                     leaf[m.key] = _measure_value(m, b, count, None)
             at.append(leaf)
+        if tail < len(levels):
+            at.extend(level_rows(levels, measures, tail, b[f"s{tail}"], b["doc_count"], index_name))
     return rows
+
+
+def _small_key(lv: Level, k: str, index_name: str) -> Tuple[str, Optional[str], Optional[str]]:
+    """A small split's group `k` as (row key, name, raw key to name it by): a listed value is named later from its
+    raw key (`name_rows`); a condition, bin or yes/no carries its name."""
+    key, label = lv.labels[k]
+    if lv.kind == "filters" and label is None:
+        return _row_key(key, lv, index_name), None, key
+    return key, label, None
+
+
+def _small_row(lv: Level, k: str, index_name: str) -> dict:
+    """A small split's group as an outer row on a cursor page (its numbers aren't read), keyed and named as
+    `level_rows` keys it."""
+    key, label, raw = _small_key(lv, k, index_name)
+    return {"key": key, "key_display_name": label, "count": None, **({"_raw": (lv.index, raw)} if raw else {})}
 
 
 def _whole_set_row(oqo: OQO, measures: List[Measure], aggs: dict, total_count: int) -> dict:
@@ -1793,36 +1857,95 @@ def _meta(oqo: OQO, measures: List[Measure], deadline: Deadline, *, count, took,
 def _nested_cursor(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: Dict[str, dict],
                    having: Optional[dict], *, index_name: str, connection, base_query: dict, per_page: int,
                    deadline: Deadline, pref: str) -> Tuple[dict, List[dict], Optional[str]]:
-    """One cursor page of every combination in key order: (the search response, the page's rows, next cursor)."""
-    names = [f"k{i}" for i in range(len(levels))]
-    comp = {"size": per_page,
-            "sources": [{names[i]: {"terms": {"field": lv.agg["terms"]["field"]}}} for i, lv in enumerate(levels)]}
+    """One cursor page of every combination in key order: (a search response holding the whole set's numbers, the
+    page's rows, next cursor). The column splits are one composite; small splits after them ride under each of its
+    combinations (every group, so a page reads fewer combinations); a small split before them is walked one group
+    at a time, the cursor saying which (`{"g": group, "a": the composite's after-key}`)."""
+    from query_translation.analytics_csv import _leaves
+    p, s = _shape(levels)
+    cols = levels[p:len(levels) - s]
+    names = [f"k{lv.index}" for lv in cols]
+    under = None
+    for lv in reversed(levels[len(levels) - s:]):
+        under = {f"s{lv.index}": _small_agg(lv, m_aggs, under)}
+    size = max(1, per_page // _cards_product(levels[len(levels) - s:], None))
+    # a combination's own numbers are read only when it is the leaf
+    sub = {**(under or m_aggs), **({"having": having} if having else {})}
+    past = {n: _PAST_EVERY_KEY[lv.key_kind] for n, lv in zip(names[1:], cols[1:])}
+
+    def body(query: dict, after: Optional[dict], root: Dict[str, dict]) -> dict:
+        comp = {"size": size, "sources": [{n: {"terms": {"field": lv.agg["terms"]["field"]}}}
+                                          for n, lv in zip(names, cols)], **({"after": after} if after else {})}
+        return {"size": 0, "track_total_hits": True, "query": query,
+                "aggs": {**root, "s0": {"composite": comp, **({"aggs": sub} if sub else {})}}}
+
+    def after_ok(a) -> bool:
+        return isinstance(a, dict) and sorted(a) == sorted(names)
+
+    if not p:
+        after = None
+        if oqo.cursor != "*":
+            after = _decode_cursor(oqo.cursor)
+            if not after_ok(after):
+                raise _bad_cursor()
+        res = _cursor_page(cols[0], body(base_query, after, m_aggs), index_name, connection, deadline, size, pref,
+                           past=past)
+        raw = res["aggregations"].get("s0") or {}
+        rows = _nested_cursor_rows(levels, measures, raw.get("buckets") or [], names, index_name)
+        return res, rows, (_encode_cursor(raw["after_key"]) if raw.get("after_key") else None)
+
+    lead = levels[0]
+    groups = _group_queries(lead)
+    g, after = 0, None
     if oqo.cursor != "*":
-        after = _decode_cursor(oqo.cursor)
-        if not isinstance(after, dict) or sorted(after) != names:
+        c = _decode_cursor(oqo.cursor)
+        if not (isinstance(c, dict) and set(c) == {"g", "a"} and isinstance(c["g"], int)
+                and 0 <= c["g"] < len(groups) and (c["a"] is None or after_ok(c["a"]))):
             raise _bad_cursor()
-        comp["after"] = after
-    sub = {**m_aggs, **({"having": having} if having else {})}
-    body = {"size": 0, "track_total_hits": True, "query": base_query,
-            "aggs": {**m_aggs, "s0": {"composite": comp, **({"aggs": sub} if sub else {})}}}
-    past = {names[i]: _PAST_EVERY_KEY[lv.key_kind] for i, lv in enumerate(levels) if i > 0}
-    res = _cursor_page(levels[0], body, index_name, connection, deadline, per_page, pref, past=past)
-    raw = res["aggregations"].get("s0") or {}
-    rows = _nested_cursor_rows(levels, measures, raw.get("buckets") or [], names, index_name)
-    return res, rows, (_encode_cursor(raw["after_key"]) if raw.get("after_key") else None)
+        g, after = c["g"], c["a"]
+    # the whole set's numbers (the same on every page: the request cache answers them after the first)
+    whole = _search(index_name, connection, {"size": 0, "track_total_hits": True, "query": base_query,
+                                             **({"aggs": m_aggs} if m_aggs else {})},
+                    deadline, "calculating the whole set", preference=pref)
+    took = whole.get("took") or 0
+    rows: List[dict] = []
+    read, nxt = 0, None
+    while True:
+        k, q = groups[g]
+        res = _cursor_page(cols[0], body({"bool": {"filter": [base_query, q]}}, after, {}), index_name,
+                           connection, deadline, per_page - read, pref, past=past)
+        took += res.get("took") or 0
+        raw = res["aggregations"].get("s0") or {}
+        got = _nested_cursor_rows(levels, measures, raw.get("buckets") or [], names, index_name, first=1)
+        if got:
+            rows.append({**_small_row(lead, k, index_name), "groups": got})
+            read += sum(1 for _ in _leaves(got, 1, len(levels), []))
+        if raw.get("after_key"):
+            nxt = {"g": g, "a": raw["after_key"]}
+            break
+        g, after = g + 1, None
+        if g == len(groups):
+            break
+        if read >= per_page or deadline.remaining() < PARTITION_RESERVE_S:
+            nxt = {"g": g, "a": None}
+            break
+    return ({"hits": whole["hits"], "took": took, "aggregations": whole.get("aggregations") or {}}, rows,
+            _encode_cursor(nxt) if nxt else None)
 
 
 def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: Dict[str, dict], pool, *,
                        index_name: str, connection, base_query: dict, per_page: int, page: int, sort,
                        deadline: Deadline, pref: str, cards: Dict[int, int], summary_only: bool):
-    """The first page x per_page rows in the usual order: the outer groups listed (one terms request; the
-    combinations' estimate and, for the summary export, each inner split on its own run beside it), then each
-    request reads a few outer groups' inner groups, sized to the rows still needed (per-group cardinality probes
-    took 10.8-40.8 s, EXPLORE § 8). Returns (the listing's response, ES time in ms, the page's rows, the summary's
-    splits, which of them hold only their biggest groups)."""
+    """The first page x per_page rows in the usual order: the outer groups listed (one request; the combinations'
+    estimate and, for the summary export, each inner split on its own run beside it), then each request reads a
+    few outer groups' inner groups, sized to the rows still needed (per-group cardinality probes took 10.8-40.8 s,
+    EXPLORE § 8); a small outer split (`_shape`) reads its groups one at a time. Returns (the listing's response, ES
+    time in ms, the page's rows, the summary's splits, which of them hold only their biggest groups)."""
     from query_translation.analytics_csv import _leaves
     rows_wanted = page * per_page
     n = len(levels)
+    p, _ = _shape(levels)
+    lead = levels[0]
     if rows_wanted > MAX_PAGE_DEPTH or (n == 3 and rows_wanted > NESTED_3_MAX_ROWS):
         cap = MAX_PAGE_DEPTH if n == 2 else NESTED_3_MAX_ROWS
         raise AnalyticsError(
@@ -1836,38 +1959,70 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
         # each inner split on its own, for the summary export only: on the page it cost 2-5 s over a big set (all
         # works by author) and only priced the summary's own call, which charges its rows anyway
         alone = pool.submit(_search, index_name, connection, {"size": 0, "query": base_query, "aggs": {
-            f"m{lv.index}": _level_terms(lv, NESTED_SUMMARY_GROUPS, sort, m_aggs) for lv in levels[1:]}},
-            deadline, "each split on its own", preference=pref)
+            f"m{lv.index}": _small_agg(lv, m_aggs) if _small(lv) else _level_terms(lv, NESTED_SUMMARY_GROUPS, sort,
+                                                                                   m_aggs)
+            for lv in levels[1:]}}, deadline, "each split on its own", preference=pref)
     listed = _search(index_name, connection, {"size": 0, "track_total_hits": True, "query": base_query, "aggs": {
-        **m_aggs, "s0": _level_terms(levels[0], n_outer, sort, m_aggs)}}, deadline, "listing the outer groups",
-        preference=pref)
+        **m_aggs, "s0": _small_agg(lead, m_aggs) if p else _level_terms(lead, n_outer, sort, m_aggs)}},
+        deadline, "listing the outer groups", preference=pref)
     total_count = listed["hits"]["total"]["value"]
     aggs = {**(listed.get("aggregations") or {}), **((alone.result().get("aggregations") or {}) if alone else {})}
     outer_rows, margins = format_levels(levels, measures, aggs, total_count, index_name)
     margins[0] = [{k: v for k, v in r.items() if k != "groups"} for r in outer_rows]
-    split_more = {lv.index: not summary_only or bool(aggs[f"m{lv.index}"].get("sum_other_doc_count"))
-                  or len(aggs[f"m{lv.index}"]["buckets"]) >= NESTED_SUMMARY_GROUPS for lv in levels[1:]}
+    split_more = {lv.index: not summary_only or (not _small(lv) and (
+        bool(aggs[f"m{lv.index}"].get("sum_other_doc_count"))
+        or len(aggs[f"m{lv.index}"]["buckets"]) >= NESTED_SUMMARY_GROUPS)) for lv in levels[1:]}
     s0 = aggs.get("s0") or {}
-    outer_keys = [b["key"] for b in s0.get("buckets") or []]
-    split_more[0] = bool(s0.get("sum_other_doc_count")) or len(outer_keys) >= n_outer
     group_rows: List[dict] = []
     took = listed.get("took") or 0
+    if p:
+        split_more[0] = False
+        if summary_only:
+            return listed, took, group_rows, margins, split_more
+        # one request per outer group, in the order a whole answer shows them, until the rows are read
+        queries = dict(_group_queries(lead))
+        key_of = {id(r): k for (k, _), r in zip(_bucket_rows(lead, s0), outer_rows)}
+        need = rows_wanted
+        for r in _order_levels(levels, outer_rows, sort, small_only=True):
+            if need <= 0:
+                break
+            if not r["count"]:
+                continue   # no works, no rows
+            inner = None
+            for lv in reversed(levels[1:]):
+                inner = {f"s{lv.index}": _level_terms(lv, need, sort, m_aggs, inner)}
+            res = _search(index_name, connection, {
+                "size": 0, "query": {"bool": {"filter": [base_query, queries[key_of[id(r)]]]}}, "aggs": inner},
+                deadline, "reading the first groups", preference=pref)
+            took += res.get("took") or 0
+            r["groups"] = level_rows(levels, measures, 1, (res.get("aggregations") or {})["s1"], r["count"],
+                                     index_name)
+            group_rows.append(r)
+            need -= sum(1 for _ in _leaves([r], 0, n, []))
+        return listed, took, _leaf_slice(group_rows, n, (page - 1) * per_page, rows_wanted), margins, split_more
+    outer_keys = [b["key"] for b in s0.get("buckets") or []]
+    split_more[0] = bool(s0.get("sum_other_doc_count")) or len(outer_keys) >= n_outer
     if summary_only:
         return listed, took, group_rows, margins, split_more
+
+    def per_outer(need: int) -> int:
+        """Buckets one outer group's inner splits may hold."""
+        b = 1
+        for lv in levels[1:]:
+            b *= len(lv.order_keys) if _small(lv) else need
+        return b
     # the first batch: as many outer groups as the rows need if each held every inner group (a lower bound)
-    inner_most = 1
-    for lv in levels[1:]:
-        inner_most *= max((cards or {}).get(lv.index) or 1, 1)
     need, i = rows_wanted, 0
-    batch_n = max(1, -(-need // inner_most))
-    field0 = levels[0].agg["terms"]["field"]
+    batch_n = max(1, -(-need // _cards_product(levels[1:], cards)))
+    field0 = lead.agg["terms"]["field"]
     while need > 0 and i < len(outer_keys):
-        batch_n = max(1, min(batch_n, NESTED_FILL_BUCKETS // max(need * (need if n == 3 else 1), 1)))
+        batch_n = max(1, min(batch_n, NESTED_FILL_BUCKETS // max(per_outer(need), 1)))
         batch = outer_keys[i:i + batch_n]
         inner = None
         for lv in reversed(levels[1:]):
-            inner = {f"s{lv.index}": _level_terms(lv, need, sort, m_aggs, inner, few_works=True)}
-        outer = _level_terms(levels[0], len(batch), sort, m_aggs, inner, few_works=True)
+            inner = {f"s{lv.index}": _small_agg(lv, m_aggs, inner) if _small(lv)
+                     else _level_terms(lv, need, sort, m_aggs, inner, few_works=True)}
+        outer = _level_terms(lead, len(batch), sort, m_aggs, inner, few_works=True)
         if all(isinstance(k, str) for k in batch):
             outer["terms"]["include"] = batch
         res = _search(index_name, connection, {
@@ -1882,6 +2037,8 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
                 need -= sum(1 for _ in _leaves([by_key[k]], 0, n, []))
         i += len(batch)
         batch_n *= 4
+    if any(_small(lv) for lv in levels):
+        group_rows = _order_levels(levels, group_rows, sort, small_only=True)
     return listed, took, _leaf_slice(group_rows, n, (page - 1) * per_page, rows_wanted), margins, split_more
 
 
@@ -1962,12 +2119,12 @@ def _nested_big(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: 
         # `groups_count`: the split's groups on their own (the probe's, approximate past 3,000; None past a count
         # floor, which the probe counts before), so the summary export can be priced before its splits are paged
         summary["splits"] = [{"groups": margins.get(lv.index, []), "more_groups": split_more[lv.index],
-                              "groups_count": (cards or {}).get(lv.index) if lv.selector is None else None}
+                              "groups_count": _level_groups(lv, cards) if lv.selector is None else None}
                              for lv in levels]
     # the outer split's groups, as within the limits: the run's probe (approximate past 3,000; a later cursor page
     # skips the probe)
     meta = _meta(oqo, measures, deadline, count=total_count, took=took, page=page, per_page=per_page,
-                 groups_count=(cards or {}).get(levels[0].index), rows_count=rows_count,
+                 groups_count=_level_groups(levels[0], cards), rows_count=rows_count,
                  more_groups=next_cursor is not None if oqo.cursor is not None else True, next_cursor=next_cursor)
     return {"meta": meta, "summary": summary, "group_by": group_rows, "results": []}
 
@@ -2079,13 +2236,15 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     # level): `big` pages it instead when it can (oxjob #1598), else the refusal stands.
     try:
         if cursor is not None and nested:
-            # nested splits by columns page every combination in key order once they pass what one answer holds
-            # (oxjob #1598); within the limits a cursor gets the one answer, with no next cursor
-            if any(lv.kind != "terms" for lv in levels):
+            # nested splits page every combination in key order once they pass what one answer holds, small splits
+            # (listed values, conditions, `at` bins, yes/no) beside the column ones too (oxjob #1598, `_shape`);
+            # within the limits a cursor gets the one answer, with no next cursor
+            if _shape(levels) is None:
                 raise AnalyticsError(
                     "cursor_not_available",
-                    "Cursor paging works on splits by a column.",
-                    "Listed values, bins and conditions return all their groups at once; drop the cursor.")
+                    "Cursor paging works on splits by a column, with listed values, conditions or bins after them "
+                    "(or one before them).",
+                    "Drop the cursor: the other shapes return all their groups at once.")
             if cursor != "*":
                 raise AnalyticsError("cursor_not_available", "This cursor needs a query whose groups page.",
                                      "Start again with cursor=*.", too_big=True)
@@ -2513,10 +2672,10 @@ def pages_by_cursor(oqo: OQO, fields_dict, index_name: str) -> bool:
     if not 1 <= len(oqo.group_by) <= 3:
         return False
     try:
-        return all(build_level(i, g, oqo, fields_dict, index_name).kind == "terms"
-                   for i, g in enumerate(oqo.group_by))
+        levels = [build_level(i, g, oqo, fields_dict, index_name) for i, g in enumerate(oqo.group_by)]
     except Exception:
         return False
+    return levels[0].kind == "terms" if len(levels) == 1 else _shape(levels) is not None
 
 
 def split_alone(oqo: OQO, n: int) -> OQO:
