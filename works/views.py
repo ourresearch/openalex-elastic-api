@@ -119,15 +119,16 @@ def index():
         # rerank (oxjob #1521) rides beside the view params but isn't one: it is read
         # from flask.g by query_translation/execution.py, not folded into the OQO.
         # format ("csv": a pipeline result as a CSV, oxjob #1530) and table ("groups"
-        # or "summary": which CSV, oxjob #1550) ride the same way.
-        allowed_keys = ("oql", "oqo", "rerank", "format", "table") + view_param_keys
+        # or "summary": which CSV, oxjob #1550) ride the same way, and split (one split of
+        # the summary on its own, oxjob #1598).
+        allowed_keys = ("oql", "oqo", "rerank", "format", "table", "split") + view_param_keys
         extra_keys = [k for k in body if k not in allowed_keys]
         if extra_keys:
             return _error_response(
                 "Unexpected top-level key(s) in request body: "
                 f"{', '.join(sorted(extra_keys))}. The body may contain one of "
                 "'oql'/'oqo' plus the sibling view params "
-                "(sort/select/page/per_page/cursor), rerank, format and table. sample/seed belong inside "
+                "(sort/select/page/per_page/cursor), rerank, format, table and split. sample/seed belong inside "
                 "the OQO.",
                 "invalid_body",
                 status=400,
@@ -142,15 +143,10 @@ def index():
         view_params = {
             k: body[k] for k in view_param_keys if body.get(k) is not None
         }
-        if body.get("rerank") is not None:
-            from flask import g
-            g.rerank_param = body["rerank"]
-        if body.get("format") is not None:
-            from flask import g
-            g.format_param = body["format"]
-        if body.get("table") is not None:
-            from flask import g
-            g.table_param = body["table"]
+        from flask import g
+        for name in ("rerank", "format", "table", "split"):
+            if body.get(name) is not None:
+                setattr(g, f"{name}_param", body[name])
         if "oqo" in body:
             return execute_oqo_dict(body["oqo"], view_params=view_params)
         if "oql" in body:

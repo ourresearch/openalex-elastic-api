@@ -1649,8 +1649,9 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
 NESTED_FILL_BUCKETS = 60_000    # combinations one fill request may ask for (ES search.max_buckets is 65,536)
 NESTED_MIN_TERMS = 50           # a nested cursor page's first range of leading keys
 NESTED_3_MAX_ROWS = 200         # three splits: a page view up to this many rows (each level sized to the rows)
-# The summary export of a nested split past the limits lists each split's biggest groups, up to this many (naming
-# 10,000 institutions and 10,000 authors took 6 s of a 13.8 s call, 2026-10-27); paging them is the job's step 6.
+# The one-call summary export of a nested split past the limits lists each split's biggest groups, up to this many
+# (naming 10,000 institutions and 10,000 authors took 6 s of a 13.8 s call, 2026-10-27); `split=<n>` with a cursor
+# pages every group of a split (the exporter does, for each split cut here: `split_alone`).
 NESTED_SUMMARY_GROUPS = 2_000
 _PAST_EVERY_KEY = {"keyword": "\U0010ffff", "number": 2 ** 63 - 1, "date": 253402300799999}
 
@@ -1958,7 +1959,10 @@ def _nested_big(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: 
         rows_count = estimate.value()
     summary = {"all": _whole_set_row(oqo, measures, aggs, total_count)}
     if oqo.cursor is None:
-        summary["splits"] = [{"groups": margins.get(lv.index, []), "more_groups": split_more[lv.index]}
+        # `groups_count`: the split's groups on their own (the probe's, approximate past 3,000; None past a count
+        # floor, which the probe counts before), so the summary export can be priced before its splits are paged
+        summary["splits"] = [{"groups": margins.get(lv.index, []), "more_groups": split_more[lv.index],
+                              "groups_count": (cards or {}).get(lv.index) if lv.selector is None else None}
                              for lv in levels]
     # the outer split's groups, as within the limits: the run's probe (approximate past 3,000; a later cursor page
     # skips the probe)
@@ -2291,15 +2295,18 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         # each split's groups on their own, computed from the works (never summed
         # from group rows): the outer split is the top level of group_by
         summary["splits"] = [{"groups": [{k: v for k, v in r.items() if k != "groups"}
-                                         for r in group_rows], "more_groups": False}]
+                                         for r in group_rows], "more_groups": False,
+                              "groups_count": len(group_rows)}]
         for lv in levels[1:]:
             buckets = aggs.get(f"m{lv.index}", {}).get("buckets")
+            # a terms split sized for the nested request came back full: more groups
+            # exist over the whole set than the summary lists
+            more = bool(lv.kind == "terms" and lv.size and isinstance(buckets, list)
+                        and len(buckets) >= lv.size)
             summary["splits"].append({
-                "groups": margins.get(lv.index, []),
-                # a terms split sized for the nested request came back full: more groups
-                # exist over the whole set than the summary lists
-                "more_groups": bool(lv.kind == "terms" and lv.size and isinstance(buckets, list)
-                                    and len(buckets) >= lv.size)})
+                "groups": margins.get(lv.index, []), "more_groups": more,
+                "groups_count": (cards.get(lv.index) if lv.selector is None else None) if more
+                else len(margins.get(lv.index, []))})
     rows_count = groups_count
     if nested:
         # every combination is in a nested answer within the limits
@@ -2510,6 +2517,13 @@ def pages_by_cursor(oqo: OQO, fields_dict, index_name: str) -> bool:
                    for i, g in enumerate(oqo.group_by))
     except Exception:
         return False
+
+
+def split_alone(oqo: OQO, n: int) -> OQO:
+    """Split `n` (1-based) of a nested query on its own, over the whole set: the summary's by-<split> table (each
+    split's groups computed from the works, its own group filter kept), as a single split, so it pages through any
+    number of groups with a cursor like one (oxjob #1598, step 6)."""
+    return replace(oqo, group_by=[oqo.group_by[n - 1]])
 
 
 def _lookup_kinds(where) -> List[str]:

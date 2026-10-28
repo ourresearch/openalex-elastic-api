@@ -145,35 +145,73 @@ def _file_slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
 
 
+def summary_names(splits: List[dict], entity: str) -> List[str]:
+    """The summary's file names: all-<entity>.csv, then by-<split>.csv for each split
+    (numbered when two splits share a name: by-condition.csv, by-condition-2.csv)."""
+    names = [f"all-{_file_slug(entity) or 'works'}.csv"]
+    for i, s in enumerate(splits):
+        base = f"by-{_file_slug(s['oql']) or f'split-{i + 1}'}"
+        name, k = f"{base}.csv", 1
+        while name in names:
+            k += 1
+            name = f"{base}-{k}.csv"
+        names.append(name)
+    return names
+
+
+def own_field_keys(g: GroupBy, oqo: OQO) -> set:
+    """The `value` measures (a group's own field) split `g`'s groups have, by their entity:
+    each author's h-index in by-author, none in by-year (the rule `fill_own_values` reads
+    by). Decided by the entity, not the rows, so every page of a split and the summary's
+    file have the same columns (oxjob #1598)."""
+    from core.join_resolver import entity_index
+    from query_translation.oql_lang import _group_entity
+    entity = None if g.conditions is not None else _group_entity(g, oqo.get_rows)
+    if not entity:
+        return set()
+    try:
+        g_fields, _ = entity_index(entity)
+    except ValueError:
+        return set()
+    return {m.key for m in oqo.calculate if m.measure == "value" and m.column_id in g_fields}
+
+
+def _split_table(s: dict, g: GroupBy, oqo: OQO, groups: List[dict], measures: List[dict]) -> str:
+    """One split's groups on their own: its columns, then each calculation's (a group's
+    own field only where these groups have one)."""
+    own = own_field_keys(g, oqo)
+    cols = [m for m in measures if m.get("measure") != "value" or m["key"] in own]
+    rows = [_split_cells(s, g) + [_cell(g.get(m["key"])) for m in cols] for g in groups]
+    return _csv(_split_cols(s) + [m["oql"] for m in cols], rows)
+
+
 def summary_files(body: dict, oqo: OQO) -> List[Tuple[str, str]]:
     """[(file name, CSV text)]: all-works.csv, then by-<split>.csv for each split on its
     own (only with two or more splits; one split's groups are the groups table)."""
     measures = body.get("meta", {}).get("measures") or []
     splits = _splits(body, oqo)
-    entity = _file_slug(oqo.get_rows) or "works"
+    names = summary_names(splits, oqo.get_rows)
     ms = _whole_set(measures)
-    files = [(f"all-{entity}.csv",
+    files = [(names[0],
               _csv([m["oql"] for m in ms], [[_cell(_all_row(body).get(m["key"])) for m in ms]]))]
     parts = (body.get("summary") or {}).get("splits") or []
     if len(splits) < 2:
         return files
-    used = {files[0][0]}
     for i, s in enumerate(splits):
         part = (parts[i] if i < len(parts) else None) or {}
-        groups = part.get("groups") or []
-        # a group's own field shows only where the groups have it (each author's h-index
-        # in by-author, not by-year)
-        cols = [m for m in measures
-                if m.get("measure") != "value" or any(g.get(m["key"]) is not None for g in groups)]
-        rows = [_split_cells(s, g) + [_cell(g.get(m["key"])) for m in cols] for g in groups]
-        base = f"by-{_file_slug(s['oql']) or f'split-{i + 1}'}"
-        name, k = f"{base}.csv", 1
-        while name in used:
-            k += 1
-            name = f"{base}-{k}.csv"
-        used.add(name)
-        files.append((name, _csv(_split_cols(s) + [m["oql"] for m in cols], rows)))
+        files.append((names[i + 1], _split_table(s, oqo.group_by[i], oqo, part.get("groups") or [],
+                                                 measures)))
     return files
+
+
+def split_file(body: dict, oqo: OQO, n: int) -> Tuple[str, str]:
+    """(file name, CSV text) for split `n` (1-based) of a nested query on its own, one page
+    of its groups (`table=summary&split=<n>`, oxjob #1598): its by-<split>.csv, named and
+    with the columns as in the summary. `body` is the answer of that split alone."""
+    splits = [split_meta(g, oqo.get_rows) for g in oqo.group_by]
+    measures = body.get("meta", {}).get("measures") or []
+    return (summary_names(splits, oqo.get_rows)[n],
+            _split_table(splits[n - 1], oqo.group_by[n - 1], oqo, body.get("group_by") or [], measures))
 
 
 def filename(oql_text: str, suffix: str = "", ext: str = "csv") -> str:
@@ -188,11 +226,16 @@ def data_rows(text: str) -> int:
     return max(0, sum(1 for _ in csv.reader(io.StringIO(text))) - 1)
 
 
-def build_download(body: dict, oqo: OQO, oql_text: str, table: str = "groups"
-                   ) -> Tuple[bytes, str, str, int]:
+def build_download(body: dict, oqo: OQO, oql_text: str, table: str = "groups",
+                   split: Optional[int] = None) -> Tuple[bytes, str, str, int]:
     """(content, file name, mimetype, rows) for one download: the groups CSV, or the
-    summary as one CSV or, when it has several tables, a zip of them. `rows` (every data
-    row in every file) prices it."""
+    summary as one CSV or, when it has several tables, a zip of them; with `split`, that
+    split's by-<split>.csv alone (`body` is the answer of that split on its own). `rows`
+    (every data row in every file) prices it."""
+    if table == "summary" and split is not None:
+        member, text = split_file(body, oqo, split)
+        return (text.encode("utf-8"), filename(oql_text, f"-summary-{member[:-len('.csv')]}"),
+                "text/csv", data_rows(text))
     if table == "summary":
         files = summary_files(body, oqo)
         rows = sum(data_rows(text) for _, text in files)

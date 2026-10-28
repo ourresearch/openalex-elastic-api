@@ -755,17 +755,30 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     csv_export = _format_asked() == "csv"
     if csv_export and _table_refusal() is not None:
         return _table_refusal()
+    split = _split_asked()
+    if split is not None:
+        refused = _split_refusal(oqo, split, csv_export)
+        if refused is not None:
+            return refused
+        split = int(split)
+    whole_oqo = oqo
+    # a split of the summary on its own answers like the groups table of that split alone
+    table = "groups" if split is not None else _table_asked()
     paging = False
     per_page, page = oqo.per_page, oqo.page
     if csv_export:
         from dataclasses import replace
+        if split is not None:
+            # one split of the summary on its own, a single split over the whole set: it pages
+            # like one (oxjob #1598, step 6), priced as the query asked
+            oqo = analytics.split_alone(oqo, split)
         # An export (#1550) pages through every group: with a cursor, a single split by a
         # column comes CSV_PAGE_GROUPS groups at a time in key order (follow X-Next-Cursor);
         # everything else has all its groups in one answer, so the cursor is dropped. With
         # no cursor, a single split holds its first MAX_PAGE_DEPTH groups.
         # Nested splits by columns page the same way once they pass what one answer holds
         # (oxjob #1598); within the limits they come whole, in their sort.
-        paging = (_table_asked() == "groups" and oqo.cursor is not None
+        paging = (table == "groups" and oqo.cursor is not None
                   and analytics.pages_by_cursor(oqo, fields_dict, index_name))
         if paging:
             if len(oqo.group_by) == 1:
@@ -782,10 +795,10 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
             base_query=base_query, per_page=per_page, page=page, sort=sort,
-            deadline=deadline, summary_only=csv_export and _table_asked() == "summary")
+            deadline=deadline, summary_only=csv_export and table == "summary")
     except analytics.AnalyticsError as e:
         return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
-                        "oqo": _echo_oqo(oqo).to_dict()}), e.status
+                        "oqo": _echo_oqo(whole_oqo).to_dict()}), e.status
     except APIError:
         raise
     if _echo_oqo(oqo) is not oqo:
@@ -794,7 +807,7 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
         cost = walk_exec.walk_price(_echo_oqo(oqo), body["meta"].get("es_calls"))
         body["meta"]["cost"] = cost
     if csv_export:
-        return _csv_response(oqo, body, cost, paging)
+        return _csv_response(whole_oqo, body, cost, paging, split=split)
     _add_baseline(body, _echo_oqo(oqo), index_name, connection, fields_dict, per_page, deadline)
     body["meta"]["x_query"] = build_x_query(_echo_oqo(oqo), sort_operands=False, name_new_form=True)
     body["meta"]["cost_usd"] = cost["usd"]
@@ -891,23 +904,47 @@ def _grandfathered() -> bool:
     return request.headers.get("X-Credits-Grandfathered") == "1"
 
 
-def _format_asked() -> Optional[str]:
-    """`format=` on GET, or the POST body's `format` (stashed on flask.g by works/views.py)."""
+def _param(name: str) -> Optional[str]:
+    """A param that rides beside the query: `<name>=` on GET, or the POST body's `<name>`
+    (stashed on flask.g as `<name>_param` by works/views.py)."""
     from flask import g
-    value = getattr(g, "format_param", None)
+    value = getattr(g, f"{name}_param", None)
     if value is None:
-        value = request.args.get("format")
-    return str(value).lower() if value is not None else None
+        value = request.args.get(name)
+    return str(value).strip() if value is not None else None
+
+
+def _format_asked() -> Optional[str]:
+    value = _param("format")
+    return value.lower() if value is not None else None
 
 
 def _table_asked() -> str:
-    """`table=` on GET, or the POST body's `table`: which CSV (`groups`, the default, or
-    `summary`), oxjob #1550."""
-    from flask import g
-    value = getattr(g, "table_param", None)
-    if value is None:
-        value = request.args.get("table")
-    return str(value).lower() if value is not None else "groups"
+    """Which CSV: `groups` (the default) or `summary`, oxjob #1550."""
+    return (_param("table") or "groups").lower()
+
+
+def _split_asked() -> Optional[str]:
+    """With table=summary, one split of a nested query on its own, 1 for the first (oxjob #1598)."""
+    return _param("split")
+
+
+def _split_refusal(oqo, value: str, csv_export: bool):
+    """A 400 for a `split=` that names no split of this query's summary, checked before
+    the query runs (and is paid for); else None."""
+    n = len(oqo.group_by)
+    if not (csv_export and _table_asked() == "summary"):
+        message = "split= picks one table of the summary: it works with format=csv&table=summary."
+        fix = "Add format=csv&table=summary, or drop split."
+    elif n < 2:
+        message = "split= picks one split of a query with two or more; this query's summary is one file."
+        fix = "Drop split."
+    elif not value.isdigit() or not 1 <= int(value) <= n:
+        message = f"split must be a number from 1 to {n} (this query's splits, in order)."
+        fix = f"Ask for split=1 to split={n}."
+    else:
+        return None
+    return jsonify({"error": "invalid_split", "message": message, "fix": fix}), 400
 
 
 def _table_refusal():
@@ -921,19 +958,20 @@ def _table_refusal():
                     "fix": "Drop table for the groups, or ask for table=summary."}), 400
 
 
-def _csv_response(oqo, body: dict, cost: dict, paging: bool = False):
+def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Optional[int] = None):
     """A pipeline result as a download (oxjob #1550): the groups as one flat CSV (with a
     cursor, one page of them and `X-Next-Cursor` for the next), or with table=summary
-    the summary, one CSV or (with several tables) a zip of them. Priced per row, like
-    works exports: the query's price for every 100 rows; refused (and free) when the
-    caller can't pay for what came back."""
+    the summary, one CSV or (with several tables) a zip of them; with split=<n> too, that
+    split's by-<split>.csv alone (`body` is that split's answer; it pages like the groups,
+    oxjob #1598). Priced per row, like works exports: the query's price for every 100
+    rows; refused (and free) when the caller can't pay for what came back."""
     from flask import Response
     from query_translation import analytics, analytics_csv
     from query_translation.oql_pipeline import render_pipeline
     table = _table_asked()
     # query.oql is the query as written (a walk's, not the works query it ran as, #1535)
     data, name, mimetype, rows = analytics_csv.build_download(
-        body, oqo, render_pipeline(_echo_oqo(oqo)), table)
+        body, oqo, render_pipeline(_echo_oqo(oqo)), table, split=split)
     price = analytics.export_price(cost, rows)
     refused = _credit_refusal(price, "narrow the query, or export fewer groups")
     if refused is not None:
@@ -948,17 +986,26 @@ def _csv_response(oqo, body: dict, cost: dict, paging: bool = False):
     if paging:
         if meta.get("next_cursor"):
             headers["X-Next-Cursor"] = meta["next_cursor"]
-    elif table == "groups" and meta.get("more_groups"):
+    elif (table == "groups" or split is not None) and meta.get("more_groups"):
         headers["X-Groups-Note"] = (
             f"the first {analytics.MAX_PAGE_DEPTH:,} groups only"
             + (f" of about {rows_total:,}" if rows_total else "")
             + "; add cursor=* and follow X-Next-Cursor for every group")
-    capped = [s.get("oql") for s, part in zip(meta.get("splits") or [],
-                                               (body.get("summary") or {}).get("splits") or [])
-              if (part or {}).get("more_groups")]
-    if table == "summary" and capped:
-        headers["X-Groups-Note"] = (f"the biggest groups only for {' and '.join(capped)}; "
-                                    f"narrow the query for the rest")
+    splits = meta.get("splits") or []
+    capped = [i for i, part in enumerate((body.get("summary") or {}).get("splits") or [])
+              if i < len(splits) and (part or {}).get("more_groups")]
+    if table == "summary" and split is None and capped:
+        # the one-call summary lists each split's biggest groups; split=<n> pages every group of
+        # split n (the exporter does, replacing that file in its zip: `n:<file>:<its groups,
+        # about; empty when not known>` each, oxjob #1598)
+        names = analytics_csv.summary_names(splits, oqo.get_rows)
+        parts = body["summary"]["splits"]
+        headers["X-More-Groups-Splits"] = ",".join(
+            f"{i + 1}:{names[i + 1]}:{analytics_csv._cell(parts[i].get('groups_count'))}" for i in capped)
+        headers["X-Groups-Note"] = (
+            f"the biggest groups only for {' and '.join(splits[i].get('oql') for i in capped)}; "
+            f"add split={capped[0] + 1}&cursor=* (for each split named in X-More-Groups-Splits) and "
+            f"follow X-Next-Cursor for every group")
     return Response(data, mimetype=mimetype, headers=headers), 200
 
 
@@ -969,11 +1016,7 @@ def _website() -> bool:
 
 
 def _rerank_asked() -> bool:
-    from flask import g
-    value = getattr(g, "rerank_param", None)
-    if value is None:
-        value = request.args.get("rerank")
-    return str(value).lower() == "true"
+    return (_param("rerank") or "").lower() == "true"
 
 
 def _finalize_oqo_response(result, oqo: OQO, MessageSchema):

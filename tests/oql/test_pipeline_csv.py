@@ -19,7 +19,7 @@ Q = ("get works where year >= (2020); then group those works by institution in "
 COUNT = {"key": "count", "measure": "count", "oql": "count"}
 FWCI = {"key": "mean_fwci", "measure": "mean", "oql": "mean FWCI"}
 SHARE = {"key": "percent_of_those", "measure": "percent_of_those", "oql": "percent of those works"}
-HINDEX = {"key": "value_summary_stats_h_index", "measure": "value", "oql": "h-index"}
+HINDEX = {"key": "summary_stats_h_index", "measure": "value", "oql": "h-index"}   # the engine's key
 
 
 def _oqo(q=Q):
