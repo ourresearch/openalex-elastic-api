@@ -54,11 +54,12 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
         alternate_of="ids.openalex",
+        sort_field="ids.openalex",
     ),
-    RangeField(param="summary_stats.2yr_mean_citedness"),
+    RangeField(param="summary_stats.2yr_mean_citedness", sortable=False),
     RangeField(param="cited_by_count"),
-    RangeField(param="summary_stats.h_index"),
-    RangeField(param="summary_stats.i10_index"),
+    RangeField(param="summary_stats.h_index", sortable=False),
+    RangeField(param="summary_stats.i10_index", sortable=False),
     RangeField(
         param="level",
         docstring="The concept's level. Lower-level concepts are more general, and higher-level concepts are more specific.",
@@ -74,7 +75,7 @@ fields = [
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
-    TermField(param="wikidata_id", alias="ids.wikidata"),
+    TermField(param="wikidata_id", alias="ids.wikidata", sort_field="ids.wikidata"),
     CollectionField(entity_type="concepts"),
 ]
 

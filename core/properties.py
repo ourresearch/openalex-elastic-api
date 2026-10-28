@@ -411,7 +411,12 @@ CAP_COLUMN = "column"
 # 17.5.0 (oxjob #1513, 2026-10-27): works `referenced_works` gains group_by (its alias `cites` always grouped; the 2022
 # "times out" refusal is gone now that cited-work groups use execution_hint map). Purely additive = MINOR. Under Jason's
 # standing authority (as 17.4.0 was).
-PROPERTIES_VERSION = "17.5.0"
+# 18.0.0 (oxjob #1900, 2026-10-28): `sort` leaves 22 filters that hold no value to sort by (works cited_by, related_to,
+# mag_only, topics_count, the has_oa_*_version and continent filters; authors scopus; sources is_in_jstage*; concepts
+# summary_stats.*; institutions x_concepts.id; awards lead_investigator.* and continents). Every one of those sorts
+# answered HTTP 500, so no working query changes; they now answer a JSON 400 (core.sort.sort_refusal). Removing an
+# action is MAJOR per classify_properties_diff.py. Under Jason's standing authority.
+PROPERTIES_VERSION = "18.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

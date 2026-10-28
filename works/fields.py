@@ -172,6 +172,7 @@ fields = [
     BooleanField(
         param="has_embeddings",
         custom_es_field="vector_embedding",
+        sortable=False,
     ),
     BooleanField(
         param="has_fulltext",
@@ -207,16 +208,18 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["has_references"],
         alternate_names=ALTERNATE_NAMES.get("has_references", None),
     ),
-    BooleanField(param="has_oa_accepted_or_published_version"),
-    BooleanField(param="has_oa_submitted_version"),
+    BooleanField(param="has_oa_accepted_or_published_version", sortable=False),
+    BooleanField(param="has_oa_submitted_version", sortable=False),
     BooleanField(
         param="has_old_authors",
         custom_es_field="authorships.uthor.id",
+        sortable=False,
     ),
     BooleanField(param="has_pdf_url", custom_es_field="locations_full.pdf_url"),
     BooleanField(
         param="has_raw_affiliation_strings",
         custom_es_field="authorships.raw_affiliation_strings",
+        sortable=False,
     ),
     BooleanField(
         param="institutions.is_global_south",
@@ -241,6 +244,7 @@ fields = [
         docstring=DOCSTRINGS["is_oa"],
         documentation_link=DOCUMENTATION_LINKS["is_oa"],
         alternate_names=ALTERNATE_NAMES.get("is_oa", None),
+        sort_field="open_access.is_oa",
     ),
     BooleanField(
         param="is_paratext",
@@ -348,6 +352,7 @@ fields = [
     ),
     BooleanField(
         param="mag_only",
+        sortable=False,
     ),
     BooleanField(
         param="primary_location.is_oa",
@@ -443,6 +448,7 @@ fields = [
         docstring=DOCSTRINGS["author"],
         documentation_link=DOCUMENTATION_LINKS["author"],
         alternate_names=ALTERNATE_NAMES.get("author", None),
+        sort_field="authorships_full.author.id",
     ),
     OpenAlexIDField(
         param="authorships.author.id",
@@ -492,6 +498,7 @@ fields = [
         docstring=DOCSTRINGS["cited_by"],
         documentation_link=DOCUMENTATION_LINKS["cited_by"],
         alternate_names=ALTERNATE_NAMES.get("cited_by", None),
+        sortable=False,
     ),
     OpenAlexIDField(
         param="cites",
@@ -500,9 +507,11 @@ fields = [
         docstring=DOCSTRINGS["cites"],
         documentation_link=DOCUMENTATION_LINKS["cites"],
         alternate_names=ALTERNATE_NAMES.get("cites", None),
+        sortable=False,
     ),
     OpenAlexIDField(
-        param="concept.id", alias="concepts.id", alternate_of="concepts.id"
+        param="concept.id", alias="concepts.id", alternate_of="concepts.id",
+        sort_field="concepts.id",
     ),
     OpenAlexIDField(
         param="concepts.id",
@@ -525,6 +534,7 @@ fields = [
         param="institution.id",
         alias="authorships_full.institutions.id",
         alternate_of="authorships.institutions.id",
+        sort_field="authorships_full.institutions.id",
     ),
     OpenAlexIDField(
         param="institutions.id",
@@ -586,7 +596,8 @@ fields = [
         alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
-        param="openalex_id", alias="ids.openalex", alternate_of="ids.openalex"
+        param="openalex_id", alias="ids.openalex", alternate_of="ids.openalex",
+        sort_field="ids.openalex",
     ),
     OpenAlexIDField(
         param="repository",
@@ -605,6 +616,7 @@ fields = [
         param="related_to",
         docstring="Related works, based on common concepts the works have.",
         documentation_link="https://developers.openalex.org/api-reference/works",
+        sortable=False,
     ),
     OpenAlexIDField(param="topics.id"),
     RangeField(
@@ -671,7 +683,7 @@ fields = [
     ),
     RangeField(param="referenced_works_count"),
     RangeField(param="sustainable_development_goals.score"),
-    RangeField(param="topics_count"),
+    RangeField(param="topics_count", sortable=False),
     SearchField(
         param="abstract.search",
         index="works",
@@ -806,6 +818,7 @@ fields = [
         param="author.orcid",
         alias="authorships_full.author.orcid",
         alternate_of="authorships.author.orcid",
+        sort_field="authorships.author.orcid",
     ),
     OrcidField(
         param="authorships.author.orcid",
@@ -833,6 +846,7 @@ fields = [
         docstring=DOCSTRINGS["continent"],
         documentation_link=DOCUMENTATION_LINKS["continent"],
         alternate_names=ALTERNATE_NAMES.get("continent", None),
+        sortable=False,
     ),
     TermField(
         param="authorships.institutions.ror",
@@ -866,7 +880,7 @@ fields = [
         custom_es_field="best_oa_location.license_id.keyword",
     ),
     TermField(param="best_oa_location.source.type"),
-    TermField(param="best_oa_location.raw_type"),
+    TermField(param="best_oa_location.raw_type", sort_field="best_oa_location.raw_type.keyword"),
     TermField(
         param="best_oa_location.version",
         docstring="The version of the work that is available Open Access",
@@ -917,6 +931,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["continent"],
         alternate_names=ALTERNATE_NAMES.get("continent", None),
         alternate_of="authorships.institutions.continent",
+        sortable=False,
     ),
     TermField(
         param="institutions.ror",
@@ -971,13 +986,14 @@ fields = [
         alternate_of="locations.license",
     ),
     TermField(param="locations.source.type", alias="locations_full.source.type"),
-    TermField(param="locations.raw_type", alias="locations_full.raw_type"),
+    TermField(param="locations.raw_type", alias="locations_full.raw_type", sort_field="locations_full.raw_type.keyword"),
     TermField(param="locations.version", alias="locations_full.version"),
     TermField(param="mag", custom_es_field="ids.mag", alternate_of="ids.mag"),
     TermField(
         param="oa_status",
         alias="open_access.oa_status",
         alternate_of="open_access.oa_status",
+        sort_field="open_access.oa_status",
     ),
     TermField(
         param="open_access.oa_status",
@@ -1013,7 +1029,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["source.type"],
         alternate_names=ALTERNATE_NAMES.get("source.type", None),
     ),
-    TermField(param="primary_location.raw_type"),
+    TermField(param="primary_location.raw_type", sort_field="primary_location.raw_type.keyword"),
     TermField(param="primary_location.version"),
     TermField(
         param="primary_topic.domain.id", custom_es_field="primary_topic.domain.id"

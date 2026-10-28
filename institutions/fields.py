@@ -53,6 +53,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
         alternate_of="x_concepts.id",
+        sortable=False,
     ),
     OpenAlexIDField(
         param="concepts.id",
@@ -61,6 +62,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
         alternate_of="x_concepts.id",
+        sortable=False,
     ),
     OpenAlexIDField(
         param="id",
@@ -89,6 +91,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
         alternate_of="ids.openalex",
+        sort_field="ids.openalex",
     ),
     OpenAlexIDField(param="roles.id"),
     OpenAlexIDField(param="lineage", custom_es_field="lineage"),
@@ -106,6 +109,7 @@ fields = [
         docstring=DOCSTRINGS["concept"],
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
+        sortable=False,
     ),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),

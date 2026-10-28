@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "6f9a77efa6bd178c8fc3d9c825a590d27b14de43eb442b501794115d8b09d88b",
+    "fingerprint": "a11bbcb2bff329fa0ebfa0f5dd8edbb33b3645e7228baed362089efb9a22eef2",
     "property_count": 923,
-    "version": "17.5.0"
+    "version": "18.0.0"
   },
   "properties": {
     "authors": {
@@ -845,8 +845,7 @@
       "scopus": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1921,8 +1920,7 @@
       "institution_awarded.continent": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2134,8 +2132,7 @@
       "lead_investigator.affiliation.name": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2157,8 +2154,7 @@
       "lead_investigator.family_name": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2180,8 +2176,7 @@
       "lead_investigator.given_name": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2492,8 +2487,7 @@
       "recipient_countries.continent": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3459,8 +3453,7 @@
       "summary_stats.2yr_mean_citedness": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3485,8 +3478,7 @@
       "summary_stats.h_index": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3511,8 +3503,7 @@
       "summary_stats.i10_index": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7686,8 +7677,7 @@
       "x_concepts.id": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -12106,8 +12096,7 @@
         "actions": [
           "column",
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12127,8 +12116,7 @@
       "is_in_jstage_since_year": {
         "actions": [
           "column",
-          "filter",
-          "sort"
+          "filter"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14914,8 +14902,7 @@
       "authorships.institutions.continent": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [
           "institution continent"
@@ -15913,8 +15900,7 @@
       },
       "cited_by": {
         "actions": [
-          "filter",
-          "sort"
+          "filter"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -16784,8 +16770,7 @@
       "has_embeddings": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -16830,8 +16815,7 @@
       "has_oa_accepted_or_published_version": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -16853,8 +16837,7 @@
       "has_oa_submitted_version": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -16877,8 +16860,7 @@
       "has_old_authors": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -16989,8 +16971,7 @@
       "has_raw_affiliation_strings": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -17992,8 +17973,7 @@
       "mag_only": {
         "actions": [
           "filter",
-          "group_by",
-          "sort"
+          "group_by"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -19054,8 +19034,7 @@
       },
       "related_to": {
         "actions": [
-          "filter",
-          "sort"
+          "filter"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -19601,8 +19580,7 @@
       },
       "topics_count": {
         "actions": [
-          "filter",
-          "sort"
+          "filter"
         ],
         "aliases": [],
         "alternate_keys": [],

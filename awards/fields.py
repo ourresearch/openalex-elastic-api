@@ -74,7 +74,8 @@ fields = [
     TermField(
         param="doi", 
         custom_es_field="doi",
-        docstring="The Digital Object Identifier for the project"
+        docstring="The Digital Object Identifier for the project",
+        sort_field="doi.keyword",
     ),
     TermField(
         param="id",
@@ -89,12 +90,14 @@ fields = [
     TermField(
         param="lead_investigator.given_name", 
         custom_es_field="lead_investigator.given_name",
-        docstring="The given name of the lead investigator"
+        docstring="The given name of the lead investigator",
+        sortable=False,
     ),
     TermField(
         param="lead_investigator.family_name", 
         custom_es_field="lead_investigator.family_name",
-        docstring="The family name of the lead investigator"
+        docstring="The family name of the lead investigator",
+        sortable=False,
     ),
     TermField(
         param="lead_investigator.orcid", 
@@ -104,7 +107,8 @@ fields = [
     TermField(
         param="lead_investigator.affiliation.name", 
         custom_es_field="lead_investigator.affiliation.name",
-        docstring="The institutional affiliation of the lead investigator"
+        docstring="The institutional affiliation of the lead investigator",
+        sortable=False,
     ),
     TermField(
         param="lead_investigator.affiliation.country",
@@ -181,6 +185,7 @@ fields = [
         param="institution_awarded.continent",
         alias="institution_awarded_full.country_code",
         docstring="The continent of the institution that received the award",
+        sortable=False,
     ),
     TermField(
         param="institution_awarded.type",
@@ -216,7 +221,7 @@ fields = [
     TermField(param="recipient_countries.country_code", custom_es_field="recipient_countries_full.country_code.lower",
               docstring="A country where the award's money lands (ISO 3166-1 alpha-2), as the funder reports it or the place of performance"),
     TermField(param="recipient_countries.continent", alias="recipient_countries_full.country_code",
-              docstring="A continent where the award's money lands"),
+              docstring="A continent where the award's money lands", sortable=False),
     TermField(param="recipient_countries.basis", custom_es_field="recipient_countries_full.basis",
               docstring="How a recipient country is known: funder_reported, place_of_performance or organisation_location"),
     OpenAlexIDField(param="recipients.id", custom_es_field="recipients_full.id",

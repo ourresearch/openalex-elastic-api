@@ -66,6 +66,7 @@ fields = [
     BooleanField(
         param="is_in_jstage",
         docstring="The source is in J-STAGE, the Japan Science and Technology Information Aggregation Service",
+        sortable=False,
     ),
     DateField(
         param="from_created_date",
@@ -125,6 +126,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
         alternate_of="ids.openalex",
+        sort_field="ids.openalex",
     ),
     OpenAlexIDField(
         param="x_concepts.id",
@@ -137,7 +139,7 @@ fields = [
     RangeField(param="cited_by_count"),
     RangeField(param="is_in_doaj_since_year"),
     RangeField(param="is_high_oa_rate_since_year"),
-    RangeField(param="is_in_jstage_since_year"),
+    RangeField(param="is_in_jstage_since_year", sortable=False),
     RangeField(param="last_publication_year"),
     RangeField(param="first_publication_year"),
     RangeField(param="oa_flip_year"),

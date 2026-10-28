@@ -46,15 +46,48 @@ def get_sort_fields(fields_dict, group_by, sort_params):
 
         # all others
         field = get_field(fields_dict, key)
-        if not getattr(field, "sortable", True):
-            raise APIQueryParamsError(
-                f"Cannot sort by {key}: it is a filter on a related entity, looked up at query time."
-            )
+        refusal = sort_refusal(key, field)
+        if refusal:
+            raise APIQueryParamsError(refusal)
         if value == "asc":
             sort_fields.append(field.es_sort_field())
         elif value == "desc":
             sort_fields.append(f"-{field.es_sort_field()}")
     return sort_fields
+
+
+# Filters that hold no value to sort by, and what people sorting by them mean (oxjob #1900).
+# Most sort=cited_by and sort=cites requests come with a search: they want the most cited first.
+SORT_INSTEAD = {
+    "cited_by": "cited_by_count",
+    "cites": "cited_by_count",
+}
+
+
+def sort_refusal(key, field):
+    """Why `sort=<key>` can't run, or None when it can (oxjob #1900).
+
+    The same rule as the sort capability /properties publishes (core.properties._derive_actions):
+    a filter column whose Field is sortable. Before, any other key reached Elasticsearch and
+    came back as an HTML 500 ("No mapping found for [cited_by] in order to sort on")."""
+    if "filter" not in field.actions:
+        if "search" in field.actions:
+            return (
+                f"Cannot sort by {key}: it is a search filter. To put the best matches "
+                f"first, use sort=relevance_score:desc."
+            )
+        return f"Cannot sort by {key}: it is not a value the results have."
+    if getattr(field, "sortable", True):
+        return None
+    if getattr(field, "target_entity", None):  # JoinField (#1526)
+        return f"Cannot sort by {key}: it is a filter on a related entity, looked up at query time."
+    instead = SORT_INSTEAD.get(key)
+    if instead:
+        return (
+            f"Cannot sort by {key}: it filters by a citation link to one work, so it has no "
+            f"value to sort by. To sort by number of citations, use sort={instead}:desc."
+        )
+    return f"Cannot sort by {key}: it is a filter only, with no stored value to sort by."
 
 
 WORKS_TIE_BREAK_SORT = ["-publication_date", "id"]

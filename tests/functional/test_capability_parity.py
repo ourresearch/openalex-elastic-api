@@ -53,24 +53,29 @@ from query_translation.validator import validate_oqo
 # aliases included — ∪ selectable result fields). sort == the filter-capable count;
 # group_by == the live `validate_group_by` subset of it; column == |selectable|.
 PARITY_BASELINE = {
-    "works": (190, 164, 58),
+    # 2026-10-28 (#1900): the counts on master had drifted to works 195/170/62,
+    # authors 43/38/22, sources 49/36/46, institutions 37/32/33, topics 11/8/16,
+    # keywords 8/5/13 (fields added since). #1900 then took sort off the filters that
+    # hold no value to sort by: works -12, authors -1, sources -2, institutions -3,
+    # concepts -3.
+    "works": (183, 170, 62),
     # authors 39/34/21 -> 40/35/21 (#593, 2026-07-15): the mangled GUI-rewrite
     # key `last_known_authorships.institutions.lineage` became a live (unlisted)
     # execution alias of last_known_institutions.id — filter-capable, so it
     # carries the derived sort+group like every alias (identical ES query);
     # not selectable. Baseline was missed in that ship; reconciled 2026-07-20.
-    "authors": (40, 35, 21),
+    "authors": (42, 38, 22),
     # sources 44/31/43 -> 45/32/44 (05447ec, 2026-06-30): new boolean field
     # `is_preprint_repository` (filter + derived sort/group, and selectable; its
     # snapshot side was healed in #557's regen). Baseline was missed in that
     # ship; reconciled 2026-07-20.
-    "sources": (45, 32, 44),
-    "institutions": (30, 27, 31),
+    "sources": (47, 36, 46),
+    "institutions": (34, 32, 33),
     "funders": (22, 19, 18),
     "publishers": (21, 18, 20),
-    "topics": (11, 8, 15),
-    "keywords": (6, 3, 8),
-    "concepts": (15, 12, 19),
+    "topics": (11, 8, 16),
+    "keywords": (8, 5, 13),
+    "concepts": (12, 12, 19),
 }
 
 ENTITIES = list(PARITY_BASELINE)
@@ -104,16 +109,19 @@ def test_capabilities_match_live_engine_rules(entity):
     groupable = {name for name, a in caps.items() if CAP_GROUP_BY in a}
     columnar = {name for name, a in caps.items() if CAP_COLUMN in a}
 
-    # sort == the filter-capable columns (search/collection columns 500 on sort).
+    # sort == the filter-capable columns whose Field is sortable: search and
+    # collection columns, join filters (#1526) and filters with no stored value
+    # (#1900) answer a JSON 400 on sort (core.sort.sort_refusal).
     expected_sortable = {
-        name for name, f in fields_dict.items() if CAP_FILTER in f.actions
+        name for name, f in fields_dict.items()
+        if CAP_FILTER in f.actions and getattr(f, "sortable", True)
     }
     assert sortable == expected_sortable
 
-    # group_by == sortable minus what the live single-dim rule rejects.
+    # group_by == the filter-capable columns the live single-dim rule accepts.
     expected_groupable = {
-        name for name in expected_sortable
-        if group_by_rejection(fields_dict[name]) is None
+        name for name, f in fields_dict.items()
+        if CAP_FILTER in f.actions and group_by_rejection(f) is None
     }
     assert groupable == expected_groupable
 
@@ -189,9 +197,12 @@ def test_alias_columns_keep_their_canonical_capabilities():
     resolvable columns — a raw-URL-accepted alias sort/group key must not reject."""
     caps = get_entity_capabilities("works")
     fields_dict = _live_fields_dict("works")
+    # An alias marked sortable=False refuses sort on purpose: sort=cites is a request
+    # for the most-cited works, not for an order of reference ids (#1900).
     aliased = [
         name for name, prop in ENTITY_PROPERTIES["works"].items()
         if prop.alternate_of and CAP_FILTER in fields_dict[name].actions
+        and getattr(fields_dict[name], "sortable", True)
     ]
     assert aliased, "expected filter-capable #446 alias columns on works"
     for name in aliased:

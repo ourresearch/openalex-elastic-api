@@ -43,6 +43,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
         alternate_of="ids.openalex",
+        sort_field="ids.openalex",
     ),
     OpenAlexIDField(
         param="openalex_id",

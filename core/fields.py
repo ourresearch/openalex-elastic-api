@@ -294,6 +294,13 @@ class Field(ABC):
     field_type = None
     operators = []
     actions = ["filter"]
+    # Sorting (oxjob #1900). A filter column sorts on es_sort_field(). `sort_field`
+    # names the Elasticsearch field to sort on when the param's own spelling isn't
+    # one (is_oa sorts on open_access.is_oa). `sortable=False`: the index holds no
+    # value to sort by (a link looked up at query time like cited_by, a value the
+    # filter computes like has_oa_submitted_version, a text field), so
+    # sort=<param> answers a JSON 400 and /properties leaves "sort" off.
+    sortable = True
 
     def __init__(
         self,
@@ -308,10 +315,15 @@ class Field(ABC):
         entity_type=None,
         alternate_of=None,
         unlisted=False,
+        sort_field=None,
+        sortable=None,
     ):
         self.param = param
         self.alias = alias
         self.custom_es_field = custom_es_field
+        self.sort_field = sort_field
+        if sortable is not None:
+            self.sortable = sortable
         self.value = None
         self.unique_id = unique_id
         self.index = index
@@ -357,6 +369,8 @@ class Field(ABC):
         return field
 
     def es_sort_field(self):
+        if self.sort_field:
+            return self.sort_field
         if self.custom_es_field:
             field = self.custom_es_field.replace("__", ".")
         elif self.alias and (self.alias.startswith("locations_full.") or self.alias == "authorships_full.countries"):
