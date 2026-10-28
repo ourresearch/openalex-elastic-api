@@ -550,6 +550,17 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
 # ---------------------------------------------------------------------------
 # Group filters: measures -> selector; own fields, co-author, collaborator -> key sets
 # ---------------------------------------------------------------------------
+def _has_own_fields(entity: str) -> bool:
+    """Can a split's groups be filtered on their own records? Not every group entity has a lookup: a split by cited
+    work (works, #1513) answered a 500 on `entity_index` (Sentry OPENALEX-ELASTIC-API-2A, 2026-10-28)."""
+    from core.join_resolver import entity_index
+    try:
+        entity_index(entity)
+        return True
+    except ValueError:
+        return False
+
+
 def _nnf_group_filters(oqo: OQO) -> OQO:
     """Group filters in negation normal form: `that author is not in (A1, A2)` parses
     to a negated OR; the key-set rules read an AND of negated leaves."""
@@ -2162,6 +2173,11 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     "group_filter_not_available",
                     "These groups have no fields of their own to filter on.",
                     f"Filter by a calculation, e.g. {count_fix(lv)}.")
+            if not _has_own_fields(lv.group_entity):
+                raise AnalyticsError(
+                    "group_filter_not_available",
+                    f"A split by {_split_noun(lv)} can't filter on its groups' own records yet.",
+                    f"Filter by a calculation, e.g. {count_fix(lv)}, or filter the starting works instead.")
             rest = resolve_keysets(lv, k_parts, oqo, index_name, connection, deadline,
                                    bool(m_parts), base_query=base_query,
                                    works_fields=fields_dict)
