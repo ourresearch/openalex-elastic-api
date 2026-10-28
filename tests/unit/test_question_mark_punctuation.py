@@ -64,6 +64,12 @@ class TestQuestionMarksAsPunctuation:
             ("Journalism Education Yun Hao 1, * , Yuxin Lin2", "Journalism Education Yun Hao 1,  , Yuxin Lin2"),
             ("* KIKO MILANO. (2026). The KIKO Show", "KIKO MILANO. (2026). The KIKO Show"),
             ("HYPOXIA-INDUCIBLE FACTORS 1 AND 2 *", "HYPOXIA-INDUCIBLE FACTORS 1 AND 2"),
+            # beside a quote too: ES answered these HTTP 500 (oxjob #1889)
+            ('"Prof. *"', '"Prof. "'),
+            ('"cancer research *"', '"cancer research "'),
+            ('"* cancer"', '" cancer"'),
+            ('"cancer **" AND dog', '"cancer " AND dog'),
+            ('"*"', '""'),  # matches nothing, as before
         ],
     )
     def test_punctuation_is_dropped(self, given, expected):
@@ -75,7 +81,7 @@ class TestQuestionMarksAsPunctuation:
             "wom?n", "wo??n", "behavio?r", "M?ller", "colo?r AND dog",  # inside a word
             "psoriati?", "Really??", '"psoriati?"',  # word-final in a one-word search
             "?cycle", "some ?cycle",  # start of a word: the validators refuse it
-            "machin* learning", "chem*stry", "Nanoring**", '"*"',  # `*` touching a word or quote
+            "machin* learning", "chem*stry", "Nanoring**", '"canc* research"',  # `*` touching a word
         ],
     )
     def test_a_wildcard_stays(self, terms):

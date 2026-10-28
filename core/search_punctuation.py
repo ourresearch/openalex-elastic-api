@@ -9,8 +9,9 @@ Pure (no settings, no ES), so the OQL parser (query_translation/oql_lang.py) use
 - On its own (`garçons ? Une`, `"the Boat"?`), inside a URL (`index.html?id=`), or beside
   Chinese/Japanese text: punctuation.
 - At the start of a word (`?cycle`): left alone; the validators refuse a leading wildcard.
-`*` on its own (a footnote mark: `Yun Hao 1, * ,`) is punctuation; every other `*` is left
-to the wildcard rules (`machin*`, `chem*stry`).
+`*` on its own (a footnote mark: `Yun Hao 1, * ,`) is punctuation, also beside a quote
+(`"Prof. *"`, `"* cancer"`: ES answered those HTTP 500, "Automaton [*] expanded to too many
+terms", oxjob #1889); every other `*` is left to the wildcard rules (`machin*`, `chem*stry`).
 
 Before, every `?` and `*` counted as a wildcard, so a pasted title got HTTP 400 on the
 default search and missed its paper on the exact one (numbers: oxjob #1327).
@@ -18,7 +19,8 @@ default search and missed its paper on the exact one (numbers: oxjob #1327).
 import re
 
 _QUESTION_MARK_RUN_RE = re.compile(r"\?+")
-_LONE_STAR_RE = re.compile(r"(?<!\S)\*+(?!\S)")
+# A run of `*` with only spaces, quotes or the ends of the text beside it.
+_LONE_STAR_RE = re.compile(r'(?<![^\s"])\*+(?![^\s"])')
 _URL_RE = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
 # A word character, except Chinese/Japanese ideographs and kana: the tokenizer indexes those
 # one character at a time, so a `?` beside one (`何が違う?(上)`) can never be a wildcard.
