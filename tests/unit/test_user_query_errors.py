@@ -37,6 +37,7 @@ def _es_error(reason, cls=BadRequestError, status=400):
     "Valid edit distances are [0, 1, 2] but was [1952]",
     "failed to create query: fuzziness cannot be [MHz].",
     "too_many_clauses: maxClauseCount is set to 4096",
+    "failed to create query: Can only use interval queries on text fields - not on [keywords.display_name] which is of type [keyword]",
 ])
 def test_user_query_errors_are_recognised(reason):
     assert is_user_query_error(_es_error(reason))
@@ -55,3 +56,6 @@ def test_messages_say_what_to_fix():
     assert "partner" in user_query_error_message(_es_error("Failed to parse query [a AND OR b]"))
     assert "fewer OR" in user_query_error_message(_es_error("too_many_clauses: maxClauseCount is set to 4096"))
     assert "0, 1 or 2" in user_query_error_message(_es_error("Valid edit distances are [0, 1, 2] but was [1952]"))
+    assert "whole keywords" in user_query_error_message(_es_error(
+        "failed to create query: Can only use interval queries on text fields - not on "
+        "[keywords.display_name] which is of type [keyword]"))

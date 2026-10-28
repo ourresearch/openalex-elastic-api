@@ -16,6 +16,10 @@ _EDIT_DISTANCE = (
     "A ~ after a word sets how many letters may differ, and it must be 0, 1 or 2 "
     "(cancer~1). For words near each other, quote them: \"heart failure\"~5."
 )
+_WHOLE_KEYWORDS = (
+    "keyword.search matches whole keywords, so a * or ? inside quotes can't run there. "
+    "Drop the quotes (canc*), or search titles and abstracts with title_and_abstract.search."
+)
 _UNREADABLE = (
     "Your search could not be read. Check that each quote and parenthesis has a "
     "partner, and that AND, OR and NOT each sit between two search terms."
@@ -30,6 +34,9 @@ _USER_QUERY_ERRORS = (
     ("too_complex_to_determinize", _TOO_BIG),
     ("Valid edit distances are", _EDIT_DISTANCE),  # a title's "1920~1952" read as fuzzy distance 1952
     ("fuzziness cannot be", _EDIT_DISTANCE),  # "100~MHz": what follows a ~ read as a fuzziness
+    # keyword.search:"canc* research": a quoted wildcard phrase becomes an intervals query, which
+    # needs a text field; keywords.display_name is a keyword field (oxjob #1900).
+    ("Can only use interval queries on text fields", _WHOLE_KEYWORDS),
     ("token_mgr_error", _UNREADABLE),
     ("Failed to parse query", _UNREADABLE),
     ("Cannot parse", _UNREADABLE),
