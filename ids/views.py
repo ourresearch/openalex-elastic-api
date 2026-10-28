@@ -134,6 +134,9 @@ def works_id_get(id):
     only_fields = process_id_only_fields(request, WorksSchema)
     # oxjob #576: (kind, key) for the Lakebase point-lookup path; None = ES-only id form
     lakebase_lookup = None
+    # the OpenAlex id this request asked for, set only by its own branch: the pmid:/pmcid: branches cut their
+    # prefix off `id`, and "S0016-5085(16)00131-1" then reads like a source id (oxjob #1907)
+    merged_lookup_id = None
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -141,6 +144,7 @@ def works_id_get(id):
             return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/W{clean_id}"
+        merged_lookup_id = f"W{clean_id}"
 
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
@@ -204,8 +208,8 @@ def works_id_get(id):
     response = s.execute()
 
     if not response:
-        if is_openalex_id(id):
-            merged = redirect_if_merged("ids.works_id_get", f"W{clean_id}", connection)
+        if merged_lookup_id:
+            merged = redirect_if_merged("ids.works_id_get", merged_lookup_id, connection)
             if merged:
                 return merged
         abort(404)
@@ -303,6 +307,7 @@ def authors_id_get(id):
 
     s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, AuthorsSchema)
+    merged_lookup_id = None  # set only by the OpenAlex-id branch (oxjob #1907)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -310,6 +315,7 @@ def authors_id_get(id):
             return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
         author_id = int(clean_id[1:])
         full_author_id = f"https://openalex.org/A{author_id}"
+        merged_lookup_id = f"A{author_id}"
         query = Q("term", ids__openalex=full_author_id)
         s = s.filter(query)
     elif id.startswith("mag:"):
@@ -341,8 +347,8 @@ def authors_id_get(id):
         abort(404)
     response = most_works_first(s).execute()
     if not response:
-        if is_openalex_id(id):
-            merged = redirect_if_merged("ids.authors_id_get", f"A{author_id}", connection)
+        if merged_lookup_id:
+            merged = redirect_if_merged("ids.authors_id_get", merged_lookup_id, connection)
             if merged:
                 return merged
         abort(404)
@@ -510,6 +516,7 @@ def funders_id_get(id):
 
     s = Search(index=settings.FUNDERS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, FundersSchema)
+    merged_lookup_id = None  # set only by the OpenAlex-id branch (oxjob #1907)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -517,6 +524,7 @@ def funders_id_get(id):
             return redirect(url_for("ids.funders_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/F{clean_id}"
+        merged_lookup_id = f"F{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
     elif id.startswith("ror:") or ("ror.org" in id):
@@ -547,8 +555,8 @@ def funders_id_get(id):
         abort(404)
     response = most_works_first(s).execute()
     if not response:
-        if is_openalex_id(id):
-            merged = redirect_if_merged("ids.funders_id_get", f"F{clean_id}", connection)
+        if merged_lookup_id:
+            merged = redirect_if_merged("ids.funders_id_get", merged_lookup_id, connection)
             if merged:
                 return merged
         abort(404)
@@ -651,6 +659,7 @@ def sources_id_get(id):
 
     s = Search(index=settings.SOURCES_INDEX, using=connection)
     only_fields = process_id_only_fields(request, SourcesSchema)
+    merged_lookup_id = None  # set only by the OpenAlex-id branch (oxjob #1907)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -658,6 +667,7 @@ def sources_id_get(id):
             return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/S{clean_id}"
+        merged_lookup_id = f"S{clean_id}"
 
         # Use different field name for v2
         if connection == 'walden':
@@ -699,8 +709,8 @@ def sources_id_get(id):
     response = s.execute()
 
     if not response:
-        if is_openalex_id(id):
-            merged = redirect_if_merged("ids.sources_id_get", f"S{clean_id}", connection)
+        if merged_lookup_id:
+            merged = redirect_if_merged("ids.sources_id_get", merged_lookup_id, connection)
             if merged:
                 return merged
         abort(404)

@@ -116,6 +116,16 @@ def test_filters_read_the_field_the_index_has(entity, param, value, expected):
     assert _query(entity, param, value) == expected
 
 
+@pytest.mark.parametrize("entity,param", [(e, p) for e in ("authors", "sources", "institutions")
+                                          for p in ("topics.id", "topic_share.id")])
+@pytest.mark.parametrize("value", ["T11672", "t11672", "https://openalex.org/T11672"])
+def test_topic_filters_take_every_id_form(entity, param, value):
+    """oxjob #1907: a full topic URL left the query unset; Sentry OPENALEX-ELASTIC-API-9 caught 190 HTTP 500s
+    (UnboundLocalError 'q'), all /authors or /sources?filter=topics.id:https://openalex.org/T<n>. Fixed by #1901."""
+    assert "https://openalex.org/T11672" in json.dumps(_query(entity, param, value))
+    assert "must_not" in json.dumps(_query(entity, param, "!" + value))
+
+
 @pytest.mark.parametrize("entity,param", REFUSED)
 def test_a_refused_filter_refuses_group_by_and_sort_with_the_same_reason(entity, param):
     from core.sort import sort_refusal

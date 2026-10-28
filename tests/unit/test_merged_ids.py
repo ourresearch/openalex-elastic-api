@@ -180,3 +180,28 @@ def test_get_on_unmerged_missing_id_is_404(es, app_client):
         assert app_client.get("/works/W2741809807").status_code == 404
         assert app_client.get("/authors/A5000000001").status_code == 404
         assert app_client.get("/sources/S1").status_code == 404
+
+
+@pytest.mark.parametrize("path", [
+    # oxjob #1907: the two requests Sentry OPENALEX-ELASTIC-API-2B caught (HTTP 500, UnboundLocalError 'clean_id').
+    # With its pmid: prefix cut off, an Elsevier article number reads like a source id.
+    "/works/pmid:S0016-5085(16)00131-1",
+    "/works/pmid:S0034-75072004000300002",
+    "/works/pmid:A99999999999",
+    "/works/pmcid:S123456",
+    "/works/pmcid:W99999999999",
+    "/works/doi:10.0000/none-such",
+    "/authors/orcid:0000-0002-1825-0097",
+    "/authors/scopus:7004212771",
+    "/sources/issn:0000-0000",
+    "/sources/issn_l:0000-0000",
+    "/funders/ror:02mhbdp94",
+    "/funders/doi:10.13039/100000001",
+    "/funders/crossref:100000001",
+])
+def test_get_on_missing_external_id_is_404_without_merge_lookup(es, app_client, path):
+    with mock.patch("elasticsearch_dsl.Search.execute", return_value=[]), \
+            mock.patch("works.lakebase.should_route", return_value=False):
+        r = app_client.get(path)
+    assert r.status_code == 404, (path, r.status_code)
+    assert es.calls == []  # only an OpenAlex id the request asked for is looked up in the merge indexes
