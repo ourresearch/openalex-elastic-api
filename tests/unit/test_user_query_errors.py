@@ -38,6 +38,7 @@ def _es_error(reason, cls=BadRequestError, status=400):
     "failed to create query: fuzziness cannot be [MHz].",
     "too_many_clauses: maxClauseCount is set to 4096",
     "failed to create query: Can only use interval queries on text fields - not on [keywords.display_name] which is of type [keyword]",
+    "failed to create query: Value [1.0E20] is out of range for an integer",  # oxjob #1913
 ])
 def test_user_query_errors_are_recognised(reason):
     assert is_user_query_error(_es_error(reason))

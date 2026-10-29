@@ -185,17 +185,25 @@ def get_country_name(country_id):
     return friendly_country_name(country_id, default=country_id)
 
 
+def select_fields(request):
+    """The field names in ?select=, or None when it names none. An empty select
+    (`select=`, `select=,`) means every field, as if it were absent; a stray comma
+    (`select=id,`) is ignored. An empty select used to reach marshmallow as
+    only="": HTTP 500 (Sentry OPENALEX-SEARCH-API-4, oxjob #1913)."""
+    fields = [f.strip() for f in (request.args.get("select") or "").split(",")]
+    return [f for f in fields if f] or None
+
+
 def process_only_fields(request, schema):
     schema_fields = [f for f in schema._declared_fields]
-    only_fields = request.args.get("select")
+    only_fields = select_fields(request)
     if only_fields:
-        only_fields = only_fields.split(",")
         for field in only_fields:
-            if field.strip() not in schema_fields:
+            if field not in schema_fields:
                 raise APIQueryParamsError(
                     f"{field} is not a valid select field. Valid fields for select are: {', '.join(schema_fields)}."
                 )
-        only_fields = [f"results.{field.strip()}" for field in only_fields]
+        only_fields = [f"results.{field}" for field in only_fields]
         # add back meta and group_by fields
         only_fields.insert(0, "meta")
         only_fields.append("group_by")

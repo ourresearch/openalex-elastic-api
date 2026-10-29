@@ -3,7 +3,7 @@ import re
 from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
-from core.utils import normalize_openalex_id
+from core.utils import normalize_openalex_id, select_fields
 
 
 def is_openalex_id(openalex_id):
@@ -309,10 +309,8 @@ def normalize_scopus_id(scopus_id):
 
 def process_id_only_fields(request, schema):
     schema_fields = [f for f in schema._declared_fields]
-    only_fields = request.args.get("select")
+    only_fields = select_fields(request)  # None for an empty select= (oxjob #1913)
     if only_fields:
-        only_fields = only_fields.split(",")
-        only_fields = [f.strip() for f in only_fields]
         for field in only_fields:
             if field not in schema_fields:
                 raise APIQueryParamsError(

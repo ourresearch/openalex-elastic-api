@@ -1,5 +1,6 @@
 import settings
 from core.exceptions import APIQueryParamsError
+from core.utils import select_fields
 
 
 # Search parameter prefixes that are accepted via dot notation
@@ -110,7 +111,7 @@ def validate_filter_param(request):
 def validate_select_param(request):
     if (
         "group_by" in request.args or "group-by" in request.args
-    ) and "select" in request.args:
+    ) and select_fields(request):  # an empty select= is no select (oxjob #1913)
         raise APIQueryParamsError("select does not work with group_by.")
 
 

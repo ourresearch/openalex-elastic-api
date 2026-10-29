@@ -1,5 +1,6 @@
 import copy
 import datetime
+import math
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -867,13 +868,13 @@ class RangeField(Field):
             self.validate(query)
             kwargs = {self.es_field(): {"gte": float(query)}}
             q = Q("range", **kwargs)
+        elif self.value == "!null":
+            # "has a value", as on every other field type. It used to reach float("null"):
+            # HTTP 500 (Sentry OPENALEX-SEARCH-API-H, oxjob #1913).
+            q = Q("exists", field=self.es_field())
         elif self.value.startswith("!"):
             if "-" in self.value:
-                values = self.value[1:].strip().split("-")
-                left_value = values[0]
-                right_value = values[1]
-                self.validate(left_value)
-                self.validate(right_value)
+                left_value, right_value = self.range_bounds(self.value[1:])
                 kwargs = {
                     self.es_field(): {
                         "gte": float(left_value),
@@ -883,14 +884,11 @@ class RangeField(Field):
                 q = ~Q("range", **kwargs)
             else:
                 query = self.value[1:]
+                self.validate(query)
                 kwargs = {self.es_field(): float(query)}
                 q = ~Q("term", **kwargs)
         elif "-" in self.value:
-            values = self.value.strip().split("-")
-            left_value = values[0]
-            right_value = values[1]
-            self.validate(left_value)
-            self.validate(right_value)
+            left_value, right_value = self.range_bounds(self.value)
             kwargs = {
                 self.es_field(): {"gte": float(left_value), "lte": float(right_value)}
             }
@@ -903,11 +901,41 @@ class RangeField(Field):
             q = Q("term", **kwargs)
         return q
 
+    def range_bounds(self, value):
+        """The two numbers of a `low-high` range; a JSON 400 for any other shape
+        (`2016-2019-2020` used to drop the third number silently)."""
+        values = value.strip().split("-")
+        if len(values) != 2:
+            raise APIQueryParamsError(
+                f"Value for param {self.param} must be a number or a range of two numbers, "
+                f"like {self.param}:2016-2019."
+            )
+        for v in values:
+            self.validate(v)
+        return values
+
     def validate(self, query):
-        try:
-            float(query)
-        except ValueError:
-            raise APIQueryParamsError(f"Value for param {self.param} must be a number.")
+        """A plain finite number. Python's float() also reads "2016_2019" (as 20162019),
+        "nan" and "inf", which Elasticsearch then rejects: HTTP 500 (Sentry
+        OPENALEX-SEARCH-API-X, oxjob #1913). Those answer a JSON 400 here."""
+        message = f"Value for param {self.param} must be a number."
+        if "_" in query:
+            parts = query.split("_")
+            if len(parts) == 2 and all(map(_is_plain_number, parts)) and float(parts[0]) < float(parts[1]):
+                message += f" For a range, use a hyphen: {self.param}:{parts[0]}-{parts[1]}."
+            elif _is_plain_number(query.replace("_", "")):
+                message += f" Write it without underscores: {query.replace('_', '')}."
+            raise APIQueryParamsError(message)
+        if not _is_plain_number(query):
+            raise APIQueryParamsError(message)
+
+
+def _is_plain_number(value):
+    try:
+        number = float(value)
+    except ValueError:
+        return False
+    return "_" not in value and math.isfinite(number)
 
 
 class SearchField(Field):

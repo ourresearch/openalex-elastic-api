@@ -20,6 +20,7 @@ _WHOLE_KEYWORDS = (
     "keyword.search matches whole keywords, so a * or ? inside quotes can't run there. "
     "Drop the quotes (canc*), or search titles and abstracts with title_and_abstract.search."
 )
+_OUT_OF_RANGE = "A number in your filter is too large for that field. Use a smaller number."
 _UNREADABLE = (
     "Your search could not be read. Check that each quote and parenthesis has a "
     "partner, and that AND, OR and NOT each sit between two search terms."
@@ -37,6 +38,8 @@ _USER_QUERY_ERRORS = (
     # keyword.search:"canc* research": a quoted wildcard phrase becomes an intervals query, which
     # needs a text field; keywords.display_name is a keyword field (oxjob #1900).
     ("Can only use interval queries on text fields", _WHOLE_KEYWORDS),
+    # publication_year:>99999999999999999999: a finite number past the field's integer range (oxjob #1913)
+    ("is out of range for", _OUT_OF_RANGE),
     ("token_mgr_error", _UNREADABLE),
     ("Failed to parse query", _UNREADABLE),
     ("Cannot parse", _UNREADABLE),
