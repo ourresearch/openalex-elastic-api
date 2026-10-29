@@ -126,9 +126,7 @@ def _works_query(oqo: OQO, ctx: Ctx) -> dict:
     return _base_query_for(start, ctx.works_fields, ctx.connection)
 
 
-def _and(*queries) -> dict:
-    qs = [q for q in queries if q]
-    return {"bool": {"filter": qs}}
+_and = A._and   # every query given (empty ones skipped), as one bool filter
 
 
 def count_distinct(ctx: Ctx, query: dict, field: str, what: str) -> int:

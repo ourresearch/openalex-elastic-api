@@ -366,7 +366,7 @@ class Level:
     composite: bool = False                    # cursor paging (a single terms split)
     by_count: bool = False                     # filters: biggest first, empty ones dropped
     paged_floor: bool = False                  # a count floor sorted and paged by ES
-    works_filters: List[dict] = field(default_factory=list)  # own fields pushed down (#1617)
+    works_filters: List[dict] = field(default_factory=list)  # own fields pushed down (#1617; first split only)
     all_groups: bool = False                   # read every group: a sort ES can't do (#1555)
     name_vocab: Optional[dict] = None          # codes sorted by name, not code (#1658)
     key_kind: str = "keyword"                  # how a terms split's keys compare: keyword | number | date
@@ -681,10 +681,14 @@ _PUSHDOWN = {
 
 
 def _pushdown(lv: Level, part, fields_dict) -> Optional[dict]:
-    """`part` (a condition on the groups' own fields) as a filter on the works, when
-    the split is by a single-valued link and every field in it has a works copy.
-    The caller makes sure it's the only split."""
+    """`part` (a condition on the groups' own fields) as a filter on the works, when the split is the first (the only
+    split, or a nested one's leading split: its groups' works are the ones whose single link passes, oxjob #1598), by
+    a single-valued link, and every field in it has a works copy. The caller reads only that split's groups through
+    it, never the whole-set row or the other splits on their own. A split by a link after a small one (`by
+    <listed values> and journal`) keeps its key-set lookup."""
     from query_translation.oqo_to_es import _translate
+    if lv.index != 0:
+        return None
     link = lv.agg.get("terms", {}).get("field")
     allowed = _PUSHDOWN.get(link)
     if allowed is None:
@@ -760,7 +764,7 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
             else:
                 add_include(keys)
             continue
-        pushed = _pushdown(lv, p, works_fields) if len(oqo.group_by) == 1 else None
+        pushed = _pushdown(lv, p, works_fields)
         if pushed is not None:
             lv.works_filters.append(pushed)
             continue
@@ -876,15 +880,30 @@ def _cardinalities(levels: List[Level], index, connection, base_query, deadline)
 def _probe(levels: List[Level], index, connection, base_query, deadline) -> Tuple[int, Dict[int, int]]:
     """(works in the set, distinct keys of each terms split): one cheap request."""
     terms = [lv for lv in levels if lv.kind == "terms"]
-    aggs = {f"card{lv.index}": {"cardinality": {"field": lv.agg["terms"]["field"],
-                                                "precision_threshold": 3000}}
-            for lv in terms}
+
+    def card(lv):
+        c = {"cardinality": {"field": lv.agg["terms"]["field"], "precision_threshold": 3000}}
+        # own fields pushed down to the works (`by journal`) narrow the split's groups
+        return {"filter": _and(*lv.works_filters), "aggs": {"c": c}} if lv.works_filters else c
+    aggs = {f"card{lv.index}": card(lv) for lv in terms}
     body = {"size": 0, "track_total_hits": True, "query": base_query}
     if aggs:
         body["aggs"] = aggs
     res = _search(index, connection, body, deadline, "counting the groups")
-    return (res["hits"]["total"]["value"],
-            {lv.index: res["aggregations"][f"card{lv.index}"]["value"] for lv in terms})
+    cards = {lv.index: res["aggregations"][f"card{lv.index}"] for lv in terms}
+    return res["hits"]["total"]["value"], {i: a.get("c", a)["value"] for i, a in cards.items()}
+
+
+def _and(*queries) -> dict:
+    """Every query given (empty ones skipped), as one bool filter."""
+    return {"bool": {"filter": [q for q in queries if q]}}
+
+
+def _lead_query(levels: List[Level], base_query: dict) -> dict:
+    """The works the leading split's groups hold: the set, narrowed by its own fields pushed down (`by journal`:
+    works whose primary source is a journal). The whole-set row and the other splits on their own read every work."""
+    wf = levels[0].works_filters if levels else []
+    return _and(base_query, *wf) if wf else base_query
 
 
 # Every combination of the terms splits' values in one document, as one key (multi-
@@ -955,7 +974,7 @@ def _keyset_combos(ks: Level, others: List[Level], index, connection, base_query
         return 0
     sample = keys if len(keys) <= SAMPLE_KEYS else random.Random(0).sample(keys, SAMPLE_KEYS)
     field = ks.agg["terms"]["field"]
-    body = {"size": 0, "query": {"bool": {"filter": [base_query, {"terms": {field: sample}}]}}, "aggs": {"k": {
+    body = {"size": 0, "query": _and(base_query, {"terms": {field: sample}}), "aggs": {"k": {
         "terms": {"field": field, "size": len(sample), "include": sample},
         "aggs": {"c": {"cardinality": _inner_card([lv.agg["terms"]["field"] for lv in others])}}}}}
     res = _search(index, connection, body, deadline, "estimating the combined groups")
@@ -967,7 +986,9 @@ def _combined_groups(levels: List[Level], index, connection, base_query, deadlin
     """Estimated groups of a nested split: the distinct combined keys of its terms
     splits, times the group count of its other splits (listed values, bins). Over a
     big set (more than COMBO_SCRIPT_MAX_WORKS) the combined keys come from a sample;
-    a split filtered to a key set counts from a sample of its own keys."""
+    a split filtered to a key set counts from a sample of its own keys. The combinations live under the leading
+    split's groups, so its own fields pushed down to the works narrow them."""
+    base_query = _lead_query(levels, base_query)
     terms = [lv for lv in levels if lv.kind == "terms"]
     fields = [lv.agg["terms"]["field"] for lv in terms]
     other = 1
@@ -1632,7 +1653,8 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     institution in [Canada](CA)`, `where last known institution is not ...`). A composite can't filter its keys, so
     the rows outside a key set are dropped as they are read; a leading split with an include list pages through its
     own sorted keys (KEYSET_CHUNK at a time, as a terms filter) instead of the index-wide term list, so it reads only
-    the works holding its keys (oxjob #1598)."""
+    the works holding its keys (oxjob #1598). The leading split's own fields pushed down to the works (`by
+    journal`) narrow the works its groups are read from, not the whole-set row."""
     s0 = body["aggs"]["s0"]
     comp = {k: v for k, v in s0["composite"].items() if k != "after"}
     names = [next(iter(src)) for src in comp["sources"]]
@@ -1713,11 +1735,11 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
         rng = {**({low: pos} if pos is not None else {}), **({"lte": hi} if hi is not None else {})}
         if terms is not None and walk is not None:
             # the works holding these keys of the key set, not every key in their range
-            query = {"bool": {"filter": [body["query"], {"terms": {field: terms}}]}}
+            query = _and(body["query"], {"terms": {field: terms}}, *lv.works_filters)
         elif terms is not None and rng:
-            query = {"bool": {"filter": [body["query"], {"range": {field: rng}}]}}
+            query = _and(body["query"], {"range": {field: rng}}, *lv.works_filters)
         else:
-            query = body["query"]
+            query = _and(body["query"], *lv.works_filters) if lv.works_filters else body["query"]
         start = len(kept)
         cur = start_after if first else (through(pos) if pos is not None else None)
         first = False
@@ -1808,14 +1830,15 @@ def _level_groups(lv: Level, cards: Optional[Dict[int, int]]) -> Optional[int]:
 def _nested_pages_ok(levels: List[Level], measures: List[Measure], sort, cursor) -> bool:
     """Can this nested split page past the limits? Two or three splits by a column, or one or two of them with small
     splits (listed values, conditions, `at` bins, yes/no) after them, or one before them (`_shape`); group filters on
-    the splits by a column: their groups' own records (a key set: `by journal`, `by institution in [Canada](CA)`) on
-    any of them, a count floor only on the innermost; on a cursor page no share of the parent group (its count isn't
+    the splits by a column: their groups' own records (a key set, `by institution in [Canada](CA)`, on any of them;
+    pushed down to the works, `by journal`, on the leading one), a count floor only on the innermost; on a cursor page no share of the parent group (its count isn't
     read) and no sort; on the page, the default order, by count or by the outer key. Anything else keeps today's
     refusal."""
     if _shape(levels) is None:
         return False
     for lv in levels:
-        if lv.post_keep is not None or lv.works_filters or lv.all_groups or "format" in lv.agg.get("terms", {}):
+        if lv.post_keep is not None or lv.all_groups or "format" in lv.agg.get("terms", {}) \
+                or (lv.works_filters and lv.index != 0):
             return False
         if lv.split.where is None:
             continue
@@ -2026,7 +2049,7 @@ def _nested_cursor(oqo: OQO, levels: List[Level], measures: List[Measure], m_agg
     read, nxt = 0, None
     while True:
         k, q = groups[g]
-        res = _cursor_page(cols[0], body({"bool": {"filter": [base_query, q]}}, after, {}), index_name,
+        res = _cursor_page(cols[0], body(_and(base_query, q), after, {}), index_name,
                            connection, deadline, per_page - read, pref, past=past, keysets=keysets)
         took += res.get("took") or 0
         raw = res["aggregations"].get("s0") or {}
@@ -2076,11 +2099,16 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
             f"m{lv.index}": _small_agg(lv, m_aggs) if _small(lv) else _level_terms(lv, NESTED_SUMMARY_GROUPS, sort,
                                                                                    m_aggs)
             for lv in levels[1:]}}, deadline, "each split on its own", preference=pref)
+    outer = _small_agg(lead, m_aggs) if p else _level_terms(lead, n_outer, sort, m_aggs)
+    if lead.works_filters:
+        # the outer groups over the works their pushed-down own fields keep; the whole-set row over every work
+        outer = {"filter": _and(*lead.works_filters), "aggs": {"s0": outer}}
     listed = _search(index_name, connection, {"size": 0, "track_total_hits": True, "query": base_query, "aggs": {
-        **m_aggs, "s0": _small_agg(lead, m_aggs) if p else _level_terms(lead, n_outer, sort, m_aggs)}},
-        deadline, "listing the outer groups", preference=pref)
+        **m_aggs, "s0": outer}}, deadline, "listing the outer groups", preference=pref)
     total_count = listed["hits"]["total"]["value"]
     aggs = {**(listed.get("aggregations") or {}), **((alone.result().get("aggregations") or {}) if alone else {})}
+    if lead.works_filters:
+        aggs["s0"] = aggs["s0"]["s0"]
     outer_rows, margins = format_levels(levels, measures, aggs, total_count, index_name)
     margins[0] = [{k: v for k, v in r.items() if k != "groups"} for r in outer_rows]
     split_more = {lv.index: not summary_only or (not _small(lv) and (
@@ -2106,7 +2134,7 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
             for lv in reversed(levels[1:]):
                 inner = {f"s{lv.index}": _level_terms(lv, need, sort, m_aggs, inner)}
             res = _search(index_name, connection, {
-                "size": 0, "query": {"bool": {"filter": [base_query, queries[key_of[id(r)]]]}}, "aggs": inner},
+                "size": 0, "query": _and(base_query, queries[key_of[id(r)]]), "aggs": inner},
                 deadline, "reading the first groups", preference=pref)
             took += res.get("took") or 0
             r["groups"] = level_rows(levels, measures, 1, (res.get("aggregations") or {})["s1"], r["count"],
@@ -2139,7 +2167,7 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
         outer = _level_terms(lead, len(batch), sort, m_aggs, inner, few_works=True,
                              include=batch if all(isinstance(k, str) for k in batch) else None)
         res = _search(index_name, connection, {
-            "size": 0, "query": {"bool": {"filter": [base_query, {"terms": {field0: batch}}]}},
+            "size": 0, "query": _and(base_query, {"terms": {field0: batch}}, *lead.works_filters),
             "aggs": {"s0": outer}}, deadline, "reading the first groups", preference=pref)
         took += res.get("took") or 0
         filled, _ = format_levels(levels, measures, res.get("aggregations") or {}, total_count, index_name)
@@ -2442,12 +2470,16 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         pushed = levels[0].works_filters if levels else []
         if pushed:
             # the split and its group counts see only the works the pushed-down own fields
-            # keep; the whole-set row (the root measures) still counts every work
-            moved = {k: body["aggs"].pop(k) for k in list(body["aggs"]) if k not in m_aggs}
-            body["aggs"]["pushed"] = {"filter": {"bool": {"filter": pushed}}, "aggs": moved}
+            # keep; the whole-set row (the root measures) still counts every work, and so do a
+            # nested split's other splits on their own (m1, m2)
+            # (a cursor page leaves the split itself on top: `_cursor_page` reads it from the pushed-down works)
+            paged = not nested and levels[0].composite
+            moved = {k: body["aggs"].pop(k) for k in list(body["aggs"])
+                     if k not in m_aggs and (k == "s0" if nested else not (paged and k == "s0"))}
+            body["aggs"]["pushed"] = {"filter": _and(*pushed), "aggs": moved}
         # same shards for the same query, so approximate counts repeat exactly
         pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
-        if levels and not nested and levels[0].composite and not pushed:
+        if levels and not nested and levels[0].composite:
             res = _cursor_page(levels[0], body, index_name, connection, deadline, per_page, pref,
                                keysets={"k": levels[0]})
         else:
@@ -2623,10 +2655,8 @@ def _read_all_groups(lv: Level, m: Measure, cards: Dict[int, int], index_name: s
         # a closed vocabulary caps the groups (247 countries): no cardinality probe
         cards[lv.index] = len(lv.name_vocab)
     else:
-        # own fields pushed down to the works (#1617) narrow the groups too
-        probe_query = ({"bool": {"filter": [base_query] + lv.works_filters}}
-                       if lv.works_filters else base_query)
-        card = _cardinalities([lv], index_name, connection, probe_query, deadline)[lv.index]
+        # own fields pushed down to the works (#1617) narrow the groups too (`_probe`)
+        card = _cardinalities([lv], index_name, connection, base_query, deadline)[lv.index]
         if card > ALL_GROUPS_SORT_LIMIT:
             raise _too_many_to_sort(lv, m, f"about {card:,}", entity)
         cards[lv.index] = card
@@ -2709,6 +2739,10 @@ EST_NAMES_S = 0.6
 # (fitted to the three measurements in check()).
 EST_WORKS_PER_S = 100_000_000
 EST_GROUPS_SCALE = 5_000
+# One split by a column in count or key order reads a page of its groups, not all of them: its time follows the works
+# (live 2026-10-29, oxjob #1598: all 330M works by author 7.7 s, works since 2020 by author 4.7 s and by source 2.0 s,
+# since 2015 by institution with mean FWCI 3.5 s; the nested fit above read the first two as 9,180 s and 39 s)
+EST_SINGLE_PAGE_FACTOR = 2.5
 
 
 def _tree_has_search(node) -> bool:
@@ -2870,6 +2904,10 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
             limits.append(e.to_dict())
             continue
         for p in k_parts:
+            pushed = _pushdown(lv, p, fields_dict)
+            if pushed is not None:
+                lv.works_filters.append(pushed)   # a works filter, as the run does it (`by journal`): no lookup
+                continue
             kinds = _lookup_kinds(p)
             if not kinds:
                 continue
@@ -2904,6 +2942,7 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     # works and 4K groups, 0.4 s; field x year over 256M works, 0.5 s).
     n_works, cards, groups = None, {}, None
     paged = False   # a nested split past one answer's limits that pages instead (oxjob #1598)
+    one_page = False   # one split that reads a page of its groups
     measures = list(oqo.calculate) or [Measure("count")]
     sort = (oqo.sort_by[0].column_id, oqo.sort_by[0].direction or "desc") if oqo.sort_by else None
     try:
@@ -2928,6 +2967,8 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
         elif levels:
             lv = levels[0]
             groups = cards.get(lv.index) if lv.kind == "terms" else max(len(lv.order_keys), 1)
+            one_page = (lv.kind == "terms" and (sort is None or sort[0] in ("count", "key"))
+                        and not (lv.split.where is not None and _split_where(lv.split.where)[0]))
     except AnalyticsError as e:
         limits.append(e.to_dict())
     if paged:
@@ -2937,7 +2978,9 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     elif n_works is not None:
         if nested and groups is None:
             groups = _cards_product(levels, cards)   # count-filtered: all groups are counted
-        est += max(0.0, estimate_main_seconds(n_works, groups or 1) - EST_CALL_ID_SET_S)
+        main = (n_works / EST_WORKS_PER_S * EST_SINGLE_PAGE_FACTOR if one_page
+                else estimate_main_seconds(n_works, groups or 1))
+        est += max(0.0, main - EST_CALL_ID_SET_S)
         if nested:
             est += call_s                    # the probe the run makes first
     est += EST_NAMES_S if levels else 0

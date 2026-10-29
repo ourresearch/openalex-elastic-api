@@ -25,6 +25,11 @@ WORKS = [
 ]
 
 
+def _inside(k, rng) -> bool:
+    return (("gt" not in rng or k > rng["gt"]) and ("gte" not in rng or k >= rng["gte"])
+            and ("lte" not in rng or k <= rng["lte"]))
+
+
 class FakeES:
     """Answers the probe (cardinalities), the whole-set request, a multi-source composite page (with a range on
     the leading key in the query) and terms-enum on the leading key (index-wide: a superset of the set's keys)."""
@@ -65,36 +70,42 @@ class FakeES:
         return {"buckets": out, "sum_other_doc_count": sum(c for _, c in items[t["size"]:])}
 
     def _works_in(self, query, lead):
-        rng = None
+        """The works a query keeps: its terms filters (a key set's keys, a fill batch, a pushed-down own field) and
+        its range on a key, ANDed."""
+        held = self.works
         for f in (query.get("bool") or {}).get("filter") or []:
             if "terms" in f:
                 (field, keys), = f["terms"].items()
-                return [w for w in self.works if set(self._vals(w, field)) & set(keys)]
-            if "range" in f:
-                rng = list(f["range"].values())[0]
-        if rng is None:
-            return self.works
-
-        def inside(k):
-            return (("gt" not in rng or k > rng["gt"]) and ("gte" not in rng or k >= rng["gte"])
-                    and ("lte" not in rng or k <= rng["lte"]))
-        return [w for w in self.works if any(inside(k) for k in self._vals(w, lead))]
+                held = [w for w in held if set(self._vals(w, field)) & set(keys)]
+            elif "range" in f:
+                (field, rng), = f["range"].items()
+                held = [w for w in held if any(_inside(k, rng) for k in self._vals(w, field))]
+        return held
 
     def search(self, index, connection, body, deadline, what, **params):
         self.calls.append(("search", body))
         aggs = body.get("aggs") or {}
         out = {}
+        def card(works, a):
+            return {"value": len({k for w in works for k in self._vals(w, a["cardinality"]["field"])})}
         for name, a in aggs.items():
             if name.startswith("card"):
-                out[name] = {"value": len({k for w in self.works for k in self._vals(w, a["cardinality"]["field"])})}
+                if "filter" in a:   # a split's own fields pushed down to the works
+                    out[name] = {"c": card(self._works_in(a["filter"], "author"), a["aggs"]["c"])}
+                else:
+                    out[name] = card(self.works, a)
         works = self.works
         if "combo" in aggs:   # the combined keys' count (a small set: the script, not the sample)
             fields = aggs["combo"]["cardinality"]["script"]["params"]["fields"]
-            out["combo"] = {"value": len({c for w in works
+            out["combo"] = {"value": len({c for w in self._works_in(body["query"], "author")
                                           for c in itertools.product(*[self._vals(w, f) for f in fields])})}
         for name, a in aggs.items():
             if "terms" in a:
                 out[name] = self._terms_agg(self._works_in(body["query"], a["terms"]["field"]), a)
+            elif "filter" in a and not name.startswith("card"):   # a filter aggregation over terms ones
+                sub = [w for w in self._works_in(body["query"], "author") if w in self._works_in(a["filter"], "author")]
+                out[name] = {"doc_count": len(sub), **{n: self._terms_agg(sub, x) for n, x in a["aggs"].items()
+                                                       if "terms" in x}}
         if "s0" in aggs and "terms" in aggs["s0"]:
             works = self._works_in(body["query"], aggs["s0"]["terms"]["field"])
         if "s0" in aggs and "composite" in aggs["s0"]:

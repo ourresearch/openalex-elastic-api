@@ -150,3 +150,52 @@ def test_keys_after_lists_a_sorted_key_set_past_a_key():
     assert A._keys_after(keys, "c", 2) == ["e", "g"]
     assert A._keys_after(keys, "b", 10) == ["c", "e", "g"]
     assert A._keys_after(keys, "g", 2) == []
+
+
+def test_a_leading_split_with_its_own_fields_pushed_down_reads_only_their_works(monkeypatch):
+    # `by journal and year`: a work's single primary source carries the journal's type, so the type filter runs on
+    # the works (no lookup of every journal); the whole-set row still counts every work. Faked on the author field.
+    narrow = {"terms": {"authorships.author.id": sorted(KEPT)}}
+    monkeypatch.setattr(A, "_pushdown", lambda lv, part, fields: narrow)
+    held = [w for w in WORKS if set(w[0]) & KEPT]
+    want = sorted((a, str(y), n) for (a, y), n in Counter(
+        c for au, ys in held for c in itertools.product(au, ys)).items())
+    for per_page in (1, 3, 100):
+        rows, _ = _walk(monkeypatch, FakeES(WORKS), oql=BY_AUTHOR_AND_YEAR, per_page=per_page)
+        assert _rows(rows) == want
+    body = _page(monkeypatch, BY_AUTHOR_AND_YEAR)
+    assert sorted(_rows(_leaves(body["group_by"]))) == want
+    assert body["summary"]["all"]["count"] == len(WORKS)              # every work, not the pushed-down ones
+    assert body["meta"]["groups_count"] == len({a for au, _ in held for a in au})
+    assert body["meta"]["rows_count"] == len(want)                   # combinations over the pushed-down works
+
+
+
+def _check(monkeypatch, oql, n_works, cards):
+    """The free check with its probe faked: `n_works` in the set, `cards` distinct keys per split."""
+    from works.fields import fields_dict
+    monkeypatch.setattr(A, "_probe", lambda levels, *a, **k: (n_works, dict(cards)))
+
+    def no_lookup(*a, **k):
+        raise AssertionError("looked up the groups' own records")
+    monkeypatch.setattr(A, "_count_entity_matches", no_lookup)
+    return A.check(parse_either(oql), index_name="works", connection=None, fields_dict=fields_dict,
+                   base_query={"match_all": {}})
+
+
+def test_the_check_reads_one_split_as_a_page_of_its_groups(monkeypatch):
+    # live 2026-10-29: all works by author 7.7 s, works since 2020 by source 2.0 s; the check said 9,180 s and 39 s
+    out = _check(monkeypatch, "get the count of all works by author", 330_000_000, {0: 96_000_000})
+    assert out["valid"] and out["estimate"]["seconds"] < 10
+    out = _check(monkeypatch, "get the count of works since 2020 by source", 70_000_000, {0: 180_000})
+    assert out["valid"] and out["estimate"]["seconds"] < 5
+    # a sort by a mean still reads every group, as the run does
+    out = _check(monkeypatch, "get the count and mean citations of all works by author, highest mean citations first",
+                 330_000_000, {0: 96_000_000})
+    assert not out["valid"]
+
+
+def test_the_check_runs_a_journal_filter_on_the_works_as_the_run_does(monkeypatch):
+    # `by journal` is a works filter on the primary source's type: no lookup of every journal
+    out = _check(monkeypatch, "get the count of works since 2020 by journal", 70_000_000, {0: 150_000})
+    assert out["valid"]
