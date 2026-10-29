@@ -54,7 +54,7 @@ class FakeES:
             out["s0"] = page
         return {"hits": {"total": {"value": len(works)}}, "took": 1, "aggregations": out}
 
-    def terms_after(self, index, connection, field, after, size, deadline):
+    def terms_after(self, index, connection, field, after, size, deadline, key_kind="keyword"):
         self.calls.append(("terms_enum", after, size))
         if not self.terms_enum_ok:
             return None

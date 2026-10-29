@@ -46,6 +46,8 @@ class FakeES:
         counts = Counter(k for w in works for k in set(self._vals(w, f)))
         if isinstance(t.get("include"), list):
             counts = Counter({k: c for k, c in counts.items() if k in t["include"]})
+        if t.get("exclude"):
+            counts = Counter({k: c for k, c in counts.items() if k not in t["exclude"]})
         items = [(k, c) for k, c in counts.items() if c >= t.get("min_doc_count", 1)]
         for o in reversed(t.get("order") or [{"_count": "desc"}, {"_key": "asc"}]):
             (what, way), = o.items()
@@ -56,6 +58,9 @@ class FakeES:
             for name, sub in (agg.get("aggs") or {}).items():
                 if "terms" in sub:
                     b[name] = self._terms_agg([w for w in works if k in self._vals(w, f)], sub)
+                elif "field" in sub.get("cardinality", {}):   # the combinations' estimate under a key set
+                    b[name] = {"value": len({v for w in works if k in self._vals(w, f)
+                                             for v in self._vals(w, sub["cardinality"]["field"])})}
             out.append(b)
         return {"buckets": out, "sum_other_doc_count": sum(c for _, c in items[t["size"]:])}
 
@@ -110,10 +115,10 @@ class FakeES:
             out["s0"] = page
         return {"hits": {"total": {"value": len(works)}}, "took": 1, "aggregations": out}
 
-    def terms_after(self, index, connection, field, after, size, deadline):
+    def terms_after(self, index, connection, field, after, size, deadline, key_kind="keyword"):
+        if key_kind != "keyword":
+            return None          # as A._terms_after: a number field can't list its keys (ES answers [] there)
         self.calls.append(("terms_enum", after, size))
-        if "author" not in field:
-            return None          # a number field can't list its keys: the walk reads it as one range
         rest = [t for t in self.index_terms if after is None or t > after]
         return rest[:size], True
 
@@ -313,5 +318,7 @@ def test_unsupported_nested_shapes_keep_their_refusal():
     assert A._nested_pages_ok(levels, count, ("count", "desc"), None)
     assert not A._nested_pages_ok(levels, count, ("cited_by_count_mean", "desc"), None)
     assert not A._nested_pages_ok(levels, [A.Measure("percent_of_those")], None, "*")
-    levels[0].include = {_a(1)}
+    levels[0].include = {_a(1)}            # a key set pages (test_nested_keysets.py)
+    assert A._nested_pages_ok(levels, count, None, None)
+    levels[0].post_keep = set()            # own fields checked after the answer: not on a page
     assert not A._nested_pages_ok(levels, count, None, None)
