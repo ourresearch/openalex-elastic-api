@@ -1,6 +1,8 @@
 from core.fields import (
     BooleanField,
     CollectionField,
+    DateField,
+    DateTimeField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -10,6 +12,24 @@ from core.fields import (
 )
 
 fields = [
+    # Sync filters (oxjob #1917): the docs promise from_created_date / from_updated_date on every entity type;
+    # awards had none (HTTP 400) though 119,624 awards changed on 29 Oct 2026.
+    DateField(
+        param="from_created_date",
+        custom_es_field="created_date",
+    ),
+    DateField(
+        param="to_created_date",
+        custom_es_field="created_date",
+    ),
+    DateTimeField(
+        param="from_updated_date",
+        custom_es_field="updated_date",
+    ),
+    DateTimeField(
+        param="to_updated_date",
+        custom_es_field="updated_date",
+    ),
     OpenAlexIDField(
         param="funder.id",
         entity_type="funders",

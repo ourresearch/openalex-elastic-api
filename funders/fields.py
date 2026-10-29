@@ -33,6 +33,14 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
+    DateField(
+        param="to_created_date",
+        custom_es_field="created_date",
+    ),
+    DateTimeField(
+        param="to_updated_date",
+        custom_es_field="updated_date",
+    ),
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",

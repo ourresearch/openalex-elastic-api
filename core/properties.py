@@ -421,7 +421,12 @@ CAP_COLUMN = "column"
 # institutions x_concepts.id (with its concept.id / concepts.id keys); sources is_in_jstage, is_in_jstage_since_year;
 # works topics_count. Each answered a silent 0 for every value (the field isn't in the index), so no query that
 # found anything changes. Removing a property is MAJOR per classify_properties_diff.py. Under Jason's standing authority.
-PROPERTIES_VERSION = "19.0.0"
+# 19.1.0 (oxjob #1917, 2026-10-29): sync filters on every entity, as help.openalex.org (api/filtering, access/sync)
+# promises: awards gain from_created_date / to_created_date / from_updated_date / to_updated_date (it had none: HTTP 400
+# though 119,624 awards changed on 29 Oct); the 21 entities that had only from_* gain to_created_date / to_updated_date
+# (works, authors, sources had them). 46 properties, purely additive = MINOR. The proxy's paid-plan gate
+# (src/syncGate.ts) already covers every from_/to_ created/updated field. Under Jason's standing authority.
+PROPERTIES_VERSION = "19.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
