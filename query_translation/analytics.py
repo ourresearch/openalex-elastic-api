@@ -382,6 +382,11 @@ class Level:
             self._kept = (self.include, self.exclude, sorted(self.include - (self.exclude or set())))
         return self._kept[2]
 
+    @property
+    def floor(self) -> int:
+        """The split's count floor (`Only authors with at least 73 works`: 73), 1 without one."""
+        return _min_doc_count(self.split.where) if self.selector is not None and self.split.where is not None else 1
+
     def keeps(self, k) -> bool:
         """Is group key `k` in this split's key set (always, without one)?"""
         return (self.include is None or k in self.include) and not (self.exclude and k in self.exclude)
@@ -1050,16 +1055,16 @@ def guard_nested(levels: List[Level], cards: Dict[int, int], index, connection,
     return n
 
 
-def _count_floor_keys(lv: Level, index, connection, base_query, deadline: Deadline,
-                      floor: int) -> Optional[List[str]]:
+def _count_floor_keys(lv: Level, index, connection, base_query, deadline: Deadline, floor: int,
+                      include: Optional[List[str]] = None, pref: Optional[str] = None) -> Optional[List[str]]:
     """The keys of a split with at least `floor` works (one terms request, no
-    sub-aggregations); None when more than WORKS_SIDE_LIMIT, or more than one request
-    can list (65,000)."""
-    limit = min(WORKS_SIDE_LIMIT, 65_000)
+    sub-aggregations), of `include` only when given; None when more than WORKS_SIDE_LIMIT, or
+    more than one request can list (65,000)."""
+    limit = len(include) if include is not None else min(WORKS_SIDE_LIMIT, 65_000)
     terms = {"field": lv.agg["terms"]["field"], "size": limit + 1, "min_doc_count": floor,
-             "shard_size": limit + 1}
+             "shard_size": limit + 1, **({"include": include} if include is not None else {})}
     res = _search(index, connection, {"size": 0, "query": base_query, "aggs": {"k": {"terms": terms}}},
-                  deadline, "finding the groups that pass the count")
+                  deadline, "finding the groups that pass the count", **({"preference": pref} if pref else {}))
     keys = [str(b["key"]) for b in res["aggregations"]["k"]["buckets"]]
     return keys if len(keys) <= limit else None
 
@@ -1632,7 +1637,7 @@ def _keys_after(keys: List[str], after, size: int) -> List[str]:
 
 def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: Deadline,
                  per_page: int, pref: str, past: Optional[Dict[str, Any]] = None,
-                 keysets: Optional[Dict[str, Level]] = None) -> dict:
+                 keysets: Optional[Dict[str, Level]] = None, floor: int = 1) -> dict:
     """One cursor page of a composite (#1550), read range by range over a big set (oxjob #1598). Returns a search
     response shaped like the one request's: hits and the whole-set aggregations, with `s0` holding the page and an
     `after_key` exactly when groups remain (`exact_after`).
@@ -1654,7 +1659,10 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     the rows outside a key set are dropped as they are read; a leading split with an include list pages through its
     own sorted keys (KEYSET_CHUNK at a time, as a terms filter) instead of the index-wide term list, so it reads only
     the works holding its keys (oxjob #1598). The leading split's own fields pushed down to the works (`by
-    journal`) narrow the works its groups are read from, not the whole-set row."""
+    journal`) narrow the works its groups are read from, not the whole-set row. `floor`: the leading split's count
+    floor (`Only authors with at least 73 works`, more than 65,000 of them): each range first lists its keys that
+    pass (a terms count on the range's keys, exact: every work holding them is in the range), then reads only those
+    keys' works."""
     s0 = body["aggs"]["s0"]
     comp = {k: v for k, v in s0["composite"].items() if k != "after"}
     names = [next(iter(src)) for src in comp["sources"]]
@@ -1689,8 +1697,17 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     aggs = dict(whole.get("aggregations") or {})
     took = whole.get("took") or 0
     n_groups = _groups_count(lv, aggs)
-    ranged = walk is not None or (whole["hits"]["total"]["value"] >= PARTITION_MIN_WORKS
-                                  and not (n_groups is not None and n_groups * 2 < per_page))
+    if floor > 1 and whole["hits"]["total"]["value"] < PARTITION_MIN_WORKS:
+        # a small set: its leading keys that pass the floor, listed at once, become the leading key set (range by
+        # range over the field's index-wide term list would read a few works per call: kelp's authors among 100M+)
+        passing = _count_floor_keys(lv, index_name, connection, _and(body["query"], *lv.works_filters), deadline,
+                                    floor, pref=pref)
+        if passing is not None:
+            kept = set(passing) & set(walk) if walk is not None else set(passing)
+            keysets[lead] = replace(lv, include=kept, exclude=None)
+            walk, floor, filtered = keysets[lead].kept_keys(), 1, True
+    ranged = walk is not None or floor > 1 or (whole["hits"]["total"]["value"] >= PARTITION_MIN_WORKS
+                                               and not (n_groups is not None and n_groups * 2 < per_page))
     # a leading key holds many combinations (an institution's authors), so nested ranges start small and grow
     # from what each one holds
     min_terms = min(PARTITION_MIN_TERMS, NESTED_MIN_TERMS) if nested else PARTITION_MIN_TERMS
@@ -1721,6 +1738,8 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
             terms, hi = [pos], pos
         elif ranged:
             listed = next_keys(pos, n_terms)
+            if listed is None and floor > 1:
+                raise too_slow("listing the next keys")   # never a range the count floor wasn't checked on
             if listed is None:
                 ranged = False        # the field can't list its keys: the rest is one range
             else:
@@ -1740,10 +1759,16 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
             query = _and(body["query"], {"range": {field: rng}}, *lv.works_filters)
         else:
             query = _and(body["query"], *lv.works_filters) if lv.works_filters else body["query"]
+        passed = None   # the range's leading keys that pass its count floor
+        if floor > 1:
+            passed = set(_count_floor_keys(lv, index_name, connection, query, deadline, floor, include=terms,
+                                           pref=pref))
+            if passed:
+                query = _and(body["query"], {"terms": {field: sorted(passed)}}, *lv.works_filters)
         start = len(kept)
         cur = start_after if first else (through(pos) if pos is not None else None)
         first = False
-        while True:
+        while passed is None or passed:   # no key in the range passes its floor: nothing to read
             # a count filter keeps few of the groups it reads: read a full page each time (one request per
             # range, sized to the range, measured slower: 65,535 groups 3.7 s vs 10,000 in 0.4 s)
             size = per_page if filtered else per_page - len(kept)
@@ -1752,7 +1777,8 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
                           deadline, "calculating the groups", preference=pref)
             took += res.get("took") or 0
             raw = res["aggregations"]["s0"]
-            kept.extend(b for b in raw["buckets"] if (hi is None or b["key"][lead] <= hi) and keep(b))
+            kept.extend(b for b in raw["buckets"] if (hi is None or b["key"][lead] <= hi) and keep(b)
+                        and (passed is None or b["key"][lead] in passed))
             last = raw.get("after_key")
             # the range is read once the composite is past every combination of hi (a co-key after it; for one
             # split, hi itself); a nested page that ends on hi may have more of hi's combinations to read
@@ -1827,13 +1853,18 @@ def _level_groups(lv: Level, cards: Optional[Dict[int, int]]) -> Optional[int]:
     return len(lv.order_keys) if _small(lv) else (cards or {}).get(lv.index)
 
 
+def _shown_groups(lv: Level, cards: Optional[Dict[int, int]]) -> Optional[int]:
+    """A split's groups as an answer shows them: None past a count floor (the probe counts before it)."""
+    return _level_groups(lv, cards) if lv.selector is None else None
+
+
 def _nested_pages_ok(levels: List[Level], measures: List[Measure], sort, cursor) -> bool:
     """Can this nested split page past the limits? Two or three splits by a column, or one or two of them with small
     splits (listed values, conditions, `at` bins, yes/no) after them, or one before them (`_shape`); group filters on
     the splits by a column: their groups' own records (a key set, `by institution in [Canada](CA)`, on any of them;
-    pushed down to the works, `by journal`, on the leading one), a count floor only on the innermost; on a cursor page no share of the parent group (its count isn't
-    read) and no sort; on the page, the default order, by count or by the outer key. Anything else keeps today's
-    refusal."""
+    pushed down to the works, `by journal`, on the leading one), a count floor on the innermost or on a leading split
+    by a keyword column; on a cursor page no share of the parent group (its count isn't read) and no sort; on the
+    page, the default order, by count or by the outer key. Anything else keeps today's refusal."""
     if _shape(levels) is None:
         return False
     for lv in levels:
@@ -1845,8 +1876,10 @@ def _nested_pages_ok(levels: List[Level], measures: List[Measure], sort, cursor)
         if lv.kind != "terms":
             return False
         m_parts = _split_where(lv.split.where)[0]
-        # a calculation filter only as a count floor on the innermost split (min_doc_count, under the composite)
-        if m_parts and (lv is not levels[-1] or not all(_is_count_floor(p) for p in m_parts)):
+        # a calculation filter only as a count floor: on the innermost split (under the composite), or on a leading
+        # split by a keyword column (each cursor range finds its keys that pass first, `_cursor_page`)
+        if m_parts and not (all(_is_count_floor(p) for p in m_parts)
+                            and (lv is levels[-1] or (lv.index == 0 and lv.key_kind == "keyword"))):
             return False
     if cursor is not None:
         # cursor pages go in key order (a sort orders the one answer within the limits)
@@ -2026,7 +2059,7 @@ def _nested_cursor(oqo: OQO, levels: List[Level], measures: List[Measure], m_agg
             if not after_ok(after):
                 raise _bad_cursor()
         res = _cursor_page(cols[0], body(base_query, after, m_aggs), index_name, connection, deadline, size, pref,
-                           past=past, keysets=keysets)
+                           past=past, keysets=keysets, floor=cols[0].floor)
         raw = res["aggregations"].get("s0") or {}
         rows = _nested_cursor_rows(levels, measures, raw.get("buckets") or [], names, index_name)
         return res, rows, (_encode_cursor(raw["after_key"]) if raw.get("after_key") else None)
@@ -2228,6 +2261,7 @@ def _nested_big(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: 
     if levels[-1].selector is not None:
         paths, script = levels[-1].selector
         having = {"bucket_selector": {"buckets_path": paths, "script": script}}
+    floored = any(lv.selector is not None for lv in levels)   # how many combinations pass isn't known
     margins: Dict[int, List[dict]] = {}
     with ThreadPoolExecutor(2) as pool:
         if oqo.cursor is not None:
@@ -2235,11 +2269,11 @@ def _nested_big(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: 
                 oqo, levels, measures, m_aggs, having, index_name=index_name, connection=connection,
                 base_query=base_query, per_page=per_page, deadline=deadline, pref=pref)
             estimate = _Estimate(None, levels, index_name, connection, base_query, deadline, n_works, cards,
-                                 None if having else groups)
+                                 None if floored else groups)
             took = res.get("took")
         else:
-            known = groups if not (having or summary_only) else None
-            estimate = _Estimate(None if (having or summary_only) else pool, levels, index_name, connection,
+            known = groups if not (floored or summary_only) else None
+            estimate = _Estimate(None if (floored or summary_only) else pool, levels, index_name, connection,
                                  base_query, deadline, n_works, cards, known)
             res, took, group_rows, margins, split_more = _nested_first_rows(
                 oqo, levels, measures, m_aggs, pool, index_name=index_name, connection=connection,
@@ -2260,12 +2294,11 @@ def _nested_big(oqo: OQO, levels: List[Level], measures: List[Measure], m_aggs: 
         # `groups_count`: the split's groups on their own (the probe's, approximate past 3,000; None past a count
         # floor, which the probe counts before), so the summary export can be priced before its splits are paged
         summary["splits"] = [{"groups": margins.get(lv.index, []), "more_groups": split_more[lv.index],
-                              "groups_count": _level_groups(lv, cards) if lv.selector is None else None}
-                             for lv in levels]
+                              "groups_count": _shown_groups(lv, cards)} for lv in levels]
     # the outer split's groups, as within the limits: the run's probe (approximate past 3,000; a later cursor page
     # skips the probe)
     meta = _meta(oqo, measures, deadline, count=total_count, took=took, page=page, per_page=per_page,
-                 groups_count=_level_groups(levels[0], cards), rows_count=rows_count,
+                 groups_count=_shown_groups(levels[0], cards), rows_count=rows_count,
                  more_groups=next_cursor is not None if oqo.cursor is not None else True, next_cursor=next_cursor)
     return {"meta": meta, "summary": summary, "group_by": group_rows, "results": []}
 
@@ -2419,10 +2452,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             lv.agg = {"composite": comp}
             lv.composite = True
         if nested and levels[0].kind == "terms" and levels[0].selector is not None \
-                and levels[0].split.where is not None and _min_doc_count(levels[0].split.where) > 1:
+                and levels[0].split.where is not None and _min_doc_count(levels[0].split.where) > 1 \
+                and (n_works is None or n_works < PARTITION_MIN_WORKS):
             # A count-filtered outer split: list the groups that pass the count first (no
             # sub-aggregations, cheap), then run the nested request on those keys only;
             # 72 shards each sending 20,000 groups with their inner splits ran past 15 s.
+            # Over a big set that listing alone took 6.7 s (2000-2016 authors with 73+ works), so such a split
+            # pages instead (oxjob #1598).
             survivors = _count_survivors(levels[0], index_name, connection, base_query, deadline)
             lv0 = levels[0]
             lv0.include = survivors if lv0.include is None else (lv0.include & survivors)

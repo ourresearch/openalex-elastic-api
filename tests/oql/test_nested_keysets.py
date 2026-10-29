@@ -124,10 +124,43 @@ def test_the_page_view_of_an_inner_key_set_holds_only_its_groups(monkeypatch):
     assert sorted(_rows(rows)) == _exact(lambda a: a != _a(1), author_first=False)
 
 
-def test_a_calculation_filter_on_an_outer_split_still_refuses(monkeypatch):
-    with pytest.raises(A.AnalyticsError) as e:
-        _page(monkeypatch, "get the count of all works by author and year. Only authors with at least 2 works.", 3)
-    assert e.value.code == "too_many_groups"
+FLOORED = "get the count of all works by author and year. Only authors with at least 2 works."
+PASSING = {a for a, n in Counter(a for au, _ in WORKS for a in set(au)).items() if n >= 2}
+
+
+@pytest.mark.parametrize("per_page", [1, 2, 3, 100])
+@pytest.mark.parametrize("min_works", [0, 10 ** 9])   # a big set (no survivors listing first) and a small one
+def test_a_count_floor_on_the_leading_split_walks_exactly(monkeypatch, per_page, min_works):
+    # 2000-2016 authors with 73+ works: more than 65,000 pass, so each cursor range finds its passing keys first
+    fake = FakeES(WORKS)
+    monkeypatch.setattr(A, "NESTED_MIN_TERMS", 1)
+    rows, _ = _walk(monkeypatch, fake, oql=FLOORED, per_page=per_page, min_works=min_works)
+    assert _rows(rows) == _exact(lambda a: a in PASSING)
+    # the leading keys that pass are counted before their works are read (min_doc_count on the leading field)
+    assert any(a.get("terms", {}).get("min_doc_count") == 2 and "author" in a["terms"]["field"]
+               for c in fake.calls if c[0] == "search" for a in (c[1].get("aggs") or {}).values())
+
+
+def test_the_page_view_of_a_leading_count_floor_holds_its_first_passing_groups(monkeypatch):
+    body = _page(monkeypatch, FLOORED)
+    rows = _leaves(body["group_by"])
+    assert sorted(_rows(rows)) == _exact(lambda a: a in PASSING)
+    m = body["meta"]
+    assert m["more_groups"] is True
+    assert m["groups_count"] is None and m["rows_count"] is None   # how many pass isn't known, as for one split
+
+
+def test_count_floors_page_on_a_leading_keyword_split_or_the_innermost_only():
+    from works.fields import fields_dict
+    oqo = A._nnf_group_filters(parse_either(FLOORED))
+    levels = [A.build_level(i, g, oqo, fields_dict, "works") for i, g in enumerate(oqo.group_by)]
+    count = [A.Measure("count")]
+    assert A._nested_pages_ok(levels, count, None, "*")
+    levels[0].key_kind = "number"            # terms-enum can't list a number's keys to check them range by range
+    assert not A._nested_pages_ok(levels, count, None, "*")
+    levels[0].key_kind = "keyword"
+    levels[0].split = replace(levels[0].split, where=A.BranchFilter("or", [levels[0].split.where] * 2))
+    assert not A._nested_pages_ok(levels, count, None, "*")   # an `or` of counts isn't a floor
 
 
 def test_a_key_set_holds_at_most_its_own_keys_and_sorts_them_once():
