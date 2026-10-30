@@ -31,7 +31,7 @@ import re
 import time
 from bisect import bisect_right
 from dataclasses import dataclass, field, replace
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from elasticsearch_dsl import Q, Search
@@ -370,6 +370,7 @@ class Level:
     all_groups: bool = False                   # read every group: a sort ES can't do (#1555)
     name_vocab: Optional[dict] = None          # codes sorted by name, not code (#1658)
     key_kind: str = "keyword"                  # how a terms split's keys compare: keyword | number | date
+    own_check: Optional["OwnCheck"] = None     # own fields checked as groups are read: both sides too big (#1598)
     _kept: Optional[tuple] = field(default=None, repr=False, compare=False)
 
     def kept_keys(self) -> Optional[List]:
@@ -647,18 +648,122 @@ def _coauthor_keys(works_index, connection, column_ids: List[str], key_field: st
 # -- the smaller side (oxjob #1555, thing-first) --
 # `at [UBC](I141945490) since 2022` is one terms query on the authors' institution-year
 # keys (#1617, oqo_to_es.affiliation_query), like any other own field.
-def _both_sides_too_big(lv: Level, n_own: Optional[int], n_keys: Optional[int]) -> AnalyticsError:
-    """Loud, never a silent cap (oxjob #1555): neither side fits in the time."""
+def _both_sides_too_big(lv: Level, n_own: Optional[int], n_keys: Optional[int], why: str = "slow",
+                        nested: bool = False) -> AnalyticsError:
+    """Loud, never a silent cap (oxjob #1555): neither side fits in the time. A single split checks its groups as
+    it reads them instead (oxjob #1598), except for a sort by a calculation (`why="sort"`) or a page past the groups
+    found in time (`why="deep"`)."""
     ent = lv.group_entity
     keys = f"about {n_keys:,}" if n_keys is not None else "too many"
+    sizes = f"about {n_own or 0:,} {ent} match their own conditions, and these works have {keys} {ent}"
+    if why == "sort":
+        return AnalyticsError(
+            "query_too_slow",
+            f"This sort needs every group's numbers: {sizes}, too many to read in time.",
+            f"Sort by count (the default), or narrow the works or the {ent}; an export lists every group.")
+    if why == "deep":
+        return AnalyticsError(
+            "page_too_deep",
+            f"This page is past the groups found in time: {sizes}, so the page's groups are found by checking "
+            f"the works' {ent} against their own records, those with the most works first.",
+            "Read an earlier page, or export every group.")
     return AnalyticsError(
         "query_too_slow",
-        f"This query is too big to run in time: about {n_own or 0:,} {ent} match their own "
-        f"conditions, and these works have {keys} {ent}. The engine checks up to "
+        f"This query is too big to run in time: {sizes}. The engine checks up to "
         f"{LOOKUP_LIMIT:,} {ent} from their own records or {WORKS_SIDE_LIMIT:,} from the works.",
         f"Narrow the works (a shorter year range, a narrower search or topic) or the {ent} "
-        f"(a smaller place, fewer years); a count filter also helps: who published more than "
-        f"5 works where ...")
+        f"(a smaller place, fewer years){', or make it the only split' if nested else ''}; a count filter also "
+        f"helps: who published more than 5 works where ...")
+
+
+@dataclass
+class OwnCheck:
+    """A single split's filter on its groups' own records when neither side can be listed in time (oxjob #1598):
+    147,180 authors at UCL, 424,449 authors in Nature's works; listing either took 6-16 s. Its groups are checked
+    against their own records as they are read instead. The page view checks the works' groups in its own order a
+    list at a time until the page fills (`_own_first_keys`); a cursor page walks the smaller side range by range,
+    the own side's ids in key order (`own_keys_after`) or the works' groups, checked as read (`own_kept`)."""
+    where: Any               # the own-field conditions, ANDed
+    entity: str
+    n_own: int               # about how many groups match their own fields
+    n_keys: int              # about how many groups the works hold
+
+
+OWN_CANDIDATES_FIRST = 2_000   # the page view checks the works' first groups in its order, this many at first,
+OWN_CANDIDATES_MAX = 20_000    # and at most this many (top 20,000 authors 1.2-3.9 s; 60,000 2.1-7.9 s, 2026-10-30)
+OWN_SAMPLE = 5_000             # own-side groups sampled to estimate how many pass
+
+
+def own_kept(own: OwnCheck, keys: List[str], connection, deadline: Deadline) -> set:
+    """The `keys` whose own record passes (the walks' check, 10,000 ids a call side by side)."""
+    from query_translation import walk_exec as WX
+    return set(WX.narrow(WX.Ctx(connection, deadline), own.entity, keys, own.where))
+
+
+def _own_search(own: OwnCheck, body: dict, query, connection, deadline: Deadline, what: str) -> dict:
+    """A search of the groups' own index for their ids, under the own-field filter `own_kept` checks (`query`
+    wraps it, or None for the filter alone)."""
+    from query_translation import walk_exec as WX
+    q, g_index = WX._own_fields_query(own.entity, own.where)
+    return _search(g_index, connection, {**body, "_source": False, "docvalue_fields": ["id"],
+                                         "query": query(q) if query else q}, deadline, what)
+
+
+def _ids(res: dict) -> List[str]:
+    return [h["fields"]["id"][0] for h in res["hits"]["hits"]]
+
+
+def own_keys_after(own: OwnCheck, after, size: int, connection, deadline: Deadline) -> List[str]:
+    """The next `size` ids after `after` (exclusive) of the groups whose own record passes, in key order: a sorted
+    search of their own index (10,000 authors at UCL ~0.7-1.0 s; a composite took 3.8 s)."""
+    body = {"size": size, "sort": [{"id": "asc"}], "track_total_hits": False,
+            **({"search_after": [after]} if after is not None else {})}
+    return _ids(_own_search(own, body, None, connection, deadline, f"listing the {own.entity} that match"))
+
+
+def _own_first_keys(lv: Level, own: OwnCheck, base_query: dict, index, connection, deadline: Deadline,
+                    needed: int, sort_measure, pref: str) -> Tuple[List[str], bool]:
+    """The split's first `needed` groups in its order whose own record passes, and one more when there is one: the
+    works' groups in that order, checked a list at a time, the list growing from what passed. Every group after the
+    list comes after its last one in that order, so the passing ones found are the first ones. Also returns whether
+    the list held every group the works hold."""
+    field = lv.agg["terms"]["field"]
+    query = _and(base_query, *lv.works_filters)
+    size, checked, kept = min(OWN_CANDIDATES_MAX, max(OWN_CANDIDATES_FIRST, 8 * needed)), 0, []
+    while True:
+        # listed as the main request lists them (plan_levels), so its counts and ties come out the same
+        terms = {"field": field, **_list_shape(field, size, sort_measure)}
+        res = _search(index, connection, {"size": 0, "query": query, "aggs": {"c": {"terms": terms}}},
+                      deadline, "listing the groups to check", preference=pref)
+        agg = res["aggregations"]["c"]
+        keys = [b["key"] for b in agg["buckets"]]
+        new = [k for k in keys[checked:] if lv.keeps(k)]
+        passed = own_kept(own, new, connection, deadline) if new else set()
+        kept += [k for k in new if k in passed]
+        checked = len(keys)
+        complete = len(keys) < size and not agg.get("sum_other_doc_count")
+        if len(kept) > needed or complete or size >= OWN_CANDIDATES_MAX \
+                or deadline.remaining() < PARTITION_RESERVE_S:
+            return kept, complete
+        rate = max(len(kept), 1) / max(checked, 1)
+        size = int(min(OWN_CANDIDATES_MAX, max(2 * size, (needed + 1) / rate * 1.3)))
+
+
+def _own_estimate(lv: Level, own: OwnCheck, base_query: dict, index, connection, deadline: Deadline) -> int:
+    """About how many groups pass: a random sample of the groups whose own record passes, and how many of them the
+    works hold, scaled to all of them. (The top of the works' list passes far more often than the rest, 16% vs 4%
+    for UCL's authors in Nature, so the page view's own rate would overstate it.)"""
+    res = _own_search(own, {"size": OWN_SAMPLE, "track_total_hits": True},
+                      lambda q: {"function_score": {"query": q, "random_score": {"seed": 1598, "field": "_seq_no"},
+                                                    "boost_mode": "replace"}},
+                      connection, deadline, f"sampling the {own.entity} that match")
+    sample, total = _ids(res), res["hits"]["total"]["value"]
+    if not sample:
+        return 0
+    field = lv.agg["terms"]["field"]
+    held = _count_floor_keys(lv, index, connection, _and(base_query, *lv.works_filters, {"terms": {field: sample}}),
+                             deadline, 1, include=sample) or []
+    return round(total * len(held) / len(sample))
 
 
 def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadline) -> Optional[int]:
@@ -715,9 +820,11 @@ def _pushdown(lv: Level, part, fields_dict) -> Optional[dict]:
 
 def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connection,
                     deadline: Deadline, has_measure_filter: bool,
-                    base_query: Optional[dict] = None, works_fields=None) -> List:
+                    base_query: Optional[dict] = None, works_fields=None, nested: bool = False) -> List:
     """Turn the key-set parts of a group filter into lv.include / lv.exclude. Returns
-    the parts that need the survivors lookup (own fields with too many matches)."""
+    the parts that need the survivors lookup (own fields with too many matches).
+    A part with both sides too big to list becomes lv.own_check on a single split (oxjob #1598), a refusal on a
+    nested one."""
     from query_translation.oqo_to_es import _translate
     from core.join_resolver import entity_index, resolve_query_ids
     from core.filter import resolve_collection
@@ -725,6 +832,7 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
     include: Optional[set] = None
     exclude: set = set()
     deferred = []
+    big: List[Tuple[Any, int, int]] = []   # (part, n_own, n_keys): both sides too big to list
 
     def add_include(keys):
         nonlocal include
@@ -799,7 +907,7 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
                   if base_query is not None and lv.kind == "terms" else None)
         n_own = _count_entity_matches(lv, p, deadline)
         ids = None
-        if n_keys is None or n_own is None or n_own <= n_keys:
+        if (n_keys is None or n_own is None or n_own <= n_keys) and (n_own is None or n_own <= LOOKUP_LIMIT):
             g_fields, _g_index = entity_index(lv.group_entity)
             q = _translate(p, g_fields)
             extra = [Q("range", works_count={"gt": 0})] if lv.group_entity == "authors" else []
@@ -818,8 +926,19 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
             if base_query is None or lv.kind != "terms":
                 deferred.append(p)
                 continue
-            raise _both_sides_too_big(lv, n_own, n_keys)
+            if nested or n_own is None or n_keys is None:
+                raise _both_sides_too_big(lv, n_own, n_keys, nested=nested)
+            big.append((p, n_own, n_keys))
+            continue
         add_include(ids)
+    if big:
+        own = OwnCheck(where=big[0][0] if len(big) == 1 else BranchFilter("and", [b[0] for b in big]),
+                       entity=lv.group_entity, n_own=min(b[1] for b in big), n_keys=big[0][2])
+        if include is not None:
+            # another part listed its keys: check those against the rest
+            include = own_kept(own, sorted(include), connection, deadline)
+        else:
+            lv.own_check = own
     lv.include = include
     lv.exclude = exclude or None
     return deferred
@@ -1185,21 +1304,24 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
                     f"{MAX_PAGE_DEPTH:,} groups.",
                     "Sort the groups so the ones you want come first, or page through "
                     "every group with cursor=* (in key order).")
-        terms["size"] = size
-        # a single split takes deep shard lists at any size, as on the URL path
-        # (buckets.determine_shard_size, oxjob #1513)
-        terms["shard_size"] = max(size * 2, 3000 if nested else SINGLE_LIST_SHARD_SIZE)
-        if terms.get("field") in _MAP_HINT_FIELDS:
-            terms["execution_hint"] = "map"   # as on the URL path: 10 s -> ~1 s
         lv.size = size
-        order = [{"_count": "desc"}, {"_key": "asc"}]
-        if sort_measure and not nested and (lv.selector is None or lv.paged_floor):
-            order = ((sort_measure if isinstance(sort_measure, list) else [sort_measure])
-                     + [{"_key": "asc"}])
-        terms["order"] = order
+        ordered = sort_measure and not nested and (lv.selector is None or lv.paged_floor)
+        terms.update(_list_shape(terms.get("field"), size, sort_measure if ordered else None, nested))
         terms.update(_keyset_terms(lv))
         if lv.selector is not None and lv.split.where is not None:
             terms["min_doc_count"] = _min_doc_count(lv.split.where)
+
+
+def _list_shape(field: str, size: int, sort_measure=None, nested: bool = False) -> dict:
+    """A terms split's size, shard lists, hint and order (`sort_measure` first, else biggest first; then key)."""
+    first = (sort_measure if isinstance(sort_measure, list) else [sort_measure]) if sort_measure else \
+        [{"_count": "desc"}]
+    # a single split takes deep shard lists at any size, as on the URL path (buckets.determine_shard_size, #1513)
+    shape = {"size": size, "shard_size": max(size * 2, 3000 if nested else SINGLE_LIST_SHARD_SIZE),
+             "order": first + [{"_key": "asc"}]}
+    if field in _MAP_HINT_FIELDS:
+        shape["execution_hint"] = "map"   # as on the URL path: 10 s -> ~1 s
+    return shape
 
 
 def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -> dict:
@@ -1662,7 +1784,12 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     journal`) narrow the works its groups are read from, not the whole-set row. `floor`: the leading split's count
     floor (`Only authors with at least 73 works`, more than 65,000 of them): each range first lists its keys that
     pass (a terms count on the range's keys, exact: every work holding them is in the range), then reads only those
-    keys' works."""
+    keys' works.
+
+    `lv.own_check` (one split; its own-field filter matches too many groups on both sides to list, oxjob #1598): the
+    smaller side is walked. Its own side's ids, KEYSET_CHUNK at a time in key order from its own index, as a terms
+    filter (UCL's 147,180 authors, not Nature's 424,449); or the works' groups, range by range as usual, each checked
+    against its own record as it is read."""
     s0 = body["aggs"]["s0"]
     comp = {k: v for k, v in s0["composite"].items() if k != "after"}
     names = [next(iter(src)) for src in comp["sources"]]
@@ -1672,19 +1799,34 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     after = (start_after or {}).get(lead)
     field = comp["sources"][0][lead]["terms"]["field"]
     keysets = {n: k for n, k in (keysets or {}).items() if k.include is not None or k.exclude}
-    # a count filter or a key set keeps few of the groups it reads
-    filtered = "having" in (s0.get("aggs") or {}) or bool(keysets)
-    walk = keysets[lead].kept_keys() if lead in keysets else None
+    own = lv.own_check
+    # a count filter, a key set or an own check keeps few of the groups it reads
+    filtered = "having" in (s0.get("aggs") or {}) or bool(keysets) or own is not None
+
+    def walk_key_set(keys: List) -> Callable:
+        def after(pos, n: int) -> Tuple[List, bool]:
+            got = _keys_after(keys, pos, n)
+            return got, bool(got) and got[-1] != keys[-1]
+        return after
+
+    # the leading split walks its own keys range by range, (pos, n) -> (the next n keys, whether more follow): a
+    # key set's include list, or the ids whose own record passes, listed from their own index (the smaller side)
+    walk: Optional[Callable] = None
+    if lead in keysets and keysets[lead].include is not None:
+        walk = walk_key_set(keysets[lead].kept_keys())
+    elif own is not None and own.n_own <= own.n_keys:
+        def walk(pos, n: int) -> Tuple[List, bool]:
+            got = own_keys_after(own, pos, n, connection, deadline)
+            return got, len(got) >= n
 
     def keep(b) -> bool:
         return all(k.keeps(b["key"][n]) for n, k in keysets.items())
 
     def next_keys(pos, n: int) -> Optional[Tuple[List[str], bool]]:
         """The leading split's next keys after pos, and whether more may follow them (None: it can't list them):
-        its key set's own keys, else the field's term list."""
+        its walk's keys, else the field's term list."""
         if walk is not None:
-            keys = _keys_after(walk, pos, n)
-            return keys, bool(keys) and keys[-1] != walk[-1]
+            return walk(pos, n)
         listed = _terms_after(index_name, connection, field, pos, n, deadline, lv.key_kind)
         return None if listed is None else (listed[0], len(listed[0]) >= n or not listed[1])
 
@@ -1703,9 +1845,10 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
         passing = _count_floor_keys(lv, index_name, connection, _and(body["query"], *lv.works_filters), deadline,
                                     floor, pref=pref)
         if passing is not None:
-            kept = set(passing) & set(walk) if walk is not None else set(passing)
+            held = keysets[lead].kept_keys() if walk is not None else None
+            kept = set(passing) & set(held) if held is not None else set(passing)
             keysets[lead] = replace(lv, include=kept, exclude=None)
-            walk, floor, filtered = keysets[lead].kept_keys(), 1, True
+            walk, floor, filtered = walk_key_set(keysets[lead].kept_keys()), 1, True
     ranged = walk is not None or floor > 1 or (whole["hits"]["total"]["value"] >= PARTITION_MIN_WORKS
                                                and not (n_groups is not None and n_groups * 2 < per_page))
     # a leading key holds many combinations (an institution's authors), so nested ranges start small and grow
@@ -1753,7 +1896,7 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
         low = "gte" if first and inside else "gt"
         rng = {**({low: pos} if pos is not None else {}), **({"lte": hi} if hi is not None else {})}
         if terms is not None and walk is not None:
-            # the works holding these keys of the key set, not every key in their range
+            # the works holding these keys of the walk, not every key in their range
             query = _and(body["query"], {"terms": {field: terms}}, *lv.works_filters)
         elif terms is not None and rng:
             query = _and(body["query"], {"range": {field: rng}}, *lv.works_filters)
@@ -1765,10 +1908,27 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
                                            pref=pref))
             if passed:
                 query = _and(body["query"], {"terms": {field: sorted(passed)}}, *lv.works_filters)
+        # a walk keeps only the range's own keys (the works holding them hold other keys too)
+        allowed = passed if passed is not None else (set(terms) if walk is not None and terms is not None else None)
         start = len(kept)
         cur = start_after if first else (through(pos) if pos is not None else None)
         first = False
-        while passed is None or passed:   # no key in the range passes its floor: nothing to read
+        # one split walking its own keys: the range's keys read whole by one terms request, no co-keys read (a
+        # composite of the same range took 1.7-2.1 s for 10,000 authors at UCL or Toronto, this 0.5-0.75 s)
+        one_read = walk is not None and not nested and terms is not None
+        if one_read:
+            if allowed:
+                t = {"field": field, "include": sorted(allowed), "size": len(allowed), "order": [{"_key": "asc"}],
+                     "execution_hint": "map"}
+                res = _search(index_name, connection, {"size": 0, "query": query, "aggs": {"s0": {
+                    "terms": t, **({"aggs": s0["aggs"]} if s0.get("aggs") else {})}}},
+                    deadline, "calculating the groups", preference=pref)
+                took += res.get("took") or 0
+                rows = ({**b, "key": {lead: b["key"]}} for b in res["aggregations"]["s0"]["buckets"])
+                kept.extend(b for b in rows if keep(b))
+                if len(kept) > per_page:
+                    return page(kept[per_page - 1]["key"])
+        while not one_read and (passed is None or passed):   # no key in the range passes its floor: nothing to read
             # a count filter keeps few of the groups it reads: read a full page each time (one request per
             # range, sized to the range, measured slower: 65,535 groups 3.7 s vs 10,000 in 0.4 s)
             size = per_page if filtered else per_page - len(kept)
@@ -1777,8 +1937,13 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
                           deadline, "calculating the groups", preference=pref)
             took += res.get("took") or 0
             raw = res["aggregations"]["s0"]
-            kept.extend(b for b in raw["buckets"] if (hi is None or b["key"][lead] <= hi) and keep(b)
-                        and (passed is None or b["key"][lead] in passed))
+            got = [b for b in raw["buckets"] if (hi is None or b["key"][lead] <= hi) and keep(b)
+                   and (allowed is None or b["key"][lead] in allowed)]
+            if own is not None and walk is None and got:
+                # the works' groups walked: each checked against its own record as it is read
+                ok = own_kept(own, [b["key"][lead] for b in got], connection, deadline)
+                got = [b for b in got if b["key"][lead] in ok]
+            kept.extend(got)
             last = raw.get("after_key")
             # the range is read once the composite is past every combination of hi (a co-key after it; for one
             # split, hi itself); a nested page that ends on hi may have more of hi's combinations to read
@@ -2343,7 +2508,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                     f"Filter by a calculation, e.g. {count_fix(lv)}, or filter the starting works instead.")
             rest = resolve_keysets(lv, k_parts, oqo, index_name, connection, deadline,
                                    bool(m_parts), base_query=base_query,
-                                   works_fields=fields_dict)
+                                   works_fields=fields_dict, nested=nested)
             if rest:
                 if lv.kind != "terms" and lv.kind != "filters":
                     raise AnalyticsError("group_filter_not_available",
@@ -2395,13 +2560,20 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             sort_measure = {"_key": direction}
         elif ((by_name or (m is not None and m.measure in ("percent", "value"))) and levels
               and levels[0].kind == "terms" and levels[0].selector is None
-              and levels[0].post_keep is None and oqo.cursor is None):
+              and levels[0].post_keep is None and levels[0].own_check is None and oqo.cursor is None):
             # a percent, a group's own field, or codes by name (`alphabetical by country`):
             # ES can't order the split by it, so every group is read and sorted here (a
             # filtered split already reads them all)
             _read_all_groups(levels[0], m, cards, index_name, connection, base_query,
                              deadline, oqo.get_rows)
     cursor = oqo.cursor
+    # same shards for the same query, so approximate counts repeat exactly
+    pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
+    own = levels[0].own_check if levels else None
+    own_complete, own_estimate = False, None   # the page view's: every group checked; about how many pass
+    if own is not None and cursor is None and not _lists_in_order(levels[0], eff_sort, measures):
+        # its groups are found in the page's order a list at a time: by count or by key, not by a calculation
+        raise _both_sides_too_big(levels[0], own.n_own, own.n_keys, why="sort")
 
     def big(e: AnalyticsError) -> dict:
         """A nested split too big for one answer pages instead, when it can (oxjob #1598); else the refusal."""
@@ -2451,6 +2623,20 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 comp["after"] = {"k": after}
             lv.agg = {"composite": comp}
             lv.composite = True
+        if own is not None and cursor is None:
+            # both sides too big to list (oxjob #1598): the page's groups are the works' first groups in its order
+            # whose own record passes, read through a terms filter on them; how many pass in all is estimated
+            from concurrent.futures import ThreadPoolExecutor
+            lv0 = levels[0]
+            with ThreadPoolExecutor(1) as ex:   # the estimate (~1 s) needs none of the list: read both at once
+                estimating = ex.submit(_own_estimate, lv0, own, base_query, index_name, connection, deadline)
+                first, own_complete = _own_first_keys(lv0, own, base_query, index_name, connection, deadline,
+                                                      page * per_page, sort_measure, pref)
+                own_estimate = len(first) if own_complete else max(len(first), estimating.result())
+            if len(first) <= (page - 1) * per_page and not own_complete:
+                raise _both_sides_too_big(lv0, own.n_own, own.n_keys, why="deep")
+            lv0.include = set(first)
+            lv0.works_filters.append({"terms": {lv0.agg["terms"]["field"]: first or ["__none__"]}})
         if nested and levels[0].kind == "terms" and levels[0].selector is not None \
                 and levels[0].split.where is not None and _min_doc_count(levels[0].split.where) > 1 \
                 and (n_works is None or n_works < PARTITION_MIN_WORKS):
@@ -2484,7 +2670,9 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             lv0 = levels[0]
             field0 = (lv0.agg["composite"]["sources"][0]["k"]["terms"]["field"] if lv0.composite
                       else lv0.agg["terms"]["field"])
-            if lv0.selector is None and lv0.post_keep is None and not lv0.all_groups:
+            if lv0.own_check is not None:
+                pass   # how many groups pass is the own check's estimate (the page view) or unknown (a cursor page)
+            elif lv0.selector is None and lv0.post_keep is None and not lv0.all_groups:
                 # how many groups a single split has in all (approximate past 3,000), less
                 # what a key-set filter leaves out (all_groups counts its rows instead)
                 body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
@@ -2513,8 +2701,6 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             moved = {k: body["aggs"].pop(k) for k in list(body["aggs"])
                      if k not in m_aggs and (k == "s0" if nested else not (paged and k == "s0"))}
             body["aggs"]["pushed"] = {"filter": _and(*pushed), "aggs": moved}
-        # same shards for the same query, so approximate counts repeat exactly
-        pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
         if levels and not nested and levels[0].composite:
             res = _cursor_page(levels[0], body, index_name, connection, deadline, per_page, pref,
                                keysets={"k": levels[0]})
@@ -2592,6 +2778,10 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             if top.paged_floor:
                 # how many groups pass the count isn't known on this path
                 more_groups = n_rows > page * per_page
+            elif top.own_check is not None:
+                # the groups found past the page say there are more; so may the groups never checked
+                more_groups = bool(aggs["s0"].get("sum_other_doc_count")) or not own_complete
+                groups_count = own_estimate
             else:
                 more_groups = bool(aggs["s0"].get("sum_other_doc_count"))
                 groups_count = _groups_count(top, aggs)
@@ -2769,6 +2959,7 @@ EST_CALL_SEARCH_SET_S = 3.0
 EST_PER_LISTED_SEARCH_S = 0.015
 EST_LOOKUP_S = 0.4
 EST_COAUTHOR_S = 1.5
+EST_OWN_CHECK_S = 3.0     # a split checked as read: the works' first groups, their own records, a sample (#1598)
 EST_IDS_PER_S = 40_000
 EST_NAMES_S = 0.6
 # The main request over big sets: about (works / 1e8) x (1 + groups / 5,000) seconds
@@ -2926,6 +3117,7 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     except APIQueryParamsError as e:
         limits.append({"error": "invalid_query", "message": str(e), "fix": ""})
     nested = len(levels) > 1
+    oqo_sort = (oqo.sort_by[0].column_id, oqo.sort_by[0].direction or "desc") if oqo.sort_by else None
     own: Dict[int, int] = {}   # how many groups match a split's own-field filter (its key set's size, at most)
     for g in oqo.group_by:
         if g.values is not None and g.column_id and g.column_id.endswith(".search"):
@@ -2969,7 +3161,16 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                     est += 0.4 + n_keys / 36_000
                     calls += 2 + n_keys // 10_000
                 elif n > LOOKUP_LIMIT:
-                    limits.append(_both_sides_too_big(lv, n, n_keys).to_dict())
+                    # as the run does it: one split checks its groups as they are read (oxjob #1598), in an order
+                    # ES lists them in
+                    as_read = n_keys is not None and not nested and lv.kind == "terms"
+                    in_order = oqo.cursor is not None or _lists_in_order(lv, oqo_sort, list(oqo.calculate))
+                    if as_read and in_order:
+                        est += EST_OWN_CHECK_S
+                        calls += 3
+                    else:
+                        limits.append(_both_sides_too_big(lv, n, n_keys, why="sort" if as_read else "slow",
+                                                          nested=nested).to_dict())
                 else:
                     est += 0.2 + n / EST_IDS_PER_S
     # One probe: how many works the set holds and how many distinct values each split
@@ -3036,6 +3237,16 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                     "before filters on the groups' own fields."),
         })
     return {"valid": not limits, "limits": limits, "estimate": estimate, "cost": price(oqo)}
+
+
+def _lists_in_order(lv: Level, sort: Optional[Tuple[str, str]], measures: List[Measure]) -> bool:
+    """Does ES list a single split's groups in this sort (by count, a share of the whole set, or key), so `run`
+    orders them with `sort_measure`? A split checked as read (oxjob #1598) can take no other sort."""
+    if sort is None:
+        return True
+    m = next((x for x in measures if x.key == sort[0]), None)
+    return (sort[0] == "count" or (m is not None and m.measure == "percent_of_those")
+            or (sort[0] == "key" and lv.name_vocab is None))
 
 
 def _count_entity_matches(lv: Level, part, deadline: Deadline,
