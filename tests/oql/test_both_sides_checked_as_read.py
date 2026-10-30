@@ -140,11 +140,50 @@ def test_a_cursor_checks_the_works_groups_as_read_when_they_are_fewer(monkeypatc
     assert not any(c[0] == "own" and c[1].get("sort") for c in fake.calls)   # the own side is never listed
 
 
-def test_a_nested_split_keeps_the_refusal_and_says_one_split_pages(monkeypatch):
+def test_an_inner_split_keeps_the_refusal_and_says_one_split_pages(monkeypatch):
     _both_sides_big(monkeypatch, n_own=len(OWN), n_keys=13)
+    oql = "get the count of all works by year and author at [University College London](I45129253)"
     with pytest.raises(A.AnalyticsError) as e:
-        _run(monkeypatch, OwnES(WORKS), oql=NESTED, per_page=3)
+        _run(monkeypatch, OwnES(WORKS), oql=oql, per_page=3)
     assert e.value.code == "query_too_slow" and "make it the only split" in e.value.fix
+
+
+def _nested_truth():
+    """Every passing author's years in the page's order (most works first, years oldest first)."""
+    from tests.oql.test_nested_pages import _whole_answer
+    return [r for r in _whole_answer(WORKS) if r[0] in OWN]
+
+
+@pytest.mark.parametrize("per_page", [1, 2, 3, 5, 100])
+def test_a_nested_split_led_by_it_shows_its_first_rows(monkeypatch, per_page):
+    _both_sides_big(monkeypatch, n_own=len(OWN), n_keys=13)
+    body = _run(monkeypatch, OwnES(WORKS), oql=NESTED, per_page=per_page)
+    from tests.oql.test_nested_pages import _leaves, _norm
+    truth = _nested_truth()
+    assert _norm(_leaves(body["group_by"])) == truth[:per_page]
+    m = body["meta"]
+    assert m["more_groups"] is True
+    assert m["groups_count"] == len({a for a, _, _ in truth})   # the sample: every passing author here
+    assert m["rows_count"] == len(truth)                         # their rows, from the same sample
+
+
+@pytest.mark.parametrize("per_page", [1, 2, 3, 100])
+@pytest.mark.parametrize("n_own,n_keys", [(8, 10 ** 6), (10 ** 6, 13)])
+@pytest.mark.parametrize("fill", [60_000, 3, 2])
+def test_a_nested_cursor_led_by_it_walks_every_passing_row(monkeypatch, per_page, n_own, n_keys, fill):
+    # fill 3: a range's inner lists are cut, so each cut key is read alone; fill 2: a key holds more years than one
+    # request lists, so the range is read by composite pages
+    from tests.oql.test_nested_pages import _walk as nested_walk
+    _both_sides_big(monkeypatch, n_own=n_own, n_keys=n_keys)
+    monkeypatch.setattr(A, "KEYSET_CHUNK", 2)
+    monkeypatch.setattr(A, "NESTED_FILL_BUCKETS", fill)
+    fake = OwnES(WORKS, index_terms={_a(n) for n in range(1, 30)})
+    rows, _ = nested_walk(monkeypatch, fake, oql=NESTED, per_page=per_page)
+    assert [(a, str(y), n) for a, y, n in rows] == sorted(_nested_truth())
+    reads = [c[1]["aggs"]["s0"] for c in fake.calls if c[0] == "search" and "s0" in (c[1].get("aggs") or {})]
+    if n_own < n_keys:   # the own side walked: its ranges read by terms, unless a key overflows one request
+        assert any("terms" in r for r in reads)
+        assert any("composite" in r for r in reads) == (fill == 2)
 
 
 def test_another_listed_part_is_checked_against_the_big_one(monkeypatch):
@@ -173,8 +212,10 @@ def test_the_check_calls_a_single_split_valid_as_the_run_answers_it(monkeypatch)
               "[University College London](I45129253)")
     out = _check(monkeypatch, nature, 147_180, 424_449)
     assert out["valid"] and out["estimate"]["seconds"] < 10
-    nested = nature + " and year"
-    assert not _check(monkeypatch, nested, 147_180, 424_449)["valid"]
+    assert _check(monkeypatch, nature + " and year", 147_180, 424_449)["valid"]        # it leads: it pages
+    inner = ("get the count of works in [Nature](S137773608) by year and author at "
+             "[University College London](I45129253)")
+    assert not _check(monkeypatch, inner, 147_180, 424_449)["valid"]
     by_mean = ("get the count and mean FWCI of works in [Nature](S137773608) by author at "
                "[University College London](I45129253), highest mean FWCI first")
     assert not _check(monkeypatch, by_mean, 147_180, 424_449)["valid"]

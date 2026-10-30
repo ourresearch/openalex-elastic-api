@@ -749,21 +749,32 @@ def _own_first_keys(lv: Level, own: OwnCheck, base_query: dict, index, connectio
         size = int(min(OWN_CANDIDATES_MAX, max(2 * size, (needed + 1) / rate * 1.3)))
 
 
-def _own_estimate(lv: Level, own: OwnCheck, base_query: dict, index, connection, deadline: Deadline) -> int:
+def _own_estimate(lv: Level, own: OwnCheck, base_query: dict, index, connection, deadline: Deadline,
+                  others: Optional[List[Level]] = None) -> Tuple[int, Optional[float]]:
     """About how many groups pass: a random sample of the groups whose own record passes, and how many of them the
     works hold, scaled to all of them. (The top of the works' list passes far more often than the rest, 16% vs 4%
-    for UCL's authors in Nature, so the page view's own rate would overstate it.)"""
+    for UCL's authors in Nature, so the page view's own rate would overstate it.) With `others` (the splits after
+    it, a nested split), also how many rows each passing group holds, on average over the sample."""
     res = _own_search(own, {"size": OWN_SAMPLE, "track_total_hits": True},
                       lambda q: {"function_score": {"query": q, "random_score": {"seed": 1598, "field": "_seq_no"},
                                                     "boost_mode": "replace"}},
                       connection, deadline, f"sampling the {own.entity} that match")
     sample, total = _ids(res), res["hits"]["total"]["value"]
     if not sample:
-        return 0
+        return 0, None
     field = lv.agg["terms"]["field"]
-    held = _count_floor_keys(lv, index, connection, _and(base_query, *lv.works_filters, {"terms": {field: sample}}),
-                             deadline, 1, include=sample) or []
-    return round(total * len(held) / len(sample))
+    cols = [x.agg["terms"]["field"] for x in others or [] if x.kind == "terms"]
+    # one request: the sampled groups the works hold and, nested, each one's distinct keys of the other column splits
+    held = _search(index, connection, {
+        "size": 0, "query": _and(base_query, *lv.works_filters, {"terms": {field: sample}}),
+        "aggs": {"h": {"terms": {"field": field, "include": sample, "size": len(sample), "execution_hint": "map"},
+                       **({"aggs": {"c": {"cardinality": _inner_card(cols)}}} if cols else {})}}},
+        deadline, "counting the sampled groups the works hold")["aggregations"]["h"]["buckets"]
+    estimate = round(total * len(held) / len(sample))
+    if not others or not held:
+        return estimate, None
+    per = sum(b["c"]["value"] for b in held) / len(held) if cols else 1
+    return estimate, per * _cards_product([x for x in others if _small(x)], None)   # small splits: every group
 
 
 def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadline) -> Optional[int]:
@@ -823,8 +834,8 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
                     base_query: Optional[dict] = None, works_fields=None, nested: bool = False) -> List:
     """Turn the key-set parts of a group filter into lv.include / lv.exclude. Returns
     the parts that need the survivors lookup (own fields with too many matches).
-    A part with both sides too big to list becomes lv.own_check on a single split (oxjob #1598), a refusal on a
-    nested one."""
+    A part with both sides too big to list becomes lv.own_check on a single split or a nested split's leading one
+    (oxjob #1598), else a refusal."""
     from query_translation.oqo_to_es import _translate
     from core.join_resolver import entity_index, resolve_query_ids
     from core.filter import resolve_collection
@@ -926,7 +937,7 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
             if base_query is None or lv.kind != "terms":
                 deferred.append(p)
                 continue
-            if nested or n_own is None or n_keys is None:
+            if (nested and lv.index != 0) or n_own is None or n_keys is None:
                 raise _both_sides_too_big(lv, n_own, n_keys, nested=nested)
             big.append((p, n_own, n_keys))
             continue
@@ -1318,7 +1329,7 @@ def _list_shape(field: str, size: int, sort_measure=None, nested: bool = False) 
         [{"_count": "desc"}]
     # a single split takes deep shard lists at any size, as on the URL path (buckets.determine_shard_size, #1513)
     shape = {"size": size, "shard_size": max(size * 2, 3000 if nested else SINGLE_LIST_SHARD_SIZE),
-             "order": first + [{"_key": "asc"}]}
+             "order": first + ([] if any("_key" in o for o in first) else [{"_key": "asc"}])}
     if field in _MAP_HINT_FIELDS:
         shape["execution_hint"] = "map"   # as on the URL path: 10 s -> ~1 s
     return shape
@@ -1861,6 +1872,48 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
 
     kept: List[dict] = []
 
+    def read_whole(keys: List, resume: Optional[dict]) -> Optional[Tuple[List[dict], int]]:
+        """The leading `keys`' rows in key order, as composite buckets, by one terms request (a nested split's inner
+        terms under it, NESTED_FILL_BUCKETS shared out; the keys it cuts are read again together, each with a bigger
+        share: in halves when more than half are cut); past `resume`, the after-key the page starts from. None when
+        one key holds more inner groups than one request lists."""
+        sub = {"aggs": s0["aggs"]} if s0.get("aggs") else {}
+        name = names[1] if nested else None
+        by_key: Dict[Any, List[dict]] = {}
+        spent, batches = 0, [keys]
+        while batches:
+            todo = batches.pop(0)
+            t = {"field": field, "include": todo, "size": len(todo), "order": [{"_key": "asc"}],
+                 "execution_hint": "map"}
+            if nested:
+                inner = {"field": comp["sources"][1][name]["terms"]["field"],
+                         "size": max(1, NESTED_FILL_BUCKETS // len(todo)), "order": [{"_key": "asc"}],
+                         "execution_hint": "map", **(_keyset_terms(keysets[name]) if name in keysets else {})}
+                t_sub = {"aggs": {"i": {"terms": inner, **sub}}}
+            else:
+                t_sub = sub
+            q = _and(body["query"], {"terms": {field: todo}}, *lv.works_filters)
+            res = _search(index_name, connection, {"size": 0, "query": q, "aggs": {"s0": {"terms": t, **t_sub}}},
+                          deadline, "calculating the groups", preference=pref)
+            spent += res.get("took") or 0
+            cut = []
+            for b in res["aggregations"]["s0"]["buckets"]:
+                if not nested:
+                    by_key[b["key"]] = [{**b, "key": {lead: b["key"]}}]
+                elif b["i"].get("sum_other_doc_count"):
+                    cut.append(b["key"])
+                else:
+                    by_key[b["key"]] = [{**ib, "key": {lead: b["key"], name: ib["key"]}} for ib in b["i"]["buckets"]]
+            if len(cut) == len(todo) == 1:
+                return None
+            if cut:   # read again, each key's share at least doubled
+                half = len(cut) // 2
+                batches[:0] = [cut] if 2 * len(cut) <= len(todo) else [cut[:half], cut[half:]]
+        rows = [r for k in sorted(by_key) for r in by_key[k]]
+        if resume is not None:
+            rows = [r for r in rows if tuple(r["key"][n] for n in names) > tuple(resume[n] for n in names)]
+        return rows, spent
+
     def page(next_after: Optional[dict]) -> dict:
         out = {"buckets": kept[:per_page], "exact_after": True}
         if next_after is not None:
@@ -1868,6 +1921,10 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
         aggs["s0"] = out
         return {"hits": whole["hits"], "took": took, "aggregations": aggs}
 
+    # a walk reads each range whole by one terms request, its keys only (a composite reads every co-key of their works
+    # too: 1.7-2.1 s for 10,000 UCL or Toronto authors, this 0.5-0.75 s; Michigan's first 50 authors by keyword
+    # 6.4-6.6 s, this 0.24-0.41 s): one split, or two with no count floor under them
+    reads_whole = walk is not None and (not nested or (len(names) == 2 and "having" not in (s0.get("aggs") or {})))
     pos, n_terms = after, clamp(min_terms if nested else 2 * per_page)
     first = True
     # a nested cursor that stopped inside a leading key (one institution's 30,000 authors fill several pages)
@@ -1913,22 +1970,14 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
         start = len(kept)
         cur = start_after if first else (through(pos) if pos is not None else None)
         first = False
-        # one split walking its own keys: the range's keys read whole by one terms request, no co-keys read (a
-        # composite of the same range took 1.7-2.1 s for 10,000 authors at UCL or Toronto, this 0.5-0.75 s)
-        one_read = walk is not None and not nested and terms is not None
-        if one_read:
-            if allowed:
-                t = {"field": field, "include": sorted(allowed), "size": len(allowed), "order": [{"_key": "asc"}],
-                     "execution_hint": "map"}
-                res = _search(index_name, connection, {"size": 0, "query": query, "aggs": {"s0": {
-                    "terms": t, **({"aggs": s0["aggs"]} if s0.get("aggs") else {})}}},
-                    deadline, "calculating the groups", preference=pref)
-                took += res.get("took") or 0
-                rows = ({**b, "key": {lead: b["key"]}} for b in res["aggregations"]["s0"]["buckets"])
-                kept.extend(b for b in rows if keep(b))
-                if len(kept) > per_page:
-                    return page(kept[per_page - 1]["key"])
-        while not one_read and (passed is None or passed):   # no key in the range passes its floor: nothing to read
+        # (None: composite pages; also when a key holds more combinations than one request lists)
+        whole_read = read_whole(sorted(allowed), cur) if reads_whole and allowed else None
+        if whole_read is not None:
+            took += whole_read[1]
+            kept.extend(b for b in whole_read[0] if keep(b))
+            if len(kept) > per_page:
+                return page(kept[per_page - 1]["key"])
+        while whole_read is None and (passed is None or passed):   # no key in the range passes its floor: none read
             # a count filter keeps few of the groups it reads: read a full page each time (one request per
             # range, sized to the range, measured slower: 65,535 groups 3.7 s vs 10,000 in 0.4 s)
             size = per_page if filtered else per_page - len(kept)
@@ -2529,7 +2578,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     # (a later nested cursor page goes straight to its page: it reads none of the probe's counts)
     n_works, cards = (_probe(levels, index_name, connection, base_query, deadline)
                       if (nested and any(lv.kind == "terms" for lv in levels)
-                          and oqo.cursor in (None, "*")) else (None, {}))
+                          and (oqo.cursor is None or (oqo.cursor == "*" and levels[0].own_check is None)))
+                      else (None, {}))
     _cap_cards(cards, {lv.index: len(lv.kept_keys()) for lv in levels if lv.include is not None})
 
     # no sort asked: a single split by year reads oldest first (D4, oxjob #1555); the
@@ -2570,7 +2620,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     # same shards for the same query, so approximate counts repeat exactly
     pref = clean_preference(json.dumps(oqo.to_dict(), sort_keys=True))
     own = levels[0].own_check if levels else None
-    own_complete, own_estimate = False, None   # the page view's: every group checked; about how many pass
+    # the page view's: every group checked; about how many groups pass; nested, about how many rows they hold
+    own_complete, own_estimate, own_rows = False, None, None
     if own is not None and cursor is None and not _lists_in_order(levels[0], eff_sort, measures):
         # its groups are found in the page's order a list at a time: by count or by key, not by a calculation
         raise _both_sides_too_big(levels[0], own.n_own, own.n_keys, why="sort")
@@ -2579,9 +2630,12 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         """A nested split too big for one answer pages instead, when it can (oxjob #1598); else the refusal."""
         if not _pages_instead(e, levels, measures, sort, cursor):
             raise e
-        return _nested_big(oqo, levels, measures, m_aggs, index_name=index_name, connection=connection,
+        body = _nested_big(oqo, levels, measures, m_aggs, index_name=index_name, connection=connection,
                            base_query=base_query, per_page=per_page, page=page, sort=sort, deadline=deadline,
                            n_works=n_works, cards=cards, groups=e.groups, summary_only=summary_only)
+        if own is not None and cursor is None and not own_complete:
+            body["summary"]["splits"][0]["more_groups"] = True   # its groups past the list were never checked
+        return body
 
     # Everything that can refuse a nested split as too big for one answer (a split past 10,000 groups,
     # combinations past 65,536, an estimate past the deadline, too many buckets, a full count-filtered
@@ -2623,20 +2677,35 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 comp["after"] = {"k": after}
             lv.agg = {"composite": comp}
             lv.composite = True
+        if own is not None and nested and not _nested_pages_ok(levels, measures, sort, cursor):
+            raise _both_sides_too_big(levels[0], own.n_own, own.n_keys, nested=True)   # before seconds of work
         if own is not None and cursor is None:
             # both sides too big to list (oxjob #1598): the page's groups are the works' first groups in its order
-            # whose own record passes, read through a terms filter on them; how many pass in all is estimated
+            # whose own record passes, read through a terms filter on them; how many pass in all is estimated (and,
+            # nested, how many rows each holds)
             from concurrent.futures import ThreadPoolExecutor
             lv0 = levels[0]
             with ThreadPoolExecutor(1) as ex:   # the estimate (~1 s) needs none of the list: read both at once
-                estimating = ex.submit(_own_estimate, lv0, own, base_query, index_name, connection, deadline)
+                estimating = ex.submit(_own_estimate, lv0, own, base_query, index_name, connection, deadline,
+                                       levels[1:])
                 first, own_complete = _own_first_keys(lv0, own, base_query, index_name, connection, deadline,
-                                                      page * per_page, sort_measure, pref)
-                own_estimate = len(first) if own_complete else max(len(first), estimating.result())
+                                                      page * per_page, _level_order(lv0, sort) if nested
+                                                      else sort_measure, pref)
+                est, per_group = estimating.result()
+                own_estimate = len(first) if own_complete else max(len(first), est)
             if len(first) <= (page - 1) * per_page and not own_complete:
                 raise _both_sides_too_big(lv0, own.n_own, own.n_keys, why="deep")
             lv0.include = set(first)
             lv0.works_filters.append({"terms": {lv0.agg["terms"]["field"]: first or ["__none__"]}})
+            if nested:
+                cards[0] = own_estimate
+                own_rows = round(own_estimate * per_group) if per_group is not None else None
+        if own is not None and nested:
+            # past one answer's limits by construction (the works hold more than 250,000 of its groups): it pages,
+            # the page from the groups found above, a cursor page walking the smaller side (`_cursor_page`)
+            e = _both_sides_too_big(levels[0], own.n_own, own.n_keys, nested=True)
+            e.too_big, e.groups = True, own_rows
+            raise e
         if nested and levels[0].kind == "terms" and levels[0].selector is not None \
                 and levels[0].split.where is not None and _min_doc_count(levels[0].split.where) > 1 \
                 and (n_works is None or n_works < PARTITION_MIN_WORKS):
@@ -3163,8 +3232,10 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                 elif n > LOOKUP_LIMIT:
                     # as the run does it: one split checks its groups as they are read (oxjob #1598), in an order
                     # ES lists them in
-                    as_read = n_keys is not None and not nested and lv.kind == "terms"
-                    in_order = oqo.cursor is not None or _lists_in_order(lv, oqo_sort, list(oqo.calculate))
+                    as_read = n_keys is not None and lv.kind == "terms" and (not nested or lv.index == 0)
+                    in_order = (_nested_pages_ok(levels, list(oqo.calculate) or [Measure("count")], oqo_sort,
+                                                 oqo.cursor) if nested
+                                else oqo.cursor is not None or _lists_in_order(lv, oqo_sort, list(oqo.calculate)))
                     if as_read and in_order:
                         est += EST_OWN_CHECK_S
                         calls += 3
