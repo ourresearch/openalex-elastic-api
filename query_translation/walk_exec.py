@@ -40,6 +40,11 @@ MAX_SET_IDS = 450_000        # ids in one filter: about 16 MB of request, about 
 LISTED_MAX = 100             # each of up to this many things can be split further
 EXACT_COUNT_MAX = 2_000_000  # distinct counts are exact up to this many (about 10 s)
 EST_THINGS_PER_S = 36_000
+# a walk that ends at the things (listed, checked against their own records, counted: `get authors where h-index is
+# above 20 who published works where ...; then, summarize all those authors`) reads no works back: 385,505 / 665,546 /
+# 963,979 AI authors in 4.3 / 5.3 / 8.3 s in-process from desk (2026-10-30, oxjob #1598); 36,000 a second called them
+# 11-27 s and refused them
+EST_LISTED_PER_S = 110_000
 EST_IDS_PER_S = 140_000
 EST_FILTER_IDS_PER_S = 100_000
 EST_OVERHEAD_S = 0.6
@@ -389,11 +394,12 @@ def plan_walk(oqo: OQO, ctx: Ctx, need_keys: bool = True) -> Tuple[str, dict]:
             plan["keys"] = list_keys(ctx, base, field, n, f"listing the {plural(entity)}")
             return "things", plan
         searched = any(A._tree_has_search(f) for f in oqo.filter_rows)
-        est = (EST_OVERHEAD_S + n / EST_THINGS_PER_S
+        rate = EST_THINGS_PER_S if back is not None else EST_LISTED_PER_S
+        est = (EST_OVERHEAD_S + n / rate
                + (math.ceil(n / LIST_PART / INFLIGHT) * A.EST_CALL_SEARCH_SET_S
                   if searched else 0))
         _over_budget(est, f"walks to about {n:,} {plural(entity)} (a walk handles about "
-                          f"{EST_THINGS_PER_S:,} a second)",
+                          f"{rate:,} a second)",
                      f"Narrow the starting works (a shorter year range, a smaller "
                      f"institution or topic), or filter the {plural(entity)} as you walk "
                      f"to them (get each {singular(entity)} of those works where ...).")
@@ -674,7 +680,7 @@ def check(oqo: OQO, connection) -> dict:
                 est += n / 200_000
                 calls += math.ceil(n * 1.15 / LIST_PART)
         else:
-            est += n / EST_THINGS_PER_S
+            est += n / (EST_THINGS_PER_S if back is not None else EST_LISTED_PER_S)   # as the run's plan_walk
             size = max(1_000, min(PART_THINGS, math.ceil(max(n, 1) / INFLIGHT)))
             calls += (math.ceil(n * 1.15 / LIST_PART) + math.ceil(n / size) + 1
                       + (math.ceil(n / 10_000) if out.where is not None else 0))

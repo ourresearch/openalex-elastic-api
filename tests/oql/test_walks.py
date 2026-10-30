@@ -256,3 +256,29 @@ def test_cooccurrence_only_on_its_own_things():
     r = _v({"get_rows": "works", "filter_rows": [{"column_id": "co_author",
                                                   "value": "A5026692680"}]})
     assert not r.valid and r.errors[0].type == "invalid_column"
+
+
+@pytest.mark.parametrize("q,n,refused", [
+    # a walk that ends at the things (listed, checked, counted): measured 385,505-963,979 authors in 4.3-8.3 s
+    ("get authors where h-index is above 20 who published works where year > (2020); then, summarize all those "
+     "authors using count", 900_000, False),
+    ("get authors where h-index is above 20 who published works where year > (2020); then, summarize all those "
+     "authors using count", 1_200_000, True),
+    # one that walks back to the things' works keeps the old speed
+    ("get works where year > (2020); then get each author of those works where h-index > (20); then get all that "
+     "author's works; then summarize using count", 900_000, True),
+])
+def test_a_walk_is_timed_at_its_measured_speed(monkeypatch, q, n, refused):
+    # oxjob #1598, 2026-10-30: 36,000 things a second called a 385,505-author walk 11 s and refused it; it runs in 4.3
+    from query_translation import analytics as A
+    from query_translation.oql_parser import parse_either
+    monkeypatch.setattr(W, "count_distinct", lambda *a, **k: n)
+    monkeypatch.setattr(W, "list_keys", lambda *a, **k: [])
+    monkeypatch.setattr(W, "narrow", lambda *a, **k: [])
+    ctx = W.Ctx("test", A.Deadline())
+    if refused:
+        with pytest.raises(A.AnalyticsError) as e:
+            W.plan_walk(parse_either(q), ctx)
+        assert e.value.code == "query_too_slow"
+    else:
+        W.plan_walk(parse_either(q), ctx)
