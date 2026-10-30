@@ -642,9 +642,14 @@ class OQO:
         """True when the OQO runs in analytics.py: what the pipeline language says,
         except an author's record by place and years, which is one filter on a plain
         list (oxjob #1617: `get authors in [Brazil](BR) since 2022 where ...`)."""
+        return self.calculates or any(has_query_value(f) or has_relation_leaf(f) for f in self.filter_rows)
+
+    @property
+    def calculates(self) -> bool:
+        """A calculation, a split or a walk: not a list, whatever its filters hold (a set in parentheses
+        resolves to ids and leaves a list a list: oxjob #1930)."""
         return (bool(self.calculate) or any(not g.is_plain for g in self.group_by)
-                or bool(self.walks) or self.each
-                or any(has_query_value(f) or has_relation_leaf(f) for f in self.filter_rows))
+                or bool(self.walks) or bool(self.each))
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}

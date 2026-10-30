@@ -150,8 +150,13 @@ def register_extensions(app):
     # oxjob #1682: http_compress asks ES for gzip. Elastic Cloud bills every response byte
     # as data out (~16 TB/day, 99% of it search responses to this app); gzip cuts it ~6x.
     # Measured from a dyno: 25-result pages unchanged, 100-200-result pages +~20 ms.
-    connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True)
-    connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True)
+    # oxjob #1930: 24 connections a worker (the client's default 10 blocks past them). A set's reference lists are
+    # read shard by shard, 24 single-shard requests in flight (KU's 29,137 works since 2020: 1.7-2.7 s; 4.2 s with
+    # 10). A gunicorn worker serves one request at a time, so the pool only opens what that request uses.
+    connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True,
+                                  connections_per_node=24)
+    connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True,
+                                  connections_per_node=24)
     if settings.ES_VECTOR_SEARCH_URL:
         connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=7, http_compress=True)
     cache.init_app(app)

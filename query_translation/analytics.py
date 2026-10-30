@@ -103,6 +103,7 @@ class Deadline:
         self.end = self.start + seconds
         self.calls = 0
         self.log: List[dict] = []     # one entry per ES call: what, ms since start
+        self.routes: List[tuple] = []  # big id filters placed by shard, kept for the query (oxjob #1930)
         self._last = self.start
 
     def remaining(self) -> float:
@@ -111,12 +112,14 @@ class Deadline:
     def elapsed_ms(self) -> int:
         return int((time.monotonic() - self.start) * 1000)
 
-    def timeout(self, what: str) -> float:
-        """The request timeout for the next ES call; logs the step."""
+    def timeout(self, what: str, count: bool = True) -> float:
+        """The request timeout for the next ES call; logs the step. `count` False: the caller counts the call
+        itself (a request to a few shards, priced as the unrouted plan would have been: oxjob #1930)."""
         left = self.remaining()
         if left <= 0.25:
             raise too_slow(what)
-        self.calls += 1
+        if count:
+            self.calls += 1
         self.mark(what)
         return left
 
@@ -983,16 +986,50 @@ def survivors_lookup(lv: Level, parts: List, keys: List[str], deadline: Deadline
 # ---------------------------------------------------------------------------
 # Running
 # ---------------------------------------------------------------------------
-def _search(index, connection, body, deadline: Deadline, what: str, **params) -> dict:
+def _search(index, connection, body, deadline: Deadline, what: str, count: bool = True, **params) -> dict:
+    """One search under the query's deadline. `count` False: the caller prices the call itself (#1930)."""
+    import settings
     from elasticsearch_dsl.connections import get_connection
-    from query_translation import id_split
+    from query_translation import id_split, shard_route
     es = get_connection(connection)
 
-    def one(b):
-        return es.search(index=index, body=b, request_timeout=deadline.timeout(what), **params)
+    def one(b, target=None, shards=None):
+        # a routed piece asks only `shards`; a pinned preference string (pages read the same copies) follows it
+        extra = params
+        if shards:
+            extra = dict(params, preference=f"{shards}|{params['preference']}" if params.get("preference")
+                         else shards)
+        return es.search(index=target or index, body=b, **extra,
+                         request_timeout=deadline.timeout(what, count=count and shards is None))
+
+    def route(field, clause):
+        # work ids: each piece asks only the shards that hold its ids (#1930), priced as the unrouted pieces. One
+        # query's requests share the filter's lists, so the ids are placed once a query.
+        if field != "id" or index != settings.WORKS_INDEX or str(params.get("preference", "")).startswith("_"):
+            return None
+        key = id_split.chunk_lists(clause)
+        got = next((g for k, g in deadline.routes if len(k) == len(key) and all(a is b for a, b in zip(k, key))),
+                   False)
+        if got is False:
+            got = shard_route.pieces(es, index, id_split._values(clause), id_split.ROUTE_PIECES)
+            deadline.routes.append((key, got))
+        if got:
+            deadline.calls += id_split.unrouted_pieces(sum(map(len, key)))
+        return got
     try:
         # a big id filter (a set in parentheses) runs in pieces side by side (#1617)
-        return id_split.search(one, body) or one(body)
+        got = id_split.search(one, body, route=route)
+        if got is not None:
+            return got
+        n = id_split.id_terms(body)
+        if n > id_split.WHOLE_MAX_IDS:
+            # a request that can't be split (a median, a nested split, a negated set) sends every id to every shard
+            raise AnalyticsError(
+                "query_too_slow",
+                f"This calculation sends about {n:,} works from a set in parentheses to every shard at once; that "
+                f"holds up to {id_split.WHOLE_MAX_IDS:,} to stay inside about {int(TIME_BUDGET_S)} seconds.",
+                "Narrow the query in parentheses, or calculate counts, sums and means, which run in pieces.")
+        return one(body)
     except ConnectionTimeout:
         raise too_slow(what)
     except TransportError as e:
@@ -1449,17 +1486,17 @@ def _id_names(keys: List, connection) -> Optional[Dict]:
         if idx is None:
             return None
         by_index.setdefault(idx, []).append(k)
+    from query_translation.id_split import _pmap
     es = get_connection(connection)
-    names: Dict = {}
-    for idx, ks in by_index.items():
-        for start in range(0, len(ks), 1000):
-            chunk = ks[start:start + 1000]
-            res = es.search(index=idx, body={
-                "size": len(chunk), "_source": ["id", "display_name"],
-                "query": {"terms": {"id": chunk}}}, request_timeout=3)
-            for h in res["hits"]["hits"]:
-                names[h["_source"]["id"]] = h["_source"].get("display_name")
-    return names
+    chunks = [(idx, ks[start:start + 1000]) for idx, ks in by_index.items() for start in range(0, len(ks), 1000)]
+
+    def one(job):
+        idx, chunk = job
+        res = es.search(index=idx, body={"size": len(chunk), "_source": ["id", "display_name"],
+                                         "query": {"terms": {"id": chunk}}}, request_timeout=3)
+        return [(h["_source"]["id"], h["_source"].get("display_name")) for h in res["hits"]["hits"]]
+    # side by side (#1930): a CSV page's 10,000 sources took 4.6 s named 1,000 at a time in turn
+    return {k: v for got in _pmap(one, chunks) for k, v in got}
 
 
 def _bucket_rows(lv: Level, agg: dict) -> List[Tuple[str, dict]]:

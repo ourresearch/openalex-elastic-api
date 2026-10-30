@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple
 from elasticsearch_dsl import Q
 
 from query_translation import analytics as A
-from query_translation.id_split import INFLIGHT, PIECE_KEYS, _pmap, _terms, piece_full
+from query_translation.id_split import INFLIGHT, PIECE_KEYS, WHOLE_MAX_IDS, _pmap, _terms, piece_full
 from query_translation.oqo import (
     OQO, RELATION_COLUMNS, BranchFilter, GroupBy, LeafFilter, Measure, has_query_value,
     has_relation_leaf, result_entity)
@@ -36,7 +36,7 @@ from query_translation.walks import entity_for_link, link_for, plural, singular
 
 PART_THINGS = 25_000         # things per aggregation call in a per-thing walk
 LIST_PART = 50_000           # keys per listing call (under the 65,536-bucket cap)
-MAX_SET_IDS = 450_000        # ids in one filter: about 16 MB of request, about 5 s
+MAX_SET_IDS = WHOLE_MAX_IDS  # ids in one filter: about 16 MB of request, about 5 s
 LISTED_MAX = 100             # each of up to this many things can be split further
 EXACT_COUNT_MAX = 2_000_000  # distinct counts are exact up to this many (about 10 s)
 EST_THINGS_PER_S = 36_000
@@ -48,6 +48,15 @@ EST_LISTED_PER_S = 110_000
 EST_IDS_PER_S = 140_000
 EST_FILTER_IDS_PER_S = 100_000
 EST_OVERHEAD_S = 0.6
+# works cited by a set (oxjob #1930): read from the set's own reference lists, shard by shard, then filtered with each
+# shard asked only for its own ids (shard_route). KU's 29,137 works since 2020 hold 1.2M references to 647,203 works:
+# read in 1.7-2.7 s (24 in flight), filtered and split by source in 1.4 s, in-process from desk (2026-10-30)
+MAX_CITED_IDS = 1_000_000      # cited works one query holds: about 80 MB of ids in a 1 GB dyno's worker
+READ_REFS_MAX = 3_000_000      # references read from the set's works (Michigan's 5.4M: 4.7 s and 200 MB, too much)
+EST_REFS_READ_PER_S = 500_000
+EST_ROUTED_IDS_PER_S = 450_000
+READ_INFLIGHT = 24             # single-shard requests (app.py's pools hold 24 connections)
+_WORK = A.ID_PREFIX + "W"
 
 
 class IdSet:
@@ -100,11 +109,12 @@ def _over_budget(seconds: float, what: str, fix: str):
 # Context: one per executed query
 # ---------------------------------------------------------------------------
 class Ctx:
-    def __init__(self, connection, deadline: A.Deadline):
+    def __init__(self, connection, deadline: A.Deadline, lists: bool = False):
         from works.fields import fields_dict
         import settings
         self.connection = connection
         self.deadline = deadline
+        self.lists = lists      # the query lists its works (no calculation): its sets keep the older limit
         self.works_fields = fields_dict
         self.works_index = settings.WORKS_INDEX
 
@@ -144,7 +154,7 @@ def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
               map_hint: bool = False) -> List:
     """Every distinct value of `field` in the works `query` matches, in hash
     partitions of about 50,000 listed side by side (each partition one call)."""
-    parts = max(1, math.ceil(est * 1.15 / LIST_PART))
+    parts = _list_parts(est)
 
     def one(i):
         terms = {"field": field, "size": PIECE_KEYS,
@@ -321,7 +331,21 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
     if leaf.column_id == "cited_by":
         # works cited by the set's works: their references
         works_q = _set_works_query(inner, ctx)
+        refs = _references(ctx, works_q, what) if _reads(ctx) else None
+        seconds = _read_seconds(refs)
+        if seconds is not None:
+            _over_budget(EST_OVERHEAD_S + seconds, f"reads the {refs:,} references of the set in parentheses",
+                         "Narrow the query in parentheses (a shorter year range, a smaller institution or topic).")
+            ids = read_cited(ctx, works_q, what)
+            return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by"), "in", leaf.is_negated)
         est = count_distinct(ctx, works_q, "referenced_works", what)
+        if est > MAX_SET_IDS and refs is not None:
+            raise A.AnalyticsError(
+                "query_too_slow",
+                f"This query needs about {est:,} works the set in parentheses cites, from {refs:,} references; a "
+                f"calculation reads up to {READ_REFS_MAX:,} references naming up to {MAX_CITED_IDS:,} works, to stay "
+                f"inside about {int(A.TIME_BUDGET_S)} seconds.",
+                "Narrow the query in parentheses (a shorter year range, a smaller institution or topic).")
         if est > MAX_SET_IDS:
             raise _too_big("needs the {n} works the set in parentheses cites", est,
                            MAX_SET_IDS,
@@ -335,6 +359,85 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
     ids = resolve_result_ids(inner, ctx, what)
     column = leaf.column_id
     return LeafFilter(column, IdSet(ids, label, column), "in", leaf.is_negated)
+
+
+# The works a set cites, read shard by shard (oxjob #1930): one rule for the run (_resolve_leaf) and the free check.
+def _reads(ctx: Ctx) -> bool:
+    """A calculation on a routable works index reads a set's references; a list runs its filter whole, in one
+    request to every shard, so its sets keep the older limit and listing."""
+    from elasticsearch_dsl.connections import get_connection
+    from query_translation import shard_route
+    return not ctx.lists and shard_route.routing(get_connection(ctx.connection), ctx.works_index) is not None
+
+
+def _read_seconds(refs: Optional[int]) -> Optional[float]:
+    """The estimate for reading `refs` references and filtering on the works they name; None past READ_REFS_MAX
+    (or with no count: the set is listed the older way)."""
+    if refs is None or refs > READ_REFS_MAX:
+        return None
+    return refs / EST_REFS_READ_PER_S + refs / EST_ROUTED_IDS_PER_S
+
+
+def _cited_counts(ctx: Ctx, works_q: dict) -> Tuple[int, int]:
+    """(about how many works the set cites, how many references its works hold): one call, for the free check."""
+    r = ctx.search({"size": 0, "query": works_q, "aggs": {
+        "n": {"cardinality": {"field": "referenced_works", "precision_threshold": 40000}},
+        "refs": {"sum": {"field": "referenced_works_count"}}}}, "counting the set's references")
+    return int(r["aggregations"]["n"]["value"]), int(r["aggregations"]["refs"]["value"] or 0)
+
+
+def _references(ctx: Ctx, works_q: dict, what: str) -> int:
+    r = ctx.search({"size": 0, "query": works_q, "aggs": {"refs": {"sum": {"field": "referenced_works_count"}}}},
+                   what)
+    return int(r["aggregations"]["refs"]["value"] or 0)
+
+
+def _list_parts(n: int) -> int:
+    """Calls listing n keys in hash partitions (list_keys), which reading a set's references is priced as."""
+    return max(1, math.ceil(n * 1.15 / LIST_PART))
+
+
+def read_cited(ctx: Ctx, works_q: dict, what: str) -> List[str]:
+    """The works the set's works cite, read from their own reference lists, one shard at a time, READ_INFLIGHT in
+    flight; references are kept as numbers (W123 -> 123) to keep the worker small."""
+    import numpy as np
+    from elasticsearch_dsl.connections import get_connection
+    from query_translation import shard_route
+    index, shards, _ = shard_route.routing(get_connection(ctx.connection), ctx.works_index)
+    query = _and(works_q, {"exists": {"field": "referenced_works"}})
+    cut = len(_WORK)
+    others: set = set()
+
+    def shard(k):
+        nums, after = [], None
+        while True:
+            body = {"size": 10_000, "query": query, "sort": [{"id": "asc"}], "track_total_hits": False,
+                    "_source": ["referenced_works"]}
+            if after:
+                body["search_after"] = after
+            hits = A._search(index, ctx.connection, body, ctx.deadline, what, count=False,
+                             preference=f"_shards:{k}", filter_path="hits.hits._source,hits.hits.sort")
+            hits = (hits.get("hits") or {}).get("hits") or []
+            for h in hits:
+                refs = h["_source"].get("referenced_works") or ()
+                got = [int(x) for x in (w[cut:] for w in refs if w.startswith(_WORK)) if x.isdigit()]
+                if len(got) < len(refs):
+                    others.update(w for w in refs if not (w.startswith(_WORK) and w[cut:].isdigit()))
+                nums.extend(got)
+            if len(hits) < 10_000:
+                return np.unique(np.asarray(nums, dtype=np.int64))
+            after = hits[-1]["sort"]
+    cited = np.unique(np.concatenate(_pmap(shard, range(shards), inflight=READ_INFLIGHT)))
+    n = len(cited) + len(others)
+    if n > MAX_CITED_IDS:
+        raise _too_big("needs the {n} works the set in parentheses cites", n, MAX_CITED_IDS,
+                       "Narrow the query in parentheses (a shorter year range, a smaller institution or topic).")
+    ctx.deadline.calls += _list_parts(n)   # priced as the listing it replaces
+    out: List[str] = []
+    for i in range(0, len(cited), 100_000):   # in slices: a million Python ints at once is ~40 MB
+        out.extend(_WORK + str(x) for x in cited[i:i + 100_000].tolist())
+    out.extend(sorted(others))
+    return out
 
 
 def _set_works_query(inner: OQO, ctx: Ctx) -> dict:
@@ -443,7 +546,7 @@ def _core_filter(oqo: OQO, ctx: Ctx) -> Optional[dict]:
 def prepare(oqo: OQO, connection, deadline: A.Deadline) -> Tuple[str, object]:
     """Resolve an OQO's sets and walks. Returns ("oqo", an OQO the works path runs as
     is) or ("body", a finished response body)."""
-    ctx = Ctx(connection, deadline)
+    ctx = Ctx(connection, deadline, lists=not oqo.calculates)
     back = next((w for w in oqo.walks if w.to is not None), None)
     out = next((w for w in oqo.walks if w.to is None), None)
     if back is None and not oqo.calculate and out is not None:
@@ -616,16 +719,19 @@ def check(oqo: OQO, connection) -> dict:
     """The free `/query` check for walks and sets: limits with their fixes, the time
     estimate against the budget, the price. One cheap count per walk or set (how
     many things or works it would list); never the walk itself."""
-    ctx = Ctx(connection, A.Deadline())
+    ctx = Ctx(connection, A.Deadline(), lists=not oqo.calculates)
     limits: List[dict] = []
     est, calls, note = EST_OVERHEAD_S, 1, None
 
     def add_set(inner: OQO, column: str):
         nonlocal est, calls, note
+        limit, read = MAX_SET_IDS, None
         try:
             if column == "cited_by":
-                n = count_distinct(ctx, _works_query(inner, ctx), "referenced_works",
-                                   "counting the set's references")
+                n, refs = _cited_counts(ctx, _works_query(inner, ctx))
+                read = _read_seconds(refs) if _reads(ctx) else None   # as the run's _resolve_leaf
+                if read is not None:
+                    limit = MAX_CITED_IDS
             elif result_entity(inner) == "works" and not inner.walks:
                 n = ctx.search({"size": 0, "track_total_hits": True,
                                 "query": _works_query(inner, ctx)},
@@ -641,9 +747,9 @@ def check(oqo: OQO, connection) -> dict:
             limits.append(e.to_dict())
             return
         calls += 2 + math.ceil(n / 10_000) + 1     # year split, pages, no-year, count
-        est += n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S
-        if n > MAX_SET_IDS:
-            limits.append(_too_big("uses a set of {n} ids", n, MAX_SET_IDS,
+        est += read if read is not None else n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S
+        if n > limit:
+            limits.append(_too_big("uses a set of {n} ids", n, limit,
                                    "Narrow the query in parentheses (a shorter year range, a "
                                    "smaller institution or topic), or save the set as a "
                                    "collection.").to_dict())

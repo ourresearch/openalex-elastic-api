@@ -34,7 +34,7 @@ def test_small_filters_and_hits_run_whole():
     assert S.plan(small) is None
     assert S.plan(body(size=10)) is None
     assert S.plan(body(sort=[{"id": "asc"}])) is None
-    assert S.plan(body({"m": {"avg": {"field": "fwci"}}})) is None
+    assert S.plan(body({"m": {"percentiles": {"field": "fwci", "percents": [50]}}})) is None
     assert S.plan(body({"s0": {"terms": {"field": "type", "min_doc_count": 5}}})) is None
     nested = {"s0": {"terms": {"field": "publication_year"},
                      "aggs": {"s1": {"terms": {"field": "type"}}}}}

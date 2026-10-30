@@ -8,12 +8,17 @@ for the split in all (works-v38, 72 shards; #1617 EXPLORE.md "Where the time goe
 
 The pieces' answers add up exactly when each piece answers in full, so a request is
 split only when every aggregation in it merges exactly: counts, sums, mins, maxes,
-filters, and one level of `terms` on a field a work holds once (a piece of PIECE_IDS
-works then lists at most PIECE_IDS keys, under PIECE_KEYS, so it answers in full). A
-`cardinality` becomes the number of distinct keys the pieces list: exact, not ES's
-estimate. Anything else (hits, sorts, means, medians, nested `terms`, fields a work
-holds many of) runs as one request, as before. A call already running in one of
-_pmap's threads isn't split, so no more than INFLIGHT calls are in flight.
+means (a sum and a count in each piece), filters, and one level of `terms` on a field a
+work holds once (a piece of PIECE_IDS works then lists at most PIECE_IDS keys, under
+PIECE_KEYS, so it answers in full). A `cardinality` becomes the number of distinct keys
+the pieces list: exact, not ES's estimate. A `composite` page (a cursor page of groups)
+splits too: every piece pages from the same after-key (_merge_composite). Anything else
+(hits, sorts, medians, nested `terms`, fields a work holds many of) runs as one request,
+as before. A call already running in one of _pmap's threads isn't split, so no more
+than INFLIGHT calls are in flight.
+
+Work ids are split by the shard that holds them when the caller can say (routed_plan,
+shard_route; oxjob #1930): each piece then asks only those shards.
 """
 import math
 import threading
@@ -24,6 +29,9 @@ INFLIGHT = 8             # calls in flight (measured safe on production, 2026-10
 SPLIT_MIN_IDS = 40_000   # below this the filter is cheap (100K author ids: 0.9 s)
 PIECE_IDS = 40_000       # about this many ids a piece
 PIECE_KEYS = 65_000      # keys one terms request lists (under the 65,536-bucket cap)
+WHOLE_MAX_IDS = 450_000  # work ids one request may send to every shard (#1617's limit for a set in parentheses)
+ROUTE_PIECES = 24        # routed pieces (#1930): each asks 3 of works' 72 shards for their own ids; KU's 647,203
+                         # cited works split by source, 8 in flight: 1.40 s (8 pieces 1.46, 72 pieces 1.61)
 
 # Works fields a work holds at most once. shortcut: a prefix list, not the registry;
 # a field missing here only runs whole (as before), never wrong.
@@ -32,6 +40,7 @@ SINGLE_VALUED = ("publication_year", "publication_date", "type", "language",
                  "cited_by_count", "fwci", "citation_normalized_percentile.", "is_", "has_")
 
 _METRICS = ("value_count", "sum", "min", "max")
+_SUM, _N = "__sum", "__n"   # a mean's two parts in a piece
 _local = threading.local()
 
 
@@ -157,6 +166,11 @@ def _piece_aggs(aggs: Dict[str, dict], inside_terms: bool = False) -> Dict[str, 
         spec = a[kind]
         if kind in _METRICS:
             out[name] = {kind: spec}
+        elif kind == "avg":
+            # a mean is its sum over its count of values: both add up across pieces (#1930)
+            if set(spec) != {"field"}:
+                raise Whole()
+            out[name + _SUM], out[name + _N] = {"sum": spec}, {"value_count": spec}
         elif kind == "cardinality":
             if inside_terms or set(spec) - {"field", "precision_threshold"} \
                     or not spec["field"].startswith(SINGLE_VALUED):
@@ -167,6 +181,16 @@ def _piece_aggs(aggs: Dict[str, dict], inside_terms: bool = False) -> Dict[str, 
             out[name] = {kind: spec}
             if sub:
                 out[name]["aggs"] = _piece_aggs(sub, inside_terms)
+        elif kind == "composite":
+            # a cursor page of keys (#1930): each piece pages from the same after-key; see _merge_composite
+            sources = spec.get("sources") or []
+            if inside_terms or set(spec) - {"size", "sources", "after"} or not sources or any(
+                    len(src) != 1 or set(next(iter(src.values()))) != {"terms"}
+                    or set(next(iter(src.values()))["terms"]) - {"field"} for src in sources):
+                raise Whole()
+            out[name] = {kind: spec}
+            if sub:
+                out[name]["aggs"] = _piece_aggs(sub, True)
         elif kind == "terms":
             if inside_terms or set(spec) - {"field", "size", "shard_size", "include",
                                             "exclude", "order", "min_doc_count",
@@ -176,7 +200,7 @@ def _piece_aggs(aggs: Dict[str, dict], inside_terms: bool = False) -> Dict[str, 
                 raise Whole()
             for key, _dir in _order(spec):
                 if key not in ("_count", "_key") and _kind_sub(sub.get(key) or {"": 0})[0] \
-                        not in _METRICS:
+                        not in _METRICS + ("avg",):
                     raise Whole()
             t = {k: v for k, v in spec.items() if k not in ("size", "shard_size", "order")}
             t["size"] = PIECE_KEYS
@@ -188,8 +212,9 @@ def _piece_aggs(aggs: Dict[str, dict], inside_terms: bool = False) -> Dict[str, 
     return out
 
 
-def plan(body: dict) -> Optional[List[dict]]:
-    """The pieces of `body`, or None when it should run whole."""
+def _target(body: dict):
+    """(the pieces' aggregations, path, clause, field, number of ids) of the id filter `body` splits on, or None
+    when it should run whole."""
     if body.get("size", 10) != 0 or set(body) - {"size", "query", "aggs", "track_total_hits"} \
             or getattr(_local, "in_pool", False):
         return None
@@ -198,20 +223,66 @@ def plan(body: dict) -> Optional[List[dict]]:
     except Whole:
         return None
     found = _id_filter(body.get("query") or {})
-    if found is None:
+    return None if found is None else (aggs, *found)
+
+
+def _piece(body: dict, aggs: dict, path, field: str, ids: List) -> dict:
+    piece = {"size": 0, "query": _replace(body["query"], path, _terms(field, ids))}
+    if "track_total_hits" in body:
+        piece["track_total_hits"] = body["track_total_hits"]
+    if aggs:
+        piece["aggs"] = aggs
+    return piece
+
+
+def unrouted_pieces(n_ids: int) -> int:
+    return min(INFLIGHT, math.ceil(n_ids / PIECE_IDS))
+
+
+def pieces(body: dict, route=None) -> Optional[List[Tuple[dict, tuple]]]:
+    """[(piece, run_one's extra arguments)] of `body`, or None when it should run whole. `route(field, clause)`
+    (oxjob #1930) may answer (index, [(shards, ids)]) for a filter whose ids it can place by shard (work ids, by
+    ES's own routing): each piece then asks only those shards for only their ids, and runs with (index, shard
+    preference). The pieces split the ids either way, so they merge the same way."""
+    t = _target(body)
+    if t is None:
         return None
-    path, clause, field, n_ids = found
-    n = min(INFLIGHT, math.ceil(n_ids / PIECE_IDS))
+    aggs, path, clause, field, n_ids = t
+    got = route(field, clause) if route is not None else None
+    if got:
+        index, groups = got
+        return [(_piece(body, aggs, path, field, ids), (index, "_shards:" + ",".join(map(str, shards))))
+                for shards, ids in groups]
+    n = unrouted_pieces(n_ids)
     ids = _values(clause)
-    pieces = []
-    for i in range(n):
-        piece = {"size": 0, "query": _replace(body["query"], path, _terms(field, ids[i::n]))}
-        if "track_total_hits" in body:
-            piece["track_total_hits"] = body["track_total_hits"]
-        if aggs:
-            piece["aggs"] = aggs
-        pieces.append(piece)
-    return pieces
+    return [(_piece(body, aggs, path, field, ids[i::n]), ()) for i in range(n)]
+
+
+def plan(body: dict) -> Optional[List[dict]]:
+    """The unrouted pieces of `body`, or None when it should run whole."""
+    got = pieces(body)
+    return None if got is None else [p for p, _ in got]
+
+
+def chunk_lists(clause: dict) -> List[list]:
+    """The value lists of a terms filter (or an OR of them), the same objects on every request one query makes."""
+    if "terms" in clause:
+        return [next(iter(clause["terms"].values()))]
+    return [v for c in clause["bool"]["should"] for v in chunk_lists(c)]
+
+
+def id_terms(node) -> int:
+    """How many work ids the `terms` filters on `id` anywhere in a query hold (negated ones too)."""
+    n = 0
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == "terms" and isinstance(v, dict):
+                n += len(v["id"]) if isinstance(v.get("id"), list) else 0
+            elif isinstance(v, (dict, list)):
+                n += id_terms(v)
+    elif isinstance(node, list):
+        n += sum(id_terms(x) for x in node if isinstance(x, (dict, list)))
+    return n
 
 
 def _merge_aggs(spec: Dict[str, dict], results: List[dict]) -> dict:
@@ -220,6 +291,10 @@ def _merge_aggs(spec: Dict[str, dict], results: List[dict]) -> dict:
         kind, sub = _kind_sub(a)
         if kind == "cardinality":
             continue   # after its sibling terms
+        if kind == "avg":
+            n = sum(r[name + _N].get("value") or 0 for r in results)
+            out[name] = {"value": sum(r[name + _SUM].get("value") or 0 for r in results) / n if n else None}
+            continue
         got = [r[name] for r in results]
         if kind in ("value_count", "sum"):
             out[name] = {"value": sum(g.get("value") or 0 for g in got)}
@@ -234,6 +309,8 @@ def _merge_aggs(spec: Dict[str, dict], results: List[dict]) -> dict:
             merged = {k: {"doc_count": sum(g["buckets"][k]["doc_count"] for g in got),
                           **_merge_aggs(sub, [g["buckets"][k] for g in got])} for k in names}
             out[name] = {"buckets": merged if isinstance(first, dict) else list(merged.values())}
+        elif kind == "composite":
+            out[name] = _merge_composite(a["composite"], sub, got)
         else:   # terms
             out[name], n_keys[name] = _merge_terms(a["terms"], sub, got)
     for name, a in spec.items():
@@ -249,6 +326,27 @@ def _merge_aggs(spec: Dict[str, dict], results: List[dict]) -> dict:
                 raise Whole()
             keys.update(b["key"] for b in r[name]["buckets"])
         out[name] = {"value": len(keys)}
+    return out
+
+
+def _merge_composite(spec: dict, sub: Dict[str, dict], got: List[dict]) -> dict:
+    """One composite page from the pieces' pages (#1930). Every piece pages from the same after-key, so each of the
+    whole set's first `size` keys is in the page of every piece holding it (a key ranks no lower in a piece than in
+    the whole), and the merged first `size` keys, summed, are exactly the one request's page; keys past them may be
+    missing from some piece, so they are dropped. Sources are plain ascending terms (_piece_aggs), keys of one type."""
+    names = [next(iter(src)) for src in spec["sources"]]
+    by_key: Dict = {}
+    for g in got:
+        for b in g.get("buckets") or []:
+            by_key.setdefault(tuple(b["key"][n] for n in names), []).append(b)
+    keys = sorted(by_key)[:spec.get("size", 10)]
+    buckets = []
+    for k in keys:
+        bs = by_key[k]
+        buckets.append({"key": bs[0]["key"], "doc_count": sum(b["doc_count"] for b in bs), **_merge_aggs(sub, bs)})
+    out = {"buckets": buckets}
+    if buckets:
+        out["after_key"] = buckets[-1]["key"]   # as Elasticsearch: the last key of a non-empty page
     return out
 
 
@@ -306,13 +404,13 @@ def merge(body: dict, results: List[dict]) -> dict:
     return out
 
 
-def search(run_one, body: dict) -> Optional[dict]:
-    """Run `body` in pieces side by side through `run_one(piece_body)`; None when it
-    should run whole."""
-    pieces = plan(body)
-    if pieces is None:
+def search(run_one, body: dict, route=None) -> Optional[dict]:
+    """Run `body` in pieces side by side through `run_one(piece_body, *extra)` (see `pieces`); None when it should
+    run whole."""
+    got = pieces(body, route)
+    if got is None:
         return None
     try:
-        return merge(body, _pmap(run_one, pieces))
+        return merge(body, _pmap(lambda p: run_one(p[0], *p[1]), got))
     except Whole:
         return None
