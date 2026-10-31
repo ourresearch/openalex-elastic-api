@@ -337,10 +337,20 @@ def _groups_count(lv, aggs: dict) -> Optional[int]:
     if lv.include is not None:
         if not lv.kept_keys():
             return 0
+        if _held_whole(lv):
+            return len(lv.universe) - len(lv.dropped_keys())
         return len(present) if present is not None else None
     if lv.exclude:
         return max(0, n - len(present)) if present is not None and n is not None else None
     return n
+
+
+def _held_whole(lv) -> bool:
+    """The set's works were listed whole for the split's key set and the split keeps every group they hold that
+    the key set keeps (no own field pushed down to the works, no count floor, no check after the request): its
+    groups are the listed ones less the left-out ones, no count needed."""
+    return (lv.universe is not None and lv.include is not None and not lv.works_filters
+            and lv.selector is None and lv.post_keep is None)
 
 
 # ---------------------------------------------------------------------------
@@ -374,7 +384,9 @@ class Level:
     name_vocab: Optional[dict] = None          # codes sorted by name, not code (#1658)
     key_kind: str = "keyword"                  # how a terms split's keys compare: keyword | number | date
     own_check: Optional["OwnCheck"] = None     # own fields checked as groups are read: both sides too big (#1598)
+    universe: Optional[frozenset] = None       # every group the set's works hold, listed whole, kept only when most pass
     _kept: Optional[tuple] = field(default=None, repr=False, compare=False)
+    _dropped: Optional[tuple] = field(default=None, repr=False, compare=False)
 
     def kept_keys(self) -> Optional[List]:
         """The keys a key-set filter with an include list keeps, sorted (None without one). Sorted once per include
@@ -385,6 +397,17 @@ class Level:
         if self._kept is None or self._kept[0] is not self.include or self._kept[1] is not self.exclude:
             self._kept = (self.include, self.exclude, sorted(self.include - (self.exclude or set())))
         return self._kept[2]
+
+    def dropped_keys(self) -> Optional[List]:
+        """The groups the set's works hold that the key set leaves out, sorted, when the works' groups were listed
+        whole (`universe`): over these works (or fewer), excluding them keeps exactly the kept keys (a kept key no
+        work holds keeps nothing either way). None without them. Cached per kept list, as `kept_keys`."""
+        kept = self.kept_keys()
+        if kept is None or self.universe is None:
+            return None
+        if self._dropped is None or self._dropped[0] is not kept:
+            self._dropped = (kept, sorted(self.universe.difference(kept)))
+        return self._dropped[1]
 
     @property
     def floor(self) -> int:
@@ -397,9 +420,14 @@ class Level:
 
 
 def _keyset_terms(lv: "Level") -> dict:
-    """A split's key set as terms include / exclude (an empty include list keeps nothing)."""
+    """A split's key set as terms include / exclude (an empty include list keeps nothing). When the works' groups
+    were listed whole, the shorter of the kept and the left-out keys: CRISPR authors not at Harvard keep 67,505 of
+    68,484, and the outer listing took 3.3 s with them as include, 0.5 s with the 979 others as exclude (#1598)."""
     kept = lv.kept_keys()
     if kept is not None:
+        drop = lv.dropped_keys()
+        if drop is not None and len(drop) < len(kept):
+            return {"exclude": drop} if drop else {}
         return {"include": kept or ["__none__"]}
     return {"exclude": sorted(lv.exclude)} if lv.exclude else {}
 
@@ -695,6 +723,8 @@ class OwnCheck:
 OWN_CANDIDATES_FIRST = 2_000   # the page view checks the works' first groups in its order, this many at first,
 OWN_CANDIDATES_MAX = 20_000    # and at most this many (top 20,000 authors 1.2-3.9 s; 60,000 2.1-7.9 s, 2026-10-30)
 OWN_SAMPLE = 5_000             # own-side groups sampled to estimate how many pass
+OWN_TOP_LIFT = 4               # the works' first groups pass about this much more often than all of them (UCL authors in
+                               # Nature 16% vs 4%; Michigan's in works since 2020 2.2% vs 0.16%, 2026-10-30)
 
 
 def own_kept(own: OwnCheck, keys: List[str], connection, deadline: Deadline) -> set:
@@ -732,7 +762,15 @@ def _own_first_keys(lv: Level, own: OwnCheck, base_query: dict, index, connectio
     the list held every group the works hold."""
     field = lv.agg["terms"]["field"]
     query = _and(base_query, *lv.works_filters)
-    size, checked, kept = min(OWN_CANDIDATES_MAX, max(OWN_CANDIDATES_FIRST, 8 * needed)), 0, []
+
+    def size_for(rate: float, floor: int) -> int:
+        """A list long enough for needed + 1 passing groups at this pass rate, with a margin."""
+        return int(min(OWN_CANDIDATES_MAX, max(floor, (needed + 1) / max(rate, 1e-9) * 1.3)))
+    # a list costs about the same at 2,000 and 20,000 (the scan of the works dominates: 3.0 s each for Michigan's
+    # authors in 103M works), so a rare pass gets a long first list instead of a second round: the top of the list
+    # passes more often than the rest (OWN_TOP_LIFT)
+    size = size_for(OWN_TOP_LIFT * own.n_own / max(own.n_keys, 1), max(OWN_CANDIDATES_FIRST, 8 * needed))
+    checked, kept = 0, []
     while True:
         # listed as the main request lists them (plan_levels), so its counts and ties come out the same
         terms = {"field": field, **_list_shape(field, size, sort_measure)}
@@ -748,8 +786,7 @@ def _own_first_keys(lv: Level, own: OwnCheck, base_query: dict, index, connectio
         if len(kept) > needed or complete or size >= OWN_CANDIDATES_MAX \
                 or deadline.remaining() < PARTITION_RESERVE_S:
             return kept, complete
-        rate = max(len(kept), 1) / max(checked, 1)
-        size = int(min(OWN_CANDIDATES_MAX, max(2 * size, (needed + 1) / rate * 1.3)))
+        size = size_for(max(len(kept), 1) / max(checked, 1), 2 * size)
 
 
 def _own_estimate(lv: Level, own: OwnCheck, base_query: dict, index, connection, deadline: Deadline,
@@ -780,13 +817,13 @@ def _own_estimate(lv: Level, own: OwnCheck, base_query: dict, index, connection,
     return estimate, per * _cards_product([x for x in others if _small(x)], None)   # small splits: every group
 
 
-def _works_side_count(lv: Level, index, connection, base_query, deadline: Deadline) -> Optional[int]:
-    """About how many distinct groups the works have (a cardinality probe)."""
+def _works_side(lv: Level, index, connection, base_query, deadline: Deadline) -> Tuple[int, int]:
+    """(works in the set, about how many distinct groups they have): one cardinality probe."""
     field = lv.agg["terms"]["field"]
-    res = _search(index, connection, {"size": 0, "query": base_query, "aggs": {
+    res = _search(index, connection, {"size": 0, "track_total_hits": True, "query": base_query, "aggs": {
         "n": {"cardinality": {"field": field, "precision_threshold": 40_000}}}},
         deadline, "counting the groups the works have")
-    return res["aggregations"]["n"]["value"]
+    return res["hits"]["total"]["value"], res["aggregations"]["n"]["value"]
 
 
 # A split by a link each work has at most once (its primary source, its primary
@@ -917,8 +954,8 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
         # The smaller side (oxjob #1555): list the groups whose own fields match (UBC's
         # authors), or the groups the works have, checked against their own fields (the
         # kelp works' authors), whichever is fewer; loud when both are too many.
-        n_keys = (_works_side_count(lv, works_index, connection, base_query, deadline)
-                  if base_query is not None and lv.kind == "terms" else None)
+        n_works, n_keys = (_works_side(lv, works_index, connection, base_query, deadline)
+                           if base_query is not None and lv.kind == "terms" else (None, None))
         n_own = _count_entity_matches(lv, p, deadline)
         ids = None
         if (n_keys is None or n_own is None or n_own <= n_keys) and (n_own is None or n_own <= LOOKUP_LIMIT):
@@ -933,9 +970,15 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
             # list the works' groups and check their own fields side by side, as a walk does
             from query_translation import walk_exec as WX
             ctx = WX.Ctx(connection, deadline)
+            # the map hint skips the field's global ordinals, which a hash partition reads whole: CRISPR's 31K works
+            # 1.6-1.9 s a partition without it, 0.5 s with it; Nature's 449K works 1.8-2.6 vs 0.4-0.8 s (2026-10-30)
             keys = WX.list_keys(ctx, base_query, lv.agg["terms"]["field"], n_keys,
-                                "listing the groups the works have")
+                                "listing the groups the works have", map_hint=n_works < PARTITION_MIN_WORKS)
             ids = set(WX.narrow(ctx, lv.group_entity, keys, p))
+            if len(keys) - len(ids) < len(ids):
+                # most pass: keep the works' groups so the key set can go as the shorter exclude list (a later
+                # narrowing only lengthens it); when few pass, the include list is the shorter one already
+                lv.universe = frozenset(keys)
         if ids is None:
             if base_query is None or lv.kind != "terms":
                 deferred.append(p)
@@ -2613,11 +2656,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
 
     m_aggs = _measure_aggs(agg_measures, fields_dict)
     # (a later nested cursor page goes straight to its page: it reads none of the probe's counts)
-    n_works, cards = (_probe(levels, index_name, connection, base_query, deadline)
-                      if (nested and any(lv.kind == "terms" for lv in levels)
-                          and (oqo.cursor is None or (oqo.cursor == "*" and levels[0].own_check is None)))
-                      else (None, {}))
-    _cap_cards(cards, {lv.index: len(lv.kept_keys()) for lv in levels if lv.include is not None})
+    def probed() -> Tuple[int, Dict[int, int]]:
+        n, c = _probe(levels, index_name, connection, base_query, deadline)
+        _cap_cards(c, {lv.index: len(lv.kept_keys()) for lv in levels if lv.include is not None})
+        return n, c
+    # (a page view whose groups are checked as read probes beside those checks, below: 0.7 s of Michigan's 6 s)
+    n_works, cards = (probed() if nested and any(lv.kind == "terms" for lv in levels)
+                      and levels[0].own_check is None and oqo.cursor in (None, "*") else (None, {}))
 
     # no sort asked: a single split by year reads oldest first (D4, oxjob #1555); the
     # OQO's sort_by stays empty, since a default isn't the user's choice
@@ -2722,14 +2767,17 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             # nested, how many rows each holds)
             from concurrent.futures import ThreadPoolExecutor
             lv0 = levels[0]
-            with ThreadPoolExecutor(1) as ex:   # the estimate (~1 s) needs none of the list: read both at once
+            with ThreadPoolExecutor(2) as ex:   # the estimate (~1 s) needs none of the list: read both at once
                 estimating = ex.submit(_own_estimate, lv0, own, base_query, index_name, connection, deadline,
                                        levels[1:])
+                probing = ex.submit(probed) if nested else None
                 first, own_complete = _own_first_keys(lv0, own, base_query, index_name, connection, deadline,
                                                       page * per_page, _level_order(lv0, sort) if nested
                                                       else sort_measure, pref)
                 est, per_group = estimating.result()
                 own_estimate = len(first) if own_complete else max(len(first), est)
+                if probing is not None:
+                    n_works, cards = probing.result()
             if len(first) <= (page - 1) * per_page and not own_complete:
                 raise _both_sides_too_big(lv0, own.n_own, own.n_keys, why="deep")
             lv0.include = set(first)
@@ -2780,12 +2828,14 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 pass   # how many groups pass is the own check's estimate (the page view) or unknown (a cursor page)
             elif lv0.selector is None and lv0.post_keep is None and not lv0.all_groups:
                 # how many groups a single split has in all (approximate past 3,000), less
-                # what a key-set filter leaves out (all_groups counts its rows instead)
-                body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
-                                                            "precision_threshold": 3000}}
-                keyset = _keyset_count_agg(lv0, field0)
-                if keyset is not None:
-                    body["aggs"]["n_keyset"] = keyset
+                # what a key-set filter leaves out (all_groups counts its rows instead); a key set whose
+                # works were listed whole knows its groups already (`_held_whole`)
+                if not _held_whole(lv0):
+                    body["aggs"]["n_groups"] = {"cardinality": {"field": field0,
+                                                                "precision_threshold": 3000}}
+                    keyset = _keyset_count_agg(lv0, field0)
+                    if keyset is not None:
+                        body["aggs"]["n_keyset"] = keyset
             elif not lv0.composite and not lv0.paged_floor and not (
                     lv0.post_keep is None and _count_floor_only(lv0.split.where)):
                 # a calculation filter checks up to FILTERED_CANDIDATES groups: the same
@@ -3260,7 +3310,7 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                 if n > LOOKUP_LIMIT and lv.kind == "terms":
                     # the works side: the groups the works have, checked in their records
                     try:
-                        n_keys = _works_side_count(lv, index_name, connection, base_query, deadline)
+                        n_keys = _works_side(lv, index_name, connection, base_query, deadline)[1]
                     except AnalyticsError:
                         pass
                 if n_keys is not None and n_keys <= WORKS_SIDE_LIMIT:

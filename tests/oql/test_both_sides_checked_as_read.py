@@ -21,43 +21,50 @@ OWN = {_a(1), _a(2), _a(4), _a(9), _a(11), _a(13), _a(20), _a(21)}   # pass thei
 
 
 class OwnES(FakeES):
-    """FakeES plus the authors' own index: a sorted id listing (search_after), a random sample, an id check."""
+    """FakeES plus the authors' own index: a sorted id listing (search_after), a random sample, an id check. `own`:
+    the authors whose own record passes."""
+
+    def __init__(self, works, own=OWN, **kw):
+        super().__init__(works, **kw)
+        self.own = own
 
     def search(self, index, connection, body, deadline, what, **params):
         if index == "works":
             return super().search(index, connection, body, deadline, what, **params)
         self.calls.append(("own", body))
+        own = self.own
         q = body["query"]
         if "function_score" in q:
-            ids = sorted(OWN)[:body["size"]]
+            ids = sorted(own)[:body["size"]]
         elif body.get("sort"):
             after = (body.get("search_after") or [None])[0]
-            ids = [k for k in sorted(OWN) if after is None or k > after][:body["size"]]
+            ids = [k for k in sorted(own) if after is None or k > after][:body["size"]]
         else:
             asked = next(f["terms"]["id"] for f in q["bool"]["filter"] if "terms" in f)
-            ids = [k for k in asked if k in OWN]
-        return {"hits": {"total": {"value": len(OWN)},
+            ids = [k for k in asked if k in own]
+        return {"hits": {"total": {"value": len(own)},
                          "hits": [{"_source": {"id": k}, "fields": {"id": [k]}} for k in ids]}}
 
 
-def _both_sides_big(monkeypatch, n_own, n_keys):
-    """Neither side listable: the own-field count and the works' group count are past their limits."""
+def _both_sides_big(monkeypatch, n_own, n_keys, n_works=450_000, works_side_limit=1):
+    """Neither side listable: the own-field count and the works' group count are past their limits (with a higher
+    `works_side_limit`, the works' groups are listed and checked instead)."""
     import core.join_resolver as J
     monkeypatch.setattr(A, "LOOKUP_LIMIT", 1)
-    monkeypatch.setattr(A, "WORKS_SIDE_LIMIT", 1)
+    monkeypatch.setattr(A, "WORKS_SIDE_LIMIT", works_side_limit)
     monkeypatch.setattr(A, "_count_entity_matches", lambda *a, **k: n_own)
-    monkeypatch.setattr(A, "_works_side_count", lambda *a, **k: n_keys)
+    monkeypatch.setattr(A, "_works_side", lambda *a, **k: (n_works, n_keys))
     monkeypatch.setattr(J, "resolve_query_ids", lambda *a, **k: None)
 
 
-def _truth():
+def _truth(own=OWN):
     """Every passing group, count desc then key asc."""
-    counts = Counter(a for au, _ in WORKS for a in set(au) if a in OWN)
+    counts = Counter(a for au, _ in WORKS for a in set(au) if a in own)
     return sorted(counts.items(), key=lambda kc: (-kc[1], kc[0]))
 
 
-def _run(monkeypatch, fake, oql=SINGLE, **kw):
-    fields_dict = _setup(monkeypatch, fake)
+def _run(monkeypatch, fake, oql=SINGLE, min_works=0, **kw):
+    fields_dict = _setup(monkeypatch, fake, min_works)
     return A.run(parse_either(oql) if isinstance(oql, str) else oql, index_name="works", connection=None,
                  fields_dict=fields_dict, base_query={"match_all": {}}, **kw)
 
@@ -148,10 +155,10 @@ def test_an_inner_split_keeps_the_refusal_and_says_one_split_pages(monkeypatch):
     assert e.value.code == "query_too_slow" and "make it the only split" in e.value.fix
 
 
-def _nested_truth():
+def _nested_truth(own=OWN):
     """Every passing author's years in the page's order (most works first, years oldest first)."""
     from tests.oql.test_nested_pages import _whole_answer
-    return [r for r in _whole_answer(WORKS) if r[0] in OWN]
+    return [r for r in _whole_answer(WORKS) if r[0] in own]
 
 
 @pytest.mark.parametrize("per_page", [1, 2, 3, 5, 100])
@@ -202,7 +209,7 @@ def _check(monkeypatch, oql, n_own, n_keys):
     from works.fields import fields_dict
     monkeypatch.setattr(A, "_probe", lambda levels, *a, **k: (450_000, {0: n_keys}))
     monkeypatch.setattr(A, "_count_entity_matches", lambda *a, **k: n_own)
-    monkeypatch.setattr(A, "_works_side_count", lambda *a, **k: n_keys)
+    monkeypatch.setattr(A, "_works_side", lambda *a, **k: (450_000, n_keys))
     return A.check(parse_either(oql), index_name="works", connection=None, fields_dict=fields_dict,
                    base_query={"match_all": {}})
 
