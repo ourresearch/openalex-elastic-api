@@ -337,13 +337,19 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
     specs = [spec for key, direction in (params.get("sort") or {}).items()
              if (spec := _group_order(fields_dict, key, direction))]
 
-    parent = s.aggs
+    fields = []
     for group_by, include_unknown in dimensions:
         field = get_field(fields_dict, group_by)
         validate_group_by(field, params)
         _reject_unsupported_nested_field(field)
         s = filter_by_repository_or_journal(field, s)
+        fields.append(field)
 
+    # The aggregations go on the search the filters returned: a filter clones the
+    # search, so aggregations added to the one before it were lost and a leading
+    # `journal` or `repository` answered HTTP 500 (KeyError on its bucket key).
+    parent = s.aggs
+    for (group_by, include_unknown), field in zip(dimensions, fields):
         group_by_field = field.alias if field.alias else field.es_sort_field()
         bucket_key = get_bucket_keys(group_by)["default"]
 

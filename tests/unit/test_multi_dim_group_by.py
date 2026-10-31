@@ -98,6 +98,23 @@ class TestNestedBucketBuilder:
         inner = aggs["groupby_type"]["aggs"]["groupby_publication_year"]
         assert "missing" in inner["terms"]
 
+    @pytest.mark.parametrize("lead, source_type_field, source_type", [
+        ("journal", "primary_location.source.type", "journal"),
+        ("repository", "locations_full.source.type", "repository"),
+    ])
+    def test_leading_source_alias_keeps_its_aggs_and_filter(
+            self, lead, source_type_field, source_type):
+        # `group_by=journal,publication_year` answered HTTP 500 live (KeyError
+        # 'groupby_journal'): the journal filter cloned the search after its
+        # aggregations were taken from the old one (oxjob #1598, 2026-10-31).
+        params = {"per_page": 200, "cursor": None, "q": None}
+        dims = parse_group_by_dimensions(f"{lead},publication_year")
+        s = create_nested_group_by_buckets(fields_dict, dims, Search(index="works"), params)
+        body = s.to_dict()
+        outer = body["aggs"][f"groupby_{lead}"]
+        assert "groupby_publication_year" in outer["aggs"]
+        assert {"term": {source_type_field: source_type}} in body["query"]["bool"]["filter"]
+
 
 class TestNestedResults:
     def _resp(self):
