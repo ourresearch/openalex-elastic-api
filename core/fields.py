@@ -919,6 +919,14 @@ class RangeField(Field):
         "nan" and "inf", which Elasticsearch then rejects: HTTP 500 (Sentry
         OPENALEX-SEARCH-API-X, oxjob #1913). Those answer a JSON 400 here."""
         message = f"Value for param {self.param} must be a number."
+        if not query.isascii():
+            # float() reads Persian, Arabic and full-width digits too (float("۱۴۰۳") == 1403.0):
+            # publication_year:۱۴۰۳ reached Elasticsearch as text, HTTP 500 (Sentry
+            # OPENALEX-SEARCH-API-X, 29 Oct 2026), and in a range it silently meant the year 1403 AD.
+            message += " Write it with the digits 0-9"
+            if "year" in self.param:
+                message += ", and give years in the Gregorian calendar, like 2024"
+            raise APIQueryParamsError(message + ".")
         if "_" in query:
             parts = query.split("_")
             if len(parts) == 2 and all(map(_is_plain_number, parts)) and float(parts[0]) < float(parts[1]):
@@ -935,7 +943,7 @@ def _is_plain_number(value):
         number = float(value)
     except ValueError:
         return False
-    return "_" not in value and math.isfinite(number)
+    return value.isascii() and "_" not in value and math.isfinite(number)
 
 
 class SearchField(Field):

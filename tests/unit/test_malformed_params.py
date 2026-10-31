@@ -92,8 +92,28 @@ def test_an_underscore_names_the_fix(param, value, hint):
     assert hint in str(err.value)
 
 
+@pytest.mark.parametrize("value", [
+    "۱۴۰۳", "٢٠٢٠", "２０２０", "!۱۴۰۳", ">۱۴۰۳", "<۱۴۰۳", "۱۴۰۳-", "۱۴۰۰-۱۴۰۳", "2016-۲۰۱۹",
+    "!۱۴۰۰-۱۴۰۳", "2019|۲۰۲۰", "۲۰۱۶_۲۰۱۹",
+])
+def test_digits_other_than_0_to_9_answer_a_400(value):
+    # Persian digits reached Elasticsearch as text: HTTP 500 (OPENALEX-SEARCH-API-X, 29 Oct 2026).
+    # In a range, float() read them as numbers, so >۱۴۰۳ silently meant after 1403 AD.
+    with pytest.raises(APIQueryParamsError) as err:
+        _filter("publication_year", value)
+    assert "Write it with the digits 0-9, and give years in the Gregorian calendar, like 2024." in str(err.value)
+
+
+def test_digits_other_than_0_to_9_on_a_count_name_the_fix_without_the_calendar():
+    with pytest.raises(APIQueryParamsError) as err:
+        _filter("cited_by_count", "۱۰۰")
+    assert str(err.value).endswith("cited_by_count must be a number. Write it with the digits 0-9.")
+
+
 @pytest.mark.parametrize("value,query", [
     ("2020", {"term": {"publication_year": "2020"}}),
+    (" 2020", {"term": {"publication_year": " 2020"}}),
+    ("+2020", {"term": {"publication_year": "+2020"}}),
     ("2016-2019", {"range": {"publication_year": {"gte": 2016.0, "lte": 2019.0}}}),
     ("!2020", {"bool": {"must_not": [{"term": {"publication_year": 2020.0}}]}}),
     ("!2016-2019", {"bool": {"must_not": [{"range": {"publication_year": {"gte": 2016.0, "lte": 2019.0}}}]}}),
