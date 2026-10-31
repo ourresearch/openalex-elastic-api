@@ -36,6 +36,8 @@ def _es_error(reason, cls=BadRequestError, status=400):
     "parse_exception: Cannot parse 'a AND (OR b)'",
     "Valid edit distances are [0, 1, 2] but was [1952]",
     "failed to create query: fuzziness cannot be [MHz].",
+    # "delta~0.42" in a pasted title: HTTP 500 on OPENALEX-SEARCH-API-X (oxjob #1913)
+    "failed to create query: fuzziness needs to be one of 0.0, 1.0 or 2.0 but was 0.42",
     "too_many_clauses: maxClauseCount is set to 4096",
     "failed to create query: Can only use interval queries on text fields - not on [keywords.display_name] which is of type [keyword]",
     "failed to create query: Value [1.0E20] is out of range for an integer",  # oxjob #1913

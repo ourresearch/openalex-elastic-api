@@ -35,6 +35,7 @@ _USER_QUERY_ERRORS = (
     ("too_complex_to_determinize", _TOO_BIG),
     ("Valid edit distances are", _EDIT_DISTANCE),  # a title's "1920~1952" read as fuzzy distance 1952
     ("fuzziness cannot be", _EDIT_DISTANCE),  # "100~MHz": what follows a ~ read as a fuzziness
+    ("fuzziness needs to be one of", _EDIT_DISTANCE),  # a title's "delta~0.42" (oxjob #1913)
     # keyword.search:"canc* research": a quoted wildcard phrase becomes an intervals query, which
     # needs a text field; keywords.display_name is a keyword field (oxjob #1900).
     ("Can only use interval queries on text fields", _WHOLE_KEYWORDS),
