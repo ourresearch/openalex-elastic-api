@@ -468,6 +468,21 @@ def _bin_labels(column_id: str, edges: List, is_float: bool) -> List[str]:
     return labels
 
 
+def _bin_label(lv: "Level", lo) -> str:
+    """A histogram bin's key and label from its low edge (`bins of 1` on FWCI: `0-1`; on a count: `3`, or `10-19`
+    for bins of 10)."""
+    w = lv.split.bins["of"]
+    if lv.is_float:
+        return f"{_num(round(lo, 10))}-{_num(round(lo + w, 10))}"
+    hi = int(lo + w - 1)
+    return _num(lo) if hi == int(lo) else f"{_num(lo)}-{hi}"
+
+
+def _col_key(lv: "Level", k, index_name: str) -> str:
+    """A column split's row key from its raw key: an `of` bin's label, else the key as a plain split writes it."""
+    return _bin_label(lv, k) if lv.kind == "histogram" else _row_key(k, lv, index_name)
+
+
 def _is_integer_column(column_id: str) -> bool:
     from query_translation.oql_lang import is_integer_column
     return is_integer_column(column_id)
@@ -567,7 +582,7 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
                 lv.order_keys.append(f"b{j}")
             return lv
         width = g.bins["of"]
-        lv = Level(i, g, "histogram", column_id=column_id, is_float=is_float)
+        lv = Level(i, g, "histogram", column_id=column_id, is_float=is_float, key_kind="number")
         lv.agg = {"histogram": {"field": es_field, "interval": width, "min_doc_count": 1}}
         return lv
     if "continent" in fld.param and g.bins is None:
@@ -1119,17 +1134,21 @@ def _lead_query(levels: List[Level], base_query: dict) -> dict:
     return _and(base_query, *wf) if wf else base_query
 
 
-# Every combination of the terms splits' values in one document, as one key (multi-
+# Every combination of the column splits' values in one document, as one key (multi-
 # valued fields give their cross product): its distinct count is the group guard's
 # estimate of a nested split's groups (#1512: multiplying per-split counts overestimated
-# MIT's year x type x OA status 5.9-fold; this gives 4,142 against 4,159 real).
+# MIT's year x type x OA status 5.9-fold; this gives 4,142 against 4,159 real). A field
+# in `params.widths` is split into `of` bins: its value counts as its bin (oxjob #1598).
 _COMBO_SCRIPT = """
 List out = new ArrayList(); out.add('');
 for (String f : params.fields) {
   List nxt = new ArrayList();
   def vals = doc[f];
+  def w = params.widths.get(f);
   if (vals.size() == 0) { for (def p : out) { nxt.add(p + '|_'); } }
-  else { for (def p : out) { for (def v : vals) { nxt.add(p + '|' + v); } } }
+  else { for (def p : out) { for (def v : vals) {
+    nxt.add(p + '|' + (w == null ? v : Math.floor(((Number) v).doubleValue() / ((Number) w).doubleValue())));
+  } } }
   out = nxt;
 }
 return out;
@@ -1144,9 +1163,10 @@ def _cap_cards(cards: Dict[int, int], sizes: Dict[int, Optional[int]]) -> None:
             cards[i] = min(cards[i], n)
 
 
-def _combo_card(fields: List[str], precision: int) -> dict:
-    """A cardinality of the combined keys of `fields` (`_COMBO_SCRIPT`)."""
-    return {"script": {"source": _COMBO_SCRIPT, "params": {"fields": fields}}, "precision_threshold": precision}
+def _combo_card(fields: List[str], precision: int, widths: Optional[Dict[str, float]] = None) -> dict:
+    """A cardinality of the combined keys of `fields` (`_COMBO_SCRIPT`); `widths`: the fields split into `of` bins."""
+    return {"script": {"source": _COMBO_SCRIPT, "params": {"fields": fields, "widths": widths or {}}},
+            "precision_threshold": precision}
 
 
 # The combined-keys script builds every combination of every work (~0.25 s a million works, but 2.8 s for MIT's
@@ -1156,19 +1176,29 @@ COMBO_SCRIPT_MAX_WORKS = 2_000_000
 SAMPLE_KEYS = 5_000             # leading keys in the sample, about
 
 
-def _inner_card(fields: List[str]) -> dict:
-    """The distinct keys (combined keys, past one) of the splits under a sampled key."""
-    return {"field": fields[0], "precision_threshold": 100} if len(fields) == 1 else _combo_card(fields, 100)
+def _inner_card(fields: List[str], widths: Optional[Dict[str, float]] = None) -> dict:
+    """The distinct keys (combined keys, past one; a field's `of` bins) of the splits under a sampled key."""
+    if len(fields) == 1 and fields[0] not in (widths or {}):
+        return {"field": fields[0], "precision_threshold": 100}
+    return _combo_card(fields, 100, widths)
 
 
-def _sampled_combos(fields: List[str], lead_card: int, index, connection, base_query, deadline) -> int:
+SCRIPT_SAMPLE_WORKS = 1_000_000   # a sample counting `of` bins runs a script on each work: about this many works
+
+
+def _sampled_combos(fields: List[str], lead_card: int, index, connection, base_query, deadline,
+                    widths: Dict[str, float], n_works: Optional[int]) -> int:
     """About how many combined keys `fields` take, from one hash partition of the leading field's keys (terms
     `include.partition`: a uniform sample of about SAMPLE_KEYS keys whatever their order or size): each sampled
     key's distinct inner keys, summed, times the partitions. Measured 2026-10-27 on production: 2023 institution x
     author 69.4M against the true 72.2M (0.8 s); all works by institution and author 589M (2.8 s), by author and
     year 295M (4.1 s). A few huge keys in or out of the sample move it most (0.79x at 4,366 institutions)."""
     parts = max(1, lead_card // SAMPLE_KEYS)
-    card = _inner_card(fields[1:])
+    if widths and n_works:
+        # the bins come from a script run on every sampled work (~0.25 s a million): sample works, not keys, or a
+        # split with few keys (4,500 topics) would run it on all 104M works since 2020 and refuse a query that pages
+        parts = min(max(parts, -(-n_works // SCRIPT_SAMPLE_WORKS)), max(lead_card, 1))
+    card = _inner_card(fields[1:], widths)
     body = {"size": 0, "query": base_query, "aggs": {"k": {
         "terms": {"field": fields[0], "size": 65_000,
                   "include": {"partition": 0, "num_partitions": parts}},
@@ -1189,7 +1219,7 @@ def _keyset_combos(ks: Level, others: List[Level], index, connection, base_query
     field = ks.agg["terms"]["field"]
     body = {"size": 0, "query": _and(base_query, {"terms": {field: sample}}), "aggs": {"k": {
         "terms": {"field": field, "size": len(sample), "include": sample},
-        "aggs": {"c": {"cardinality": _inner_card([lv.agg["terms"]["field"] for lv in others])}}}}}
+        "aggs": {"c": {"cardinality": _inner_card([_col_field(lv) for lv in others], _bin_widths(others))}}}}}
     res = _search(index, connection, body, deadline, "estimating the combined groups")
     return int(sum(b["c"]["value"] for b in res["aggregations"]["k"]["buckets"]) * len(keys) / len(sample))
 
@@ -1203,28 +1233,34 @@ def _combined_groups(levels: List[Level], index, connection, base_query, deadlin
     split's groups, so its own fields pushed down to the works narrow them."""
     base_query = _lead_query(levels, base_query)
     terms = [lv for lv in levels if lv.kind == "terms"]
-    fields = [lv.agg["terms"]["field"] for lv in terms]
-    other = 1
-    for lv in levels:
-        if lv.kind == "filters":
-            other *= max(len(lv.order_keys), 1)
-        elif lv.kind == "range":
-            other *= max(len(lv.order_keys), 1)
-        elif lv.kind == "histogram":
-            other *= 100
+    # the column splits, a terms one first (the sample partitions its keys; a combination's count doesn't depend
+    # on the splits' order); `of` bins count as their bins under each key, not as 100 (institution x FWCI bins of 1
+    # since 2023: 100 a key overstated it about 17-fold, oxjob #1598)
+    cols = terms + [lv for lv in levels if lv.kind == "histogram"]
+    fields = [_col_field(lv) for lv in cols]
+    widths = _bin_widths(cols)
+    other = _cards_product([lv for lv in levels if _small(lv)], None)
+    if not terms:
+        # bins only: 100 a split, as the guard counts them (the script over a big set would run past the deadline)
+        return _cards_product(levels, None)
     if len(fields) == 1 and cards and cards.get(terms[0].index):
         return cards[terms[0].index] * other
     ks = next((lv for lv in terms if lv.include is not None), None)
-    if ks is not None and len(terms) > 1:
-        return _keyset_combos(ks, [lv for lv in terms if lv is not ks], index, connection, base_query,
+    if ks is not None and len(cols) > 1:
+        return _keyset_combos(ks, [lv for lv in cols if lv is not ks], index, connection, base_query,
                               deadline) * other
     if len(fields) > 1 and n_works is not None and n_works > COMBO_SCRIPT_MAX_WORKS \
             and cards and cards.get(terms[0].index):
         return _sampled_combos(fields, cards[terms[0].index], index, connection, base_query,
-                               deadline) * other
-    body = {"size": 0, "query": base_query, "aggs": {"combo": {"cardinality": _combo_card(fields, 1000)}}}
+                               deadline, widths, n_works) * other
+    body = {"size": 0, "query": base_query, "aggs": {"combo": {"cardinality": _combo_card(fields, 1000, widths)}}}
     res = _search(index, connection, body, deadline, "counting the combined groups")
     return int(res["aggregations"]["combo"]["value"]) * other
+
+
+def _bin_widths(levels: List[Level]) -> Dict[str, float]:
+    """The `of` bin splits among `levels`: field -> bin width."""
+    return {_col_field(lv): lv.split.bins["of"] for lv in levels if lv.kind == "histogram"}
 
 
 def guard_nested(levels: List[Level], cards: Dict[int, int], index, connection,
@@ -1298,9 +1334,11 @@ def _count_survivors(lv: Level, index, connection, base_query, deadline) -> set:
 
 
 def _cards_product(levels: List[Level], cards: Optional[Dict[int, int]]) -> int:
+    """The splits' groups multiplied; an `of` bin split counts as 100, or its bins when fewer are known."""
     p = 1
     for lv in levels:
-        p *= 100 if lv.kind == "histogram" else max(_level_groups(lv, cards) or 1, 1)
+        p *= min(100, (cards or {}).get(lv.index) or 100) if lv.kind == "histogram" \
+            else max(_level_groups(lv, cards) or 1, 1)
     return p
 
 
@@ -1582,14 +1620,7 @@ def level_rows(levels: List[Level], measures: List[Measure], level_i: int, agg: 
             elif lv.kind == "range":
                 key, label, _ = _small_key(lv, k, index_name)
             else:  # histogram
-                lo = k
-                w = lv.split.bins["of"]
-                if lv.is_float:
-                    label = f"{_num(round(lo, 10))}-{_num(round(lo + w, 10))}"
-                else:
-                    hi = int(lo + w - 1)
-                    label = _num(lo) if hi == int(lo) else f"{_num(lo)}-{hi}"
-                key = label
+                key = label = _col_key(lv, k, index_name)
             row = {"key": key, "key_display_name": label, "count": count}
             if lv.kind in ("terms", "filters") and raw is not None:
                 row["_raw"] = (level_i, raw)
@@ -1882,11 +1913,14 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     s0 = body["aggs"]["s0"]
     comp = {k: v for k, v in s0["composite"].items() if k != "after"}
     names = [next(iter(src)) for src in comp["sources"]]
+    # each source's kind (terms, or a histogram for `of` bins) and field
+    kinds, fields = zip(*[next(iter(src[n].items())) for src, n in zip(comp["sources"], names)])
     lead = names[0]
     nested = len(names) > 1
     start_after = s0["composite"].get("after")
     after = (start_after or {}).get(lead)
-    field = comp["sources"][0][lead]["terms"]["field"]
+    # (a leading `of` bin split is number-keyed: it can't list its keys, so it reads as one range, as a year does)
+    field = fields[0]["field"]
     keysets = {n: k for n, k in (keysets or {}).items() if k.include is not None or k.exclude}
     own = lv.own_check
     # a count filter, a key set or an own check keeps few of the groups it reads
@@ -1938,8 +1972,10 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
             kept = set(passing) & set(held) if held is not None else set(passing)
             keysets[lead] = replace(lv, include=kept, exclude=None)
             walk, floor, filtered = walk_key_set(keysets[lead].kept_keys()), 1, True
-    ranged = walk is not None or floor > 1 or (whole["hits"]["total"]["value"] >= PARTITION_MIN_WORKS
-                                               and not (n_groups is not None and n_groups * 2 < per_page))
+    # (a leading `of` bin split is never ranged: a range on a key would be a range on one value, not on its bin)
+    ranged = kinds[0] == "terms" and (
+        walk is not None or floor > 1 or (whole["hits"]["total"]["value"] >= PARTITION_MIN_WORKS
+                                          and not (n_groups is not None and n_groups * 2 < per_page)))
     # a leading key holds many combinations (an institution's authors), so nested ranges start small and grow
     # from what each one holds
     min_terms = min(PARTITION_MIN_TERMS, NESTED_MIN_TERMS) if nested else PARTITION_MIN_TERMS
@@ -1964,7 +2000,7 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
             t = {"field": field, "include": todo, "size": len(todo), "order": [{"_key": "asc"}],
                  "execution_hint": "map"}
             if nested:
-                inner = {"field": comp["sources"][1][name]["terms"]["field"],
+                inner = {"field": fields[1]["field"],
                          "size": max(1, NESTED_FILL_BUCKETS // len(todo)), "order": [{"_key": "asc"}],
                          "execution_hint": "map", **(_keyset_terms(keysets[name]) if name in keysets else {})}
                 t_sub = {"aggs": {"i": {"terms": inner, **sub}}}
@@ -2002,7 +2038,8 @@ def _cursor_page(lv: Level, body: dict, index_name: str, connection, deadline: D
     # a walk reads each range whole by one terms request, its keys only (a composite reads every co-key of their works
     # too: 1.7-2.1 s for 10,000 UCL or Toronto authors, this 0.5-0.75 s; Michigan's first 50 authors by keyword
     # 6.4-6.6 s, this 0.24-0.41 s): one split, or two with no count floor under them
-    reads_whole = walk is not None and (not nested or (len(names) == 2 and "having" not in (s0.get("aggs") or {})))
+    reads_whole = walk is not None and (not nested or (len(names) == 2 and "having" not in (s0.get("aggs") or {})
+                                                       and kinds[1] == "terms"))
     pos, n_terms = after, clamp(min_terms if nested else 2 * per_page)
     first = True
     # a nested cursor that stopped inside a leading key (one institution's 30,000 authors fill several pages)
@@ -2118,8 +2155,43 @@ _SHAPES = {"tt": (0, 0), "ttt": (0, 0), "ts": (0, 1), "tts": (0, 1), "tss": (0, 
 def _shape(levels: List[Level]) -> Optional[Tuple[int, int]]:
     """How a nested split pages: (small splits before its column splits, small splits after them), or None when it
     can't. The column splits page in a composite (key order); small splits after them ride under each combination
-    (every group, as in one answer); one small split before them is walked a group at a time (oxjob #1598)."""
-    return _SHAPES.get("".join("t" if lv.kind == "terms" else "s" if _small(lv) else "x" for lv in levels))
+    (every group, as in one answer); one small split before them is walked a group at a time (oxjob #1598). `of`
+    bins page as a column split: a composite histogram source, key order, its empty bins left out as in one answer."""
+    return _SHAPES.get("".join("t" if lv.kind in ("terms", "histogram") else "s" if _small(lv) else "x"
+                               for lv in levels))
+
+
+def _col_field(lv: Level) -> str:
+    """A column split's field (by its values, or into `of` bins)."""
+    return lv.agg[lv.kind]["field"]
+
+
+def _comp_source(lv: Level) -> dict:
+    """A column split as a composite source: its values, or its `of` bins (a histogram source, keyed by each bin's
+    low edge as the histogram aggregation keys it)."""
+    if lv.kind == "histogram":
+        h = lv.agg["histogram"]
+        return {"histogram": {"field": h["field"], "interval": h["interval"]}}
+    return {"terms": {"field": lv.agg["terms"]["field"]}}
+
+
+def _held_query(lv: Level, keys: List) -> dict:
+    """The works holding these keys of a column split: a terms filter, or for `of` bins (low edges, as ES keys them)
+    a range per run of adjacent bins. Each range is widened by a hair, so a value the histogram puts across an edge
+    after rounding (0.6 / 0.1 = 5.999...: 0.6 lands in bin 0.5) is read too; the few works of a neighbouring bin it
+    lets in make groups the caller drops."""
+    if lv.kind != "histogram":
+        return {"terms": {_col_field(lv): keys}}
+    w = lv.split.bins["of"]
+    runs: List[List[float]] = []
+    for k in sorted(keys):
+        if runs and round((k - runs[-1][1]) / w) <= 1:
+            runs[-1][1] = k
+        else:
+            runs.append([k, k])
+    eps = 1e-9 * max([w] + [abs(x) for r in runs for x in r])
+    return {"bool": {"should": [{"range": {_col_field(lv): {"gte": lo - eps, "lt": hi + w + eps}}} for lo, hi in runs],
+                     "minimum_should_match": 1}}
 
 
 def _group_queries(lv: Level) -> List[Tuple[str, dict]]:
@@ -2178,7 +2250,9 @@ def _nested_pages_ok(levels: List[Level], measures: List[Measure], sort, cursor)
         return not any(m.measure == "percent_of_those" for m in measures)
     if sort is not None:
         key = sort[0]
-        if key not in ("count", "key") or (key == "key" and levels[0].name_vocab is not None):
+        # (one answer sorts `of` bins by key as their labels, `10-11` before `2-3`: not an order ES lists them in)
+        if key not in ("count", "key") or (key == "key" and (levels[0].name_vocab is not None
+                                                             or levels[0].kind == "histogram")):
             return False
     return True
 
@@ -2195,8 +2269,8 @@ def _level_order(lv: Level, sort) -> List[dict]:
         return [{"_count": sort[1]}, {"_key": "asc"}]
     if sort and sort[0] == "key" and lv.index == 0:
         return [{"_key": sort[1]}]
-    if _is_year_level(lv):
-        return [{"_key": "asc"}]
+    if _is_year_level(lv) or lv.kind == "histogram":
+        return [{"_key": "asc"}]   # `of` bins: lowest first, as one answer lists them
     return [{"_count": "desc"}, {"_key": "asc"}]
 
 
@@ -2206,7 +2280,10 @@ def _level_terms(lv: Level, size: int, sort, m_aggs: Dict[str, dict], inner: Opt
     floor (min_doc_count, applied before sizing, so the first groups by count are exact) and the next level.
     `few_works`: the request reads a few outer groups' works, where the map hint skips building the field's global
     ordinals (CNRS's 129K works of 2023 by author: 0.9 s with it, 4.8 s without, 2026-10-27). `include`: these keys
-    only (a fill batch, already inside the split's key set), else the split's key set."""
+    only (a fill batch, already inside the split's key set), else the split's key set. `of` bins: every non-empty
+    bin, in the page's order (a histogram has no size; the works read decide which bins it holds)."""
+    if lv.kind == "histogram":
+        return {**_small_agg(lv, m_aggs, inner), "histogram": {**lv.agg["histogram"], "order": _level_order(lv, sort)}}
     field = lv.agg["terms"]["field"]
     t = {"field": field, "size": size, "shard_size": max(size * 2, 3000), "order": _level_order(lv, sort)}
     if field in _MAP_HINT_FIELDS or few_works:
@@ -2245,19 +2322,27 @@ def _nested_cursor_rows(levels: List[Level], measures: List[Measure], buckets: L
     group, as in one answer)."""
     cols = levels[first:first + len(names)]
     tail = first + len(names)
+
+    def row(lv: Level, k, count) -> dict:
+        """A column split's row: named later from its raw key (`name_rows`), or an `of` bin with its label."""
+        key = _col_key(lv, k, index_name)
+        if lv.kind == "histogram":
+            return {"key": key, "key_display_name": key, "count": count}
+        return {"key": key, "key_display_name": None, "count": count, "_raw": (lv.index, k)}
+
     rows: List[dict] = []
     for b in buckets:
         at = rows
         for j, lv in enumerate(cols):
             k = b["key"][names[j]]
             if j < len(cols) - 1 or tail < len(levels):
-                if not (at and at[-1]["_raw"][1] == k):
-                    at.append({"key": _row_key(k, lv, index_name), "key_display_name": None, "count": None,
-                               "_raw": (lv.index, k), "groups": []})
+                r = row(lv, k, None)
+                if not (at and at[-1]["key"] == r["key"]):
+                    at.append({**r, "groups": []})
                 at = at[-1]["groups"]
                 continue
             count = b["doc_count"]
-            leaf = {"key": _row_key(k, lv, index_name), "key_display_name": None, "count": count, "_raw": (lv.index, k)}
+            leaf = row(lv, k, count)
             for m in measures:
                 if m.measure != "count":
                     leaf[m.key] = _measure_value(m, b, count, None)
@@ -2336,8 +2421,8 @@ def _nested_cursor(oqo: OQO, levels: List[Level], measures: List[Measure], m_agg
     keysets = dict(zip(names, cols))
 
     def body(query: dict, after: Optional[dict], root: Dict[str, dict]) -> dict:
-        comp = {"size": size, "sources": [{n: {"terms": {"field": lv.agg["terms"]["field"]}}}
-                                          for n, lv in zip(names, cols)], **({"after": after} if after else {})}
+        comp = {"size": size, "sources": [{n: _comp_source(lv)} for n, lv in zip(names, cols)],
+                **({"after": after} if after else {})}
         return {"size": 0, "track_total_hits": True, "query": query,
                 "aggs": {**root, "s0": {"composite": comp, **({"aggs": sub} if sub else {})}}}
 
@@ -2428,15 +2513,20 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
     if lead.works_filters:
         # the outer groups over the works their pushed-down own fields keep; the whole-set row over every work
         outer = {"filter": _and(*lead.works_filters), "aggs": {"s0": outer}}
+    # an inner `of` bin split lists every non-empty bin under each outer group (no size): its bins over the whole
+    # set bound how many, which sizes the fill's batches
+    bins = {f"hb{lv.index}": {"histogram": lv.agg["histogram"]} for lv in levels[1:]
+            if lv.kind == "histogram" and not (summary_only or p)}
     listed = _search(index_name, connection, {"size": 0, "track_total_hits": True, "query": base_query, "aggs": {
-        **m_aggs, "s0": outer}}, deadline, "listing the outer groups", preference=pref)
+        **m_aggs, **bins, "s0": outer}}, deadline, "listing the outer groups", preference=pref)
     total_count = listed["hits"]["total"]["value"]
     aggs = {**(listed.get("aggregations") or {}), **((alone.result().get("aggregations") or {}) if alone else {})}
     if lead.works_filters:
         aggs["s0"] = aggs["s0"]["s0"]
     outer_rows, margins = format_levels(levels, measures, aggs, total_count, index_name)
     margins[0] = [{k: v for k, v in r.items() if k != "groups"} for r in outer_rows]
-    split_more = {lv.index: not summary_only or (not _small(lv) and (
+    # (`of` bins list every bin: never cut)
+    split_more = {lv.index: not summary_only or (not _small(lv) and lv.kind != "histogram" and (
         bool(aggs[f"m{lv.index}"].get("sum_other_doc_count"))
         or len(aggs[f"m{lv.index}"]["buckets"]) >= NESTED_SUMMARY_GROUPS)) for lv in levels[1:]}
     s0 = aggs.get("s0") or {}
@@ -2468,20 +2558,27 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
             need -= sum(1 for _ in _leaves([r], 0, n, []))
         return listed, took, _leaf_slice(group_rows, n, (page - 1) * per_page, rows_wanted), margins, split_more
     outer_keys = [b["key"] for b in s0.get("buckets") or []]
-    split_more[0] = bool(s0.get("sum_other_doc_count")) or len(outer_keys) >= n_outer
+    hist = lead.kind == "histogram"
+    if hist:
+        split_more[0] = False              # every bin listed
+        cards[lead.index] = len(outer_keys)
+    else:
+        split_more[0] = bool(s0.get("sum_other_doc_count")) or len(outer_keys) >= n_outer
     if summary_only:
         return listed, took, group_rows, margins, split_more
+    # each inner bin split's bins over the set (its groups on their own, for the summary; an outer group holds at
+    # most these)
+    cards.update({lv.index: len(aggs[f"hb{lv.index}"]["buckets"]) for lv in levels[1:] if lv.kind == "histogram"})
 
     def per_outer(need: int) -> int:
-        """Buckets one outer group's inner splits may hold."""
+        """Buckets one outer group's inner splits may hold (a split by values lists at most `need` of its groups)."""
         b = 1
         for lv in levels[1:]:
-            b *= len(lv.order_keys) if _small(lv) else need
+            b *= need if lv.kind == "terms" else _level_groups(lv, cards)
         return b
     # the first batch: as many outer groups as the rows need if each held every inner group (a lower bound)
     need, i = rows_wanted, 0
     batch_n = max(1, -(-need // _cards_product(levels[1:], cards)))
-    field0 = lead.agg["terms"]["field"]
     while need > 0 and i < len(outer_keys):
         batch_n = max(1, min(batch_n, NESTED_FILL_BUCKETS // max(per_outer(need), 1)))
         batch = outer_keys[i:i + batch_n]
@@ -2492,12 +2589,14 @@ def _nested_first_rows(oqo: OQO, levels: List[Level], measures: List[Measure], m
         outer = _level_terms(lead, len(batch), sort, m_aggs, inner, few_works=True,
                              include=batch if all(isinstance(k, str) for k in batch) else None)
         res = _search(index_name, connection, {
-            "size": 0, "query": _and(base_query, {"terms": {field0: batch}}, *lead.works_filters),
+            "size": 0, "query": _and(base_query, _held_query(lead, batch), *lead.works_filters),
             "aggs": {"s0": outer}}, deadline, "reading the first groups", preference=pref)
         took += res.get("took") or 0
         filled, _ = format_levels(levels, measures, res.get("aggregations") or {}, total_count, index_name)
-        by_key = {r["_raw"][1]: r for r in filled}
+        # (the bins next to a batch's bins, read in part, are dropped here)
+        by_key = {r["key"]: r for r in filled}
         for k in batch:
+            k = _col_key(lead, k, index_name)
             if k in by_key and need > 0:
                 group_rows.append(by_key[k])
                 need -= sum(1 for _ in _leaves([by_key[k]], 0, n, []))

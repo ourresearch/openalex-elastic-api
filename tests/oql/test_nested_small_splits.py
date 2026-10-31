@@ -26,13 +26,17 @@ def _in_bin(y, lo, hi):
 
 class SmallES(FakeES):
     """FakeES that also reads queries (bool / range / term / terms) and answers range and filters aggregations,
-    top level, under a terms bucket or under a composite bucket."""
+    top level, under a terms bucket or under a composite bucket. Subclasses add aggregation kinds (`AGG_KINDS`,
+    `_agg`) and composite source kinds (`_keys`)."""
+    AGG_KINDS = ("terms", "range", "filters")
 
     def _match(self, w, q) -> bool:
         if not q or "match_all" in q:
             return True
         if "bool" in q:
-            return all(self._match(w, f) for f in q["bool"].get("filter", []))
+            b = q["bool"]
+            return (all(self._match(w, f) for f in b.get("filter", []))
+                    and (not b.get("should") or any(self._match(w, s) for s in b["should"])))
         (kind, spec), = q.items()
         (field, arg), = spec.items()
         vals = self._vals(w, field)
@@ -44,7 +48,7 @@ class SmallES(FakeES):
 
     def _subs(self, works, agg):
         return {n: self._agg(works, a) for n, a in (agg.get("aggs") or {}).items()
-                if any(t in a for t in ("terms", "range", "filters"))}
+                if any(t in a for t in self.AGG_KINDS)}
 
     def _agg(self, works, agg):
         if "range" in agg:
@@ -73,12 +77,16 @@ class SmallES(FakeES):
                for k, c in items[:t["size"]]]
         return {"buckets": out, "sum_other_doc_count": sum(c for _, c in items[t["size"]:])}
 
+    def _keys(self, w, src) -> list:
+        """A work's keys for one composite source, sorted."""
+        return sorted(set(self._vals(w, src["terms"]["field"])))
+
     def _composite(self, works, a):
         comp = a["composite"]
-        srcs = [(n, s[n]["terms"]["field"]) for s in comp["sources"] for n in s]
+        srcs = [(n, s[n]) for s in comp["sources"] for n in s]
         combos = {}
         for w in works:
-            for c in itertools.product(*[sorted(set(self._vals(w, f))) for _, f in srcs]):
+            for c in itertools.product(*[self._keys(w, src) for _, src in srcs]):
                 combos.setdefault(c, []).append(w)
         after = comp.get("after")
         after_t = tuple(after[n] for n, _ in srcs) if after else None
@@ -101,7 +109,7 @@ class SmallES(FakeES):
                 out[name] = {"value": len({k for w in works for k in self._vals(w, a["cardinality"]["field"])})}
             elif "composite" in a:
                 out[name] = self._composite(works, a)
-            elif any(t in a for t in ("terms", "range", "filters")):
+            elif any(t in a for t in self.AGG_KINDS):
                 out[name] = self._agg(works, a)
         return {"hits": {"total": {"value": len(works)}}, "took": 1, "aggregations": out}
 
