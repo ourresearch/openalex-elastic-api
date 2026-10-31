@@ -145,9 +145,25 @@ _and = A._and   # every query given (empty ones skipped), as one bool filter
 
 
 def count_distinct(ctx: Ctx, query: dict, field: str, what: str) -> int:
-    r = ctx.search({"size": 0, "query": query, "aggs": {"n": {"cardinality": {
-        "field": field, "precision_threshold": 40000}}}}, what)
-    return int(r["aggregations"]["n"]["value"])
+    return count_works_and_distinct(ctx, query, field, what)[1]
+
+
+def count_works_and_distinct(ctx: Ctx, query: dict, field: str, what: str,
+                             index: Optional[str] = None) -> Tuple[int, int]:
+    """(works `query` matches, about how many distinct values of `field` they hold): one
+    cardinality probe (counting the works is free beside it)."""
+    r = ctx.search({"size": 0, "track_total_hits": True, "query": query, "aggs": {"n": {
+        "cardinality": {"field": field, "precision_threshold": 40000}}}}, what, index=index)
+    return r["hits"]["total"]["value"], int(r["aggregations"]["n"]["value"])
+
+
+def few_works(n_works: Optional[int]) -> bool:
+    """A set small enough to list its values with the map hint: a hash partition over the
+    field's global ordinals reads the field's whole term list (authors: 1.6-5 s a call
+    whatever the set); map reads only the set's values (AI works of 2012-2015, 385K
+    authors: 9 partitions 3.3-6.8 s -> 0.9-1.2 s, 2026-10-30). Past PARTITION_MIN_WORKS
+    the ordinals win."""
+    return n_works is not None and n_works < A.PARTITION_MIN_WORKS
 
 
 def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
@@ -488,13 +504,14 @@ def plan_walk(oqo: OQO, ctx: Ctx, need_keys: bool = True) -> Tuple[str, dict]:
         entity = entity_for_link(link)
         base = _works_query(oqo, ctx)
         field = ctx.raw_field(link)
-        n = count_distinct(ctx, base, field, f"counting the {plural(entity)}")
+        n_works, n = count_works_and_distinct(ctx, base, field, f"counting the {plural(entity)}")
         plan = {"link": link, "entity": entity, "base": base, "field": field, "n": n,
-                "out": out, "back": back, "each": out.each}
+                "n_works": n_works, "out": out, "back": back, "each": out.each}
         if back is None and (not need_keys or (not out.where and n > EXACT_COUNT_MAX)):
             return "things", plan
         if back is None and not out.where:
-            plan["keys"] = list_keys(ctx, base, field, n, f"listing the {plural(entity)}")
+            plan["keys"] = list_keys(ctx, base, field, n, f"listing the {plural(entity)}",
+                                     map_hint=few_works(n_works))
             return "things", plan
         searched = any(A._tree_has_search(f) for f in oqo.filter_rows)
         rate = EST_THINGS_PER_S if back is not None else EST_LISTED_PER_S
@@ -506,7 +523,8 @@ def plan_walk(oqo: OQO, ctx: Ctx, need_keys: bool = True) -> Tuple[str, dict]:
                      f"Narrow the starting works (a shorter year range, a smaller "
                      f"institution or topic), or filter the {plural(entity)} as you walk "
                      f"to them (get each {singular(entity)} of those works where ...).")
-        keys = list_keys(ctx, base, field, n, f"listing the {plural(entity)}")
+        keys = list_keys(ctx, base, field, n, f"listing the {plural(entity)}",
+                         map_hint=few_works(n_works))
         if out.where is not None:
             keys = narrow(ctx, entity, keys, out.where)
     elif oqo.get_rows != "works":
@@ -608,7 +626,7 @@ def count_things(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
         n, exact = len(plan["keys"]), True
     elif plan["n"] <= EXACT_COUNT_MAX:
         keys = list_keys(ctx, plan["base"], plan["field"], plan["n"],
-                         f"counting the {plural(entity)}")
+                         f"counting the {plural(entity)}", map_hint=few_works(plan.get("n_works")))
         n, exact = len(keys), True
     else:
         n, exact = plan["n"], False

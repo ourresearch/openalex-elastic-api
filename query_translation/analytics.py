@@ -819,11 +819,9 @@ def _own_estimate(lv: Level, own: OwnCheck, base_query: dict, index, connection,
 
 def _works_side(lv: Level, index, connection, base_query, deadline: Deadline) -> Tuple[int, int]:
     """(works in the set, about how many distinct groups they have): one cardinality probe."""
-    field = lv.agg["terms"]["field"]
-    res = _search(index, connection, {"size": 0, "track_total_hits": True, "query": base_query, "aggs": {
-        "n": {"cardinality": {"field": field, "precision_threshold": 40_000}}}},
-        deadline, "counting the groups the works have")
-    return res["hits"]["total"]["value"], res["aggregations"]["n"]["value"]
+    from query_translation import walk_exec as WX
+    return WX.count_works_and_distinct(WX.Ctx(connection, deadline), base_query, lv.agg["terms"]["field"],
+                                       "counting the groups the works have", index=index)
 
 
 # A split by a link each work has at most once (its primary source, its primary
@@ -970,10 +968,10 @@ def resolve_keysets(lv: Level, parts: List, oqo: OQO, works_index: str, connecti
             # list the works' groups and check their own fields side by side, as a walk does
             from query_translation import walk_exec as WX
             ctx = WX.Ctx(connection, deadline)
-            # the map hint skips the field's global ordinals, which a hash partition reads whole: CRISPR's 31K works
-            # 1.6-1.9 s a partition without it, 0.5 s with it; Nature's 449K works 1.8-2.6 vs 0.4-0.8 s (2026-10-30)
+            # the map hint over a small set (`WX.few_works`): CRISPR's 31K works 1.6-1.9 s a partition without it,
+            # 0.5 s with it; Nature's 449K works 1.8-2.6 vs 0.4-0.8 s (2026-10-30)
             keys = WX.list_keys(ctx, base_query, lv.agg["terms"]["field"], n_keys,
-                                "listing the groups the works have", map_hint=n_works < PARTITION_MIN_WORKS)
+                                "listing the groups the works have", map_hint=WX.few_works(n_works))
             ids = set(WX.narrow(ctx, lv.group_entity, keys, p))
             if len(keys) - len(ids) < len(ids):
                 # most pass: keep the works' groups so the key set can go as the shorter exclude list (a later

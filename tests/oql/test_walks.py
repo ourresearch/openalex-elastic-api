@@ -272,7 +272,7 @@ def test_a_walk_is_timed_at_its_measured_speed(monkeypatch, q, n, refused):
     # oxjob #1598, 2026-10-30: 36,000 things a second called a 385,505-author walk 11 s and refused it; it runs in 4.3
     from query_translation import analytics as A
     from query_translation.oql_parser import parse_either
-    monkeypatch.setattr(W, "count_distinct", lambda *a, **k: n)
+    monkeypatch.setattr(W, "count_works_and_distinct", lambda *a, **k: (450_000, n))
     monkeypatch.setattr(W, "list_keys", lambda *a, **k: [])
     monkeypatch.setattr(W, "narrow", lambda *a, **k: [])
     ctx = W.Ctx("test", A.Deadline())
@@ -282,3 +282,20 @@ def test_a_walk_is_timed_at_its_measured_speed(monkeypatch, q, n, refused):
         assert e.value.code == "query_too_slow"
     else:
         W.plan_walk(parse_either(q), ctx)
+
+
+@pytest.mark.parametrize("n_works,hint", [(450_000, True), (5_000_000, False)])
+def test_a_walk_lists_a_small_sets_things_with_the_map_hint(monkeypatch, n_works, hint):
+    # oxjob #1598, 2026-10-30: a hash partition over the author field's global ordinals took 1.6-5 s a call whatever
+    # the set; with the map hint the AI works of 2012-2015 (385K authors, 9 partitions) listed in 0.9-1.2 s, not 3.3-6.8
+    from query_translation import analytics as A
+    from query_translation.oql_parser import parse_either
+    hints = []
+    monkeypatch.setattr(A, "PARTITION_MIN_WORKS", 2_000_000)
+    monkeypatch.setattr(W, "count_works_and_distinct", lambda *a, **k: (n_works, 300_000))
+    monkeypatch.setattr(W, "list_keys", lambda *a, **k: hints.append(k.get("map_hint")) or [])
+    monkeypatch.setattr(W, "narrow", lambda *a, **k: [])
+    q = ("get authors where h-index is above 20 who published works where year > (2020); then, summarize all those "
+         "authors using count")
+    W.plan_walk(parse_either(q), W.Ctx("test", A.Deadline()))
+    assert hints == [hint]
