@@ -118,6 +118,23 @@ def oql_vocabulary_route():
     return jsonify({"phrases": VOCABULARY}), 200
 
 
+@blueprint.route("/oql-phrases", methods=["GET"])
+def oql_phrases_route():
+    """Every phrase of one OQL statement with its help where it stands (oxjob #1597).
+
+    GET /oql-phrases?q=<oql> -> {phrases: [{start, end, value, kind, detail, doc, choice}]},
+    offsets in code points, in order. The IDE editor's hover help and click-to-change: one
+    call per statement, read by the same walk as `/parse-context`, so a word with two
+    meanings (`by` an author, `by` a split) gets the one it has there. Parse-only, always
+    200; a statement that isn't core OQL (or doesn't read) gets what was read before it."""
+    from query_translation.oql_core_context import core_phrases
+    try:
+        phrases = core_phrases(request.args.get("q", ""))
+    except Exception:  # noqa: BLE001 (an editor hint never raises)
+        phrases = []
+    return jsonify({"phrases": phrases}), 200
+
+
 @blueprint.route("/query/orders", methods=["GET", "POST"])
 def query_orders_route():
     """The orders one query can take, for the website's sort menu (oxjob #1658).

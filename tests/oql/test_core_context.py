@@ -487,3 +487,76 @@ def test_latency_well_under_20ms():
         parse_context(q, pos)
     per_call = (time.perf_counter() - t0) / (len(q) + 1)
     assert per_call < 0.005, per_call
+
+
+# ---------------------------------------------------------------------------
+# GET /oql-phrases: what each phrase means where it stands (hover help, #1597)
+# ---------------------------------------------------------------------------
+def phrase(q, text, nth=0):
+    hits = [p for p in X.core_phrases(q) if q[p["start"]:p["end"]] == text]
+    return hits[nth]
+
+
+def test_phrases_say_what_a_word_means_here():
+    q = "get the count of works by [Jennifer A. Doudna](A5067184382) by year"
+    assert phrase(q, "by", 0)["detail"] == "works by this author"
+    assert phrase(q, "by", 1)["detail"].startswith("split into rows")
+    assert phrase("get works by [Jennifer A. Doudna](A5067184382)", "by")["detail"] == "works by this author"
+    q = "get the count of works by country in ([United States](US), [China](CN))"
+    assert phrase(q, "in")["value"] == "in (…)"
+    assert phrase("get the count of works by institution in [Sweden](SE)", "in")["detail"] == \
+        "in this country or continent"
+    q = "get the count of works by institution in the collection [My list](c1)"
+    assert phrase(q, "in the collection")["value"] == "in the collection"
+    q = "get authors at [UBC](I141945490) in 2+ years since 2022"
+    assert phrase(q, "since")["detail"] == "on their record since a year"
+    assert phrase(q, "in 2+ years")["value"] == "in 2+ years"
+    assert phrase("get works since 2020", "since")["detail"] == "published in or after a year"
+    assert phrase("get works since 2020", "2020")["kind"] == "year"
+
+
+@pytest.mark.parametrize("q", DEMO + CASES)
+def test_phrases_are_ordered_apart_and_choices_open_dropdowns(q):
+    ps = X.core_phrases(q)
+    assert ps and ps[0]["value"] == "get"
+    for a, b in zip(ps, ps[1:]):
+        assert a["end"] <= b["start"], (a, b)
+    for p in ps:
+        assert p["detail"] and p["doc"] and p["kind"]
+        mid = (p["start"] + p["end"]) // 2
+        c = X.core_context(q, mid)["context"]
+        opened = any(s.get("current") for s in c.get("suggestions") or [])
+        if p["choice"]:   # a click on a choice opens its alternatives, this phrase first
+            assert opened and c["suggestions"][0]["value"].lower() in (p["value"].lower(), q[p["start"]:p["end"]].lower())
+        elif p["end"] < len(q):
+            assert not opened, p
+
+
+def test_phrases_skip_links_searches_and_other_grammars():
+    q = "get works about kelp from [MIT](I63966007)"
+    assert [q[p["start"]:p["end"]] for p in X.core_phrases(q)] == ["get", "works", "about", "from"]
+    assert X.core_phrases("works where year > 2000") == []
+    assert X.core_phrases("") == []
+    for q in ["get [", "get works ,,, ..", "get the the the", "get ) ("]:
+        X.core_phrases(q)
+
+
+def test_a_closed_partial_link_is_replaced_whole():
+    for q in ["get works from [harv|]", "get works from [ha|rv]", "get works from [harv|](I13"]:
+        c = ctx(q)
+        text = q.replace("|", "")
+        assert text[c["replace_range"]["start"]:c["replace_range"]["end"]] == text[15:], q
+        assert "institutions" in c["autocomplete_entities"]
+    c = ctx("get works from [Stan|ford University")          # unclosed: to the word's end, as before
+    assert c["replace_range"] == {"start": 15, "end": 24}
+
+
+def test_phrases_route():
+    from flask import Flask
+    from query_translation.editor_views import blueprint
+    app = Flask(__name__)
+    app.register_blueprint(blueprint)
+    with app.test_client() as client:
+        body = client.get("/oql-phrases", query_string={"q": "get works about kelp by [A](A1)"}).get_json()
+        assert [p["value"] for p in body["phrases"]] == ["get", "works", "about", "by"]
+        assert client.get("/oql-phrases").get_json() == {"phrases": []}

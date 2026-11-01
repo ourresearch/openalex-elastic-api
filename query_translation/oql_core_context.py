@@ -710,6 +710,9 @@ class _Walk:
         self.i = 0
         self.cpos = cpos              # set: a cursor inside a `where` tail delegates
         self.choices: List[Tuple[_Slot, int, int, str]] = []
+        # every phrase read, for hover help (`core_phrases`): (slot or a callable making it,
+        # first token, end token, value, the entry when the slot alone can't say it)
+        self.spans: List[Tuple[Any, int, int, str, Optional[Dict[str, Any]]]] = []
         self.kind = None              # list | things | number | table
         self.entity = None
         self.search = False
@@ -723,6 +726,19 @@ class _Walk:
     def skip(self):
         self.i += 1
         self.skipped += 1
+
+    def mark(self, start: int, end: int, value: str, slot=None, entry=None):
+        """Note a phrase read without `match` (`get`, a year's `since`, a measure's `of`)."""
+        self.spans.append((slot, start, end, value, entry))
+
+    def retag(self, value: str, entry: Dict[str, Any], end: Optional[int] = None):
+        """The last span read as `value` means `entry` here (`by [A](A1)` in a table is the
+        author's `by`; `in (...)` after a split lists rows); `end` widens it."""
+        for k in range(len(self.spans) - 1, -1, -1):
+            slot, s, e, v, _ = self.spans[k]
+            if v == value:
+                self.spans[k] = (slot, s, end if end is not None else e, v, entry)
+                return
 
     # -- cursor over the tokens before the limit
     def tok(self, k=0) -> Optional[_Tok]:
@@ -753,6 +769,7 @@ class _Walk:
             if ok and k == len(words):
                 start = self.i
                 self.i += k
+                self.spans.append((slot, start, self.i, value, None))
                 if record:
                     self.choices.append((slot() if callable(slot) else slot, start, self.i, value))
                 return value
@@ -788,6 +805,7 @@ class _Walk:
     def run(self):
         if self.low() != "get":
             self.stop(S_START)
+        self.mark(self.i, self.i + 1, "get")
         self.i += 1
         t = self.tok()
         if t is None:
@@ -884,6 +902,7 @@ class _Walk:
                 if t is None:
                     self.stop(S_SPLIT)
                 if t.kind == "L":
+                    self.retag("by", K["by"])      # a table's works by an author, not a split
                     self.links(S_BY_AUTHOR, after)
                     return
                 if t.kind == "PL":
@@ -977,9 +996,11 @@ class _Walk:
             return False
         if nxt.kind != "W" or not _YEARISH.fullmatch(nxt.low):
             if strict or w in ("since", "before", "through"):
+                self.mark(self.i, self.i + j + 1, w)
                 self.i += j + 1
                 return True
             return False
+        self.mark(self.i, self.i + j + 1, w)
         self.i += j + 1
         self.choices.append((S_YEAR[w], self.i, self.i + 1, nxt.text))
         self.i += 1
@@ -989,6 +1010,7 @@ class _Walk:
                 self.i += 1
                 self.stop(S_YEAR["through"])
             if nxt2.kind == "W" and _YEARISH.fullmatch(nxt2.low):
+                self.mark(self.i, self.i + 1, "through")
                 self.choices.append((S_YEAR["through"], self.i + 1, self.i + 2, nxt2.text))
                 self.i += 2
         return True
@@ -1049,9 +1071,11 @@ class _Walk:
                     self.i += 1
                     return
                 if t.low == "and":
+                    self.mark(self.i, self.i + 1, "and")
                     self.i += 1
                     break
                 if main and t.kind == "W" and t.low in _MEASURE_JOINS:
+                    self.mark(self.i, self.i + 1, t.low)
                     self.i += 1
                     return self.works_phrase(S_NOUN_TABLE, "table")
                 self.skip()
@@ -1122,11 +1146,15 @@ class _Walk:
                 if nt is None:
                     self.stop(in_slot)
                 if nt.kind in ("G", "OG"):
+                    self.retag("in", _VALUES_IN)          # only these rows
                     self.i += 1
                     continue
                 if nt.kind == "W" and self.match(_COLLECTION_TABLE, in_slot):
+                    self.spans.pop()                       # `in` + `the collection`: one phrase
+                    self.retag("in", K["in the collection"], end=self.i)
                     self.link(S_COLLECTION)
                     continue
+                self.retag("in", _THING_IN)               # the things' own place
                 self.link(in_slot())
             elif v == "in the collection":
                 self.link(S_COLLECTION)
@@ -1216,10 +1244,14 @@ class _Walk:
                 self.stop(after, extra=_RECORD_YEARS)
             if t.kind == "W" and t.low == "in" and re.fullmatch(r"\d\+", self.low(1) or "") \
                     and self.low(2) == "years":
+                self.mark(self.i, self.i + 3, "in 2+ years")
                 self.i += 3
                 continue
             if t.kind == "W" and t.low in C.YEAR_OPS and t.low != "in":
                 if self.years(strict=True):
+                    rec = next((o for o in _RECORD_YEARS if o["value"] == t.low), None)
+                    if rec:
+                        self.retag(t.low, rec)     # on their record, not published
                     continue
             return
 
@@ -1438,7 +1470,8 @@ def core_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
         start = toks[stop.pending].start
     else:
         start = cur.start if cur is not None else cpos
-    end = cur.end if cur is not None and cur.kind == "W" else \
+    closed = cur is not None and cur.kind == "PL" and "]" in cur.text
+    end = cur.end if cur is not None and (cur.kind == "W" or closed) else \
         _word_end(q, cpos, cur.end) if cur is not None else cpos
     prefix = q[start:cpos]
     ents = slot.entities + ([e for e in slot.bracket_entities if e not in slot.entities]
@@ -1539,3 +1572,51 @@ _ORDER_ALL = _ptable([o for o in VOCABULARY if o["kind"] == "order"])
 _RECORD_YEARS = [_with(K[w], detail=d) for w, d in (("since", "on their record since a year"),
                                                      ("through", "on their record through a year"))] \
     + [K["in 2+ years"]]
+_VOCAB_BY_VALUE = {o["value"].lower(): o for o in VOCABULARY}
+
+
+# ---------------------------------------------------------------------------
+# GET /oql-phrases: every phrase of one statement, with its help in that place
+# ---------------------------------------------------------------------------
+def _span_entry(slot, value: str, written: str) -> Optional[Dict[str, Any]]:
+    """The entry for a phrase the walker read in `slot`: the slot's own (so `by` in a table
+    is the split's `by`), a year's, else the vocabulary's."""
+    if callable(slot):
+        slot = slot()
+    low = value.lower()
+    if slot is not None:
+        for o in _options(slot):
+            if o["value"].lower() == low:
+                return o
+        if slot.years and _YEARISH.fullmatch(written.lower()):
+            return _year(slot.years, written)
+    return _VOCAB_BY_VALUE.get(low)
+
+
+def core_phrases(q: str) -> List[Dict[str, Any]]:
+    """Every phrase the walker reads in `q`, with what it means where it stands: {start, end,
+    value, kind, detail, doc, choice} in code points, in order. `choice`: a click on it opens
+    its alternatives (`/parse-context` there answers with a dropdown). The editor's hover
+    help (oxjob #1597), like an IDE's semantic tokens: one call per statement, from the same
+    walk the autocomplete runs, so `by` in `... by country` gets the split's help, not the
+    author's. Links, search words and `where` tails have no phrase; not a core statement: []."""
+    if not is_core(q):
+        return []
+    toks = _tokens(q)
+    w, _ = _walk(q, toks, len(toks))
+    choice_at = {(s, e) for _, s, e, _ in w.choices}
+    marks = w.spans + [(slot, s, e, v, None) for slot, s, e, v in w.choices]
+    out, seen = [], set()
+    for slot, s, e, value, entry in marks:
+        if (s, e) in seen or not 0 <= s < e <= len(toks):
+            continue
+        a, b = toks[s].start, toks[e - 1].end
+        entry = entry or _span_entry(slot, value, q[a:b])
+        if entry is None:
+            continue
+        seen.add((s, e))
+        out.append({"start": a, "end": b, "value": entry["value"], "kind": entry["kind"],
+                    "detail": entry.get("detail"), "doc": entry.get("doc"),
+                    "choice": (s, e) in choice_at})
+    out.sort(key=lambda p: p["start"])
+    return out
