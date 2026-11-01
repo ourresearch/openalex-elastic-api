@@ -513,6 +513,21 @@ def test_phrases_say_what_a_word_means_here():
     assert phrase(q, "in 2+ years")["value"] == "in 2+ years"
     assert phrase("get works since 2020", "since")["detail"] == "published in or after a year"
     assert phrase("get works since 2020", "2020")["kind"] == "year"
+    assert phrase(q, "2022")["detail"] == "on their record since 2022"
+    assert phrase("get works in 2020", "in")["detail"] == "published in a year"
+    q = 'get works with "smart grid" in the title'
+    assert phrase(q, "with")["value"] == "with … in the title"
+    assert phrase("get works with [Jane Doe](A1) as corresponding author", "with")["value"] == \
+        "with … as corresponding author"
+    assert phrase("get works under the [CC BY](cc-by) license", "under the")["value"] == \
+        "under the … license"
+
+
+def test_only_the_phrases_walk_keeps_spans():
+    q = DEMO[4]
+    toks = X._tokens(q)
+    assert X._walk(q, toks, len(toks))[0].spans is None          # /parse-context: nothing kept
+    assert X._walk(q, toks, len(toks), spans=True)[0].spans
 
 
 @pytest.mark.parametrize("q", DEMO + CASES)
