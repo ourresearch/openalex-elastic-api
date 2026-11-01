@@ -153,6 +153,10 @@ def find(q: str, known_bad: bool = False) -> Optional[Dict[str, Any]]:
     words = [t for t in toks if t[0] not in _SEPARATORS]
     if not words:
         return None
+    # a name being picked (`from [stanf`, `from [stanf]`, a link without its ID): OQL being
+    # typed, its dropdown is open; not plain words
+    if any(t[0] == "PL" for t in toks):
+        return None
     whole = {"kind": "plain", "start": words[0][1], "end": words[-1][2],
              "text": q[words[0][1]:words[-1][2]], "rest": None}
     if q[words[0][1]:words[0][2]].lower() != "get":

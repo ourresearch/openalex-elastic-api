@@ -27,6 +27,9 @@ def test_oql_that_reads_has_no_plain_words(q):
 @pytest.mark.parametrize("q", [
     "get works about kelp since",               # an OQL word being typed at the end
     "get works about kelp since 2020, most cit",
+    "get works from [stanf",                    # a name being picked
+    "get works from [stanf]",
+    "get works from [stanf] since 2020",
 ])
 def test_oql_being_typed_is_not_plain_words(q):
     assert find(q) is None
