@@ -603,15 +603,15 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         return _execute_analytics(oqo, index_name, connection, fields_dict,
                                   search_q, filter_q, extra_qs, params)
 
-    def build_search(p):
+    def build_search(p, sq=search_q, fq=filter_q):
         s = Search(index=index_name, using=connection)
         s = set_source(index_name, s)
         s = _set_size(p, s)
         s = _set_cursor_pagination(p, s)
-        if search_q is not None:
-            s = s.query(search_q)
-        if filter_q is not None:
-            s = s.filter(filter_q)
+        if sq is not None:
+            s = s.query(sq)
+        if fq is not None:
+            s = s.filter(fq)
         for extra in extra_qs:
             s = s.filter(extra)
         s = _apply_search_preference(oqo, s)
@@ -632,6 +632,18 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     rerank_on = index_name.lower().startswith("works") and (
         str(rerank_value).lower() == "true" or rerank.is_rerank_cursor(params.get("cursor"))
     )
+    from query_translation import walk_exec
+    sample = walk_exec.sample_of(oqo)
+    if sample is not None:
+        # its set in parentheses was too big to hold: the page answers from a sample of it (oxjob #1930)
+        try:
+            result = _sampled_list(oqo, sample, params, build_search, fields_dict, index_name, connection)
+        except analytics_mod.AnalyticsError as e:
+            return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
+                            "oqo": _echo_oqo(oqo).to_dict()}), e.status
+        if rerank_on:
+            result["meta"]["reranked"] = False
+        return _finalize_oqo_response(result, oqo, MessageSchema)
     if rerank_on:
         rerank_query = rerank.oqo_query_text(oqo.filter_rows)
         try:
@@ -685,6 +697,60 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     if rerank_on:
         result["meta"]["reranked"] = False
     return _finalize_oqo_response(result, oqo, MessageSchema)
+
+
+def _sampled_list(oqo: OQO, sample: dict, params, build_search, fields_dict, index_name, connection):
+    """A list whose set in parentheses was too big to hold, answered from a sample of the set (oxjob #1930, step 2).
+    Without the set, a list of up to walk_exec.WHOLE_CHECK_MAX works is checked whole against the set's works: exact.
+    Else the count is the sample's, scaled up, and the rows are the list's own first works when the set cites enough
+    of its first walk_exec.CANDIDATES (each checked), or else the first works of a thinned sample in the list's
+    order."""
+    from concurrent.futures import ThreadPoolExecutor
+    from flask import g
+    from query_translation import walk_exec
+    deadline = getattr(g, "oql_deadline", None) or analytics_mod.Deadline()
+    page, per_page = params["page"] or 1, params["per_page"]
+    first = dict(params, page=1, cursor=None)
+    sq, fq = oqo_to_search_and_filter_q(walk_exec.without_sample(oqo), fields_dict, scoring=True)
+
+    def listed(size, total=False):
+        got = build_search(first, sq, fq).source(False).extra(
+            **{"from": 0, "size": size, "track_total_hits": walk_exec.WHOLE_CHECK_MAX + 1 if total else False}
+        ).params(request_timeout=deadline.timeout("listing the list's first works")).execute()
+        return [h.meta.id for h in got], (got.hits.total.value if total else None)
+
+    def run(rows, p):
+        return format_response(execute_search(rows, p), params, index_name, fields_dict, rows, connection)
+
+    def page_of(hits):
+        # the page's works, in the list's order (its sort, run again on just them)
+        return run(build_search(first, sq, fq).filter("terms", id=hits[(page - 1) * per_page:page * per_page]), first)
+
+    ids, total = listed(walk_exec.CANDIDATES, total=True)
+    if total <= walk_exec.WHOLE_CHECK_MAX:
+        if total > len(ids):
+            ids = listed(total)[0]   # in one request: a sort with no tiebreaker could repeat or skip across two
+        hits = walk_exec.cited_by_set(connection, deadline, sample["set_query"], ids)
+        result = page_of(hits)
+        result["meta"]["count"] = len(hits)
+        return result
+    # the sample's count (its id filter in routed pieces), beside the check of the list's first works and the rows
+    count_body = {"size": 0, "track_total_hits": True, "query": _base_query_for(oqo, fields_dict, connection)}
+    thinned = None
+    with ThreadPoolExecutor(1) as pool:
+        counting = pool.submit(analytics_mod._search, index_name, connection, count_body, deadline,
+                               "counting the sample")
+        hits = walk_exec.cited_first(connection, deadline, sample["set_query"], ids, page * per_page)
+        if hits is not None:
+            result = page_of(hits)
+        else:
+            # the sample's first works in the list's order, from fewer of its ids (a sorted page of 83K ids: 2.6 s)
+            thin, thinned = walk_exec.thin_sample(oqo, walk_exec.LIST_ROWS_IDS)
+            sq, fq = oqo_to_search_and_filter_q(thin, fields_dict, scoring=True)
+            result = run(build_search(params, sq, fq), params)
+        count = counting.result()["hits"]["total"]["value"]
+    walk_exec.label_list(result["meta"], sample, count, thinned)
+    return result
 
 
 def _run_walks(oqo: OQO, connection):

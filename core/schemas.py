@@ -30,6 +30,10 @@ class MetaSchema(Schema):
     # undocumented/mutable; it is deliberately NOT a `/properties` Field, so it
     # does not touch the properties drift gate.
     x_query = fields.Raw()
+    # A list whose set in parentheses was too big to hold answers from a sample of it (oxjob #1930): its count is an
+    # estimate, and `estimate` says how (sample_share, set_works, count_margin, rows, message). Present only then.
+    approximate = fields.Bool()
+    estimate = fields.Raw()
 
     class Meta:
         ordered = True

@@ -210,7 +210,8 @@ def test_scale_estimate_scales_counts_and_sums_only():
     ("; then group those works by type; then summarize using max FWCI", False, "max"),
     ("; then get authors of those works; then get all those authors' works; then summarize using count", False,
      "walk"),
-    ("", False, "list"),
+    ("", False, None),                 # a list: its count scales up (step 2)
+    ("", True, "export"),
 ])
 def test_what_a_sample_can_answer(q, export, why):
     got = W._why_not_estimable(_calc(SET + q), export)
@@ -254,3 +255,173 @@ def test_list_keys_can_read_only_the_first_partitions():
     assert len(keys) == W.SAMPLE_PARTS == len(calls)
     assert {c["num_partitions"] for c in calls} == {W._list_parts(3_000_000)}
     assert sorted(c["partition"] for c in calls) == list(range(W.SAMPLE_PARTS))
+
+
+# ---------------------------------------------------------------------------
+# Step 2: past the limit, a list's page answers from a sample of the cited works; its rows are its own first works
+# where the set cites them, and a list of a few thousand works is checked whole
+# ---------------------------------------------------------------------------
+def _sampled(ids=("https://openalex.org/W1", "https://openalex.org/W2"), share=0.1):
+    return W.IdSet(list(ids), "s", "cited_by", {"share": share, "works": 3_000_000, "set_query": {"match_all": {}}})
+
+
+def test_a_list_can_be_sampled_unless_it_groups_samples_or_searches_semantically():
+    from dataclasses import replace
+    from query_translation.oqo import GroupBy
+    oqo = _calc(SET)
+    assert not oqo.calculates and W._why_not_estimable(oqo, False) is None
+    assert "groups" in W._why_not_estimable(replace(oqo, group_by=[GroupBy(column_id="type")]), False)
+    assert "random sample" in W._why_not_estimable(replace(oqo, sample=100), False)
+    sem = replace(oqo, filter_rows=oqo.filter_rows + [
+        LeafFilter("title_and_abstract.search.semantic", "folding", "is")])
+    assert "semantic" in W._why_not_estimable(sem, False)
+    assert W._why_not_estimable(None, False)
+
+
+class _FakeSearch:
+    """A Ctx.search answering the list resolver's calls: the references total, the distinct count, partitions."""
+
+    def __init__(self, refs, est, per_part=3):
+        self.refs, self.est, self.per_part, self.calls = refs, est, per_part, []
+
+    def __call__(self, body, what, index=None, **params):
+        aggs = body.get("aggs") or {}
+        if "refs" in aggs:
+            self.calls.append("refs")
+            return {"aggregations": {"refs": {"value": self.refs}}}
+        if "n" in aggs:
+            self.calls.append("distinct")
+            return {"hits": {"total": {"value": 1}}, "aggregations": {"n": {"value": self.est}}}
+        inc = aggs["k"]["terms"]["include"]
+        self.calls.append(("part", inc["partition"], inc["num_partitions"]))
+        return {"aggregations": {"k": {"buckets": [{"key": f"W{inc['partition']}-{i}"}
+                                                   for i in range(self.per_part)]}}}
+
+
+def _list_ctx(fake, export=False, calc=""):
+    ctx = W.Ctx("walden", None, query=_calc(SET + calc), export=export)
+    ctx.search = fake
+    return ctx
+
+
+def test_a_big_set_is_sampled_without_counting_its_works():
+    for calc in ("", "; then group those works by type; then summarize using count"):   # a list, a calculation
+        fake = _FakeSearch(refs=20_000_000, est=None, per_part=4_000)
+        ctx = _list_ctx(fake, calc=calc)
+        ids, sample = W._list_or_sample_cited(ctx, {"match_all": {}}, 20_000_000, True, "listing")
+        parts = W._list_parts(20_000_000 * W.MAX_DISTINCT_SHARE)
+        assert "distinct" not in fake.calls                       # the references total sizes the partitions
+        assert {c[2] for c in fake.calls if c[0] == "part"} == {parts}
+        assert len(ids) == 4_000 * W.SAMPLE_PARTS and ctx.sampled
+        assert sample == {"share": W.SAMPLE_PARTS / parts, "works": round(len(ids) * parts / W.SAMPLE_PARTS),
+                          "set_query": {"match_all": {}}}
+
+
+def test_a_set_naming_few_works_is_listed_whole_after_all():
+    fake = _FakeSearch(refs=20_000_000, est=None, per_part=1)   # 1 id a partition: a few hundred works in all
+    ctx = _list_ctx(fake)
+    ids, sample = W._list_or_sample_cited(ctx, {"match_all": {}}, 20_000_000, True, "listing")
+    assert sample is None and not ctx.sampled
+    assert fake.calls[-1][2] == W._list_parts(W._list_parts(20_000_000 * W.MAX_DISTINCT_SHARE))
+
+
+def test_a_middling_set_is_counted_then_sampled_or_listed():
+    fake = _FakeSearch(refs=1_200_000, est=660_000)
+    ids, sample = W._list_or_sample_cited(_list_ctx(fake), {"match_all": {}}, 1_200_000, True, "listing")
+    assert fake.calls[0] == "distinct"
+    assert sample["share"] == W.SAMPLE_PARTS / W._list_parts(660_000)
+    fake = _FakeSearch(refs=600_000, est=300_000)
+    ids, sample = W._list_or_sample_cited(_list_ctx(fake), {"match_all": {}}, 600_000, True, "listing")
+    assert sample is None and len([c for c in fake.calls if c[0] == "part"]) == W._list_parts(300_000)
+
+
+def test_a_list_export_or_a_set_inside_not_is_refused_with_its_reason():
+    from query_translation import analytics as A
+    for ctx, top, why in ((_list_ctx(_FakeSearch(20_000_000, 9_000_000), export=True), True, "export"),
+                          (_list_ctx(_FakeSearch(20_000_000, 9_000_000)), False, "`not`")):
+        with pytest.raises(A.AnalyticsError) as e:
+            W._list_or_sample_cited(ctx, {"match_all": {}}, 20_000_000, top, "listing")
+        assert e.value.message.startswith("This list needs about 9,000,000 works") and why in e.value.message
+        assert "a list holds up to 450,000 exactly" in e.value.message
+
+
+def test_without_and_thin_sample_touch_only_the_sampled_set():
+    from query_translation.oqo import OQO, BranchFilter
+    sampled, kept = LeafFilter("ids.openalex", _sampled(), "in"), LeafFilter("type", "article", "is")
+    oqo = OQO(get_rows="works", filter_rows=[BranchFilter(join="and", filters=[sampled, kept])])
+    assert W.without_sample(oqo).filter_rows == [BranchFilter(join="and", filters=[kept])]
+    assert W.without_sample(OQO(get_rows="works", filter_rows=[sampled])).filter_rows == []
+    neg = OQO(get_rows="works", filter_rows=[LeafFilter("ids.openalex", _sampled(), "in", True)])
+    assert W.without_sample(neg) == neg
+    many = [f"https://openalex.org/W{i}" for i in range(4_000)]
+    thin, k = W.thin_sample(OQO(get_rows="works", filter_rows=[LeafFilter("ids.openalex", _sampled(many), "in"),
+                                                               kept]), 1_000)
+    s = thin.filter_rows[0].value
+    assert k == 4 and 800 < len(s) < 1_200 and set(s.ids) <= set(many) and s.sample["share"] == 0.1
+    assert thin.filter_rows[1] == kept
+    thin, k = W.thin_sample(oqo, 1_000)
+    assert k == 1 and thin.filter_rows[0].filters[0].value.ids == _sampled().ids
+
+
+def test_cited_first_checks_a_round_then_more_only_when_it_can_fill_the_page(monkeypatch):
+    ids = [f"W{i}" for i in range(1_000)]
+    checked = []
+
+    def with_cited(cited):
+        def fake(connection, deadline, set_query, part):
+            checked.append(len(part))
+            return [w for w in part if w in cited]
+        monkeypatch.setattr(W, "cited_by_set", fake)
+    with_cited(set(ids[::2]))
+    assert W.cited_first(None, None, {}, ids, 25) == ids[:W.MEMBER_PIECE:2]
+    assert checked == [W.MEMBER_PIECE]                            # one round: 63 of the first 125 cited
+    checked.clear()
+    with_cited(set(ids[:5]) | set(ids[200::4]))     # 5 of the first 125: at that rate the rest makes up 25
+    got = W.cited_first(None, None, {}, ids, 25)
+    assert len(got) >= 25 and got[:5] == ids[:5] and checked == [W.MEMBER_PIECE, 1_000 - W.MEMBER_PIECE]
+    checked.clear()
+    with_cited(set(ids[:3]) | set(ids[200::4]))     # 3 of 125: 24 at most at that rate, so the sample's rows
+    assert W.cited_first(None, None, {}, ids, 25) is None and checked == [W.MEMBER_PIECE]
+    checked.clear()
+    with_cited(set())
+    assert W.cited_first(None, None, {}, ids, 25) is None and checked == [W.MEMBER_PIECE]   # no second round
+
+
+def test_cited_by_set_counts_one_bucket_a_work_in_pieces(monkeypatch):
+    from query_translation import analytics as A
+    bodies = []
+
+    def search(index, connection, body, deadline, what, **params):
+        bodies.append(body)
+        f = body["aggs"]["m"]["filters"]["filters"]
+        return {"aggregations": {"m": {"buckets": {k: {"doc_count": int(v["term"]["referenced_works"].endswith("7"))}
+                                                   for k, v in f.items()}}}}
+    monkeypatch.setattr(A, "_search", search)
+    ids = [f"https://openalex.org/W{i}" for i in range(300)]
+    got = W.cited_by_set("walden", None, {"term": {"type": "review"}}, ids)
+    assert got == [w for w in ids if w.endswith("7")]               # in the list's order
+    assert sorted(len(b["aggs"]["m"]["filters"]["filters"]) for b in bodies) == [50, 125, 125]
+    assert all(b["query"] == {"term": {"type": "review"}} and b["size"] == 0 for b in bodies)
+
+
+def test_label_list_scales_the_count_and_gives_its_margin():
+    meta = {}
+    W.label_list(meta, {"share": 0.02, "works": 10_500_000}, 200_000, None)
+    assert meta["count"] == 10_000_000 and meta["approximate"] is True
+    e = meta["estimate"]
+    assert e["rows"] == "first" and e["count_margin"] == round(1.96 * (200_000 * 0.98) ** 0.5 * 50)
+    assert "1 in 50 of the 10,500,000 works" in e["message"] and "the rows are exact" in e["message"]
+    assert f"give or take {e['count_margin']:,}" in e["message"]
+    W.label_list(meta, {"share": 0.02, "works": 10_500_000}, 200_000, 14)
+    assert meta["estimate"]["rows"] == "sample"
+    assert "a random 1 in 700 of the list's works" in meta["estimate"]["message"]
+
+
+def test_a_calculation_estimate_gives_its_count_margin_too():
+    body = {"meta": {"count": 12, "groups_count": None}, "group_by": [], "summary": {"all": {"count": 12}}}
+    W.scale_estimate(body, _calc(SET + "; then summarize using count"), {"share": 0.125, "works": 2_979_009})
+    e = body["meta"]["estimate"]
+    assert body["meta"]["count"] == 96 and e["count_margin"] == round(1.96 * (12 * 0.875) ** 0.5 * 8)
+    assert e["message"] == ("Estimated from a random 1 in 8 of the 2,979,009 works the set in parentheses cites: "
+                            "counts and sums are scaled up, means and percents are the sample's. Narrow the set for "
+                            "exact numbers.")
