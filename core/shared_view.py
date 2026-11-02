@@ -261,6 +261,9 @@ def set_source(index_name, s):
                 "authorships_full",
                 "locations_full",
                 "vector_embedding",
+                # oxjob #1300: removed from the API 2026-11-02; docs written before then still
+                # carry it until the next works rebuild.
+                "sustainable_development_goals_aurora",
             ]
         )
     elif index_name.startswith("funder-search"):

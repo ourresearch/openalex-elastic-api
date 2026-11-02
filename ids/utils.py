@@ -3,7 +3,7 @@ import re
 from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
-from core.utils import normalize_openalex_id, select_fields
+from core.utils import check_select_field, normalize_openalex_id, select_fields
 
 
 def is_openalex_id(openalex_id):
@@ -312,8 +312,5 @@ def process_id_only_fields(request, schema):
     only_fields = select_fields(request)  # None for an empty select= (oxjob #1913)
     if only_fields:
         for field in only_fields:
-            if field not in schema_fields:
-                raise APIQueryParamsError(
-                    f"{field} is not a valid select field. Valid fields for select are: {', '.join(schema_fields)}."
-                )
+            check_select_field(field, schema_fields)
     return only_fields

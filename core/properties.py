@@ -426,7 +426,12 @@ CAP_COLUMN = "column"
 # though 119,624 awards changed on 29 Oct); the 21 entities that had only from_* gain to_created_date / to_updated_date
 # (works, authors, sources had them). 46 properties, purely additive = MINOR. The proxy's paid-plan gate
 # (src/syncGate.ts) already covers every from_/to_ created/updated field. Under Jason's standing authority.
-PROPERTIES_VERSION = "19.1.0"
+# 20.0.0 (oxjob #1300, 2026-11-02): works lose the deprecated column `sustainable_development_goals_aurora` (Aurora's
+# SDG tags frozen in October 2026), removed in November 2026 as announced in 15.0.0 and on help.openalex.org
+# (api/deprecations). `select=` naming it answers a 400 that says it was removed and names
+# `sustainable_development_goals` (core.utils.REMOVED_SELECT_FIELDS). A column removed = MAJOR per
+# classify_properties_diff.py. Under Jason's standing authority.
+PROPERTIES_VERSION = "20.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

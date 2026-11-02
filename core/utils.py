@@ -194,15 +194,34 @@ def select_fields(request):
     return [f for f in fields if f] or None
 
 
+# Result fields the API used to return, with what to use instead: a ?select= naming one
+# answers a 400 that says it was removed, rather than "not a valid select field".
+REMOVED_SELECT_FIELDS = {
+    # oxjob #1300: Aurora's frozen SDG tags, deprecated October 2026.
+    "sustainable_development_goals_aurora": (
+        "sustainable_development_goals_aurora was removed on 2 November 2026 (deprecated since October 2026). "
+        "Use sustainable_development_goals. See https://help.openalex.org/api/deprecations/"
+    ),
+}
+
+
+def check_select_field(field, schema_fields):
+    """Raise the 400 for a ?select= field the schema doesn't declare."""
+    if field in schema_fields:
+        return
+    if field in REMOVED_SELECT_FIELDS:
+        raise APIQueryParamsError(REMOVED_SELECT_FIELDS[field])
+    raise APIQueryParamsError(
+        f"{field} is not a valid select field. Valid fields for select are: {', '.join(schema_fields)}."
+    )
+
+
 def process_only_fields(request, schema):
     schema_fields = [f for f in schema._declared_fields]
     only_fields = select_fields(request)
     if only_fields:
         for field in only_fields:
-            if field not in schema_fields:
-                raise APIQueryParamsError(
-                    f"{field} is not a valid select field. Valid fields for select are: {', '.join(schema_fields)}."
-                )
+            check_select_field(field, schema_fields)
         only_fields = [f"results.{field}" for field in only_fields]
         # add back meta and group_by fields
         only_fields.insert(0, "meta")

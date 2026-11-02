@@ -537,9 +537,6 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'citation_normalized_percentile.is_in_top_10_percent': {"display_name": 'top 10% cited'},
         'cited_by_percentile_year.max': {"display_name": 'citation percentile (max)'},
         'sustainable_development_goals.score': {"display_name": 'SDG score'},
-        # oxjob #1300: deprecated output-only column (Aurora's frozen tags; removed Nov 2026).
-        # Paren-free like its neighbours: labels double as OQL parse words.
-        'sustainable_development_goals_aurora': {"display_name": 'deprecated Aurora SDGs'},
         'concepts.wikidata': {"display_name": 'concept Wikidata ID'},
         'topics.domain.id': {"display_name": 'domain'},
         'topics.field.id': {"display_name": 'field'},

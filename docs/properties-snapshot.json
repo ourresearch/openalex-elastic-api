@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "a97d270492e1f0a3c891c3213d3983a55c2ef8bb45c93c1fb42ed24d4b914b77",
-    "property_count": 961,
-    "version": "19.1.0"
+    "fingerprint": "8257b34b221cac0fce55a14bb3803113da477d7c491f9aec9e2e021a9fe74c33",
+    "property_count": 960,
+    "version": "20.0.0"
   },
   "properties": {
     "authors": {
@@ -20071,22 +20071,6 @@
         ],
         "supported_by": [],
         "type": "number"
-      },
-      "sustainable_development_goals_aurora": {
-        "actions": [
-          "column"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "deprecated Aurora SDGs",
-        "entity_type": null,
-        "name": "sustainable_development_goals_aurora",
-        "operators": [],
-        "supported_by": [],
-        "type": null
       },
       "title": {
         "actions": [
