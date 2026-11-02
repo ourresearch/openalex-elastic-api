@@ -1,5 +1,8 @@
 -r prod.txt
 
+# Scripts (test_openai_responses.py)
+openai>=2.14.0
+
 # Testing
 pytest==7.2.0
 
