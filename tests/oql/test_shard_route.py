@@ -5,6 +5,7 @@ import pytest
 from query_translation import id_split as S
 from query_translation import shard_route as R
 from query_translation import walk_exec as W
+from query_translation.oqo import LeafFilter
 
 
 def _reference_hash(s: str) -> int:
@@ -143,9 +144,8 @@ def test_lists_keep_the_older_limit_and_calculations_take_more():
     q = "get works where it's cited by works in (get works where institution is (I146416000))"
     assert not parse(q).calculates and parse(q).runs_as_analytics
     assert parse(q + "; then summarize using count").calculates
-    ctx = W.Ctx.__new__(W.Ctx)
-    ctx.lists = True
-    assert W._reads(ctx) is False                                   # a list never reads its set's references
+    ctx = W.Ctx("walden", None, query=parse(q))
+    assert ctx.lists and W._reads(ctx) is False                     # a list never reads its set's references
     assert W._read_seconds(W.READ_REFS_MAX + 1) is None and W._read_seconds(None) is None
     assert 0 < W._read_seconds(1_200_000) < 8
 
@@ -173,3 +173,84 @@ def test_a_mean_splits_into_its_sum_and_count():
     assert out["all"] == {"value": 21 / 5}
     assert [(b["key"], b["doc_count"], b["m"]["value"]) for b in out["s0"]["buckets"]] == [(2021, 1, 9.0), (2020, 4, 3.0)]
     assert S.plan(_body({"m": {"avg": {"field": "fwci", "missing": 0}}})) is None
+
+
+# ---------------------------------------------------------------------------
+# Past the limits, a calculation's page view answers from a sample of the cited works (Jason, 2026-11-02)
+# ---------------------------------------------------------------------------
+def _calc(q):
+    from query_translation.oql_lang import parse
+    return parse(q)
+
+
+SET = "get works where it's cited by works in (get works where institution is (I27837315))"
+
+
+def test_scale_estimate_scales_counts_and_sums_only():
+    oqo = _calc(SET + "; then group those works by type; then summarize using count, sum citation count, and mean FWCI")
+    body = {"group_by": [{"count": 10, "key": "article", "sum_cited_by_count": 50.0, "mean_fwci": 1.5,
+                          "groups": [{"count": 3, "key": "2020", "sum_cited_by_count": 9.0, "mean_fwci": None}]}],
+            "summary": {"all": {"count": 12, "sum_cited_by_count": 60.0, "mean_fwci": 1.4},
+                        "splits": [{"groups": [{"count": 10, "key": "article", "mean_fwci": 1.5}]}]},
+            "meta": {"count": 12, "groups_count": 1, "rows_count": 1}}
+    W.scale_estimate(body, oqo, {"share": 0.125, "works": 2_979_009})
+    row = body["group_by"][0]
+    assert (row["count"], row["sum_cited_by_count"], row["mean_fwci"]) == (80, 400.0, 1.5)
+    assert (row["groups"][0]["count"], row["groups"][0]["sum_cited_by_count"]) == (24, 72.0)
+    assert body["summary"]["all"] == {"count": 96, "sum_cited_by_count": 480.0, "mean_fwci": 1.4}
+    assert body["summary"]["splits"][0]["groups"][0]["count"] == 80
+    m = body["meta"]
+    assert (m["count"], m["groups_count"], m["rows_count"]) == (96, 1, 1)
+    assert m["estimate"]["sample_share"] == 0.125 and "1 in 8 of the 2,979,009 works" in m["estimate"]["message"]
+
+
+@pytest.mark.parametrize("q, export, why", [
+    ("; then group those works by type; then summarize using count and mean FWCI", False, None),
+    ("; then group those works by type; then summarize using count", True, "export"),
+    ("; then group those works by type; then summarize using max FWCI", False, "max"),
+    ("; then get authors of those works; then get all those authors' works; then summarize using count", False,
+     "walk"),
+    ("", False, "list"),
+])
+def test_what_a_sample_can_answer(q, export, why):
+    got = W._why_not_estimable(_calc(SET + q), export)
+    assert (got is None) if why is None else (why in got)
+
+
+def test_a_cursor_page_is_never_estimated():
+    from dataclasses import replace
+    oqo = replace(_calc(SET + "; then group those works by type; then summarize using count"), cursor="*")
+    assert "export" in W._why_not_estimable(oqo, False)
+
+
+def test_only_a_set_anded_into_the_works_is_sampled():
+    calc = "; then group those works by type; then summarize using count"
+    ctx = W.Ctx("walden", None, query=_calc(SET + calc))
+    assert W._cited_way(ctx, 3_000_000, 5_000_000, top=True) == "sample"
+    assert W._cited_way(ctx, 3_000_000, 5_000_000, top=False) == "refuse"     # inside not, or, a split
+    assert W._cited_way(ctx, 3_000_000, None, top=True) == "refuse"           # can't read references
+    assert W._cited_way(ctx, 400_000, None, top=False) == "list"
+    ctx.sampled = True
+    assert W._cited_way(ctx, 3_000_000, 5_000_000, top=True) == "refuse"      # one sampled set a query
+    sampled = W.IdSet(["https://openalex.org/W1"], "s", "cited_by", {"share": 0.1, "works": 3_000_000})
+    from query_translation.oqo import BranchFilter
+    pos = _calc(SET + calc).__class__(get_rows="works", filter_rows=[LeafFilter("ids.openalex", sampled, "in")])
+    assert W.sample_of(pos) == {"share": 0.1, "works": 3_000_000}
+    neg = pos.__class__(get_rows="works", filter_rows=[LeafFilter("ids.openalex", sampled, "in", True)])
+    ored = pos.__class__(get_rows="works", filter_rows=[BranchFilter(
+        join="or", filters=[LeafFilter("ids.openalex", sampled, "in"), LeafFilter("type", "article", "is")])])
+    assert W.sample_of(neg) is None and W.sample_of(ored) is None
+
+
+def test_list_keys_can_read_only_the_first_partitions():
+    calls = []
+
+    class Ctx:
+        def search(self, body, what, **params):
+            calls.append(body["aggs"]["k"]["terms"]["include"])
+            assert params["filter_path"].startswith("aggregations.k.buckets.key")
+            return {"aggregations": {"k": {"buckets": [{"key": f"W{len(calls)}"}]}}}
+    keys = W.list_keys(Ctx(), {"match_all": {}}, "referenced_works", 3_000_000, "listing", first=W.SAMPLE_PARTS)
+    assert len(keys) == W.SAMPLE_PARTS == len(calls)
+    assert {c["num_partitions"] for c in calls} == {W._list_parts(3_000_000)}
+    assert sorted(c["partition"] for c in calls) == list(range(W.SAMPLE_PARTS))

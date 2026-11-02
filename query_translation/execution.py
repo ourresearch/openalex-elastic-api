@@ -695,7 +695,8 @@ def _run_walks(oqo: OQO, connection):
     g.oql_echo_oqo = oqo
     g.oql_deadline = deadline = analytics.Deadline()
     try:
-        kind, val = walk_exec.prepare(oqo, connection, deadline)
+        kind, val = walk_exec.prepare(oqo, connection, deadline,
+                                      export=oqo.cursor is not None or _format_asked() == "csv")
     except analytics.AnalyticsError as e:
         return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
                         "oqo": oqo.to_dict()}), e.status
@@ -806,6 +807,10 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
         from query_translation import walk_exec
         cost = walk_exec.walk_price(_echo_oqo(oqo), body["meta"].get("es_calls"))
         body["meta"]["cost"] = cost
+        sample = walk_exec.sample_of(oqo)
+        if sample:
+            # its set was too big to hold: the answer comes from a sample of it (oxjob #1930)
+            walk_exec.scale_estimate(body, oqo, sample)
     if csv_export:
         return _csv_response(whole_oqo, body, cost, paging, split=split)
     _add_baseline(body, _echo_oqo(oqo), index_name, connection, fields_dict, per_page, deadline)

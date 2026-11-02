@@ -56,6 +56,13 @@ READ_REFS_MAX = 3_000_000      # references read from the set's works (Michigan'
 EST_REFS_READ_PER_S = 500_000
 EST_ROUTED_IDS_PER_S = 450_000
 READ_INFLIGHT = 24             # single-shard requests (app.py's pools hold 24 connections)
+# Past those limits a calculation's page view answers from a uniform sample of the cited works (oxjob #1930, Jason
+# 2026-11-02: "the estimate sounds good"): the first SAMPLE_PARTS of list_keys' hash partitions (~43K each, 8 side by
+# side: Michigan's 3.0M cited works 1.3 s, systematic reviews' 10.5M 3.5-4.5 s; each call scans every reference).
+# Counts and sums scale up; means, medians, percents and shares are the sample's; exports wait for the exact path.
+SAMPLE_PARTS = 8
+EST_SAMPLE_REFS_PER_S = 5_000_000   # each partition call scans every reference: 20.4M in 3.5-4.5 s, 5.4M in 1.3 s
+ESTIMABLE = ("count", "sum", "mean", "median", "percent", "percent_of_those", "value")
 _WORK = A.ID_PREFIX + "W"
 
 
@@ -64,10 +71,12 @@ class IdSet:
     standing in for a whole query as a leaf's value while the query runs. `label`
     is the canonical text of the query it came from (what `to_dict` echoes)."""
 
-    def __init__(self, ids: List[str], label: str, column: Optional[str] = None):
+    def __init__(self, ids: List[str], label: str, column: Optional[str] = None,
+                 sample: Optional[dict] = None):
         self.ids = list(ids)
         self.label = label
         self.column = column    # the leaf's column as written (`cited_by`), for labels
+        self.sample = sample    # {"share", "works"}: a uniform sample of a set too big to hold (oxjob #1930)
 
     def __len__(self):
         return len(self.ids)
@@ -109,14 +118,24 @@ def _over_budget(seconds: float, what: str, fix: str):
 # Context: one per executed query
 # ---------------------------------------------------------------------------
 class Ctx:
-    def __init__(self, connection, deadline: A.Deadline, lists: bool = False):
+    def __init__(self, connection, deadline: A.Deadline, query: Optional[OQO] = None, export: bool = False):
         from works.fields import fields_dict
         import settings
         self.connection = connection
         self.deadline = deadline
-        self.lists = lists      # the query lists its works (no calculation): its sets keep the older limit
+        self.query = query      # the query as written: what its sets may be read as (oxjob #1930)
+        self.export = export    # an export needs every work: never a sample
+        # a list (no calculation) runs its filter whole, unsplit: its sets keep the older limit
+        self.lists = query is not None and not query.calculates
+        self.sampled = False    # a set was answered from a sample (one a query)
         self.works_fields = fields_dict
         self.works_index = settings.WORKS_INDEX
+
+    def why_not_sample(self) -> Optional[str]:
+        """Why this query's numbers can't come from a sample of its set (None: they can)."""
+        if self.sampled:
+            return "only one set a query can be estimated from a sample"
+        return _why_not_estimable(self.query, self.export)
 
     def search(self, body, what, index=None, **params):
         return A._search(index or self.works_index, self.connection, body, self.deadline,
@@ -167,9 +186,11 @@ def few_works(n_works: Optional[int]) -> bool:
 
 
 def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
-              map_hint: bool = False) -> List:
+              map_hint: bool = False, first: Optional[int] = None) -> List:
     """Every distinct value of `field` in the works `query` matches, in hash
-    partitions of about 50,000 listed side by side (each partition one call)."""
+    partitions of about 50,000 listed side by side (each partition one call).
+    `first`: only the first that many partitions (a uniform sample of the values:
+    ES places a value in a partition by its hash)."""
     parts = _list_parts(est)
 
     def one(i):
@@ -177,15 +198,17 @@ def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
                  "include": {"partition": i, "num_partitions": parts}}
         if map_hint:
             terms["execution_hint"] = "map"   # referenced_works: 10 s per call without it
-        r = ctx.search({"size": 0, "query": query, "aggs": {"k": {"terms": terms}}}, what)
-        agg = r["aggregations"]["k"]
+        # keys only: a partition's 50,000 buckets with their counts cost a second to parse (#1930)
+        r = ctx.search({"size": 0, "query": query, "aggs": {"k": {"terms": terms}}}, what,
+                       filter_path="aggregations.k.buckets.key,aggregations.k.sum_other_doc_count")
+        agg = (r.get("aggregations") or {}).get("k") or {"buckets": []}
         if piece_full(agg):
             raise A.AnalyticsError("query_too_slow",
                                    "A partition of this walk came back full; it can't be "
                                    "listed exactly.", "Narrow the starting set.")
         return [b["key"] for b in agg["buckets"]]
     out: List = []
-    for keys in _pmap(one, range(parts)):
+    for keys in _pmap(one, range(min(parts, first or parts))):
         out.extend(keys)
     return out
 
@@ -301,11 +324,13 @@ def _listed_ids(oqo: OQO) -> Optional[List[str]]:
 def resolve_sets(oqo: OQO, ctx: Ctx, walk_wheres: bool = True) -> OQO:
     """Replace every leaf whose value is a whole query, and every co-author or
     collaborator leaf, by its resolved ids."""
-    def walk(node):
+    def walk(node, top=False):
+        # `top`: the node ANDs into the query's works, so a sample of its set is a sample of them (oxjob #1930)
         if isinstance(node, BranchFilter):
-            return replace(node, filters=[walk(f) for f in node.filters])
+            inner = top and node.join == "and" and not node.is_negated
+            return replace(node, filters=[walk(f, inner) for f in node.filters])
         if isinstance(node, LeafFilter) and isinstance(node.value, OQO):
-            return _resolve_leaf(node, ctx)
+            return _resolve_leaf(node, ctx, top and not node.is_negated)
         if isinstance(node, LeafFilter) and node.column_id in RELATION_COLUMNS:
             return _resolve_relation(node, ctx)
         return node
@@ -321,7 +346,7 @@ def resolve_sets(oqo: OQO, ctx: Ctx, walk_wheres: bool = True) -> OQO:
         values = ([walk(v) if isinstance(v, (LeafFilter, BranchFilter)) else v
                    for v in g.values] if g.values is not None else None)
         return replace(g, conditions=conditions, values=values)
-    return replace(oqo, filter_rows=[walk(f) for f in oqo.filter_rows], walks=walks,
+    return replace(oqo, filter_rows=[walk(f, True) for f in oqo.filter_rows], walks=walks,
                    group_by=[split(g) for g in oqo.group_by])
 
 
@@ -339,7 +364,7 @@ def _resolve_relation(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
                       leaf.is_negated)
 
 
-def _resolve_leaf(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
+def _resolve_leaf(leaf: LeafFilter, ctx: Ctx, top: bool = False) -> LeafFilter:
     from query_translation.oql_pipeline import render_pipeline_line
     inner = leaf.value
     label = render_pipeline_line(inner)
@@ -349,29 +374,29 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
         works_q = _set_works_query(inner, ctx)
         refs = _references(ctx, works_q, what) if _reads(ctx) else None
         seconds = _read_seconds(refs)
+        sample = None
         if seconds is not None:
             _over_budget(EST_OVERHEAD_S + seconds, f"reads the {refs:,} references of the set in parentheses",
                          "Narrow the query in parentheses (a shorter year range, a smaller institution or topic).")
             ids = read_cited(ctx, works_q, what)
-            return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by"), "in", leaf.is_negated)
-        est = count_distinct(ctx, works_q, "referenced_works", what)
-        if est > MAX_SET_IDS and refs is not None:
-            raise A.AnalyticsError(
-                "query_too_slow",
-                f"This query needs about {est:,} works the set in parentheses cites, from {refs:,} references; a "
-                f"calculation reads up to {READ_REFS_MAX:,} references naming up to {MAX_CITED_IDS:,} works, to stay "
-                f"inside about {int(A.TIME_BUDGET_S)} seconds.",
-                "Narrow the query in parentheses (a shorter year range, a smaller institution or topic).")
-        if est > MAX_SET_IDS:
-            raise _too_big("needs the {n} works the set in parentheses cites", est,
-                           MAX_SET_IDS,
-                           "Narrow the query in parentheses (a shorter year range, a "
-                           "smaller institution or topic).")
-        _over_budget(EST_OVERHEAD_S + est / EST_IDS_PER_S + est / EST_FILTER_IDS_PER_S,
-                     f"reads the references of a set that cites about {est:,} works",
-                     "Narrow the query in parentheses.")
-        ids = list_keys(ctx, works_q, "referenced_works", est, what, map_hint=True)
-        return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by"), "in", leaf.is_negated)
+        else:
+            est = count_distinct(ctx, works_q, "referenced_works", what)
+            way = _cited_way(ctx, est, refs, top)
+            if way == "refuse":
+                raise _cited_refusal(ctx, est, refs, top)
+            if way == "sample":
+                _over_budget(EST_OVERHEAD_S + _sample_seconds(refs),
+                             f"samples the {refs:,} references of the set in parentheses",
+                             "Narrow the query in parentheses (a shorter year range, a smaller institution or topic).")
+                ctx.sampled = True
+                sample = {"share": min(1.0, SAMPLE_PARTS / _list_parts(est)), "works": est}
+            else:
+                _over_budget(EST_OVERHEAD_S + est / EST_IDS_PER_S + est / EST_FILTER_IDS_PER_S,
+                             f"reads the references of a set that cites about {est:,} works",
+                             "Narrow the query in parentheses.")
+            ids = list_keys(ctx, works_q, "referenced_works", est, what, map_hint=True,
+                            first=SAMPLE_PARTS if sample else None)
+        return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by", sample), "in", leaf.is_negated)
     ids = resolve_result_ids(inner, ctx, what)
     column = leaf.column_id
     return LeafFilter(column, IdSet(ids, label, column), "in", leaf.is_negated)
@@ -384,6 +409,29 @@ def _reads(ctx: Ctx) -> bool:
     from elasticsearch_dsl.connections import get_connection
     from query_translation import shard_route
     return not ctx.lists and shard_route.routing(get_connection(ctx.connection), ctx.works_index) is not None
+
+
+def _cited_way(ctx: Ctx, est: int, refs: Optional[int], top: bool) -> str:
+    """How a set too big to read is resolved, for the run and the free check alike: `list` its cited works by hash
+    partitions (exact, up to MAX_SET_IDS), `sample` them (a calculation's page view, the set ANDed into its works),
+    or `refuse`. `refs` is None when the query can't read references (a list, an unroutable index)."""
+    if est <= MAX_SET_IDS:
+        return "list"
+    if refs is not None and top and ctx.why_not_sample() is None:
+        return "sample"
+    return "refuse"
+
+
+def _cited_refusal(ctx: Ctx, est: int, refs: Optional[int], top: bool) -> A.AnalyticsError:
+    fix = "Narrow the query in parentheses (a shorter year range, a smaller institution or topic)."
+    if refs is None:
+        return _too_big("needs the {n} works the set in parentheses cites", est, MAX_SET_IDS, fix)
+    why = ctx.why_not_sample() if top else "a set inside `not`, `or` or a split can't be sampled"
+    return A.AnalyticsError(
+        "query_too_slow",
+        f"This query needs about {est:,} works the set in parentheses cites, from {refs:,} references; a calculation "
+        f"reads up to {READ_REFS_MAX:,} references naming up to {MAX_CITED_IDS:,} works exactly (about "
+        f"{int(A.TIME_BUDGET_S)} seconds), and past that answers from a sample, but {why}.", fix)
 
 
 def _read_seconds(refs: Optional[int]) -> Optional[float]:
@@ -400,6 +448,11 @@ def _cited_counts(ctx: Ctx, works_q: dict) -> Tuple[int, int]:
         "n": {"cardinality": {"field": "referenced_works", "precision_threshold": 40000}},
         "refs": {"sum": {"field": "referenced_works_count"}}}}, "counting the set's references")
     return int(r["aggregations"]["n"]["value"]), int(r["aggregations"]["refs"]["value"] or 0)
+
+
+def _sample_seconds(refs: int) -> float:
+    """The estimate for sampling a set whose works hold `refs` references (SAMPLE_PARTS partitions, one round)."""
+    return refs / EST_SAMPLE_REFS_PER_S + SAMPLE_PARTS * LIST_PART / EST_ROUTED_IDS_PER_S
 
 
 def _references(ctx: Ctx, works_q: dict, what: str) -> int:
@@ -552,6 +605,68 @@ def plan_walk(oqo: OQO, ctx: Ctx, need_keys: bool = True) -> Tuple[str, dict]:
     return ("each" if plan["each"] else "set"), plan
 
 
+def _why_not_estimable(oqo: Optional[OQO], export: bool) -> Optional[str]:
+    """Why a calculation's numbers can't come from a sample of its set (None: they can, oxjob #1930)."""
+    if oqo is None or not oqo.calculates:
+        return "a list can't be scaled up"
+    if export or oqo.cursor is not None:
+        return "an export needs every work (the page answers it as an estimate)"
+    if oqo.walks or oqo.each:
+        return "a walk's numbers can't be scaled up from a sample"
+    bad = next((m.measure for m in oqo.calculate if m.measure not in ESTIMABLE), None)
+    if bad:
+        return f"a {bad} can't be estimated from a sample"
+    if any(A._has_measure(g.where) for g in oqo.group_by):
+        return "a filter on a calculation can't be checked on a sample"
+    return None
+
+
+def sample_of(oqo: OQO) -> Optional[dict]:
+    """The sample a resolved query's works were read from, if a set ANDed into them was too big to hold."""
+    def find(node):
+        if isinstance(node, BranchFilter) and node.join == "and" and not node.is_negated:
+            return next((x for x in map(find, node.filters) if x), None)
+        if isinstance(node, LeafFilter) and isinstance(node.value, IdSet) and not node.is_negated:
+            return node.value.sample
+        return None
+    return next((x for x in map(find, oqo.filter_rows) if x), None)
+
+
+def scale_estimate(body: dict, oqo: OQO, sample: dict):
+    """A calculation answered from a sample of its set (oxjob #1930): counts and sums scaled up to the whole set, means,
+    medians, percents and shares as the sample has them, and `meta.estimate` saying so."""
+    factor = 1 / sample["share"]
+    sums = {m.key for m in oqo.calculate if m.measure == "sum"}
+
+    def scale(node):
+        if isinstance(node, list):
+            for x in node:
+                scale(x)
+        elif isinstance(node, dict):
+            for k, v in node.items():
+                if k == "count" and isinstance(v, (int, float)):
+                    node[k] = round(v * factor)
+                elif k in sums and isinstance(v, (int, float)):
+                    node[k] = v * factor
+                elif isinstance(v, (list, dict)):
+                    scale(v)
+    scale(body.get("group_by"))
+    scale(body.get("summary"))
+    meta = body.setdefault("meta", {})
+    if isinstance(meta.get("count"), (int, float)):
+        meta["count"] = round(meta["count"] * factor)
+    meta["approximate"] = True   # as count_things marks an inexact count
+    one_in = round(factor)
+    groups = meta.get("groups_count")
+    meta["estimate"] = {
+        "sample_share": round(sample["share"], 6), "set_works": sample["works"], "groups_count_is_at_least": True,
+        "message": (f"Estimated from a random 1 in {one_in:,} of the {sample['works']:,} works the set in parentheses "
+                    f"cites: counts and sums are scaled up, means and percents are the sample's"
+                    + (f", and the {groups:,} groups are those the sample holds (small ones may be missing)"
+                       if isinstance(groups, int) and len(oqo.group_by) else "")
+                    + ". Narrow the set for exact numbers.")}
+
+
 def _core_filter(oqo: OQO, ctx: Ctx) -> Optional[dict]:
     """The corpus filter the walked-back works carry (core works by default)."""
     from query_translation.execution import _effective_corpus
@@ -561,10 +676,10 @@ def _core_filter(oqo: OQO, ctx: Ctx) -> Optional[dict]:
     return {"term": {"is_xpac": "false" if corpus == "core" else "true"}}
 
 
-def prepare(oqo: OQO, connection, deadline: A.Deadline) -> Tuple[str, object]:
+def prepare(oqo: OQO, connection, deadline: A.Deadline, export: bool = False) -> Tuple[str, object]:
     """Resolve an OQO's sets and walks. Returns ("oqo", an OQO the works path runs as
     is) or ("body", a finished response body)."""
-    ctx = Ctx(connection, deadline, lists=not oqo.calculates)
+    ctx = Ctx(connection, deadline, query=oqo, export=export)
     back = next((w for w in oqo.walks if w.to is not None), None)
     out = next((w for w in oqo.walks if w.to is None), None)
     if back is None and not oqo.calculate and out is not None:
@@ -737,19 +852,26 @@ def check(oqo: OQO, connection) -> dict:
     """The free `/query` check for walks and sets: limits with their fixes, the time
     estimate against the budget, the price. One cheap count per walk or set (how
     many things or works it would list); never the walk itself."""
-    ctx = Ctx(connection, A.Deadline(), lists=not oqo.calculates)
+    ctx = Ctx(connection, A.Deadline(), query=oqo)
     limits: List[dict] = []
     est, calls, note = EST_OVERHEAD_S, 1, None
 
-    def add_set(inner: OQO, column: str):
+    def add_set(inner: OQO, column: str, top: bool):
         nonlocal est, calls, note
-        limit, read = MAX_SET_IDS, None
+        limit, read, sampled = MAX_SET_IDS, None, False
         try:
             if column == "cited_by":
+                # as the run's _resolve_leaf: read the references, list them, sample them or refuse
                 n, refs = _cited_counts(ctx, _works_query(inner, ctx))
-                read = _read_seconds(refs) if _reads(ctx) else None   # as the run's _resolve_leaf
+                refs = refs if _reads(ctx) else None
+                read = _read_seconds(refs)
                 if read is not None:
                     limit = MAX_CITED_IDS
+                elif _cited_way(ctx, n, refs, top) == "sample":
+                    ctx.sampled = sampled = True
+                    limit, read = n, _sample_seconds(refs)
+                    note = (f"answers from a random sample of the about {n:,} works the set in parentheses cites: "
+                            f"counts and sums are estimates")
             elif result_entity(inner) == "works" and not inner.walks:
                 n = ctx.search({"size": 0, "track_total_hits": True,
                                 "query": _works_query(inner, ctx)},
@@ -764,7 +886,11 @@ def check(oqo: OQO, connection) -> dict:
         except A.AnalyticsError as e:
             limits.append(e.to_dict())
             return
-        calls += 2 + math.ceil(n / 10_000) + 1     # year split, pages, no-year, count
+        if column == "cited_by":
+            # as the run: a count, then the references read or listed (priced as list_keys' partitions), or a sample
+            calls += 1 + (SAMPLE_PARTS + 1 if sampled else _list_parts(n))
+        else:
+            calls += 2 + math.ceil(n / 10_000) + 1     # year split, pages, no-year, count
         est += read if read is not None else n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S
         if n > limit:
             limits.append(_too_big("uses a set of {n} ids", n, limit,
@@ -772,18 +898,18 @@ def check(oqo: OQO, connection) -> dict:
                                    "smaller institution or topic), or save the set as a "
                                    "collection.").to_dict())
 
-    def visit(node):
+    def visit(node, top=False):
         if isinstance(node, BranchFilter):
             for f in node.filters:
-                visit(f)
+                visit(f, top and node.join == "and" and not node.is_negated)
         elif isinstance(node, LeafFilter) and isinstance(node.value, OQO):
-            add_set(node.value, node.column_id)
+            add_set(node.value, node.column_id, top and not node.is_negated)
         elif isinstance(node, LeafFilter) and node.column_id in RELATION_COLUMNS:
             nonlocal est, calls
             calls += 1                     # one group-by lists the co-authors
             est += A.EST_COAUTHOR_S
     for f in oqo.filter_rows:
-        visit(f)
+        visit(f, True)
     for w in oqo.walks:
         if w.where is not None:
             visit(w.where)
