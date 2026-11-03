@@ -62,6 +62,19 @@ def test_fields_a_work_holds_many_of_run_whole():
         assert S.plan(body({"n": {"cardinality": {"field": field}}})) is None
 
 
+def test_a_filter_on_a_field_a_work_holds_many_of_runs_whole():
+    # a work citing ids in two pieces would count twice (oxjob #1930: 2,818,034 split vs 2,279,670 true)
+    for field in ("referenced_works", "authorships.author.id", "authorships.institutions.lineage"):
+        b = body()
+        b["query"]["bool"]["filter"][0] = {"bool": {"should": [{"terms": {field: IDS[:60_000]}},
+                                                               {"terms": {field: IDS[60_000:]}}],
+                                                    "minimum_should_match": 1}}
+        assert S.plan(b) is None
+    b = body()
+    b["query"]["bool"]["filter"][0] = {"terms": {"primary_location.source.id": IDS[:50_000]}}
+    assert len(S.plan(b)) == 2
+
+
 def test_the_filter_is_found_inside_an_and():
     b = body()
     idf = b["query"]["bool"]["filter"][0]

@@ -726,11 +726,12 @@ def _sampled_list(oqo: OQO, sample: dict, params, build_search, fields_dict, ind
         # the page's works, in the list's order (its sort, run again on just them)
         return run(build_search(first, sq, fq).filter("terms", id=hits[(page - 1) * per_page:page * per_page]), first)
 
+    check = walk_exec.set_check(sample)   # the set cites them (cited by), or they cite it (cites)
     ids, total = listed(walk_exec.CANDIDATES, total=True)
     if total <= walk_exec.WHOLE_CHECK_MAX:
         if total > len(ids):
             ids = listed(total)[0]   # in one request: a sort with no tiebreaker could repeat or skip across two
-        hits = walk_exec.cited_by_set(connection, deadline, sample["set_query"], ids)
+        hits = check(connection, deadline, sample["set_query"], ids)
         result = page_of(hits)
         result["meta"]["count"] = len(hits)
         return result
@@ -740,7 +741,7 @@ def _sampled_list(oqo: OQO, sample: dict, params, build_search, fields_dict, ind
     with ThreadPoolExecutor(1) as pool:
         counting = pool.submit(analytics_mod._search, index_name, connection, count_body, deadline,
                                "counting the sample")
-        hits = walk_exec.cited_first(connection, deadline, sample["set_query"], ids, page * per_page)
+        hits = walk_exec.cited_first(connection, deadline, sample["set_query"], ids, page * per_page, check)
         if hits is not None:
             result = page_of(hits)
         else:

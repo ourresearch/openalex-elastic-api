@@ -425,3 +425,174 @@ def test_a_calculation_estimate_gives_its_count_margin_too():
     assert e["message"] == ("Estimated from a random 1 in 8 of the 2,979,009 works the set in parentheses cites: "
                             "counts and sums are scaled up, means and percents are the sample's. Narrow the set for "
                             "exact numbers.")
+
+
+# ---------------------------------------------------------------------------
+# Step 3: past the limit, the works citing a set are read and checked: all of them up to CITES_SAMPLE (exact), else
+# a uniform sample of them for a page view
+# ---------------------------------------------------------------------------
+CITES = "get works where type is (article) and it cites works in (get works where field is (fields/17))"
+
+
+def test_others_drops_the_sets_and_keeps_every_other_condition():
+    from query_translation.oqo import OQO, BranchFilter
+    inner = _calc("get works where field is (fields/17)")
+    cites = LeafFilter("referenced_works", inner, "in")
+    oqo = OQO(get_rows="works", filter_rows=[
+        LeafFilter("type", "article", "is"),
+        BranchFilter(join="or", filters=[cites, LeafFilter("type", "book", "is")]),     # its whole row goes
+        BranchFilter(join="and", filters=[LeafFilter("publication_year", 2020, "is"), cites]),
+        LeafFilter("co_author", "A1", "is")])
+    got = W._others(oqo)
+    assert got.filter_rows == [LeafFilter("type", "article", "is"),
+                               BranchFilter(join="and", filters=[LeafFilter("publication_year", 2020, "is")])]
+    assert W._others(OQO(get_rows="authors", filter_rows=[])) is None and W._others(None) is None
+
+
+def test_any_in_says_which_works_hold_a_found_reference():
+    import numpy as np
+    lens, refs = np.array([2, 0, 3, 1]), np.array([1, 2, 3, 4, 5, 6])
+    assert W._any_in(lens, refs, np.array([4])).tolist() == [False, False, True, False]
+    assert W._any_in(lens, refs, np.array([1, 6])).tolist() == [True, False, False, True]
+    assert W._any_in(np.array([0, 0]), np.array([], dtype=int), np.array([4])).tolist() == [False, False]
+
+
+def _cites_env(monkeypatch, others, calc="; then group those works by field; then summarize using count",
+               export=False):
+    import numpy as np
+    import elasticsearch_dsl.connections as C
+    from query_translation import analytics as A
+    from query_translation import shard_route
+    monkeypatch.setattr(C, "get_connection", lambda name: None)
+    monkeypatch.setattr(shard_route, "routing", lambda es, index: ("works-v40", 72, 576))
+    monkeypatch.setattr(W, "_works_query", lambda oqo, ctx: {"term": {"type": "article"}})
+    seen = {}
+
+    def read(connection, deadline, index, reads, what):
+        assert [k for k, _ in reads] == list(range(72))
+        seen["query"] = reads[0][1]
+        return (["https://openalex.org/W1", "https://openalex.org/W2", "https://openalex.org/W3"],
+                np.array([2, 0, 1]), np.array([10, 11, 12]))
+
+    def in_set(connection, deadline, index, shards, rs, nums, set_q, what):
+        seen["nums"], seen["set_q"] = nums.tolist(), set_q
+        return np.array([11, 12])
+    monkeypatch.setattr(W, "read_references", read)
+    monkeypatch.setattr(W, "works_in_set", in_set)
+    ctx = W.Ctx("walden", A.Deadline(), query=_calc(CITES + calc), export=export)
+    ctx.search = lambda body, what, **kw: {"hits": {"total": {"value": others}}}
+    return ctx, seen
+
+
+def test_a_narrow_query_reads_every_work_that_may_cite_the_set_exactly(monkeypatch):
+    for export in (False, True):            # exact: an export too
+        ctx, seen = _cites_env(monkeypatch, 20_000, export=export)
+        got = W.citing_works(ctx, {"term": {"field": "17"}}, 7_000_000, "label", True, "listing")
+        assert got.ids == ["https://openalex.org/W1", "https://openalex.org/W3"] and got.sample is None
+        assert "function_score" not in seen["query"] and not ctx.sampled
+        assert seen["nums"] == [10, 11, 12] and seen["set_q"] == {"term": {"field": "17"}}
+
+
+def test_a_broad_query_reads_a_uniform_sample_of_them(monkeypatch):
+    ctx, seen = _cites_env(monkeypatch, 3_000_000)
+    got = W.citing_works(ctx, {"term": {"field": "17"}}, 7_000_000, "label", True, "listing")
+    share = W.CITES_SAMPLE / 3_000_000
+    fs = seen["query"]["function_score"]
+    assert fs["min_score"] == 1 - share and fs["functions"] == [{"random_score": {"seed": W.CITES_SEED,
+                                                                                  "field": "_seq_no"}}]
+    assert got.ids == ["https://openalex.org/W1", "https://openalex.org/W3"] and ctx.sampled
+    assert got.sample == {"share": share, "works": 7_000_000, "set_query": {"term": {"field": "17"}}, "cites": True}
+    assert ctx.deadline.calls == W.CITES_CALLS - 1
+
+
+def test_citing_works_refuse_with_their_reason(monkeypatch):
+    from query_translation import analytics as A
+    for others, top, export, calc, why in (
+            (3_000_000, True, True, "; then group those works by field; then summarize using count", "export"),
+            (3_000_000, True, False, "; then group those works by field; then summarize using max FWCI", "max"),
+            (20_000, False, False, "", "`not`")):
+        ctx, _ = _cites_env(monkeypatch, others, calc=calc, export=export)
+        with pytest.raises(A.AnalyticsError) as e:
+            W.citing_works(ctx, {}, 7_000_000, "label", top, "listing")
+        assert e.value.message.startswith("This query uses a set of about 7,000,000 works") and why in e.value.message
+        assert e.value.fix == "Narrow the query in parentheses to 450,000 works, or the rest of the query to 30,000."
+
+
+def test_works_in_set_asks_each_shard_for_its_own_references(monkeypatch):
+    import numpy as np
+    from query_translation import analytics as A
+    from query_translation import shard_route
+    calls = []
+
+    def search(index, connection, body, deadline, what, count=True, **params):
+        piece = body["query"]["bool"]["filter"][0]["terms"]["id"]
+        k = int(params["preference"].split(":")[1])
+        assert set(shard_route.shards_of(piece, 72, 576).tolist()) == {k} and body["size"] == len(piece)
+        assert body["query"]["bool"]["filter"][1] == {"term": {"type": "article"}} and count is False
+        calls.append(len(piece))
+        return {"hits": {"hits": [{"_id": w} for w in piece if int(w.rsplit("W", 1)[1]) % 7 == 0]}}
+    monkeypatch.setattr(A, "_search", search)
+    monkeypatch.setattr(W, "CHECK_PIECE", 100)
+    got = W.works_in_set(None, None, "works-v40", 72, 576, np.arange(1, 20_001), {"term": {"type": "article"}}, "x")
+    assert got.tolist() == list(range(7, 20_001, 7))
+    assert sum(calls) == 20_000 and max(calls) <= 100
+
+
+def test_read_references_reads_each_shard_and_pages_a_full_one(monkeypatch):
+    from query_translation import analytics as A
+    asked = []
+    w = "https://openalex.org/W"
+
+    def search(index, connection, body, deadline, what, count=True, **params):
+        k = int(params["preference"].split(":")[1])
+        asked.append((k, "sort" in body))
+        if k == 1 and "sort" not in body:    # more than one call holds: read again in id order
+            return {"hits": {"total": {"value": 3}, "hits": [{"_id": w + "8", "_source": {}}] * 2}}
+        n = 3 if k == 1 else 1
+        return {"hits": {"total": {"value": n}, "hits": [
+            {"_id": f"{w}{k}{i}", "_source": {"referenced_works": [w + "5", w + str(k), "https://doi.org/x"]},
+             "sort": [i]} for i in range(n)]}}
+    monkeypatch.setattr(A, "_search", search)
+    ids, lens, refs = W.read_references(None, None, "works-v40", [(0, {"match_all": {}}), (1, {"match_all": {}})], "x")
+    assert ids == [w + "00", w + "10", w + "11", w + "12"]
+    assert lens.tolist() == [2, 2, 2, 2] and refs.tolist() == [5, 0, 5, 1, 5, 1, 5, 1]
+    assert sorted(asked) == [(0, False), (1, False), (1, True)]
+
+
+def test_a_cites_estimate_says_what_was_sampled_and_how_to_be_exact():
+    meta = {}
+    W.estimate_meta(meta, {"share": 0.01, "works": 7_435_270, "cites": True}, 4_000, "counts are scaled up")
+    e = meta["estimate"]
+    assert meta["count"] == 400_000 and e["sampled"] == "citing works"
+    W.label_list(meta, {"share": 0.01, "works": 7_435_270, "cites": True}, 4_000, 3)
+    assert "too few of the list's first works cite the set, so the rows" in meta["estimate"]["message"]
+    assert e["message"] == ("Estimated from a random 1 in 100 of the works, each checked for a reference to the "
+                            "7,435,270 works in the set in parentheses: counts are scaled up.")
+    body = {"meta": {"count": 12, "groups_count": None}, "group_by": [], "summary": {"all": {"count": 12}}}
+    W.scale_estimate(body, _calc(CITES + "; then summarize using count"), {"share": 0.125, "works": 9, "cites": True})
+    assert body["meta"]["estimate"]["message"].endswith(
+        "Narrow the query to 30,000 works or the set in parentheses to 450,000 for exact numbers.")
+    W.label_list(meta, {"share": 0.01, "works": 7_435_270, "cites": True}, 4_000, None)
+    assert meta["estimate"]["message"].endswith("or the set in parentheses to 450,000 for an exact count.")
+
+
+def test_a_list_checks_its_first_works_the_way_its_set_was_sampled(monkeypatch):
+    import numpy as np
+    import elasticsearch_dsl.connections as C
+    from query_translation import shard_route
+    assert W.set_check({"cites": True}) is W.citing_set and W.set_check({"share": 0.1}) is W.cited_by_set
+    monkeypatch.setattr(C, "get_connection", lambda name: None)
+    monkeypatch.setattr(shard_route, "routing", lambda es, index: ("works-v40", 72, 576))
+    w = "https://openalex.org/W"
+    seen = {}
+
+    def read(connection, deadline, index, reads, what):
+        seen["reads"] = reads
+        return [w + "3", w + "1", w + "2"], np.array([1, 1, 1]), np.array([30, 10, 20])
+    monkeypatch.setattr(W, "read_references", read)
+    monkeypatch.setattr(W, "works_in_set", lambda *a: np.array([10, 30]))
+    ids = [w + "1", w + "2", w + "3"]
+    assert W.citing_set("walden", None, {}, ids) == [w + "1", w + "3"]   # in their order
+    where = shard_route.shards_of(ids, 72, 576).tolist()
+    assert sorted((k, q["terms"]["id"]) for k, q in seen["reads"]) == sorted(
+        (k, [i for i, s in zip(ids, where) if s == k]) for k in set(where))   # each shard reads only its own

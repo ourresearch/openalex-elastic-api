@@ -402,8 +402,17 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx, top: bool = False) -> LeafFilter:
         else:
             ids, sample = _list_or_sample_cited(ctx, works_q, refs, top, what)
         return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by", sample), "in", leaf.is_negated)
-    ids = resolve_result_ids(inner, ctx, what)
     column = leaf.column_id
+    if column == "referenced_works" and result_entity(inner) == "works":
+        # works citing the set's works: past MAX_SET_IDS, the citing works are read and checked instead (step 3)
+        works_q = _set_works_query(inner, ctx)
+        n = _count(ctx, works_q, what)
+        if n > MAX_SET_IDS:
+            return LeafFilter("ids.openalex", citing_works(ctx, works_q, n, label, top, what), "in",
+                              leaf.is_negated)
+        ids = _set_ids(ctx, works_q, n, what)
+    else:
+        ids = resolve_result_ids(inner, ctx, what)
     return LeafFilter(column, IdSet(ids, label, column), "in", leaf.is_negated)
 
 
@@ -529,7 +538,7 @@ def read_cited(ctx: Ctx, works_q: dict, what: str) -> List[str]:
             hits = (hits.get("hits") or {}).get("hits") or []
             for h in hits:
                 refs = h["_source"].get("referenced_works") or ()
-                got = [int(x) for x in (w[cut:] for w in refs if w.startswith(_WORK)) if x.isdigit()]
+                got = _ref_nums(refs)
                 if len(got) < len(refs):
                     others.update(w for w in refs if not (w.startswith(_WORK) and w[cut:].isdigit()))
                 nums.extend(got)
@@ -566,20 +575,220 @@ def resolve_result_ids(inner: OQO, ctx: Ctx, what: str) -> List:
     end = result_entity(inner)
     if end == "works":
         q = _set_works_query(inner, ctx)
-        n = ctx.search({"size": 0, "track_total_hits": True, "query": q},
-                       what)["hits"]["total"]["value"]
-        if n > MAX_SET_IDS:
-            raise _too_big("uses a set of {n} works", n, MAX_SET_IDS,
-                           "Narrow the query in parentheses (a shorter year range, a "
-                           "smaller institution or topic), or save the set as a "
-                           "collection.")
-        _over_budget(EST_OVERHEAD_S + n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S,
-                     f"uses a set of {n:,} works", "Narrow the query in parentheses.")
-        return list_work_ids(ctx, q, n, what)
+        return _set_ids(ctx, q, _count(ctx, q, what), what)
     if inner.get_rows == end and not inner.walks:
         return _entity_ids(ctx, inner)
     kind, plan = plan_walk(inner, ctx)
     return plan["keys"]
+
+
+def _count(ctx: Ctx, query: dict, what: str) -> int:
+    return ctx.search({"size": 0, "track_total_hits": True, "query": query}, what)["hits"]["total"]["value"]
+
+
+def _set_ids(ctx: Ctx, query: dict, n: int, what: str) -> List[str]:
+    """The ids of a set's `n` works (`query`), while one filter holds them."""
+    if n > MAX_SET_IDS:
+        raise _too_big("uses a set of {n} works", n, MAX_SET_IDS,
+                       "Narrow the query in parentheses (a shorter year range, a "
+                       "smaller institution or topic), or save the set as a "
+                       "collection.")
+    _over_budget(EST_OVERHEAD_S + n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S,
+                 f"uses a set of {n:,} works", "Narrow the query in parentheses.")
+    return list_work_ids(ctx, query, n, what)
+
+
+# ---------------------------------------------------------------------------
+# Works citing a set too big to send (oxjob #1930, step 3)
+# ---------------------------------------------------------------------------
+# `it cites a work in the set (...)` filters the citing works' reference lists, so every shard looks up every id of
+# the set: past MAX_SET_IDS (Computer Science articles: 7.4M ids) it can't be sent. The citing works are read instead:
+# the query's other works that hold references, with their reference lists (shard by shard: ~1 ms a work, the stored
+# source), their distinct references checked against the set's own filter (each shard asked for its own ids). Up to
+# CITES_SAMPLE such works are all read: exact. Past that a page reads a uniform sample of them (ES's random_score on
+# each work's _seq_no keeps each with chance CITES_SAMPLE / their number, whatever it holds), so the works found citing
+# the set are a Bernoulli sample of the answer, scaled up like the cited-by sample (scale_estimate). Articles citing
+# Computer Science articles, from desk against production during the nightly (2026-11-03): 29,826 of 75,766,133 read
+# in 3.6 s, their 775,696 distinct references checked in 2.3 s (20,021 are Computer Science articles), 4,016 cite one.
+CITES_SAMPLE = 30_000          # citing works a page reads
+CITES_SEED = 1930              # the same sample for the same query
+CHECK_PIECE = 10_000           # references a check call sends its shard (the matches come back as hits: 10,000 a call)
+EST_CITING_READ_PER_S = 10_000
+EST_CHECK_PER_S = 350_000
+REFS_PER_WORK = 28             # articles with references hold 27.9 each; 30K of them, 26 distinct a work
+# priced as a count, the read, and the check (listed LIST_PART references a call)
+CITES_CALLS = 2 + math.ceil(CITES_SAMPLE * REFS_PER_WORK / LIST_PART)
+CITES_LIST_CALLS = 3           # a list's page besides: its first works, their check, the sample's count
+
+
+def _cites_seconds(works: int) -> float:
+    """The estimate for reading up to CITES_SAMPLE of `works` citing works and checking their references."""
+    works = min(works, CITES_SAMPLE)
+    return works / EST_CITING_READ_PER_S + works * REFS_PER_WORK / EST_CHECK_PER_S
+
+
+def _others(oqo: Optional[OQO]) -> Optional[OQO]:
+    """The works a query asks for without its sets in parentheses and co-author filters: a superset of them (a set
+    inside `or` or `not` takes its whole row with it). None when the query doesn't list works."""
+    if oqo is None or oqo.get_rows != "works":
+        return None
+
+    def keep(node):
+        if not has_query_value(node) and not has_relation_leaf(node):
+            return node
+        if isinstance(node, BranchFilter) and node.join == "and" and not node.is_negated:
+            kept = [x for x in map(keep, node.filters) if x is not None]
+            return replace(node, filters=kept) if kept else None
+        return None
+    return replace(oqo, filter_rows=[x for x in map(keep, oqo.filter_rows) if x is not None])
+
+
+def _cites_refusal(n_set: int, why: str) -> A.AnalyticsError:
+    return A.AnalyticsError(
+        "query_too_slow",
+        f"This query uses a set of about {n_set:,} works; a set in parentheses holds up to {MAX_SET_IDS:,} to stay "
+        f"inside about {int(A.TIME_BUDGET_S)} seconds. Past that the works citing it are read instead (up to "
+        f"{CITES_SAMPLE:,} exactly, else a page answers from a sample), but {why}.",
+        f"Narrow the query in parentheses to {MAX_SET_IDS:,} works, or the rest of the query to {CITES_SAMPLE:,}.")
+
+
+def _cites_plan(ctx: Ctx, n_set: int, top: bool) -> Tuple[tuple, dict, int, float]:
+    """How the works citing a set of n_set works are read, for the run and the free check alike: (the index's
+    routing, the query's other works that hold references, their number, the share of them read: 1 is all). Refuses
+    when they can't be read: a set inside not/or/a split, an unroutable index, or too many to read whole when the
+    query can't be estimated."""
+    from elasticsearch_dsl.connections import get_connection
+    from query_translation import shard_route
+    others = _others(ctx.query) if top else None
+    route = shard_route.routing(get_connection(ctx.connection), ctx.works_index) if others is not None else None
+    if route is None:
+        raise _cites_refusal(n_set, "a set inside `not`, `or` or a split can't be read that way" if not top
+                             else "this query's works can't be read that way")
+    query = _and(_works_query(others, ctx), {"exists": {"field": "referenced_works"}})
+    n = _count(ctx, query, "counting the works that may cite the set in parentheses")
+    if n > CITES_SAMPLE and ctx.why_not_sample() is not None:
+        raise _cites_refusal(n_set, f"this query has {n:,} of them and {ctx.why_not_sample()}")
+    return route, query, n, min(1.0, CITES_SAMPLE / n) if n else 1.0
+
+
+def citing_works(ctx: Ctx, set_q: dict, n_set: int, label: str, top: bool, what: str) -> IdSet:
+    """The works citing a set of n_set works (its query `set_q`), past MAX_SET_IDS: the query's other works that hold
+    references, all of them up to CITES_SAMPLE (exact), else a uniform sample (a page view), each kept if a reference
+    of it is a work of the set."""
+    route, query, n, share = _cites_plan(ctx, n_set, top)
+    sampled = share < 1
+    _over_budget(EST_OVERHEAD_S + _cites_seconds(n),
+                 f"reads {'a sample of ' if sampled else ''}the {n:,} works that may cite the set in parentheses",
+                 NARROW_SET)
+    if sampled:
+        query = {"function_score": {"query": query, "boost_mode": "replace", "min_score": 1 - share,
+                                    "functions": [{"random_score": {"seed": CITES_SEED, "field": "_seq_no"}}]}}
+    hits = _citers(ctx.connection, ctx.deadline, route, [(k, query) for k in range(route[1])], set_q, what)
+    ctx.deadline.calls += CITES_CALLS - 1   # the count was priced when it ran
+    if not sampled:
+        return IdSet(hits, label, "referenced_works")
+    ctx.sampled = True
+    return IdSet(hits, label, "referenced_works", {"share": share, "works": n_set, "set_query": set_q, "cites": True})
+
+
+def citing_set(connection, deadline: A.Deadline, set_query: dict, ids: List[str]) -> List[str]:
+    """The `ids` that cite a work in the set, in their order (a list's first works, each shard reading its own, checked
+    as citing_works checks its sample)."""
+    import settings
+    from elasticsearch_dsl.connections import get_connection
+    from query_translation import shard_route
+    route = shard_route.routing(get_connection(connection), settings.WORKS_INDEX)
+    if route is None:
+        raise A.AnalyticsError("query_too_slow", "The works index can't be read shard by shard right now.", NARROW_SET)
+    _, shards, rs = route
+    where = shard_route.shards_of(ids, shards, rs)
+    reads = [(ks[0], {"terms": {"id": own}}) for ks, own in shard_route.group(ids, where, shards, shards)]
+    hits = set(_citers(connection, deadline, route, reads, set_query, "checking the list's first works against the set"))
+    return [w for w in ids if w in hits]
+
+
+def _citers(connection, deadline: A.Deadline, route: tuple, reads: List[Tuple[int, dict]], set_q: dict,
+            what: str) -> List[str]:
+    """The works each (shard, query) of `reads` matches on its shard that cite a work of the set `set_q`, in the order
+    read: their reference lists read, their distinct references checked against the set."""
+    import numpy as np
+    index, shards, rs = route
+    ids, lens, refs = read_references(connection, deadline, index, reads, what)
+    found = works_in_set(connection, deadline, index, shards, rs, np.unique(refs), set_q, what)
+    return [ids[i] for i in np.flatnonzero(_any_in(lens, refs, found))]
+
+
+def _ref_nums(refs) -> List[int]:
+    """References W123 as numbers (123); others skipped."""
+    cut = len(_WORK)
+    return [int(x) for x in (w[cut:] for w in refs if w.startswith(_WORK)) if x.isdigit()]
+
+
+def read_references(connection, deadline: A.Deadline, index: str, reads: List[Tuple[int, dict]], what: str):
+    """(ids, reference counts, references as numbers, end to end) of the works each (shard, query) of `reads` matches
+    on its shard, READ_INFLIGHT in flight. A shard's works come in one unsorted call (a sorted read costs a third
+    more), read again in id order, a page at a time, only past 10,000."""
+    import numpy as np
+
+    def search(k, body):
+        return A._search(index, connection, body, deadline, what, count=False, preference=f"_shards:{k}",
+                         filter_path="hits.total.value,hits.hits._id,hits.hits._source,hits.hits.sort").get("hits") or {}
+
+    def shard(read):
+        k, query = read
+        body = {"size": 10_000, "query": query, "_source": ["referenced_works"]}
+        got = search(k, dict(body, track_total_hits=True))
+        hits = got.get("hits") or []
+        if got["total"]["value"] > len(hits):
+            hits, body = [], dict(body, sort=[{"id": "asc"}], track_total_hits=False)
+            while True:
+                page = search(k, body).get("hits") or []
+                hits += page
+                if len(page) < 10_000:
+                    break
+                body = dict(body, search_after=page[-1]["sort"])
+        refs = [_ref_nums((h.get("_source") or {}).get("referenced_works") or ()) for h in hits]
+        return ([h["_id"] for h in hits], np.fromiter(map(len, refs), dtype=np.int64, count=len(refs)),
+                np.fromiter((x for r in refs for x in r), dtype=np.int64))
+    got = _pmap(shard, reads, inflight=READ_INFLIGHT)
+    none = np.zeros(0, dtype=np.int64)
+    return ([i for g in got for i in g[0]], np.concatenate([none] + [g[1] for g in got]),
+            np.concatenate([none] + [g[2] for g in got]))
+
+
+def works_in_set(connection, deadline: A.Deadline, index: str, shards: int, rs: int, nums, set_q: dict,
+                 what: str):
+    """Which of the works `nums` (distinct numbers) are works of the set `set_q`: each shard asked for only its own,
+    CHECK_PIECE a call, READ_INFLIGHT in flight. Ids are written out only to place them, 100,000 at a time, and to send
+    them (800K id strings at once hold ~60 MB)."""
+    import numpy as np
+    from query_translation import shard_route
+    where = np.empty(len(nums), dtype=np.int64)
+    for start in range(0, len(nums), 100_000):
+        where[start:start + 100_000] = shard_route.shards_of(
+            [_WORK + str(x) for x in nums[start:start + 100_000].tolist()], shards, rs)
+    order = np.argsort(where, kind="stable")
+    bounds = np.searchsorted(where[order], np.arange(shards + 1))
+    calls = [(k, order[i:min(i + CHECK_PIECE, bounds[k + 1])])
+             for k in range(shards) for i in range(bounds[k], bounds[k + 1], CHECK_PIECE)]
+
+    def one(call):
+        k, idx = call
+        piece = [_WORK + str(x) for x in nums[idx].tolist()]
+        got = A._search(index, connection, {
+            "size": len(piece), "_source": False, "track_total_hits": False,
+            "query": {"bool": {"filter": [{"terms": {"id": piece}}, set_q]}}}, deadline, what, count=False,
+            preference=f"_shards:{k}", filter_path="hits.hits._id")
+        return [int(h["_id"][len(_WORK):]) for h in (got.get("hits") or {}).get("hits") or ()]
+    return np.unique(np.asarray([x for g in _pmap(one, calls, inflight=READ_INFLIGHT) for x in g], dtype=np.int64))
+
+
+def _any_in(lens, refs, found):
+    """For each work (its `lens` references, end to end in `refs`), whether any of them is in `found`."""
+    import numpy as np
+    out = np.zeros(len(lens), dtype=bool)
+    out[np.repeat(np.arange(len(lens)), lens)[np.isin(refs, found)]] = True
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -706,7 +915,7 @@ def scale_estimate(body: dict, oqo: OQO, sample: dict):
                   "counts and sums are scaled up, means and percents are the sample's"
                   + (f", and the {groups:,} groups are those the sample holds (small ones may be missing)"
                      if isinstance(groups, int) and len(oqo.group_by) else "")
-                  + ". Narrow the set for exact numbers", groups_count_is_at_least=True)
+                  + f". {_sample_words(sample)['narrow']} for exact numbers", groups_count_is_at_least=True)
 
 
 def estimate_meta(meta: dict, sample: dict, count, says: str, **keys):
@@ -722,9 +931,22 @@ def estimate_meta(meta: dict, sample: dict, count, says: str, **keys):
         est["count_margin"] = _count_margin(count, share)
     meta["approximate"] = True
     est.update(keys)
-    est["message"] = (f"Estimated from a random 1 in {round(1 / share):,} of the {sample['works']:,} works the set in "
-                      f"parentheses cites: {says}.")
+    est["sampled"] = "citing works" if sample.get("cites") else "cited works"
+    est["message"] = f"Estimated from a random 1 in {round(1 / share):,} of {_sample_words(sample)['of']}: {says}."
     meta["estimate"] = est
+
+
+def _sample_words(sample: dict) -> dict:
+    """How an answer from a sample of its set says what was sampled: the works the set cites (cited by), or the works
+    that may cite it (cites, step 3), and how to get exact numbers."""
+    if sample.get("cites"):
+        return {"of": f"the works, each checked for a reference to the {sample['works']:,} works in the set in "
+                      f"parentheses",
+                "few": "too few of the list's first works cite the set",
+                "narrow": f"Narrow the query to {CITES_SAMPLE:,} works or the set in parentheses to {MAX_SET_IDS:,}"}
+    return {"of": f"the {sample['works']:,} works the set in parentheses cites",
+            "few": "the set cites too few of the list's first works",
+            "narrow": "Narrow the set"}
 
 
 def _count_margin(count, share: float) -> int:
@@ -738,10 +960,10 @@ def label_list(meta: dict, sample: dict, count: int, rows_thinned: Optional[int]
     if rows_thinned is None:
         said = "the rows are exact: the list's first works in its order, each checked against the set"
     else:
-        said = (f"the set cites too few of the list's first works, so the rows are the first in its order of a "
+        said = (f"{_sample_words(sample)['few']}, so the rows are the first in its order of a "
                 f"random 1 in {round(rows_thinned / sample['share']):,} of the list's works")
     estimate_meta(meta, sample, count, f"the count is scaled up (give or take {_count_margin(count, sample['share']):,}"
-                                       f"), and {said}. Narrow the set for an exact count",
+                                       f"), and {said}. {_sample_words(sample)['narrow']} for an exact count",
                   rows="first" if rows_thinned is None else "sample")
 
 
@@ -797,14 +1019,21 @@ def cited_by_set(connection, deadline: A.Deadline, set_query: dict, ids: List[st
             for w in got]
 
 
-def cited_first(connection, deadline: A.Deadline, set_query: dict, ids: List[str], need: int) -> Optional[List[str]]:
+def set_check(sample: dict):
+    """How a list's own works are checked against its sampled set: does the set cite them, or do they cite it."""
+    return citing_set if sample.get("cites") else cited_by_set
+
+
+def cited_first(connection, deadline: A.Deadline, set_query: dict, ids: List[str], need: int,
+                check=None) -> Optional[List[str]]:
     """Of `ids` (a list's first works, in its order), at least the first `need` a work in the set cites, a round at a
     time. None when the first round finds too few for the rest to make up (the rows then come from the sample)."""
     n = min(len(ids), max(MEMBER_PIECE, 2 * need))
-    hits = cited_by_set(connection, deadline, set_query, ids[:n])
+    check = check or cited_by_set
+    hits = check(connection, deadline, set_query, ids[:n])
     rest = ids[n:]
     if len(hits) < need and rest and len(hits) + len(hits) / n * len(rest) >= need:
-        hits += cited_by_set(connection, deadline, set_query, rest)
+        hits += check(connection, deadline, set_query, rest)
     return hits if len(hits) >= need else None
 
 
@@ -999,7 +1228,7 @@ def check(oqo: OQO, connection) -> dict:
 
     def add_set(inner: OQO, column: str, top: bool):
         nonlocal est, calls, note
-        limit, read, sampled = MAX_SET_IDS, None, False
+        limit, read, sampled, cites = MAX_SET_IDS, None, False, False
         try:
             if column == "cited_by":
                 # as the run's _resolve_leaf: read the references, list them, sample them or refuse
@@ -1017,9 +1246,20 @@ def check(oqo: OQO, connection) -> dict:
                             + ("the count is an estimate; the rows are the list's own first works where the set "
                                "cites them, else the sample's" if ctx.lists else "counts and sums are estimates"))
             elif result_entity(inner) == "works" and not inner.walks:
-                n = ctx.search({"size": 0, "track_total_hits": True,
-                                "query": _works_query(inner, ctx)},
-                               "counting the set")["hits"]["total"]["value"]
+                n = _count(ctx, _works_query(inner, ctx), "counting the set")
+                if column == "referenced_works" and n > MAX_SET_IDS:
+                    # as the run's citing_works: the works that may cite it read whole, or a sample of them, or refused
+                    _, _, others, share = _cites_plan(ctx, n, top)
+                    cites, limit, read = True, n, _cites_seconds(others)
+                    if share < 1:
+                        ctx.sampled = sampled = True
+                        note = (f"answers from a random sample of the {others:,} works that may cite the about {n:,} "
+                                f"works of the set in parentheses, each checked: "
+                                + ("the count is an estimate; the rows are the list's own first works that cite the "
+                                   "set, else the sample's" if ctx.lists else "counts and sums are estimates"))
+                    else:
+                        note = (f"reads the {others:,} works that may cite the about {n:,} works of the set in "
+                                f"parentheses and checks each: exact")
             elif inner.walks and inner.walks[-1].to is None:
                 link = inner.walks[-1].column_id
                 n = count_distinct(ctx, _works_query(inner, ctx), ctx.raw_field(link),
@@ -1033,6 +1273,9 @@ def check(oqo: OQO, connection) -> dict:
         if column == "cited_by":
             # as the run: a count, then the references read or listed (priced as list_keys' partitions), or a sample
             calls += 1 + ((LIST_SAMPLE_CALLS if ctx.lists else SAMPLE_PARTS + 1) if sampled else _list_parts(n))
+        elif cites:
+            # as the run: the set's count, then citing_works (a list's page: its first works, their check, the count)
+            calls += 1 + CITES_CALLS + (CITES_LIST_CALLS if sampled and ctx.lists else 0)
         else:
             calls += 2 + math.ceil(n / 10_000) + 1     # year split, pages, no-year, count
         est += read if read is not None else n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S

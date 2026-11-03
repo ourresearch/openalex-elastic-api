@@ -14,8 +14,10 @@ PIECE_KEYS, so it answers in full). A `cardinality` becomes the number of distin
 the pieces list: exact, not ES's estimate. A `composite` page (a cursor page of groups)
 splits too: every piece pages from the same after-key (_merge_composite). Anything else
 (hits, sorts, medians, nested `terms`, fields a work holds many of) runs as one request,
-as before. A call already running in one of _pmap's threads isn't split, so no more
-than INFLIGHT calls are in flight.
+as before. The filter itself must be on a field a work holds once (work ids, a source):
+on one it holds many of (references, authors) a work could match two pieces and count
+twice, so it runs whole. A call already running in one of _pmap's threads isn't split,
+so no more than INFLIGHT calls are in flight.
 
 Work ids are split by the shard that holds them when the caller can say (routed_plan,
 shard_route; oxjob #1930): each piece then asks only those shards.
@@ -128,13 +130,20 @@ def _replace(q: dict, path, new: dict) -> dict:
     return {"bool": b}
 
 
+def _one_a_work(field: str) -> bool:
+    """A filter splits only on a field each work holds once: then each work matches one piece. On a field a work holds
+    many of, a work matching values in two pieces counts twice: works citing Computer Science works of 2000 (153,065
+    ids on `referenced_works`) counted 2,818,034 split, 2,279,670 whole (oxjob #1930, 2026-11-03)."""
+    return field == "id" or field.startswith(SINGLE_VALUED)
+
+
 def _id_filter(query: dict):
     """(path, clause, field, n) of the biggest terms filter ANDed into `query` with at
-    least SPLIT_MIN_IDS values."""
+    least SPLIT_MIN_IDS values, on a field each work holds once."""
     best = None
     for path, c in _and_clauses(query):
         found = _terms_size(c)
-        if found and found[1] >= SPLIT_MIN_IDS and (best is None or found[1] > best[3]):
+        if found and found[1] >= SPLIT_MIN_IDS and _one_a_work(found[0]) and (best is None or found[1] > best[3]):
             best = (path, c, found[0], found[1])
     return best
 
