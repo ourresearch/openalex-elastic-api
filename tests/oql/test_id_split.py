@@ -1,4 +1,6 @@
 """Big id filters run in pieces and merge exactly (oxjob #1617)."""
+import pytest
+
 from query_translation import id_split as S
 
 IDS = [f"https://openalex.org/W{i}" for i in range(100_000)]
@@ -60,6 +62,63 @@ def test_fields_a_work_holds_many_of_run_whole():
     for field in ("authorships.author.id", "referenced_works", "topics.id"):
         assert S.plan(body({"s0": {"terms": {"field": field}}})) is None
         assert S.plan(body({"n": {"cardinality": {"field": field}}})) is None
+
+
+@pytest.mark.parametrize("field", ["authorships_full.author.id", "referenced_works", "locations.source.id"])
+def test_multi_valued_filters_run_whole(field):
+    b = body()
+    b["query"]["bool"]["filter"][0] = {"terms": {field: IDS}}
+    assert S.plan(b) is None
+
+
+def test_record_ids_can_still_split_with_a_larger_author_filter():
+    b = body()
+    authors = {"terms": {"authorships_full.author.id": [f"A{i}" for i in range(120_000)]}}
+    b["query"]["bool"]["filter"].insert(0, authors)
+    pieces = S.plan(b)
+    assert pieces is not None
+    assert all(p["query"]["bool"]["filter"][0] == authors for p in pieces)
+    record_ids = []
+    for piece in pieces:
+        record_ids.extend(S._values(piece["query"]["bool"]["filter"][1]))
+    assert sorted(record_ids) == sorted(IDS)
+
+
+def test_shared_authors_do_not_double_count_works_or_citations(monkeypatch):
+    from query_translation import analytics
+    from query_translation.oqo import LeafFilter
+    from query_translation.oqo_to_es import _translate_leaf
+    from query_translation.walk_exec import IdSet
+    from works.fields import fields_dict
+
+    authors = [f"https://openalex.org/A{i}" for i in range(100_000)]
+    query = _translate_leaf(
+        LeafFilter("authorships.author.id", IdSet(authors, "authors"), "in"), fields_dict
+    ).to_dict()
+    request = {"size": 0, "track_total_hits": True,
+               "query": {"bool": {"filter": [query]}},
+               "aggs": {"citations": {"sum": {"field": "cited_by_count"}}}}
+    works = [(set(authors[:2]), 10), ({authors[0]}, 3), ({authors[1]}, 7)]
+
+    def allowed(q):
+        if "terms" in q:
+            return set(q["terms"]["authorships_full.author.id"])
+        b = q["bool"]
+        if "should" in b:
+            return set().union(*(allowed(c) for c in b["should"]))
+        return set.intersection(*(allowed(c) for c in b["filter"]))
+
+    class LocalSearch:
+        def search(self, *, body, **kwargs):
+            ids = allowed(body["query"])
+            matched = [citations for ids_for_work, citations in works if ids_for_work & ids]
+            return {"took": 1, "hits": {"total": {"value": len(matched), "relation": "eq"}},
+                    "aggregations": {"citations": {"value": sum(matched)}}}
+
+    monkeypatch.setattr("elasticsearch_dsl.connections.get_connection", lambda _: LocalSearch())
+    result = analytics._search("works", "default", request, analytics.Deadline(), "counting works")
+    assert (result["hits"]["total"]["value"],
+            result["aggregations"]["citations"]["value"]) == (3, 20)
 
 
 def test_the_filter_is_found_inside_an_and():
