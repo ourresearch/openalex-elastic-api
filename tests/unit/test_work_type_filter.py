@@ -88,6 +88,13 @@ def test_suggested_type_feeds_oql_fix_its():
 
 
 def test_only_the_works_type_filter_is_checked():
-    # type_crossref is a different (free) field; a works filter on it is not a work-type check
-    filter_records(fields_dict, [{"type_crossref": "journal-article"}], Search())
+    # raw_type holds a source's own label: any value, never a work-type check
+    filter_records(fields_dict, [{"primary_location.raw_type": "journal-article"}], Search())
     assert unknown_type_message("article") is None
+
+
+def test_type_crossref_is_refused_and_points_to_raw_type():
+    # empty on every work, so every value answered a silent 0
+    with pytest.raises(APIQueryParamsError) as err:
+        filter_records(fields_dict, [{"type_crossref": "journal-article"}], Search())
+    assert "primary_location.raw_type:journal-article" in str(err.value)

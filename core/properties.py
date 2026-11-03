@@ -437,7 +437,12 @@ CAP_COLUMN = "column"
 # `.search.exact`, which gains the aliases `affiliation` / `raw affiliation string`, the alternate key, category `other`
 # and the GUI. A top-level property removed = MAJOR per classify_properties_diff.py (as 6.0.0 did for default.search).
 # Direction set with Jason 2026-06-14; shipped under his standing authority.
-PROPERTIES_VERSION = "21.0.0"
+# 22.0.0 (oxjob #1836, 2026-11-03): works `type_crossref` leaves the catalog and answers a JSON 400 (Field
+# filter_refusal), as #1901 did for 8 others: no work carries the field (`type_crossref:!null` = 0, with xpac too), so
+# every value answered a silent 0. The message points to `primary_location.raw_type:` (the source's own label, e.g.
+# journal-article on 124M works) and `type:`. A property removed = MAJOR per classify_properties_diff.py. Under Jason's
+# standing authority.
+PROPERTIES_VERSION = "22.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

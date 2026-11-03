@@ -39,6 +39,7 @@ def test_every_filter_queries_fields_the_index_has():
 def test_the_refused_filters_are_the_ones_with_no_stored_value():
     assert set(REFUSED) == {
         ("works", "topics_count"),
+        ("works", "type_crossref"),  # empty on every work since v2 (oxjob #1836)
         ("authors", "scopus"),
         ("institutions", "concept.id"), ("institutions", "concepts.id"), ("institutions", "x_concepts.id"),
         ("sources", "is_in_jstage"), ("sources", "is_in_jstage_since_year"),

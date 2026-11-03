@@ -1086,7 +1086,10 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["type"],
         alternate_names=ALTERNATE_NAMES.get("work.type", None),
     ),
-    TermField(param="type_crossref"),
+    TermField(param="type_crossref",
+              filter_refusal="works no longer carry Crossref's type label (it is empty on every work). For the "
+                             "label a source gave, use primary_location.raw_type: (e.g. "
+                             "primary_location.raw_type:journal-article); for OpenAlex's own type, use type:."),
     TermField(
         param="version",
         custom_es_field="locations_full.version",

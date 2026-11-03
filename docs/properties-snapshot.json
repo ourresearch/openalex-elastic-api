@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "1b2037c2822c8ded58d3cc112473951284264a387baf748678ac647268f7810a",
-    "property_count": 959,
-    "version": "21.0.0"
+    "fingerprint": "0c83497f32d6b1c144eac18f508ef51e742f124f2a01af1b48b2187e6a9e04b3",
+    "property_count": 958,
+    "version": "22.0.0"
   },
   "properties": {
     "authors": {
@@ -20369,32 +20369,6 @@
         ],
         "supported_by": [
           "gui"
-        ],
-        "type": "string"
-      },
-      "type_crossref": {
-        "actions": [
-          "column",
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "Crossref type",
-        "entity_type": null,
-        "name": "type_crossref",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [
-          "oxurl"
         ],
         "type": "string"
       },
