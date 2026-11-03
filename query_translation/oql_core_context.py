@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from query_translation import oql_core as C
 from query_translation.oql_context import _DIRECTIVE_WORDS
 from query_translation.oql_lang import ENTITY_TYPES, THING_VERBS, entity_type_for_column
-from query_translation.oqo import SortBy
+from query_translation.oqo import SortBy, normalize_corpus
 
 # ---------------------------------------------------------------------------
 # Routing: is this a core v3 statement?
@@ -861,6 +861,9 @@ class _Walk:
                 continue
             self.choices.append((S_CHOICE_WORKS_NOUN, start, self.i, v))
             break
+        t = self.tok()
+        if t is not None and t.kind == "G" and normalize_corpus(t.text[1:-1]) is not None:
+            self.i += 1                   # `works (all corpora)`
         self.works_slots(ctx)
 
     def ws_slot(self, ctx: str) -> _Slot:

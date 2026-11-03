@@ -70,9 +70,9 @@ OQL has two ways to write a statement:
 - number bins, samples, and three splits;
 - splits by continent, institution type, source type, license, keyword or global south, and by corresponding institution;
 - numbers outside the sentence's list (`mean reference count`, `min date`, `percent global south`), and counts of distinct things (`summarize all those authors using count`);
-- a filter on the groups by a number other than the count (`where mean FWCI of those works is at least 2`);
-- groups chosen by own fields a split can't say (`last known institution`, `co-author is not`, `institution type`);
-- a corpus other than the core (`(all corpora)`).
+- a filter on the groups by a number other than the count (`where mean FWCI of those works is at least 2`).
+
+A split's own fields and a corpus are in the sentence: `get the count of works about kelp by author where last known institution is [University of British Columbia](I141945490)`, `get works (all corpora) about kelp, most cited first`.
 
 ```
 get works where published since 2015; then, compare country [India](IN) versus country is not [India](IN) using count and mean FWCI
@@ -652,7 +652,7 @@ OQL's text never hides a condition the query carries, with these exceptions: sen
 | Default | What it means |
 |---|---|
 | `about` | searches the title, the abstract and the keywords |
-| The core corpus | every query runs on OpenAlex's core corpus; the general form's `(all corpora)` or `(expansion corpus)`, or `include_xpac=true` on the API, adds the rest |
+| The core corpus | every query runs on OpenAlex's core corpus; `(all corpora)` or `(expansion corpus)` after the works noun (`get works (all corpora) about kelp`), or `include_xpac=true` on the API, adds the rest |
 | Authors with works | lists of authors leave out authors with no works |
 | Sub-units count | `from [institution]` and `[institution]'s works` include its sub-units (a university's hospitals and institutes) |
 | Primary topic | `in the topic / subfield / field / domain` and splits by them use each work's primary topic, not every topic it has |
@@ -859,7 +859,7 @@ only          ::= 'Only' thingNoun 'with' countWords NUMBER works '.'
 countWords    ::= 'more than' | 'at least' | 'fewer than' | 'at most'
 
 /* ---------- The works phrase, in canonical order ---------- */
-works         ::= possessive? adjective* typeNoun time? search* citing* place*
+works         ::= possessive? adjective* typeNoun corpus? time? search* citing* place*
                   people? role? sits* published? funded? license?
                   ( 'where' conditions )?
 

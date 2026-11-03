@@ -25,8 +25,9 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from query_translation import oql_lang as L
 from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_text, english_list, link_text
-from query_translation.oqo import (OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter,
-                                   Measure, MeasureFilter, SortBy)
+from query_translation.oqo import (CORPUS_ALIASES, CORPUS_CANONICAL_PHRASE, OQO, AffiliationFilter,
+                                   BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, SortBy,
+                                   normalize_corpus)
 from query_translation.walks import link_for
 
 # ---------------------------------------------------------------------------
@@ -304,8 +305,9 @@ class _Works:
     phrase goes to `where`."""
 
     def __init__(self, rows: List, resolver: Resolver = None, possessive: bool = True,
-                 thing: Optional[str] = None):
+                 thing: Optional[str] = None, corpus: Optional[str] = None):
         self.resolver = resolver
+        self.corpus = CORPUS_CANONICAL_PHRASE.get(corpus)     # `works (all corpora)`
         self.adjectives: List[str] = []
         self.type_noun = "works"
         self.years: Dict[str, object] = {}
@@ -419,6 +421,8 @@ class _Works:
         if all_works and noun == "works" and not self._has_conditions():
             noun = "all works"
         words.append(noun)
+        if self.corpus:
+            words.append(f"({self.corpus})")
         if keep_time and self.time_text():
             words.append(self.time_text())
         for base in SEARCH_PLACES:
@@ -587,8 +591,11 @@ def render_core(oqo: OQO, resolver: Resolver = None) -> Optional[str]:
 
 
 def _render(oqo: OQO, resolver: Resolver) -> str:
-    if oqo.walks or oqo.each or oqo.sample or (oqo.corpus and oqo.corpus != "core"):
-        raise NotCore("walks, samples and other corpora")
+    if oqo.walks or oqo.each or oqo.sample:
+        raise NotCore("walks and samples")
+    if oqo.corpus not in (None, "core") and (oqo.get_rows != "works"
+                                             or oqo.corpus not in CORPUS_CANONICAL_PHRASE):
+        raise NotCore("a corpus belongs to works")
     if any(g.conditions is not None or g.bins is not None for g in oqo.group_by):
         raise NotCore("condition groups and bins")
     if oqo.get_rows != "works":
@@ -699,12 +706,12 @@ def _has_search(rows) -> bool:
 
 
 def _works_list(oqo, resolver):
-    w = _works(oqo.filter_rows, resolver)
+    w = _works(oqo.filter_rows, resolver, corpus=oqo.corpus)
     return "get " + w.text() + _order_text(oqo.sort_by, "works", _has_search(oqo.filter_rows))
 
 
 def _number_sentence(oqo, resolver):
-    w = _works(oqo.filter_rows, resolver)
+    w = _works(oqo.filter_rows, resolver, corpus=oqo.corpus)
     names = []
     for m in oqo.calculate:
         n = _measure_name(m)
@@ -815,7 +822,7 @@ def _table(oqo, resolver):
     thing = next((THING_NOUNS[g.column_id] for g in oqo.group_by
                   if g.column_id in THING_NOUNS and g.values is None), None)
     possessive = not any(g.column_id in STAR_COLUMNS for g in oqo.group_by)
-    w = _works(oqo.filter_rows, resolver, possessive=possessive, thing=thing)
+    w = _works(oqo.filter_rows, resolver, possessive=possessive, thing=thing, corpus=oqo.corpus)
     year_dim = any(g.column_id == "publication_year" for g in oqo.group_by)
     works_text = w.text(all_works=True, keep_time=not year_dim)
     splits, only = [], []
@@ -1354,6 +1361,35 @@ def core_first(text: str) -> bool:
 
 def parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     """A core v3 statement -> OQO. Raises NotCore when the text isn't a core sentence."""
+    text, corpus = _lift_corpus(text)
+    oqo = _parse_core(text, collection_type)
+    if corpus is not None:
+        if oqo.get_rows != "works":
+            raise NotCore("a corpus belongs to works")
+        oqo.corpus = corpus
+    return oqo
+
+
+# `works (all corpora)`: the corpus right after the works noun, as today's grammar reads it
+_CORPUS_AFTER_NOUN = re.compile(
+    r"\b(works|%s)\s+\(\s*(%s)\s*\)" % (
+        "|".join(re.escape(n) for n in sorted(NOUN_TYPES, key=len, reverse=True)),
+        "|".join(re.escape(a).replace(r"\ ", r"\s+") for a in sorted(CORPUS_ALIASES, key=len, reverse=True))),
+    re.I)
+
+
+def _lift_corpus(text: str) -> Tuple[str, Optional[str]]:
+    """The text without its corpus parentheticals, and the corpus (None when it has none).
+    A table's `Only` sentence repeats the works phrase, so the same corpus may come twice."""
+    corpora = {normalize_corpus(m.group(2)) for m in _CORPUS_AFTER_NOUN.finditer(text)}
+    if not corpora:
+        return text, None
+    if len(corpora) > 1:
+        raise NotCore("one corpus, after the works noun: `get works (all corpora) about kelp`")
+    return _CORPUS_AFTER_NOUN.sub(r"\1", text), corpora.pop()
+
+
+def _parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
     t = _Text(text)
     sentences = _split_sentences(t)
     main, extras = sentences[0], sentences[1:]

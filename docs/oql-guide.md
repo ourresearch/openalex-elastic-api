@@ -404,7 +404,7 @@ OQL's text never hides a condition the query carries, with these exceptions: sen
 | Default | What it means |
 |---|---|
 | `about` | searches the title, the abstract and the keywords |
-| The core corpus | every query of works runs on OpenAlex's [core corpus](https://help.openalex.org/data/works/corpus/) unless it asks for another, in the general form: `get works (all corpora) where title-abstract-keywords has (kelp)`, or `(expansion corpus)` |
+| The core corpus | every query of works runs on OpenAlex's [core corpus](https://help.openalex.org/data/works/corpus/) unless it asks for another, after the works noun: `get works (all corpora) about kelp`, or `(expansion corpus)` |
 | Authors with works | lists of authors leave out authors with no works |
 | Sub-units count | `from [institution]` and `[institution]'s works` include its sub-units (a university's hospitals and institutes) |
 | Primary topic | `in the topic / subfield / field / domain` and splits by them use each work's primary topic, not every topic it has |

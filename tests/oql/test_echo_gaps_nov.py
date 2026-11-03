@@ -76,7 +76,9 @@ def test_the_old_place_still_reads():
 
 
 @pytest.mark.parametrize("q", ["get works with kelp in the full text",
-                               "get works with kelp in the title, abstract, or full text, most cited first"])
+                               "get works with kelp in the title, abstract, or full text, most cited first",
+                               "get works (all corpora) about kelp",
+                               "get the count of articles (expansion corpus) about kelp by year"])
 def test_the_editor_reads_both_places_whole(q):
     from query_translation import oql_core_context as X
     toks = X._tokens(q)
@@ -107,3 +109,34 @@ def test_conditions_that_would_read_as_a_split_fall_back():
         "calculate": [{"measure": "count"}]})
     text = render_core(oqo)
     assert text is None or canonicalize_oqo(parse_core(text)).to_dict() == canonicalize_oqo(oqo).to_dict()
+
+
+# --- a corpus in the sentence, so the order survives ------------------------------------
+
+@pytest.mark.parametrize("text,corpus", [
+    ("get works (all corpora) with kelp in the title, most cited first", "all"),
+    ("get works (all corpora) about kelp", "all"),
+    ("get the count of works (all corpora) about kelp by year", "all"),
+    ("get works (expansion corpus) since 2020 about kelp", "expansion"),
+    ("get articles (all corpora) about kelp", "all"),
+])
+def test_a_corpus_reads_in_the_sentence(text, corpus):
+    oqo = parse_core(text)
+    assert oqo.corpus == corpus
+    assert render_core(oqo) == text
+
+
+def test_the_corpus_aliases_read():
+    assert parse_core("get works (all) about kelp").corpus == "all"
+    assert parse_core("get works (xpac) about kelp").corpus == "expansion"
+    with pytest.raises(Exception):
+        parse_core("get works (all corpora) about kelp. Only authors with at least 5 works (xpac) about kelp.")
+
+
+def test_a_corpus_url_keeps_its_order():
+    # `/works?filter=title.search:kelp&include_xpac=true&sort=cited_by_count:desc` echoed
+    # `get works (all corpora) where title has (kelp)`, the order gone
+    oqo = OQO.from_dict({"get_rows": "works", "corpus": "all",
+                         "filter_rows": [{"column_id": "title.search", "value": "kelp", "operator": "has"}],
+                         "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}]})
+    assert render_core(oqo) == "get works (all corpora) with kelp in the title, most cited first"
