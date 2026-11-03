@@ -27,6 +27,18 @@ def test_a_works_collection_combines(text):
     assert validate_oqo(oqo).valid, validate_oqo(oqo).errors
 
 
+def test_is_a_collection_means_membership():
+    # `country is col_x` matched nothing (read as a literal ID) and echoed `get (col_x)'s works`
+    from query_translation.oqo import LeafFilter
+    oqo = canonicalize_oqo(OQO(get_rows="works", filter_rows=[
+        LeafFilter("authorships.countries", "col_x"),
+        LeafFilter("title.search", "kelp", "has")]))
+    leaf = next(f for f in oqo.filter_rows if f.column_id == "authorships.countries")
+    assert leaf.operator == "in collection"
+    text = render_core(oqo)
+    assert "'s works" not in text and "in the collection (col_x)" in text
+
+
 def test_a_collection_url_echo_reads_back():
     # `/works?filter=collection:col_x&sort=cited_by_count:desc` echoed text that failed
     oqo = OQO.from_dict({"get_rows": "works",

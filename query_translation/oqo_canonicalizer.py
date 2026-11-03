@@ -26,7 +26,8 @@ import json
 from dataclasses import replace
 from typing import List, Union, Any
 from query_translation.oqo import (OQO, LeafFilter, BranchFilter, FilterType, SortBy, GroupBy,
-                                   MeasureFilter, AffiliationFilter, canonicalize_oqo_column_ids)
+                                   MeasureFilter, AffiliationFilter, canonicalize_oqo_column_ids,
+                                   is_collection_id)
 from query_translation.oql_lang import (
     canon_value_for_column,
     canonical_exact_search_value,
@@ -300,6 +301,10 @@ def canonicalize_leaf_filter(f: LeafFilter, sort_operands: bool = True) -> Union
                           operator="in", is_negated=bool(f.is_negated))
     value = canonicalize_value(f.value, f.column_id)
     operator = f.operator or "is"
+    if operator == "is" and is_collection_id(value):
+        # `country is (col_x)` is membership, as `?filter=authorships.countries:col_x` reads
+        # it; as `is` it echoed `get (col_x)'s works` and matched nothing (oxjob #1555)
+        operator = "in collection"
 
     # A strict lower bound on a whole-day date is the next day, inclusive (oxjob #1555,
     # Jason 2026-10-09): `date > 2021-06-01` is `from_publication_date 2021-06-02`, so

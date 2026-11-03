@@ -23,7 +23,7 @@ from core.fields import CollectionField, any_of_terms
 from core.collection_resolver import check_collection_reference_count
 from core.filter import MAX_RESOLVED_IDS_PER_REQUEST, resolve_collection_for_field
 from core.utils import get_field
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, is_collection_id
 
 
 class OQOTranslationError(APIQueryParamsError):
@@ -260,7 +260,11 @@ def _translate_leaf(leaf: LeafFilter, fields_dict) -> Q:
     # literal ID and match ~zero. The same-type `collection` column is a
     # CollectionField whose build_query resolves natively, so it stays on the
     # default path below. (oxjob #363)
-    if leaf.operator == "in collection" and not isinstance(field, CollectionField):
+    # `is (col_x)` is membership too (the canonicalizer folds it; an uncanonical OQO
+    # still runs right, never a silent zero, oxjob #1555)
+    if (leaf.operator == "in collection" or (leaf.operator in (None, "is")
+                                             and is_collection_id(leaf.value))) \
+            and not isinstance(field, CollectionField):
         q = _cross_type_collection_query(field, str(leaf.value))
         if leaf.is_negated:
             q = ~q

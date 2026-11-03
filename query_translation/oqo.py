@@ -820,6 +820,12 @@ CORPUS_CANONICAL_PHRASE = {
 }
 
 
+def is_collection_id(value) -> bool:
+    """A Collection's id, `col_<base58>` (core/fields.py's shape; oxjob #363)."""
+    return (isinstance(value, str) and value.startswith("col_")
+            and 4 < len(value) <= 52 and value[4:].isalnum() and value.isascii())
+
+
 def normalize_corpus(text):
     """Map an OQL corpus-parenthetical surface phrase to its canonical value.
 

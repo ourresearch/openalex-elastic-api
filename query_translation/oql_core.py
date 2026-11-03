@@ -27,7 +27,7 @@ from query_translation import oql_lang as L
 from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_text, english_list, link_text
 from query_translation.oqo import (CORPUS_ALIASES, CORPUS_CANONICAL_PHRASE, OQO, AffiliationFilter,
                                    BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, SortBy,
-                                   normalize_corpus)
+                                   is_collection_id, normalize_corpus)
 from query_translation.walks import link_for
 
 # ---------------------------------------------------------------------------
@@ -318,7 +318,7 @@ class _Works:
         self.authors: List = []
         singles = [f for f in rows if isinstance(f, LeafFilter) and not f.is_negated
                    and f.operator == "is" and f.column_id in STAR_COLUMNS
-                   and isinstance(f.value, str)]
+                   and isinstance(f.value, str) and not is_collection_id(f.value)]
         self.star = singles[0] if possessive and len(singles) == 1 else None
         for f in rows:
             if f is self.star:
@@ -333,6 +333,8 @@ class _Works:
 
     def _read_one(self, f, thing):
         r = self.resolver
+        if isinstance(f, LeafFilter) and f.operator == "is" and is_collection_id(f.value):
+            raise _Leftover()     # `institution is (col_x)`: no phrase says it (`get (col_x)'s works`)
         base = L._search_base(f)
         if base in SEARCH_PLACES:
             self.searches.setdefault(base, []).append(f)
