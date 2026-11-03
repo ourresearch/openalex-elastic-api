@@ -27,7 +27,7 @@ import settings
 from core.cursor import handle_cursor
 from core.exceptions import APIError, APIQueryParamsError
 from core.paginate import get_per_page
-from core.preference import clean_preference, combine_preferences
+from core.preference import PREFERENCE_SEARCH_FILTERS, clean_preference, combine_preferences
 from core.shared_view import (
     add_semantic_search,
     apply_grouping,
@@ -1275,13 +1275,7 @@ def _oql_parse_error_response(exc: OQLParseError):
 # core/shared_view.set_preference_for_filter_search inspects. Other search kinds
 # (fulltext/keyword/semantic) get no preference in legacy, so they're excluded here
 # for parity. Empirically verified against the legacy path (see EXPLORE session 5).
-PREFERENCE_SEARCH_COLUMNS = {
-    "default.search",
-    "title.search",
-    "abstract.search",
-    "display_name.search",
-    "raw_affiliation_strings.search",
-}
+PREFERENCE_SEARCH_COLUMNS = {"default.search", *PREFERENCE_SEARCH_FILTERS}
 
 
 def _collect_preference_search_values(filter_rows):

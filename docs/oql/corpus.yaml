@@ -1069,10 +1069,10 @@ rows:
     type: "librarian guide"
     label: "Bibliometric study of librarian-authored SRs"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:library'
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search.exact:library'
   status: ok
   oql: 'works where raw affiliation has (library)'
-  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: library, operator: has}]}
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search.exact, value: library, operator: has}]}
 
 - id: 65
   tags: [proximity, sr-transcription]
@@ -1081,11 +1081,11 @@ rows:
     label: "Elsevier Scopus Search Tips"
     url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22london%22~5~%22hospital%22'
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search.exact:%22london%22~5~%22hospital%22'
   status: ok
   oql: 'works where raw affiliation has (within 5 (london, hospital))'
-  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london"~5~"hospital"', operator: has}]}
-  note: 'List proximity on a non-title field (oxjob #514): the position_increment_gap scopes the window to ONE affiliation string; slop ~5 allows order/gap within it. All-bare operands → stemmed `.search`.'
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search.exact, value: '"london"~5~"hospital"', operator: has}]}
+  note: 'List proximity on a non-title field (oxjob #514): the position_increment_gap scopes the window to ONE affiliation string; slop ~5 allows order/gap within it. Raw affiliation has only its exact mode (oxjob #400), so bare operands run on `.search.exact`.'
 
 - id: 66
   tags: [sr-transcription]
@@ -1215,10 +1215,10 @@ rows:
     label: "Tufts Web of Science proximity examples"
     url: "https://researchguides.library.tufts.edu/c.php?g=249270&p=1660077"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22tufts%22~5~%22boston%22'
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search.exact:%22tufts%22~5~%22boston%22'
   status: ok
   oql: 'works where raw affiliation has (within 5 (tufts, boston))'
-  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts"~5~"boston"', operator: has}]}
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search.exact, value: '"tufts"~5~"boston"', operator: has}]}
 
 - id: 76
   tags: [sr-transcription]
@@ -4615,3 +4615,25 @@ rows:
   status: error
   oql: 'get works where author is in (get works where title has (kelp); then get authors of those works; then, summarize using count)'
   diagnostic: OQL_QUERY_SET_RETURNS_NUMBERS
+- id: 243
+  tags: [sr-transcription]
+  provenance:
+    type: "spec design"
+    label: 'Raw affiliation is exact-only: a quoted phrase renders plain, never stemmed (oxjob #400)'
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search.exact:%22universiteit%20maastricht%22'
+  status: ok
+  oql: 'works where raw affiliation has ("universiteit maastricht")'
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search.exact, value: '"universiteit maastricht"', operator: has}]}
+  note: 'Raw affiliation was never stemmed, so it has only `.search.exact`; `raw_affiliation_strings.search` is an alias of it (oxjob #400). The old URL `raw_affiliation_strings.search:"universiteit maastricht"` gives this same OQO.'
+- id: 244
+  tags: [sr-transcription]
+  provenance:
+    type: "spec design"
+    label: 'Raw affiliation keeps the quotes on a hyphenated word: they make a phrase (oxjob #400)'
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search.exact:%22Paris-Saclay%22'
+  status: ok
+  oql: 'works where raw affiliation has ("Paris-Saclay")'
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search.exact, value: '"Paris-Saclay"', operator: has}]}
+  note: 'Live 2026-11-03: "Paris-Saclay" 162,495 works, bare Paris-Saclay 184,312 (query_string reads the bare word as both its parts). Raw affiliation searches stay one value with the user''s quotes.'

@@ -3653,7 +3653,9 @@ class _Parser:
             raise oql_error("OQL_PROXIMITY_NEEDS_OPERANDS",
                            'proximity needs at least two operands',
                            'e.g. (smart and phone within 3 words of each other)', wt.pos)
-        if len({q for _, q in operands}) > 1:
+        # on a field with no stemmed mode bare and quoted are the same text (oxjob #400)
+        stemless = is_stemless_search_column(base + ".search.exact")
+        if len({q for _, q in operands}) > 1 and not stemless:
             raise oql_error("OQL_PROXIMITY_MIXED_OPERANDS",
                            'proximity operands must be all bare (stemmed) or all quoted '
                            '(exact), not a mix',
@@ -3664,7 +3666,7 @@ class _Parser:
             _reject_engine_chars(op_text, wt.pos)
         # exact-column availability degrades quoted operands to the stemmed
         # column on entities with no `.search.exact` (#611 follow-up).
-        col, _ = self._effective_search_col(base, exact=quoted)
+        col, _ = self._effective_search_col(base, exact=quoted or stemless)
         # Wildcards: a bare (stemmed) operand can't carry one (#364 — stemming strips the
         # literal prefix); a quoted operand can, validated per-token + a shared expansion
         # budget across the whole intervals query (#355 guard).
@@ -3684,7 +3686,7 @@ class _Parser:
                                f'"{word}" has no exact search variant'
                                f'{f" on {self._entity}" if self._entity else ""}',
                                "remove the wildcard", wt.pos)
-        if has_wild and not quoted:
+        if has_wild and not quoted and not stemless:
             bad = next(w for w in all_tokens if "*" in w or "?" in w)
             raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
                            f'wildcards run on exact (no-stem) text: {bad}',
@@ -3813,7 +3815,9 @@ class _Parser:
         if not phrase and not stemmed_phrase and " " not in text \
                 and ("*" in text or "?" in text):
             phrase = True   # `adolescen*`: read as `"adolescen*"` (Haiku's cow path, #1555)
-        stemmed = (not phrase) or stemmed_phrase
+        # no stemmed mode (raw affiliation, oxjob #400): bare words are exact text
+        stemless = is_stemless_search_column(base + ".search.exact")
+        stemmed = ((not phrase) or stemmed_phrase) and not stemless
         col, degraded = self._effective_search_col(base, exact=not stemmed)
         if degraded:
             stemmed = True
@@ -3862,7 +3866,7 @@ class _Parser:
                            f'quote it: "{text}"', t.pos)
         # A quoted wildcard (`"studies*"`) is exact — validate each token's shape
         # so #337's leading / sub-3-char-prefix rejections still hold inside quotes.
-        if phrase and has_wildcard:
+        if has_wildcard:   # exact by now: a stemmed wildcard was refused above
             for word in text.split():
                 _validate_wildcards(word, t.pos)
             _validate_wildcard_budget(text.split(), t.pos)
@@ -3880,8 +3884,11 @@ class _Parser:
         # "foo*bar" live there — `*`/`?` are metachars, not delimiters), so an exact
         # single token stays bare. On the stemmed `.search` column a quoted
         # hyphen/slash token diverges from bare, so keep its quotes.
-        if phrase and (len(text.split()) > 1
-                       or (stemmed and len(re.findall(r"\w+", text)) > 1)):
+        if stemless:
+            # one value, as typed; quotes kept where they make a phrase (oxjob #400)
+            value = canonical_stemless_search_value(f'"{text}"') if phrase else text
+        elif phrase and (len(text.split()) > 1
+                         or (stemmed and len(re.findall(r"\w+", text)) > 1)):
             value = f'"{text}"'
         else:
             value = text
@@ -6245,6 +6252,14 @@ def _render_term(value: str, column: str) -> str:
       .search.exact (exact):   "word"    | "phrase"      | within N ("a", "b", ...)
     """
     stemmed = not column.endswith(".search.exact")  # .search (and anything else) stems
+    # No stemmed mode (raw affiliation, oxjob #400): bare reads as exact, so render the
+    # way the user types, with no quotes or `stemmed` that mark a mode it doesn't have.
+    stemless = is_stemless_search_column(column)
+
+    def operand(op):
+        return op if stemmed or (stemless and op and not any(c.isspace() for c in op)) \
+            else f'"{op}"'
+
     # List / binary proximity `"a"~N~"b"[~"c"...]` -> `within N (a, b, ...)` (oxjob #514;
     # the ONE proximity surface, K operands NEAR each other). Operands render bare on a
     # stemmed column, quoted on an exact column — reconstructing the input quoting. Binary
@@ -6254,7 +6269,7 @@ def _render_term(value: str, column: str) -> str:
     if lst:
         slop = lst.group(1)
         operands = re.findall(r'"([^"]*)"', value)
-        items = [op if stemmed else f'"{op}"' for op in operands]
+        items = [operand(op) for op in operands]
         return f'within {slop} ({", ".join(items)})'
     # Single-phrase slop `"P"~N` is OXURL-only now (the OQL suffix form was removed). It
     # is reachable only from a URL-authored OQO; render the equivalent list form by
@@ -6272,7 +6287,7 @@ def _render_term(value: str, column: str) -> str:
                        "in OQL yet")
     if prox:
         slop = prox.group(2)
-        items = [w if stemmed else f'"{w}"' for w in prox.group(1).split()]
+        items = [operand(w) for w in prox.group(1).split()]
         return f'within {slop} ({", ".join(items)})'
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
         # On an entity with NO `.search.exact` sibling (#611 follow-up: every
@@ -6282,6 +6297,10 @@ def _render_term(value: str, column: str) -> str:
         if stemmed and not _exact_unavailable(column):
             return f"stemmed {value}"
         return value
+    if stemless and not ("*" in value or "?" in value):
+        return _render_stemmed_search_value(value)   # a bare run, as typed
+    # (a wildcard renders as on any exact column below: one word bare; several words as
+    # the operand list, since the bare-run reading drops a wildcard as punctuation, #1327)
     if not stemmed:
         # A BARE multi-word exact value is no-stem AND-of-words — a DIFFERENT
         # query from the quoted phrase (live: 224,070 vs 36,755 for `cancer
@@ -6400,6 +6419,34 @@ def canonical_exact_search_value(value: str) -> str:
             return v                            # nested quotes — don't touch
         return inner if inner and not any(c.isspace() for c in inner) else v
     return v                                    # bare (single token OR AND-of-words)
+
+
+def is_stemless_search_column(column) -> bool:
+    """True for a `.search.exact` column whose field has no stemmed mode, so its
+    `.search` spelling is only an alias of it: raw affiliation (oxjob #400). Such a
+    search keeps the old `.search` handling under the honest name: bare words are
+    exact text, a run of them is ONE value, and quotes are kept where they change the
+    engine's query (see canonical_stemless_search_value)."""
+    if not isinstance(column, str) or not column.endswith(".search.exact"):
+        return False
+    try:
+        from core.properties import stemless_search_columns
+    except ImportError:   # a half-loaded app; never hide other errors
+        return False
+    return column in stemless_search_columns()
+
+
+def canonical_stemless_search_value(value: str) -> str:
+    """A value on a column with no stemmed mode (oxjob #400) in its canonical OQO
+    spelling: canonical_exact_search_value's, except a quoted single token the analyzer
+    splits keeps its quotes. On raw affiliation `"Paris-Saclay"` is a phrase, 162,495
+    works live vs 184,312 for bare `Paris-Saclay` (2026-11-03). Wildcards stay unquoted,
+    as the engine unquotes them."""
+    v = canonical_exact_search_value(value)
+    if (v != (value or "").strip() and "*" not in v and "?" not in v
+            and len(re.findall(r"\w+", v)) > 1):
+        return f'"{v}"'
+    return v
 
 
 def _value_needs_quote(value: str) -> bool:
@@ -6724,6 +6771,7 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
             # `does not have` predicate (`title has (not pediatric)`).
             term = _render_term(f.value, f.column_id)
             if (f.is_negated and f.column_id.endswith(".search.exact")
+                    and not is_stemless_search_column(f.column_id)
                     and isinstance(f.value, str)
                     and split_exact_words(canonical_exact_search_value(f.value))):
                 # Negated bare multi-word exact leaf = NOT(AND-of-words). The

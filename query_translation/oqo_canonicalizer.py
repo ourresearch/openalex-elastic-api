@@ -30,8 +30,10 @@ from query_translation.oqo import (OQO, LeafFilter, BranchFilter, FilterType, So
 from query_translation.oql_lang import (
     canon_value_for_column,
     canonical_exact_search_value,
+    canonical_stemless_search_value,
     _is_search_leaf,
     is_numeric_column,
+    is_stemless_search_column,
     split_exact_words,
 )
 
@@ -309,7 +311,10 @@ def canonicalize_leaf_filter(f: LeafFilter, sort_operands: bool = True) -> Union
         if day is not None:
             return LeafFilter(column_id=col, value=day, operator="is", is_negated=bool(f.is_negated))
 
-    if f.column_id.endswith(".search.exact") and isinstance(value, str):
+    if is_stemless_search_column(f.column_id) and isinstance(value, str):
+        # no stemmed mode (raw affiliation, oxjob #400): one value, quotes kept
+        value = canonical_stemless_search_value(value)
+    elif f.column_id.endswith(".search.exact") and isinstance(value, str):
         value = canonical_exact_search_value(value)
         words = split_exact_words(value)
         if words:

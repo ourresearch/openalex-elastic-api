@@ -12,6 +12,7 @@ from core.search_punctuation import wildcard_chars_as_punctuation
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids, normalize_corpus
 from query_translation.oql_lang import (
     canonical_exact_search_value,
+    is_stemless_search_column as _stemless,
     split_exact_words,
 )
 
@@ -368,6 +369,12 @@ def parse_single_filter(
     # (renders cleanly + the rendered OQL re-parses). Mirrors the OQL lexer's
     # position-preserving collapse. (oxjob #363)
     value = re.sub('"{2,}', '"', value.translate(CURLY_DQUOTE_MAP))
+    # A search column with no stemmed mode (raw affiliation, oxjob #400) reads as its
+    # `.search` spelling, which has always run the same engine query: one value, the
+    # user's quotes kept, never the per-word split of the other exact columns. The
+    # alias canonicalization at this boundary names it `.search.exact` again.
+    if _stemless(field):
+        field = field[: -len(".exact")]
     # A raw comma OUTSIDE quotes in a search value (legal in top-level
     # `search[.…]=` params, where the analyzer strips it) would render an
     # x_query.url whose filter clause the API edge REJECTS (the comma reads as

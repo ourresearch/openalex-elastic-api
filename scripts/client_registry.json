@@ -1434,8 +1434,8 @@
       "isId": false,
       "hasExport": false
     },
-    "raw_affiliation_strings.search": {
-      "key": "raw_affiliation_strings.search",
+    "raw_affiliation_strings.search.exact": {
+      "key": "raw_affiliation_strings.search.exact",
       "entityToFilter": "works",
       "entityToSelect": null,
       "displayName": "raw affiliation",

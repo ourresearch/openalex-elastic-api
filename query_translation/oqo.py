@@ -317,6 +317,12 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
         if g.is_plain:
             return replace(g, column_id=_canon(g.column_id))
         column_id = _canon(g.column_id) if g.column_id is not None else None
+        if g.values is not None and g.column_id and column_id == g.column_id + ".exact":
+            # A split by searches names its field as `<base>.search`, a marker that
+            # every consumer tests for; each listed search carries its own column. A
+            # field whose `.search` is an alias of its exact column (raw affiliation,
+            # oxjob #400) keeps the marker.
+            column_id = g.column_id
         values = g.values
         if values is not None:
             values = [_canon_filter(v) if isinstance(v, (LeafFilter, BranchFilter)) else v

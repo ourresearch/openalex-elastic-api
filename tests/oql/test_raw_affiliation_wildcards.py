@@ -56,7 +56,9 @@ def test_nathalies_one_liner_parses_and_round_trips():
          '"process*"~50~"material*"~"solar"~"font"~"romeu"')]
     rendered, identity = _rt(q)
     assert identity, rendered
-    assert rendered == q
+    # raw affiliation has no stemmed mode (oxjob #400): operands render as typed bare
+    assert rendered == ('works where raw affiliation has '
+                        '(within 50 (process*, material*, solar, font, romeu))')
 
 
 def test_plain_quoted_phrase_now_rides_the_exact_column():
@@ -70,9 +72,12 @@ def test_plain_quoted_phrase_now_rides_the_exact_column():
     assert identity, rendered
 
 
-def test_bare_stemmed_search_unchanged():
+def test_bare_search_rides_the_exact_column_as_one_value():
+    # oxjob #400: raw affiliation has only its exact mode; a bare run is ONE value
+    # on `.search.exact` (not the per-word split of other exact columns)
     oqo = L.parse("works where raw affiliation has (solar cells)")
-    assert [f.column_id for f in oqo.filter_rows] == ["raw_affiliation_strings.search"]
+    assert [(f.column_id, f.value) for f in oqo.filter_rows] == [
+        ("raw_affiliation_strings.search.exact", "solar cells")]
     rendered, identity = _rt("works where raw affiliation has (solar cells)")
     assert identity, rendered
     assert rendered == "works where raw affiliation has (solar cells)"
@@ -80,12 +85,14 @@ def test_bare_stemmed_search_unchanged():
 
 # ---- T-b: the error circle is gone -------------------------------------------
 
-def test_unquoted_wildcard_hint_now_actually_works_when_followed():
-    # The "quote the operand" hint is only allowed when quoting HELPS — and on
-    # raw affiliation it now does.
-    msg = _err("works where raw affiliation has (within 50 (process*, material*))")
+def test_unquoted_wildcard_operands_need_no_quotes_on_raw_affiliation():
+    # oxjob #400: raw affiliation has no stemmed mode, so a bare operand is already
+    # exact text and its wildcard runs; quoted or not is the same query.
+    assert L.parse("works where raw affiliation has (within 50 (process*, material*))") \
+        == L.parse('works where raw affiliation has (within 50 ("process*", "material*"))')
+    # on a field WITH a stemmed mode the hint still applies
+    msg = _err("works where title has (within 5 (process*, material*))")
     assert "quote the operand" in msg
-    L.parse('works where raw affiliation has (within 50 ("process*", "material*"))')
 
 
 def test_unquoted_bare_wildcard_reads_as_quoted():

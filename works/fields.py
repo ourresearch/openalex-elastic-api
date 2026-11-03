@@ -736,14 +736,17 @@ fields = [
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     SearchField(
+        # The old name of raw_affiliation_strings.search.exact (oxjob #400): the field
+        # was never stemmed, so `.search` named a mode it didn't have. Still accepted
+        # everywhere and byte-identical; the public catalog lists only `.search.exact`.
         param="raw_affiliation_strings.search",
         custom_es_field="authorships.raw_affiliation_strings",
+        alternate_of="raw_affiliation_strings.search.exact",
+        docstring="(DEPRECATED — use raw_affiliation_strings.search.exact) Free text search on raw affiliation strings, without stemming",
     ),
     SearchField(
         # The underlying ES field is indexed WITHOUT stemming (standard analyzer),
-        # so this is behaviorally identical to raw_affiliation_strings.search —
-        # offered under the .exact name so wildcards (* and ?) have a sanctioned
-        # no-stem target, consistent with the other .search.exact fields (#800).
+        # so raw affiliation search has only this exact mode (#800, #400).
         param="raw_affiliation_strings.search.exact",
         custom_es_field="authorships.raw_affiliation_strings",
         docstring="Free text search on raw affiliation strings, without stemming",

@@ -378,6 +378,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name.search": "other",
         "title.search": "other",
         "raw_affiliation_strings.search": "other",
+        "raw_affiliation_strings.search.exact": "other",
         "raw_affiliation_strings": "other",
         "doi_starts_with": "other",
         "display_name": "other",

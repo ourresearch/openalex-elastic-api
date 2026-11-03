@@ -431,7 +431,13 @@ CAP_COLUMN = "column"
 # (api/deprecations). `select=` naming it answers a 400 that says it was removed and names
 # `sustainable_development_goals` (core.utils.REMOVED_SELECT_FIELDS). A column removed = MAJOR per
 # classify_properties_diff.py. Under Jason's standing authority.
-PROPERTIES_VERSION = "20.0.0"
+# 21.0.0 (oxjob #400, 2026-11-03): works `raw_affiliation_strings.search` becomes an alias (alternate_of) of
+# `raw_affiliation_strings.search.exact`. The field was never stemmed (standard analyzer), so `.search` named a mode it
+# didn't have; both names run the same engine query and stay accepted everywhere (no URL breaks). The catalog lists only
+# `.search.exact`, which gains the aliases `affiliation` / `raw affiliation string`, the alternate key, category `other`
+# and the GUI. A top-level property removed = MAJOR per classify_properties_diff.py (as 6.0.0 did for default.search).
+# Direction set with Jason 2026-06-14; shipped under his standing authority.
+PROPERTIES_VERSION = "21.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -688,6 +694,29 @@ def canonicalize_column_id(column_id, entity_type):
     if prop is not None and prop.alternate_of:
         return prop.alternate_of
     return column_id
+
+
+def stemless_search_columns():
+    """The `.search.exact` columns whose field has no stemmed mode: the entity's `.search`
+    spelling is only an alias of them (`alternate_of`). Raw affiliation is the one today
+    (oxjob #400; its ES field was never stemmed).
+
+    Query translation keeps a search on such a column as ONE value with the user's quotes,
+    as its `.search` spelling always ran, never the per-word split the other exact columns
+    get: the engine runs raw affiliation through query_string, where quotes on a one-word
+    `Paris-Saclay` make a phrase (162,495 works live vs 184,312 bare, 2026-11-03).
+
+    shortcut: entity-blind (a set of column ids); fine while each such column exists on
+    one entity only."""
+    return _STEMLESS_SEARCH_COLUMNS
+
+
+_STEMLESS_SEARCH_COLUMNS = frozenset(
+    prop.alternate_of
+    for props in ENTITY_PROPERTIES.values()
+    for param, prop in props.items()
+    if param.endswith(".search") and prop.alternate_of == param + ".exact"
+)
 
 
 # ---------------------------------------------------------------------------

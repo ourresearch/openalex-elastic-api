@@ -40,16 +40,21 @@ def combine_preferences(search_strings):
     return clean_preference(combined)
 
 
+# The search filters whose value pins shard routing, so scores and tie-breaks repeat.
+PREFERENCE_SEARCH_FILTERS = (
+    "abstract.search",
+    "display_name.search",
+    "title.search",
+    "raw_affiliation_strings.search",
+    "raw_affiliation_strings.search.exact",  # its honest name (oxjob #400)
+)
+
+
 def set_preference_for_filter_search(filter_params, s):
     preference = None
     for filter_param in filter_params:
         for key in filter_param:
-            if key in [
-                "abstract.search",
-                "display_name.search",
-                "title.search",
-                "raw_affiliation_strings.search",
-            ]:
+            if key in PREFERENCE_SEARCH_FILTERS:
                 preference = filter_param[key]
     if preference:
         s = s.params(preference=clean_preference(preference))
