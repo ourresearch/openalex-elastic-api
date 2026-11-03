@@ -66,7 +66,7 @@ values:
 - id: subfields/2705
   display_name: Cardiology and Cardiovascular Medicine
 - id: subfields/2737
-  display_name: Physiology
+  display_name: Physiology (medical)
 - id: subfields/3308
   display_name: Law
 - id: subfields/2730
@@ -84,7 +84,7 @@ values:
 - id: subfields/3207
   display_name: Social Psychology
 - id: subfields/1204
-  display_name: Archeology
+  display_name: Archeology (arts and humanities)
 - id: subfields/3314
   display_name: Anthropology
 - id: subfields/1105
@@ -130,7 +130,7 @@ values:
 - id: subfields/1908
   display_name: Geophysics
 - id: subfields/2728
-  display_name: Neurology
+  display_name: Clinical Neurology
 - id: subfields/2105
   display_name: Renewable Energy, Sustainability and the Environment
 - id: subfields/1803
@@ -138,7 +138,7 @@ values:
 - id: subfields/2312
   display_name: Water Science and Technology
 - id: subfields/2736
-  display_name: Pharmacology
+  display_name: Pharmacology (medical)
 - id: subfields/2738
   display_name: Psychiatry and Mental health
 - id: subfields/2003
@@ -250,7 +250,7 @@ values:
 - id: subfields/1205
   display_name: Classics
 - id: subfields/2716
-  display_name: Genetics
+  display_name: Genetics (clinical)
 - id: subfields/2610
   display_name: Mathematical Physics
 - id: subfields/2711
@@ -400,7 +400,7 @@ values:
 - id: subfields/3505
   display_name: Orthodontics
 - id: subfields/2704
-  display_name: Biochemistry
+  display_name: Biochemistry (medical)
 - id: subfields/1313
   display_name: Molecular Medicine
 - id: subfields/2302
@@ -494,7 +494,7 @@ values:
 - id: subfields/2718
   display_name: Health Informatics
 - id: subfields/2726
-  display_name: Microbiology
+  display_name: Microbiology (medical)
 - id: subfields/1315
   display_name: Structural Biology
 - id: subfields/3608
