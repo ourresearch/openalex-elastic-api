@@ -11,6 +11,7 @@ from core.collection_resolver import (
     resolve_collection,
 )
 from core.utils import get_field
+from core.work_type_values import check_work_type_filter
 from settings import MAX_IDS_IN_FILTER
 
 
@@ -46,6 +47,9 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             ):
                 value = "!" + value[2:-1]
                 is_quoted = True
+
+            # A `type` value that isn't a work type answers a 400, not a silent 0 (oxjob #1836).
+            check_work_type_filter(field, value, is_quoted)
 
             # multiple OR queries have | in the param values.
             # A leading `!` on a SEARCH value also routes here even with no `|`:

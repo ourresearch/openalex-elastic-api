@@ -39,6 +39,7 @@ def _invalid_value_errors(oql):
     "works where language is en",                 # languages
     "works where sdg is 3",                       # sdgs (numeric id)
     "works where type is article",                # work-types
+    "works where type is software-paper",         # served by /types since June; OQL rejected it (oxjob #1836)
     "works where open access status is gold",     # oa-statuses
 ])
 def test_valid_members_pass(oql):
@@ -64,6 +65,13 @@ def test_non_members_rejected(oql):
 def test_country_name_suggests_code():
     [msg] = _invalid_value_errors("works where country is Canada")
     assert "Did you mean 'ca'?" in msg
+
+
+def test_work_type_label_or_retired_type_suggests_the_type():  # oxjob #1836
+    [msg] = _invalid_value_errors("works where type is journal-article")
+    assert "Did you mean 'article'?" in msg
+    [msg] = _invalid_value_errors("works where type is book-section")
+    assert "Did you mean 'reference-entry'?" in msg
 
 
 def test_language_name_suggests_code():
