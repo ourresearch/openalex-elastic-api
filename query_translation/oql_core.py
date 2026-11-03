@@ -52,13 +52,24 @@ ADJECTIVES = {"open_access.is_oa": "open access", "is_retracted": "retracted",
 # negative yes/no words before the noun (cow paths, writing test 2026-10-11)
 NEG_ADJECTIVES = {"is_retracted": "non-retracted", "open_access.is_oa": "closed access"}
 
-# search bases: `about` (title, abstract, keywords) or `with ... in the <place>`
+# search bases: `about` (title, abstract, keywords) or `with ... in the <place>`; the
+# broad search names all three places it reads (`search=`; it said `in the full text`,
+# which read as the full text only, oxjob #1555)
 SEARCH_PLACES = {"title_abstract_keywords": None, "display_name": "the title",
-                 "abstract": "the abstract", "fulltext": "the full text",
+                 "abstract": "the abstract", "fulltext": "the title, abstract, or full text",
                  "title_and_abstract": "the title or abstract"}
 # the parser's bridge: a place's key-value search word (`with X in the title` -> `title has X`)
 SEARCH_FIELD_FOR = {place: L._search_word_of(base) for base, place in SEARCH_PLACES.items() if place}
-_PLACES_LONGEST = sorted(SEARCH_FIELD_FOR, key=lambda w: -len(w.split()))
+# places still read but never written (the broad search's words until 2026-11-03)
+_OLD_PLACES = {"the full text": SEARCH_FIELD_FOR["the title, abstract, or full text"]}
+
+
+def _place_words(place: str) -> List[str]:
+    """A place's words as `_Words` splits them (a comma is its own word)."""
+    return re.sub(r",(?!\d)", " , ", place).split()
+
+
+_PLACES_LONGEST = sorted({**SEARCH_FIELD_FOR, **_OLD_PLACES}, key=lambda w: -len(_place_words(w)))
 
 # `in <key> [X]`: classification values that don't say their kind (Jason's #95 rule). Only
 # the primary topic's columns: any of a work's topics (`topics.id`) reads in the `where`
@@ -564,10 +575,15 @@ def _record_text(f, resolver=None) -> Optional[str]:
 # ---------------------------------------------------------------------------
 def render_core(oqo: OQO, resolver: Resolver = None) -> Optional[str]:
     """The core v3 echo of `oqo`, or None when it uses something outside the core."""
+    # conditions read in the entity's own words (`subfield`, not `topics.subfield.id`,
+    # on authors), as the pipeline renderer sets it for its walks
+    tok = L._RENDER_ENTITY.set(oqo.get_rows)
     try:
         return _render(oqo, resolver)
     except (NotCore, _Leftover):
         return None
+    finally:
+        L._RENDER_ENTITY.reset(tok)
 
 
 def _render(oqo: OQO, resolver: Resolver) -> str:
@@ -813,7 +829,17 @@ def _table(oqo, resolver):
                 raise NotCore("which groups, on a split with no things")
             noun, parts, left, count = _thing_parts(g.where, THING_NOUNS[g.column_id], resolver)
             if left:
-                raise NotCore("which groups, with no words")
+                # the things' own fields no phrase says, key-value in their own words, last
+                # (`by author where last known institution is [X]`), as `_parse_things` reads
+                # them; an `and <split word>` inside would read as a second split
+                tok = L._RENDER_ENTITY.set(THING_NOUNS[g.column_id])
+                try:
+                    where = _where_text(left, resolver)
+                finally:
+                    L._RENDER_ENTITY.reset(tok)
+                if _SPLIT_AND.search(where):
+                    raise NotCore("which groups, with words that read as a second split")
+                parts.append("where " + where)
             word = " ".join([THING_SINGULAR[noun]] + parts)
             if count is not None:
                 only.append(f"Only {noun} with {COMPARATOR_WORDS[count.operator]} "
@@ -1128,14 +1154,15 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             s_tok = ws.take()[0]
             place = None
             for words in _PLACES_LONGEST:
-                if ws.at("in", *words.split()):
+                if ws.at("in", *_place_words(words)):
                     place = words
-                    ws.take(1 + len(words.split()))
+                    ws.take(1 + len(_place_words(words)))
                     break
             if place is None:
                 ws.i = save
                 raise NotCore("`with` needs `in the title` (or abstract, full text)")
-            rows += _old_filters("works", f"{SEARCH_FIELD_FOR[place]} has {t.restore(s_tok)}")
+            field = SEARCH_FIELD_FOR.get(place) or _OLD_PLACES[place]
+            rows += _old_filters("works", f"{field} has {t.restore(s_tok)}")
             continue
         if ws.at("with") and t.link_id(ws.peek(1) or "") and ws.at("with", ws.peek(1), "as",
                                                                    "corresponding", "author"):
@@ -1214,7 +1241,9 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             ws.take(3)
             cid = t.link_id(ws.take()[0])
             ctype = collection_type(cid) if collection_type else None
-            col = _works_column(ctype) if ctype not in (None, "works") else "id"
+            # a works collection is the same-type `collection` column, as `?filter=collection:`
+            # reads it (`id` is no column: it ran alone only via today's grammar, #1589)
+            col = _works_column(ctype) if ctype not in (None, "works") else "collection"
             rows.append(LeafFilter(col, cid, "in collection"))
             continue
         key_hit = None

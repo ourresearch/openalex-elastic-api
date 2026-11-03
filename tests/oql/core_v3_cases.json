@@ -377,7 +377,7 @@
    "case": 1512,
    "label": null,
    "shape": "find",
-   "new": "get works since 2023 with (\"as an AI language model\" OR \"regenerate response\") in the full text",
+   "new": "get works since 2023 with (\"as an AI language model\" OR \"regenerate response\") in the title, abstract, or full text",
    "oqo": {
     "get_rows": "works",
     "filter_rows": [

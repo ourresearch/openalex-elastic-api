@@ -1477,8 +1477,21 @@ def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -
     return {"size": 0, "track_total_hits": True, "query": base_query, "aggs": aggs}
 
 
-_ANNOTATED_VALUE = re.compile(r"([^\s(]+) \[([^\]]+)\]")
+# today's `I99464096 [KU Leuven]`: the ID before the name starts with a capital, so a
+# word (`is [India](IN)`, `not [India](IN)`) is never read as one (oxjob #1555)
+_ANNOTATED_VALUE = re.compile(r"(?<![\w\]])([A-Z][^\s(\[]*) \[([^\]]+)\](?!\()")
+_LINK_VALUE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")      # the new form's `[India](IN)`
 MAX_NAMED_CONDITION_IDS = 20
+
+
+def _condition_label(text: str) -> str:
+    """A condition group's label with each value by name: `country is not India` from
+    `country is not [India](IN)`, `institution is (KU Leuven)` from today's
+    `institution is (I99464096 [KU Leuven])`; an unnamed value keeps its ID."""
+    def name(named, id_):
+        return id_ if not named or named == "no entity found" else named
+    text = _LINK_VALUE.sub(lambda m: name(m.group(1), m.group(2)), text)
+    return _ANNOTATED_VALUE.sub(lambda m: name(m.group(2), m.group(1)), text)
 
 
 def _name_conditions(levels: List[Level], entity: str) -> None:
@@ -1499,9 +1512,7 @@ def _name_conditions(levels: List[Level], entity: str) -> None:
         resolver = make_engine_resolver(safe_get_display_name, entity=entity)
         for k, c in zip(lv.order_keys, lv.split.conditions):
             try:
-                named = _ANNOTATED_VALUE.sub(
-                    lambda m: m.group(1) if m.group(2) == "no entity found" else m.group(2),
-                    _expr_text(c, resolver))
+                named = _condition_label(_expr_text(c, resolver))
             except Exception:
                 continue
             lv.labels[k] = (lv.labels[k][0], named)

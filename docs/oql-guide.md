@@ -92,7 +92,7 @@ Years read in words, right after the type: `since 2020` (2020 or later), `from 2
 | `get works with conjugal in the title` | the title |
 | `get works with conjugal in the abstract` | the abstract |
 | `get works with conjugal in the title or abstract` | both, no keywords |
-| `get works with "OpenAlex" in the full text` | title, abstract and full text |
+| `get works with "OpenAlex" in the title, abstract, or full text` | title, abstract and full text (the broad search) |
 | `get works where raw affiliation has ("Max Planck" AND Leipzig)` | the affiliation strings as printed |
 | `get works where byline has Priem` | the author names as printed |
 

@@ -176,7 +176,7 @@ for _key in C.THING_IN_KEYS.values():
 
 # with <search> in <place> (oql_core.SEARCH_PLACES)
 _PLACE_DOC = {"the title": "the title only", "the abstract": "the abstract only",
-              "the full text": "the full text only", "the title or abstract": "title or abstract"}
+              "the title or abstract": "title or abstract"}
 PLACES = []
 WITH_SEARCH = []
 for _place in C.SEARCH_FIELD_FOR:
@@ -427,7 +427,7 @@ def _ptable(values) -> Dict[str, List[Tuple[Tuple[str, ...], str]]]:
     out: Dict[str, List[Tuple[Tuple[str, ...], str]]] = {}
     for v in values:
         v = v["value"] if isinstance(v, dict) else v
-        words = tuple(v.lower().split())
+        words = tuple(C._place_words(v.lower()))     # a comma is its own word
         out.setdefault(words[0], []).append((words, v))
     for phrases in out.values():
         phrases.sort(key=lambda x: -len(x[0]))
@@ -474,7 +474,8 @@ S_CHOICE_ADJ = _Slot("adjective", list(ADJECTIVES.values()))
 S_MEASURE = _Slot("measure", MAIN_MEASURES)
 S_MEASURE_SHOW = _Slot("measure", SHOW_MEASURES)
 S_SPLIT = _Slot("split", list(SPLITS.values()), bracket_entities=["authors"])
-S_PLACE = _Slot("place", PLACES)
+# the old place words still read (never offered): `in the full text`
+S_PLACE = _Slot("place", PLACES, table=_ptable(PLACES + ["in " + p for p in C._OLD_PLACES]))
 S_SEARCH = _Slot("search-text", group="search", bracket_entities=["authors"])
 S_ABOUT = _Slot("search-text", group="search")
 S_NUMBER = _Slot("number")
@@ -769,7 +770,8 @@ class _Walk:
                 t = self.tok(k)
                 if t is None:
                     break
-                if t.kind in ("L", "PL", "C", "P") or t.low != w:
+                if (t.kind == "C") != (w == ",") or t.kind in ("L", "PL", "P") \
+                        or (t.kind != "C" and t.low != w):
                     ok = False
                     break
                 k += 1

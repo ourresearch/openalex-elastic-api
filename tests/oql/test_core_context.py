@@ -104,7 +104,7 @@ CURSOR_CASES = [
     ("get works under the |", "entity", "", [], [], ["licenses"]),
     ("get works under the [CC BY](cc-by) |", "works-slot", "", ["license"], [], []),
     ("get works with |", "search-text", "", [], [], []),
-    ("get works with (kelp) |", "place", "", ["in the title", "in the abstract", "in the full text"], [], []),
+    ("get works with (kelp) |", "place", "", ["in the title", "in the abstract", "in the title, abstract, or full text"], [], []),
     ("get works with (kelp) in the t|", "place", "in the t", ["in the title", "in the title or abstract"],
      ["in the abstract"], []),
     ("get works about kelp since |", "year", "", ["2025", "2020", "2015"], [], []),
