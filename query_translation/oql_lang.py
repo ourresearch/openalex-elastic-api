@@ -1846,6 +1846,12 @@ _ROW_SUBJECT_RENDER = {
     "cited_by": ("it's", " cited by ", "cited by"),
     "related_to": ("it's", " related to ", "related to"),
 }
+# the same verbs negated (subject, verb), read back by `match_negated_relation`
+_ROW_SUBJECT_NEGATED = {
+    "referenced_works": ("it", " doesn't cite "),
+    "cited_by": ("it", " isn't cited by "),
+    "related_to": ("it", " isn't related to "),
+}
 
 
 def match_negated_relation(toks: List[Tok], i: int) -> Optional[Tuple[str, int]]:
@@ -6843,7 +6849,9 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
         else:
             val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)
             if f.is_negated:
-                val_segs = [_seg("negation", "not ")] + val_segs
+                # negation on the verb, as people write it and the parser reads it
+                # (`it doesn't cite (W1)`; it echoed `it cites (not W1)`, oxjob #1555)
+                subj, verb = _ROW_SUBJECT_NEGATED[f.column_id]
             kind = "entity"
         segs = ([_seg("column", subj, column_id=f.column_id),
                  _seg("operator", verb), _seg("text", "(")]

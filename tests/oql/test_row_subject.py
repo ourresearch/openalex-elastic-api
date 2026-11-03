@@ -61,7 +61,7 @@ CONVERGE = [
     ("works where cited by (W123)", "works where it's cited by (W123)"),
     ("works where related to (W123)", "works where it's related to (W123)"),
     ("works where references (W123)", "works where it cites (W123)"),
-    ("works where cites (not W123)", "works where it cites (not W123)"),
+    ("works where cites (not W123)", "works where it doesn't cite (W123)"),
     # curly apostrophe (U+2019) — macOS/iOS smart punctuation auto-curls `it's`
     ("works where it’s cited by (W123)", "works where it's cited by (W123)"),
     ("works where it’s related to (W123)", "works where it's related to (W123)"),
@@ -92,10 +92,13 @@ def test_oqo_columns_are_the_frozen_oxurl_params():
 # ---------------------------------------------------------------------------
 # 3. Negation: value-level only; no verb-level form.
 # ---------------------------------------------------------------------------
-def test_value_level_not_roundtrips():
+def test_value_level_not_echoes_on_the_verb():
+    # still read; echoed with the negation on the verb (oxjob #1555, 2026-11-03)
     out = _render("works where it cites (not W123)")
-    assert out == "works where it cites (not W123)"
+    assert out == "works where it doesn't cite (W123)"
     assert _render(out) == out
+    assert _render("works where it's cited by (not W123)") == "works where it isn't cited by (W123)"
+    assert _render("works where it's related to (not W123)") == "works where it isn't related to (W123)"
 
 
 @pytest.mark.parametrize("q,col", [
