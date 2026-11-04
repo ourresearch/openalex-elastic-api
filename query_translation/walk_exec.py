@@ -23,6 +23,7 @@ How each shape runs:
 """
 import math
 from dataclasses import replace
+from functools import partial
 from typing import Dict, List, Optional, Tuple
 
 from elasticsearch_dsl import Q
@@ -571,8 +572,16 @@ def read_cited(ctx: Ctx, works_q: dict, what: str, top: bool = False) -> List[st
             after = hits[-1]["sort"]
     cited = np.unique(np.concatenate(_pmap(shard, range(shards), inflight=READ_INFLIGHT)))
     n = len(cited) + len(others)
+    slices = n > MAX_SET_IDS and _slices(ctx, top)
+    if slices:
+        # past MAX_SET_IDS a request that can't run in pieces (a nested split) can't send them whole (A._search): an
+        # export then asks for its slices, each under it (KU's 660K: 2), and a page view's refusal says to export.
+        # shortcut: it answers for any too-big request of the query, not only this set's; a second big set in the
+        # same query then gets "comes in slices", and its slice refuses (one set a query is sliced)
+        ctx.deadline.whole_refusal = (partial(_slices_refusal, n) if ctx.export else
+                                      partial(A.too_whole, n, export_it=True))
     if n > MAX_CITED_IDS:
-        if _sliceable(ctx, top):
+        if slices and ctx.export:
             raise _slices_refusal(n)
         raise _too_big("needs the {n} works the set in parentheses cites", n, MAX_CITED_IDS,
                        NARROW_SET)
@@ -623,9 +632,14 @@ def _why_not_sliced(oqo: Optional[OQO]) -> Optional[str]:
     return _why_not_in_parts(oqo, SLICE_RULES, "added up across slices", "slice by slice")
 
 
+def _slices(ctx: Ctx, top: bool) -> bool:
+    """The query's set ANDed into its works can come in slices: its numbers add up across them."""
+    return top and _why_not_sliced(ctx.query) is None
+
+
 def _sliceable(ctx: Ctx, top: bool) -> bool:
     """An export whose set ANDed into its works is too big to hold comes in slices."""
-    return ctx.export and top and _why_not_sliced(ctx.query) is None
+    return ctx.export and _slices(ctx, top)
 
 
 def slices_for(n: int) -> int:

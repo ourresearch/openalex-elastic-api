@@ -178,3 +178,65 @@ def test_merge_order_reads_like_the_page(splits, sort, want):
         oqo = replace(oqo, sort_by=[SortBy(column_id=sort, direction="asc")])
     body = _body(splits, [("count", "count"), ("sum_cited_by_count", "sum citations")])
     assert C.merge_order(body, oqo) == want
+
+
+# A set of 450K-1M cited works (oxjob #2016): read whole, but a request that can't run in pieces (a nested split, a
+# median) can't send that many ids to every shard. An export that can slice asks for its slices instead of refusing.
+NESTED = "; then group those works by year and type; then summarize using count and percent open access"
+
+
+def _read_env(monkeypatch, n):
+    import numpy as np
+    import elasticsearch_dsl.connections as Conn
+    from query_translation import shard_route
+    monkeypatch.setattr(Conn, "get_connection", lambda name=None: None)
+    monkeypatch.setattr(shard_route, "routing", lambda es, index: ("works-v40", 72, 576))
+    monkeypatch.setattr(W, "_pmap", lambda fn, items, inflight=None: [np.arange(1, n + 1, dtype=np.int64)])
+
+
+@pytest.mark.parametrize("n, calc, export, top, want", [
+    (661_784, NESTED, True, True, (W.SLICE_ERROR, 2, "Export it from the website")),   # KU's 2020+ set: 2 slices
+    (661_784, NESTED, False, True, ("query_too_slow", None, "Export it: an export")),  # a page view: says to export
+    (661_784, NESTED, True, False, None),        # a set inside `not` or `or` can't be sliced
+    (661_784, "; then group those works by year; then summarize using median FWCI", True, True, None),
+    (400_000, NESTED, True, True, None),         # under the limit: sent whole, no slices
+])
+def test_reading_a_set_past_the_whole_limit_arms_a_better_answer(monkeypatch, n, calc, export, top, want):
+    _read_env(monkeypatch, n)
+    ctx = W.Ctx("walden", A.Deadline(), query=parse(SET + calc), export=export)
+    assert len(W.read_cited(ctx, {"match_all": {}}, "reading", top=top)) == n
+    got = ctx.deadline.whole_refusal and ctx.deadline.whole_refusal()
+    assert (got and (got.code, got.slices, got.fix[:len(want[2])])) == want
+
+
+def test_a_request_too_big_to_send_whole_asks_for_slices_when_armed(monkeypatch):
+    import elasticsearch_dsl.connections as Conn
+
+    class Es:
+        def search(self, **params):
+            raise AssertionError("never sent")
+    monkeypatch.setattr(Conn, "get_connection", lambda name=None: Es())
+    # a nested terms split: id_split can't run it in pieces
+    body = {"size": 0, "query": {"bool": {"filter": [W._terms("id", [f"W{i}" for i in range(W.MAX_SET_IDS + 1)])]}},
+            "aggs": {"y": {"terms": {"field": "publication_year"}, "aggs": {"t": {"terms": {"field": "type"}}}}}}
+    deadline = A.Deadline()
+    with pytest.raises(A.AnalyticsError) as e:
+        A._search("works-test", "walden", body, deadline, "splitting")
+    assert e.value.code == "query_too_slow" and "every shard at once" in e.value.message
+    assert e.value.fix.startswith("Narrow")
+    deadline.whole_refusal = lambda: W._slices_refusal(661_784)
+    raised = []
+    for _ in range(2):
+        with pytest.raises(A.AnalyticsError) as e:
+            A._search("works-test", "walden", body, deadline, "splitting")
+        assert e.value.code == W.SLICE_ERROR and e.value.slices == 2
+        raised.append(e.value)
+    assert raised[0] is not raised[1]       # a fresh error each time: a re-raised one keeps its frames alive
+
+
+def test_the_slices_ride_every_error_answer():
+    """Whichever handler answers the refusal (set resolution or the calculation's run), its JSON names the slices
+    users-api's export worker asks for."""
+    assert W._slices_refusal(661_784).to_dict()["slices"] == 2
+    assert 661_784 / 2 < W.MAX_SET_IDS                   # each of KU's 2 slices is small enough to send whole
+    assert "slices" not in A.AnalyticsError("query_too_slow", "m", "f").to_dict()

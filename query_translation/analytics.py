@@ -94,7 +94,10 @@ class AnalyticsError(APIQueryParamsError):
         self.slices = slices
 
     def to_dict(self):
-        return {"error": self.code, "message": self.message, "fix": self.fix}
+        out = {"error": self.code, "message": self.message, "fix": self.fix}
+        if self.slices:
+            out["slices"] = self.slices   # an export of a set too big to hold comes in this many slices (#1930)
+        return out
 
 
 class Deadline:
@@ -106,6 +109,9 @@ class Deadline:
         self.calls = 0
         self.log: List[dict] = []     # one entry per ES call: what, ms since start
         self.routes: List[tuple] = []  # big id filters placed by shard, kept for the query (oxjob #1930)
+        # builds what's raised instead of too_whole's refusal (read_cited, #2016): a fresh error each time, since a
+        # stored one re-raised keeps every frame it passed through (and their id lists) alive
+        self.whole_refusal: Optional[Callable[[], Exception]] = None
         self._last = self.start
 
     def remaining(self) -> float:
@@ -155,6 +161,18 @@ def too_slow(what: str) -> AnalyticsError:
         f"so it was stopped.",
         "Narrow the starting set (a shorter year range, a smaller institution or topic), "
         f"add a count filter ({count_fix()}), or split it into several queries.")
+
+
+def too_whole(n: int, export_it: bool = False) -> AnalyticsError:
+    """A request that can't be split (a median, a nested split, a negated set) would send `n` work ids to every
+    shard. `export_it`: its set slices, so an export answers it exactly (oxjob #2016)."""
+    from query_translation import id_split
+    return AnalyticsError(
+        "query_too_slow",
+        f"This calculation sends about {n:,} works from a set in parentheses to every shard at once; that holds up "
+        f"to {id_split.WHOLE_MAX_IDS:,} to stay inside about {int(TIME_BUDGET_S)} seconds.",
+        ("Export it: an export comes in exact slices. Or narrow" if export_it else "Narrow")
+        + " the query in parentheses, or calculate counts, sums and means, which run in pieces.")
 
 
 # ---------------------------------------------------------------------------
@@ -1094,12 +1112,9 @@ def _search(index, connection, body, deadline: Deadline, what: str, count: bool 
             return got
         n = id_split.id_terms(body)
         if n > id_split.WHOLE_MAX_IDS:
-            # a request that can't be split (a median, a nested split, a negated set) sends every id to every shard
-            raise AnalyticsError(
-                "query_too_slow",
-                f"This calculation sends about {n:,} works from a set in parentheses to every shard at once; that "
-                f"holds up to {id_split.WHOLE_MAX_IDS:,} to stay inside about {int(TIME_BUDGET_S)} seconds.",
-                "Narrow the query in parentheses, or calculate counts, sums and means, which run in pieces.")
+            # a request that can't be split sends every id to every shard: refused (walk_exec.read_cited may have
+            # set a better answer: #2016)
+            raise deadline.whole_refusal() if deadline.whole_refusal else too_whole(n)
         return one(body)
     except ConnectionTimeout:
         raise too_slow(what)

@@ -644,8 +644,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         try:
             result = _sampled_list(oqo, sample, params, build_search, fields_dict, index_name, connection)
         except analytics_mod.AnalyticsError as e:
-            return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
-                            "oqo": _echo_oqo(oqo).to_dict()}), e.status
+            return jsonify(dict(e.to_dict(), oqo=_echo_oqo(oqo).to_dict())), e.status
         if rerank_on:
             result["meta"]["reranked"] = False
         return _finalize_oqo_response(result, oqo, MessageSchema)
@@ -771,10 +770,7 @@ def _run_walks(oqo: OQO, connection):
         kind, val = walk_exec.prepare(oqo, connection, deadline, export=oqo.cursor is not None or csv_export,
                                       slice=walk_exec.parse_slice(_param("set_slice")) if csv_export else None)
     except analytics.AnalyticsError as e:
-        out = {"error": e.code, "message": e.message, "fix": e.fix, "oqo": oqo.to_dict()}
-        if e.slices:
-            out["slices"] = e.slices   # an export of a set too big to hold comes in this many slices (#1930)
-        return jsonify(out), e.status
+        return jsonify(dict(e.to_dict(), oqo=oqo.to_dict())), e.status
     if kind == "oqo":
         # an export's slice sends its sums unrounded, so the slices add up exactly (oxjob #1930). shortcut: a
         # request flag read in analytics._measure_value; the root fix rounds where cells are written, not computed
@@ -884,8 +880,8 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
             base_query=base_query, per_page=per_page, page=page, sort=sort,
             deadline=deadline, summary_only=csv_export and table == "summary")
     except analytics.AnalyticsError as e:
-        return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
-                        "oqo": _echo_oqo(whole_oqo).to_dict()}), e.status
+        # an export whose set must come in slices learns how many here too (#2016: a request too big to send whole)
+        return jsonify(dict(e.to_dict(), oqo=_echo_oqo(whole_oqo).to_dict())), e.status
     except APIError:
         raise
     if _echo_oqo(oqo) is not oqo:
