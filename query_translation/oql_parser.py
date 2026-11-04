@@ -89,7 +89,10 @@ def parse_either(oql: str) -> OQO:
             try:
                 return parse_core(oql, _collection_type)
             except (NotCore, _OQLError) as ce:
-                if _meant_as_a_sentence(oql, e):
+                # core's own diagnosis (a NotCore with a fix) beats today's generic
+                # "unexpected text" (`get institutions with at least 500 works in [Austria](AT)`)
+                if _meant_as_a_sentence(oql, e) or (
+                        e.code == "OQL_TRAILING_TOKENS" and getattr(ce, "fix", "")):
                     core_error = ce
         e.core_error = core_error
         raise

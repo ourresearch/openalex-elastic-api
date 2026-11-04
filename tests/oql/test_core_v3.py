@@ -601,4 +601,4 @@ def test_a_count_of_matching_works_on_a_plain_list_says_how():
     from query_translation.oql_core import NotCore
     with pytest.raises(NotCore) as e:
         parse_core("get authors with more than 5 works about kelp")
-    assert "Only authors with at least 5 works about kelp" in str(e.value)
+    assert "get the count of works about kelp by author. Only authors with more than 5 works about kelp." in str(e.value)

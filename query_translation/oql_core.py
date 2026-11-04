@@ -92,6 +92,7 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "primary_location.source.id": "source", "funders.id": "funder",
         "primary_location.source.host_organization_lineage": "publisher",
         "language": "language", "corresponding_author_ids": "corresponding author",
+        "corresponding_institution_ids": "corresponding institution",
         "is_retracted": "retracted", "authorships.author.id": "author"}
 DIM_COLUMNS = {v: k for k, v in DIMS.items()}
 _TYPE_NOUNS_LONGEST = sorted(NOUN_TYPES, key=lambda n: -len(n.split()))
@@ -999,6 +1000,31 @@ LINK_SLOTS = {"co-authored with": "authorships.institutions.lineage",
 _LINK_SLOT_WORDS = [(tuple(p.split()), col) for p, col in LINK_SLOTS.items()]
 # the kinds of place `from [X]` takes
 FROM_KINDS = ("institutions", "countries", "continents")
+# `from [X]` and `in [X]` read either way for a place, an institution or a journal ("works
+# in Austria", "papers from Nature"); the echo writes `from` for places, `in` for journals
+_FROM_OR_IN_KINDS = FROM_KINDS + ("sources",)
+# the words other kinds of link take in a works phrase, for the fix when `from`/`in` meet one
+_KIND_WORDS = {"publishers": "published by", "funders": "funded by", "authors": "by",
+               "topics": "in the topic", "works": "citing"}
+
+
+def _from_or_in(t: "_Text", word: str, ids: List[str]):
+    """`from` / `in` + links -> the filter, by the first link's kind (#1589's list, 4 Nov)."""
+    kind = _kind_of(ids[0])
+    if kind not in _FROM_OR_IN_KINDS:
+        name = next((n for n, i in t.links if i == ids[0] and n), "name")
+        link = f"[{name}]({ids[0]})"
+        words = _KIND_WORDS.get(kind)
+        what = THING_SINGULAR.get(kind or "", (kind or "").rstrip("s"))
+        fix = (f"{'an' if what[:1] in 'aeiou' else 'a'} {what} reads `{words} {link}`" if words
+               else f"`{word}` takes a place, an institution or a journal by its OpenAlex ID: "
+                    "`from [Austria](AT)`, `from [Africa](Q15)`, `from [MIT](I63966007)`, "
+                    "`in [Nature](S137773608)`")
+        raise NotCore(f"`{word} {link}`", fix)
+    col = "primary_location.source.id" if kind == "sources" else _works_column(kind)
+    return _any_of(col, ids)
+
+
 _DATE = r"(\d{4}-\d{2}-\d{2})"
 
 
@@ -1225,22 +1251,14 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
                     ws.take()
             if len(ids) < 2:
                 raise NotCore("`from both A and B`")
-            for id_ in ids:
-                kind = _kind_of(id_)
-                if kind not in FROM_KINDS:
-                    raise NotCore(f"`from` {id_}")
-                rows.append(LeafFilter(_works_column(kind), id_))
+            rows += [_from_or_in(t, "from", [id_]) for id_ in ids]
             continue
         if ws.at("from"):
             ws.take()
             ids = _links_list(ws)
             if not ids:
                 raise NotCore("`from` needs a place")
-            kind = _kind_of(ids[0])
-            if kind not in FROM_KINDS:
-                raise NotCore(f"`from` {ids[0]}")
-            col = _works_column(kind)
-            rows.append(_any_of(col, ids))
+            rows.append(_from_or_in(t, "from", ids))
             continue
         if ws.at("by") and t.link_id(ws.peek(1) or ""):
             ws.take()
@@ -1268,10 +1286,7 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             continue
         if ws.at("in") and t.link_id(ws.peek(1) or ""):
             ws.take()
-            ids = _links_list(ws)
-            if _kind_of(ids[0]) != "sources":
-                raise NotCore(f"`in` {ids[0]}: name its kind (the topic, SDG, the collection)")
-            rows.append(_any_of("primary_location.source.id", ids))
+            rows.append(_from_or_in(t, "in", _links_list(ws)))
             continue
         if ws.at("under", "the") and t.link_id(ws.peek(2) or "") and ws.at("under", "the", ws.peek(2), "license"):
             rows.append(LeafFilter("primary_location.license", t.link_id(ws.peek(2))))
@@ -1287,7 +1302,7 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
         if word.startswith(","):
             raise NotCore(f"unknown order {t.restore(ws.rest())!r}", _orders_fix())
         if word.lstrip(";").lower() in ("then", "then,") or word.startswith(";"):
-            raise NotCore("a `; then` step", "OQL has no steps now: a table is one sentence, "
+            raise NotCore("a `; then` step", "a sentence has no steps: a table is one sentence, "
                           "`get the count of works about kelp by year`")
         if word.lower() == "by":
             raise NotCore(f"unknown split `by {ws.peek(1) or ''}`", _splits_fix())
@@ -1567,11 +1582,18 @@ def _parse_things_list(t, s) -> OQO:
                 rows += _old_filters(entity, t.restore(ph[len("works where "):]))
                 ph = "works"
             if ph != "works":
+                # the fix in the query's own words (#1589's list: `get institutions with at
+                # least 500 works in [Austria](AT)` read Austria as a works ID)
+                noun = (s.split() or ["authors"])[0].lower()
+                what = THING_SINGULAR.get(noun, "author")
+                count = f"with {COMPARATOR_WORDS.get(op, 'at least')} {_number(n)}"
+                works = t.restore(ph)
+                place = re.fullmatch(r"works (?:in|from) (\S+)", works)
+                listed = (f"a place goes on the {noun}: `get {noun} in {place.group(1)} {count} "
+                          "works`; " if place and noun in ("authors", "institutions") else "")
                 raise NotCore("a count of matching works on a plain list",
-                              "a list filters on the things' own works count (`get authors with "
-                              "more than 1,000 works`); to count matching works, a table: `get the "
-                              "count of works about kelp by author. Only authors with at least 5 "
-                              "works about kelp.`")
+                              f"{listed}to count matching works, a table: `get the count of "
+                              f"{works} by {what}. Only {noun} {count} {works}.`")
             # `authors with more than 1,000 works`: their own works count (#1589's recheck)
             it = LeafFilter("works_count", n, op)
         rows.append(it)

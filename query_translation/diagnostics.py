@@ -120,8 +120,8 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "e.g. works (all corpora) where ..."),
         _spec("OQL_TRAILING_TOKENS", ERROR, PARSE,
               "unexpected text after the query's clauses",
-              "queries are: <entity> [where <conditions>] "
-              "[group by ...] [sample N]"),
+              "a query reads like `get works about kelp since 2020, most cited first` or "
+              "`get the count of works about kelp by year`; other conditions go after `where`"),
         # -- boolean structure ----------------------------------------------------
         _spec("OQL_IMPLICIT_ADJACENCY", ERROR, PARSE,
               "two conditions sit side by side with no AND/OR between them",
@@ -168,7 +168,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "e.g. institution is [Harvard University](I136199984)"),
         _spec("OQL_BAD_NUMBER", ERROR, PARSE,
               "a numeric field was given a non-numeric value",
-              "use a whole number, e.g. year is (2020)"),
+              "use a number, e.g. year is 2020 or citation count is above 100"),
         _spec("OQL_BAD_DATE", ERROR, PARSE,
               "a date field was given a value that is not a full ISO date",
               "use YYYY-MM-DD, e.g. date is (2020-05-17)"),
@@ -348,8 +348,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "yes/no column; percent of those works (needs a split)"),
         _spec("OQL_UNKNOWN_STEP", ERROR, PARSE,
               "a step after `; then` doesn't start with a known verb",
-              "steps are: group those works by ...; compare A versus B; "
-              "summarize using ...; sample (N) of those works; get ... of those works"),
+              "a table is one sentence: `get the count of works about kelp by year`"),
         # walks and sets (oxjob #1535)
         _spec("invalid_walk", ERROR, VALIDATE,
               "a walk doesn't fit where it is",

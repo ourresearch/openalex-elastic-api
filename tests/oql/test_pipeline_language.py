@@ -315,7 +315,7 @@ def test_a_groups_own_name_or_code_in_summarize(q, column, word):
      "using count and DOAJ", "percent DOAJ"),
     # no split by the things that have it: say which split shows it
     ("get works where year > (2020); then summarize using count and country",
-     "group those works by institution; then, summarize using count and country"),
+     "group those works by institution; finally, summarize using count and country"),
 ])
 def test_a_groups_own_field_refusals_say_the_fix(q, fix):
     e = _err(q)

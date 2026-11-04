@@ -325,7 +325,8 @@ _SPLIT_DOC = {"year": "`get the count of works about kelp by year since 2004`. T
                          "by company`."}
 _SPLIT_ORDER = ["year", "country", "institution", "author", "journal", "source", "publisher",
                 "funder", "topic", "subfield", "field", "domain", "SDG", "type", "open access",
-                "open access status", "language", "corresponding author", "company",
+                "open access status", "language", "corresponding author",
+                "corresponding institution", "company",
                 "repository", "retracted"]
 SPLITS = {}
 for _w in sorted(C._SPLIT_WORDS, key=lambda w: (_SPLIT_ORDER.index(w) if w in _SPLIT_ORDER else 99, w)):

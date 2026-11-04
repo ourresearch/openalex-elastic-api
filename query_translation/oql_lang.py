@@ -935,8 +935,13 @@ def _coerce_number(val: str, fld: "Field", pos):
                 return float(val)
             except ValueError:
                 pass
+    example = f"{fld.oql} is 2020" if fld.oql == "year" else f"{fld.oql} is above 100"
+    if (val.lower(),) in _NUMBER_WORD_OPS or val.lower() in ("at", "more", "greater", "less", "fewer"):
+        # `citation count is above abc`: the comparison word met no number (#1589's list)
+        raise oql_error("OQL_BAD_NUMBER", f'a number goes after "{val}" for "{fld.oql}"',
+                        f"e.g. {example}", pos)
     raise oql_error("OQL_BAD_NUMBER",
-                   f'"{val}" is not a number for "{fld.oql}"', "", pos)
+                   f'"{val}" is not a number for "{fld.oql}"', f"e.g. {example}", pos)
 
 
 def _range_endpoints(val: str):
@@ -2090,7 +2095,8 @@ class _Parser:
                 filters.append(self._parse_place_phrase(entity))
                 self._skip_annot()
         if (start_each or entity == "works") and self.word_is("in") \
-                and self._set_words(1) is not None:
+                and self._set_words(1) is not None \
+                and (start_each or not self._link_to_other_kind(self._set_words(1))):
             # `get works in (col_mylist)` too: a saved list of works (Haiku's cow path)
             # `get each institution in (MIT, Stanford)`: the start's own ids; one
             # reads `in [MIT](I63966007)`, a collection `in [Our lab](col_x)` (#1555)
@@ -2283,8 +2289,7 @@ class _Parser:
                     raise _CtxFound()
                 raise oql_error("OQL_TRAILING_TOKENS",
                                f'unexpected text near "{t.val}" (position {t.pos})',
-                               'queries are: <entity> [where <conditions>] '
-                               '[group by ...] [sample N]', t.pos)
+                               None, t.pos)   # the registry's fix: the sentence shapes
         # Collapse alias spellings to one canonical identity at the parse boundary
         # (#455) — covers leaf and group uniformly, so the leaf path's entity-resolve
         # and the (previously un-canonicalized) group path both emit the canonical
@@ -4246,6 +4251,17 @@ class _Parser:
             return j            # a collection's link: `[Climate topics](col_x)`
         return j if t is not None and t.kind == "LP" else None
 
+    def _link_to_other_kind(self, j: int) -> bool:
+        """At a set's start (offset j): a link to something other than works or a
+        collection, `get works in [Austria](AT)`, which the sentence reads as a place
+        (oxjob #1555, 4 Nov), not as works listed by ID."""
+        head = self.peek(j)
+        if head is None or head.kind != "ANNOT" or not _is_link_text(self.toks, self.i + j):
+            return False
+        t = self.peek(j + 2)
+        v = t.val if t is not None and t.kind == "WORD" else ""
+        return bool(v) and not v.startswith("col_") and not _is_entity_id("works", v)
+
     def _parse_relation_query(self, column: str, negated: bool) -> FilterType:
         """`it cites a work in the set (works where ...)` (oxjob #1555), `it cites works
         in (get works where ...)`: the relation's set of works."""
@@ -5316,7 +5332,7 @@ class _Parser:
                     f'percent takes a yes/no field; "{fld.oql}" isn\'t one',
                     f"e.g. summarize using percent open access; for the share of "
                     f"each {fld.oql}, split by it: group those {noun} by {fld.oql}; "
-                    f"then, summarize using percent of those {noun}",
+                    f"finally, summarize using percent of those {noun}",
                     t.pos)
             # min / max of a date: the earliest / latest (`summarize using max date`)
             if name != "percent" and fld.kind != "num" and not (
@@ -5375,7 +5391,7 @@ class _Parser:
                     f'"{om[0]}" belongs to each {other[:-1]}, not to the {noun}, so it '
                     f"isn't calculated",
                     f"split by {other[:-1]} to show it beside each one: group those "
-                    f"{noun} by {other[:-1]}; then, summarize using count and {om[0]}",
+                    f"{noun} by {other[:-1]}; finally, summarize using count and {om[0]}",
                     t.pos)
         raise oql_error(
             "OQL_BAD_MEASURE",
