@@ -15,6 +15,7 @@ formats and NEVER touches ES. Execution was split out of `views.py` (oxjob #384)
 the translation module no longer cohabits with the ES-executing machinery — a
 recurring source of "does /query run the query?" confusion.
 """
+from functools import partial
 import importlib
 from typing import Optional
 import json
@@ -874,11 +875,21 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     # a walk's one deadline covers its lookups and this request (oxjob #1535); the
     # baseline (oxjob #1555) shares it too, so it never stretches the answer's budget
     deadline = getattr(g, "oql_deadline", None) or analytics.Deadline()
+
+    run = partial(analytics.run, oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
+                  per_page=per_page, page=page, sort=sort, deadline=deadline,
+                  summary_only=csv_export and table == "summary")
     try:
-        body = analytics.run(
-            oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
-            base_query=base_query, per_page=per_page, page=page, sort=sort,
-            deadline=deadline, summary_only=csv_export and table == "summary")
+        try:
+            body = run(base_query=base_query)
+        except analytics.AnalyticsError as e:
+            # a page view that can't run in pieces on a set of 450K-1M cited works: once more, on a sample of the set
+            # small enough to send whole (oxjob #2016), scaled and labeled below. shortcut: the first run's requests
+            # are thrown away (~2 s near 1M); predicting it would copy id_split's rules (_piece_aggs)
+            if not (e.sample and walk_exec.thin_set(oqo)):
+                raise
+            deadline.whole_refusal = None
+            body = run(base_query=_base_query_for(oqo, fields_dict, connection))
     except analytics.AnalyticsError as e:
         # an export whose set must come in slices learns how many here too (#2016: a request too big to send whole)
         return jsonify(dict(e.to_dict(), oqo=_echo_oqo(whole_oqo).to_dict())), e.status

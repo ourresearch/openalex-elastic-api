@@ -464,7 +464,8 @@ def _list_or_sample_cited(ctx: Ctx, works_q: dict, refs: Optional[int], top: boo
         return list_keys(ctx, works_q, "referenced_works", works, what, map_hint=True), None
     ctx.sampled = True
     # `set_query`: a list checks its own first works against the set's works (execution._sampled_list)
-    return ids, {"share": share, "works": works, "set_query": works_q}
+    # `export`: an export of the query answers it exactly, in slices (says scale_estimate)
+    return ids, {"share": share, "works": works, "set_query": works_q, "export": _slices(ctx, top)}
 
 
 # The works a set cites, read shard by shard (oxjob #1930): one rule for the run (_resolve_leaf) and the free check.
@@ -573,13 +574,14 @@ def read_cited(ctx: Ctx, works_q: dict, what: str, top: bool = False) -> List[st
     cited = np.unique(np.concatenate(_pmap(shard, range(shards), inflight=READ_INFLIGHT)))
     n = len(cited) + len(others)
     slices = n > MAX_SET_IDS and _slices(ctx, top)
-    if slices:
-        # past MAX_SET_IDS a request that can't run in pieces (a nested split) can't send them whole (A._search): an
-        # export then asks for its slices, each under it (KU's 660K: 2), and a page view's refusal says to export.
-        # shortcut: it answers for any too-big request of the query, not only this set's; a second big set in the
-        # same query then gets "comes in slices", and its slice refuses (one set a query is sliced)
-        ctx.deadline.whole_refusal = (partial(_slices_refusal, n) if ctx.export else
-                                      partial(A.too_whole, n, export_it=True))
+    # Past MAX_SET_IDS a request that can't run in pieces (a nested split, a median) can't send them whole
+    # (A._search). An export then asks for its slices, each under it (KU's 660K: 2); a page view answers from a sample
+    # of them small enough to send whole (thin_set), and else its refusal says whether an export would answer it.
+    # shortcut: this answers for any too-big request of the query, not only this set's (a second big set is rare)
+    if ctx.export and slices:
+        ctx.deadline.whole_refusal = partial(_slices_refusal, n)
+    elif not ctx.export and top and n > MAX_SET_IDS:
+        ctx.deadline.whole_refusal = partial(A.too_whole, n, export_it=slices, sample=ctx.why_not_sample() is None)
     if n > MAX_CITED_IDS:
         if slices and ctx.export:
             raise _slices_refusal(n)
@@ -1028,6 +1030,25 @@ def _anded_sets(oqo: OQO):
         yield from walk(f)
 
 
+# A page view whose calculation can't run in pieces (a nested split, a median) on a set of MAX_SET_IDS to MAX_CITED_IDS
+# cited works (read whole: read_cited) answers from a uniform sample of them small enough to send whole (oxjob #2016):
+# each work kept by a hash of its id, 1 in k, about THIN_IDS of them.
+THIN_IDS = 200_000
+
+
+def thin_set(oqo: OQO) -> bool:
+    """Thin the cited works of the set ANDed into `oqo`'s works, read whole past MAX_SET_IDS, to a uniform sample of
+    about THIN_IDS, marked so the answer is scaled up and labeled (scale_estimate). False: none to thin."""
+    s = next((s for s in _anded_sets(oqo) if s.column == "cited_by" and not s.sample and not s.slice
+              and len(s) > MAX_SET_IDS), None)
+    if s is None:
+        return False
+    works = len(s)
+    s.ids, k = _thin_ids(s.ids, THIN_IDS)
+    s.sample = {"share": 1 / k, "works": works, "export": _why_not_sliced(oqo) is None}
+    return True
+
+
 def sample_of(oqo: OQO) -> Optional[dict]:
     """The sample a resolved query's works were read from, if a set ANDed into them was too big to hold."""
     return next((s.sample for s in _anded_sets(oqo) if s.sample), None)
@@ -1090,7 +1111,8 @@ def _sample_words(sample: dict) -> dict:
                 "narrow": f"Narrow the query to {CITES_SAMPLE:,} works or the set in parentheses to {MAX_SET_IDS:,}"}
     return {"of": f"the {sample['works']:,} works the set in parentheses cites",
             "few": "the set cites too few of the list's first works",
-            "narrow": "Narrow the set"}
+            # a calculation whose export comes in exact slices (#2016)
+            "narrow": "Export it or narrow the set" if sample.get("export") else "Narrow the set"}
 
 
 def _count_margin(count, share: float) -> int:
@@ -1135,16 +1157,21 @@ def without_sample(oqo: OQO) -> OQO:
 def thin_sample(oqo: OQO, size: int) -> Tuple[OQO, int]:
     """A resolved list with its sampled set thinned to about `size` ids, picked by a fixed hash of each id (so still a
     uniform sample), and the k it kept 1 in: the rows of a list whose own first works the set doesn't cite."""
-    import zlib
     k = 1
 
     def thin(leaf):
         nonlocal k
         s = leaf.value
-        k = math.ceil(len(s) / size)
-        keep = [w for w in s.ids if zlib.crc32(w.encode()) % k == 0] if k > 1 else s.ids
+        keep, k = _thin_ids(s.ids, size)
         return replace(leaf, value=IdSet(keep, s.label, s.column, s.sample))
-    return _with_sample(oqo, thin), max(k, 1)
+    return _with_sample(oqo, thin), k
+
+
+def _thin_ids(ids: List[str], size: int) -> Tuple[List[str], int]:
+    """About `size` of `ids`, 1 in k picked by a fixed hash of each id (so a uniform sample), and that k."""
+    import zlib
+    k = max(1, math.ceil(len(ids) / size))
+    return ([w for w in ids if zlib.crc32(w.encode()) % k == 0] if k > 1 else ids), k
 
 
 def cited_by_set(connection, deadline: A.Deadline, set_query: dict, ids: List[str]) -> List[str]:

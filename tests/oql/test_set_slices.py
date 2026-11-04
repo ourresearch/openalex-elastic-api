@@ -194,19 +194,78 @@ def _read_env(monkeypatch, n):
     monkeypatch.setattr(W, "_pmap", lambda fn, items, inflight=None: [np.arange(1, n + 1, dtype=np.int64)])
 
 
+MEDIAN = "; then group those works by year; then summarize using median FWCI"
+
+
 @pytest.mark.parametrize("n, calc, export, top, want", [
-    (661_784, NESTED, True, True, (W.SLICE_ERROR, 2, "Export it from the website")),   # KU's 2020+ set: 2 slices
-    (661_784, NESTED, False, True, ("query_too_slow", None, "Export it: an export")),  # a page view: says to export
+    # KU's 2020+ set: an export comes in 2 slices
+    (661_784, NESTED, True, True, (W.SLICE_ERROR, 2, "Export it from the website", False)),
+    # a page view answers from a sample (thin_set); if it can't, its refusal says an export answers it
+    (661_784, NESTED, False, True, ("query_too_slow", None, "Export it: an export", True)),
+    (661_784, MEDIAN, False, True, ("query_too_slow", None, "Narrow", True)),   # a median: no slices, a sample
     (661_784, NESTED, True, False, None),        # a set inside `not` or `or` can't be sliced
-    (661_784, "; then group those works by year; then summarize using median FWCI", True, True, None),
+    (661_784, MEDIAN, True, True, None),         # a median's export: refused as before
     (400_000, NESTED, True, True, None),         # under the limit: sent whole, no slices
+    (400_000, NESTED, False, True, None),
 ])
 def test_reading_a_set_past_the_whole_limit_arms_a_better_answer(monkeypatch, n, calc, export, top, want):
     _read_env(monkeypatch, n)
     ctx = W.Ctx("walden", A.Deadline(), query=parse(SET + calc), export=export)
     assert len(W.read_cited(ctx, {"match_all": {}}, "reading", top=top)) == n
     got = ctx.deadline.whole_refusal and ctx.deadline.whole_refusal()
-    assert (got and (got.code, got.slices, got.fix[:len(want[2])])) == want
+    assert (got and (got.code, got.slices, got.fix[:len(want[2])], got.sample)) == want
+
+
+def _resolved(n, calc=NESTED):
+    """`SET + calc` as prepare resolves it: its set read whole, `n` cited works."""
+    from dataclasses import replace
+    oqo = parse(SET + calc)
+    ids = W.IdSet([f"https://openalex.org/W{i}" for i in range(n)], "the set", "cited_by")
+    return replace(oqo, filter_rows=[LeafFilter("ids.openalex", ids, "in")]), ids
+
+
+def test_thin_set_keeps_a_uniform_sample_small_enough_to_send_whole(monkeypatch):
+    monkeypatch.setattr(W, "MAX_SET_IDS", 500)
+    monkeypatch.setattr(W, "THIN_IDS", 200)
+    oqo, ids = _resolved(1_000)
+    assert W.thin_set(oqo)
+    assert ids.sample == {"share": 0.2, "works": 1_000, "export": True}       # 1 in 5; its export comes in slices
+    assert 150 < len(ids) < 250 and set(ids.ids) < {f"https://openalex.org/W{i}" for i in range(1_000)}
+    assert not W.thin_set(oqo)                                                # once
+    assert not W.thin_set(_resolved(400)[0])                                  # small enough already
+    median, _ = _resolved(1_000, MEDIAN)
+    assert W.thin_set(median) and W.sample_of(median)["export"] is False      # a median's export can't slice
+
+
+def test_an_estimate_an_export_answers_exactly_says_so():
+    body = {"meta": {"count": 12, "groups_count": None}, "group_by": [], "summary": {"all": {"count": 12}}}
+    W.scale_estimate(body, parse(SET + "; then summarize using count"), {"share": 0.25, "works": 661_784,
+                                                                          "export": True})
+    assert body["meta"]["estimate"]["message"].endswith("Export it or narrow the set for exact numbers.")
+
+
+def test_a_page_view_refused_for_its_whole_set_answers_from_a_sample(monkeypatch, client):
+    """The run (analytics.run) refuses a request it can't send whole; the page view runs once more on a sample of
+    the set, scaled up and labeled (oxjob #2016). users-api's export check reads this page, so the export starts."""
+    monkeypatch.setattr(W, "MAX_SET_IDS", 500)
+    monkeypatch.setattr(W, "THIN_IDS", 200)
+    resolved, ids = _resolved(1_000)
+    monkeypatch.setattr(W, "prepare", lambda oqo, *a, **k: ("oqo", resolved))
+    sent = []
+
+    def run(oqo, base_query=None, deadline=None, **kw):
+        sent.append(str(base_query).count("https://openalex.org/W"))
+        if len(sent) == 1:
+            raise A.too_whole(1_000, export_it=True, sample=True)
+        return {"group_by": [{"key": "2020", "key_display_name": "2020", "count": 10, "groups": []}],
+                "summary": {"all": {"count": 10}}, "meta": {"count": 10, "groups_count": 1, "es_calls": 3}}
+    monkeypatch.setattr(A, "run", run)
+    r = client.post("/", json={"oql": SET + NESTED})
+    assert r.status_code == 200, r.data[:400]
+    assert sent[0] == 1_000 and 150 < sent[1] < 250                          # the second run sent the sample
+    m = r.get_json()["meta"]
+    assert m["count"] == 50 and m["estimate"]["sample_share"] == 0.2 and m["approximate"] is True
+    assert r.get_json()["group_by"][0]["count"] == 50
 
 
 def test_a_request_too_big_to_send_whole_asks_for_slices_when_armed(monkeypatch):

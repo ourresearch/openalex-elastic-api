@@ -80,7 +80,8 @@ class AnalyticsError(APIQueryParamsError):
     """A loud, fixable refusal: `code`, a message and the fix."""
 
     def __init__(self, code: str, message: str, fix: str, status: int = 400,
-                 too_big: bool = False, groups: Optional[int] = None, slices: Optional[int] = None):
+                 too_big: bool = False, groups: Optional[int] = None, slices: Optional[int] = None,
+                 sample: bool = False):
         super().__init__(f"{message} {fix}")
         self.code = code
         self.message = message
@@ -92,6 +93,8 @@ class AnalyticsError(APIQueryParamsError):
         self.groups = groups
         # an export of a set too big for one request: the slices it comes in (oxjob #1930, step 4)
         self.slices = slices
+        # a page view refused for sending its set whole can answer from a sample of it instead (#2016, thin_set)
+        self.sample = sample
 
     def to_dict(self):
         out = {"error": self.code, "message": self.message, "fix": self.fix}
@@ -163,16 +166,17 @@ def too_slow(what: str) -> AnalyticsError:
         f"add a count filter ({count_fix()}), or split it into several queries.")
 
 
-def too_whole(n: int, export_it: bool = False) -> AnalyticsError:
+def too_whole(n: int, export_it: bool = False, sample: bool = False) -> AnalyticsError:
     """A request that can't be split (a median, a nested split, a negated set) would send `n` work ids to every
-    shard. `export_it`: its set slices, so an export answers it exactly (oxjob #2016)."""
+    shard. `export_it`: its set slices, so an export answers it exactly; `sample`: a page view can answer from a
+    sample of its set instead (oxjob #2016)."""
     from query_translation import id_split
     return AnalyticsError(
         "query_too_slow",
         f"This calculation sends about {n:,} works from a set in parentheses to every shard at once; that holds up "
         f"to {id_split.WHOLE_MAX_IDS:,} to stay inside about {int(TIME_BUDGET_S)} seconds.",
         ("Export it: an export comes in exact slices. Or narrow" if export_it else "Narrow")
-        + " the query in parentheses, or calculate counts, sums and means, which run in pieces.")
+        + " the query in parentheses, or calculate counts, sums and means, which run in pieces.", sample=sample)
 
 
 # ---------------------------------------------------------------------------

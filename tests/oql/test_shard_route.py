@@ -314,7 +314,7 @@ def test_a_big_set_is_sampled_without_counting_its_works():
         assert {c[2] for c in fake.calls if c[0] == "part"} == {parts}
         assert len(ids) == 4_000 * W.SAMPLE_PARTS and ctx.sampled
         assert sample == {"share": W.SAMPLE_PARTS / parts, "works": round(len(ids) * parts / W.SAMPLE_PARTS),
-                          "set_query": {"match_all": {}}}
+                          "set_query": {"match_all": {}}, "export": bool(calc)}   # a calculation exports in slices
 
 
 def test_a_set_naming_few_works_is_listed_whole_after_all():
