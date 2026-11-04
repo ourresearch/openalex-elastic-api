@@ -31,6 +31,7 @@ from elasticsearch_dsl import Q
 from extensions import cache_get, cache_set
 from query_translation import analytics as A
 from query_translation.id_split import INFLIGHT, PIECE_KEYS, WHOLE_MAX_IDS, _pmap, _terms, piece_full
+from query_translation.measure_parts import MEASURE_PARTS
 from query_translation.oqo import (
     OQO, RELATION_COLUMNS, BranchFilter, GroupBy, LeafFilter, Measure, has_query_value,
     has_relation_leaf, result_entity)
@@ -64,7 +65,7 @@ READ_INFLIGHT = 24             # single-shard requests (app.py's pools hold 24 c
 # Counts and sums scale up; means, medians, percents and shares are the sample's; exports wait for the exact path.
 SAMPLE_PARTS = 8
 EST_SAMPLE_REFS_PER_S = 5_000_000   # each partition call scans every reference: 20.4M in 3.5-4.5 s, 5.4M in 1.3 s
-ESTIMABLE = ("count", "sum", "mean", "median", "percent", "percent_of_those", "value")
+ESTIMABLE = tuple(m for m, p in MEASURE_PARTS.items() if p.sample)
 # Past QUICK_REFS references the partitions are sized from the references total (0.2 s) instead of a count of the
 # works they name (1.6 s for systematic reviews'), as if MAX_DISTINCT_SHARE of them were distinct: each partition then
 # stays under the 65,536-key cap whatever the share (systematic reviews' and Michigan's sets: 45-55%).
@@ -602,16 +603,8 @@ def _work_ids(nums) -> List[str]:
 
 # An export of a set too big to hold, in exact slices (oxjob #1930, step 4; see SLICE_PARTS). How each measure adds
 # up across slices (its X-Set-Merge rule, analytics_csv.merge_rules) and the helper measures each slice sends for it
-# ((measure, of the same column?)); a measure missing here (median, percent of those) can't be sliced.
-# shortcut: a table of its own; step 5 makes one registry of it, ESTIMABLE and id_split's merge rules.
-SLICE_RULES = {
-    "count": ("add", ()), "sum": ("add", ()), "values": ("add", ()),
-    "min": ("min", ()), "max": ("max", ()), "value": ("first", ()),
-    # a slice's numerator is percent x count / 100: exact while a slice holds under a million works (a partition holds
-    # at most 65,536 keys, list_keys refuses past it: SLICE_PARTS x 65,536 = 524,288)
-    "percent": ("percent", (("count", False),)),
-    "mean": ("mean", (("sum", True), ("values", True))),
-}
+# are measure_parts' (#2016); a measure without a rule (median, percent of those) can't be sliced.
+SLICEABLE = tuple(m for m, p in MEASURE_PARTS.items() if p.merge)
 SLICE_ERROR = "set_needs_slices"
 
 
@@ -636,7 +629,7 @@ def _why_not_sliced(oqo: Optional[OQO]) -> Optional[str]:
         return "the query isn't known"
     if not oqo.calculates:
         return f"a list exports the works of a set that cites up to {MAX_SET_IDS:,}"
-    return _why_not_in_parts(oqo, SLICE_RULES, "added up across slices", "slice by slice")
+    return _why_not_in_parts(oqo, SLICEABLE, "added up across slices", "slice by slice")
 
 
 def _slices(ctx: Ctx, top: bool) -> bool:
@@ -725,10 +718,10 @@ def slice_of(oqo: OQO) -> Optional[Tuple[int, int]]:
 
 
 def slice_measures(calculate: List[Measure]) -> List[Measure]:
-    """The measures a slice answers: the query's, plus the helpers its slices add up by (SLICE_RULES)."""
+    """The measures a slice answers: the query's, plus the helpers its slices add up by (measure_parts)."""
     out = list(calculate)
     for m in calculate:
-        out += [h for h in (Measure(name, m.column_id if same else None) for name, same in SLICE_RULES[m.measure][1])
+        out += [h for h in (Measure(name, m.column_id if same else None) for name, same in MEASURE_PARTS[m.measure].helpers)
                 if h not in out]
     return out
 
@@ -1102,7 +1095,8 @@ def scale_estimate(body: dict, oqo: OQO, sample: dict):
     """A calculation answered from a sample of its set (oxjob #1930): counts and sums scaled up to the whole set, means,
     medians, percents and shares as the sample has them, and `meta.estimate` saying so."""
     factor = 1 / sample["share"]
-    sums = {m.key for m in oqo.calculate if m.measure == "sum"}
+    # counts (every row's own) and the measures measure_parts scales on a sample (sums)
+    sums = {m.key for m in oqo.calculate if MEASURE_PARTS[m.measure].sample == "scale"}
 
     def scale(node):
         if isinstance(node, list):

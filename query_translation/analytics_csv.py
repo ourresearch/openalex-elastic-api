@@ -226,14 +226,14 @@ def merge_rules(body: dict, oqo: OQO, asked: list, at: Tuple[int, int]) -> dict:
     """X-Set-Merge for an export's slice of a set too big for one request (oxjob #1930, step 4): how the exporter
     adds the slices up, by column name: `add` counts and sums, `min` / `max` the smallest / largest, `first` a group's
     own field (the same in every slice), `percent` {column: its count column}, `mean` {column: [its sum, its count of
-    values]} (walk_exec.SLICE_RULES), `drop` the helper columns the query didn't ask for, `order` (merge_order).
+    values]} (measure_parts), `drop` the helper columns the query didn't ask for, `order` (merge_order).
     Columns named in none of them are the groups' keys."""
+    from query_translation.measure_parts import MEASURE_PARTS
     from query_translation.oqo import Measure
-    from query_translation.walk_exec import SLICE_RULES
     _, name = _header_names(body, oqo)
     rules = {"slice": list(at), "add": [], "min": [], "max": [], "first": [], "percent": {}, "mean": {}}
     for m in body.get("meta", {}).get("measures") or []:
-        rule, helpers = SLICE_RULES[m["measure"]]
+        rule, helpers = MEASURE_PARTS[m["measure"]].merge, MEASURE_PARTS[m["measure"]].helpers
         parts = [name[Measure(h, m["column_id"] if same else None).key] for h, same in helpers]
         if rule in ("percent", "mean"):
             rules[rule][name[m["key"]]] = parts[0] if rule == "percent" else parts

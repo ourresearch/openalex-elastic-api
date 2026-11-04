@@ -40,6 +40,7 @@ from core.exceptions import APIQueryParamsError
 from core.group_by.buckets import SINGLE_LIST_SHARD_SIZE, _MAP_HINT_FIELDS
 from core.preference import clean_preference
 from query_translation.analytics_csv import split_meta
+from query_translation.measure_parts import MEASURE_PARTS
 from query_translation.oqo import (
     OQO, AffiliationFilter, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 
@@ -199,17 +200,17 @@ def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
     aggs = {}
     for m in measures:
         name = f"m_{m.key}"
-        if m.measure in ("count", "percent_of_those", "value"):
+        agg = MEASURE_PARTS[m.measure].agg   # None: read from the bucket's count or the group (count, a share, value)
+        if agg is None:
             continue
-        if m.measure == "percent":
+        if agg == "filter":   # a percent: how many hold yes
             aggs[name] = {"filter": _true_query(fields_dict, m.column_id).to_dict()}
             continue
         es_field = _es_number_field(fields_dict, m.column_id)
-        if m.measure == "median":
+        if agg == "percentiles":
             aggs[name] = {"percentiles": {"field": es_field, "percents": [50]}}
         else:
             # `values`: how many works hold a value, a mean's denominator (only an export's slices ask: oxjob #1930)
-            agg = {"mean": "avg", "sum": "sum", "min": "min", "max": "max", "values": "value_count"}[m.measure]
             aggs[name] = {agg: {"field": es_field}}
             if m.measure != "values" and "Date" in type(get_field(fields_dict, m.column_id)).__name__:
                 aggs[name][agg]["format"] = "yyyy-MM-dd"   # the earliest / latest date

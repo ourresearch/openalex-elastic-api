@@ -162,8 +162,8 @@ def test_a_slice_adds_the_helpers_its_measures_add_up_by():
 
 def test_every_sliceable_measure_has_a_rule_and_the_rest_refuse():
     from query_translation.oqo import MEASURES
-    assert set(W.SLICE_RULES) - {"values"} <= set(MEASURES)
-    assert {m for m in MEASURES if m not in W.SLICE_RULES} == {"median", "percent_of_those"}
+    assert set(W.SLICEABLE) - {"values"} <= set(MEASURES)
+    assert {m for m in MEASURES if m not in W.SLICEABLE} == {"median", "percent_of_those"}
 
 
 def test_a_slice_costs_its_share_of_the_export():
@@ -382,3 +382,28 @@ def test_a_slice_with_an_id_that_isnt_a_work_isnt_kept(monkeypatch):
     ctx.search = Odd(refs=5_400_000, est=None)
     assert "https://openalex.org/A1" in W.slice_cited(ctx, {"match_all": {}}, True, "listing")
     assert not cache.data
+
+
+def test_one_table_says_how_each_measure_behaves_in_parts():
+    """measure_parts (#2016): the sample, slice and id-filter piece rules all read one table; these are the rules
+    #1930 shipped as three separate tables."""
+    from query_translation import id_split
+    from query_translation.measure_parts import AGG_MERGE, MEASURE_PARTS
+    from query_translation.oqo import MEASURES
+    assert set(MEASURE_PARTS) == set(MEASURES) | {"values"}
+    assert set(W.ESTIMABLE) == {"count", "sum", "mean", "median", "percent", "percent_of_those", "value"}
+    assert {m: (p.merge, p.helpers) for m, p in MEASURE_PARTS.items() if m in W.SLICEABLE} == {
+        "count": ("add", ()), "sum": ("add", ()), "values": ("add", ()),
+        "min": ("min", ()), "max": ("max", ()), "value": ("first", ()),
+        "percent": ("percent", (("count", False),)),
+        "mean": ("mean", (("sum", True), ("values", True)))}
+    assert AGG_MERGE == {"sum": "add", "value_count": "add", "avg": "mean", "min": "min", "max": "max"}
+    # a median's percentiles can't merge: a request with one runs whole
+    with pytest.raises(id_split.Whole):
+        id_split._piece_aggs({"m": {"percentiles": {"field": "fwci", "percents": [50]}}})
+    assert id_split._piece_aggs({"m": {"avg": {"field": "fwci"}}, "n": {"max": {"field": "fwci"}}}) == {
+        "m__sum": {"sum": {"field": "fwci"}}, "m__n": {"value_count": {"field": "fwci"}},
+        "n": {"max": {"field": "fwci"}}}
+    from works.fields import fields_dict
+    assert A._measure_aggs([Measure("mean", "fwci"), Measure("max", "fwci")], fields_dict) == {
+        "m_mean_fwci": {"avg": {"field": "fwci"}}, "m_max_fwci": {"max": {"field": "fwci"}}}

@@ -27,6 +27,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
+from query_translation.measure_parts import AGG_MERGE
+
 INFLIGHT = 8             # calls in flight (measured safe on production, 2026-10-03)
 SPLIT_MIN_IDS = 40_000   # below this the filter is cheap (100K author ids: 0.9 s)
 PIECE_IDS = 40_000       # about this many ids a piece
@@ -41,7 +43,6 @@ SINGLE_VALUED = ("publication_year", "publication_date", "type", "language",
                  "primary_location.", "primary_topic.", "open_access.", "best_oa_location.",
                  "cited_by_count", "fwci", "citation_normalized_percentile.", "is_", "has_")
 
-_METRICS = ("value_count", "sum", "min", "max")
 _SUM, _N = "__sum", "__n"   # a mean's two parts in a piece
 _local = threading.local()
 
@@ -173,13 +174,14 @@ def _piece_aggs(aggs: Dict[str, dict], inside_terms: bool = False) -> Dict[str, 
     for name, a in aggs.items():
         kind, sub = _kind_sub(a)
         spec = a[kind]
-        if kind in _METRICS:
-            out[name] = {kind: spec}
-        elif kind == "avg":
+        rule = AGG_MERGE.get(kind)   # the metrics measures run as (measure_parts, #2016)
+        if rule == "mean":
             # a mean is its sum over its count of values: both add up across pieces (#1930)
             if set(spec) != {"field"}:
                 raise Whole()
             out[name + _SUM], out[name + _N] = {"sum": spec}, {"value_count": spec}
+        elif rule:
+            out[name] = {kind: spec}   # added, the smallest or the largest of the pieces
         elif kind == "cardinality":
             if inside_terms or set(spec) - {"field", "precision_threshold"} \
                     or not spec["field"].startswith(SINGLE_VALUED):
@@ -209,7 +211,7 @@ def _piece_aggs(aggs: Dict[str, dict], inside_terms: bool = False) -> Dict[str, 
                 raise Whole()
             for key, _dir in _order(spec):
                 if key not in ("_count", "_key") and _kind_sub(sub.get(key) or {"": 0})[0] \
-                        not in _METRICS + ("avg",):
+                        not in AGG_MERGE:
                     raise Whole()
             t = {k: v for k, v in spec.items() if k not in ("size", "shard_size", "order")}
             t["size"] = PIECE_KEYS
@@ -300,16 +302,17 @@ def _merge_aggs(spec: Dict[str, dict], results: List[dict]) -> dict:
         kind, sub = _kind_sub(a)
         if kind == "cardinality":
             continue   # after its sibling terms
-        if kind == "avg":
+        rule = AGG_MERGE.get(kind)
+        if rule == "mean":
             n = sum(r[name + _N].get("value") or 0 for r in results)
             out[name] = {"value": sum(r[name + _SUM].get("value") or 0 for r in results) / n if n else None}
             continue
         got = [r[name] for r in results]
-        if kind in ("value_count", "sum"):
+        if rule == "add":
             out[name] = {"value": sum(g.get("value") or 0 for g in got)}
-        elif kind in ("min", "max"):
+        elif rule in ("min", "max"):
             vals = [g["value"] for g in got if g.get("value") is not None]
-            out[name] = {"value": (min if kind == "min" else max)(vals) if vals else None}
+            out[name] = {"value": (min if rule == "min" else max)(vals) if vals else None}
         elif kind in ("filter", "missing"):
             out[name] = {"doc_count": sum(g["doc_count"] for g in got), **_merge_aggs(sub, got)}
         elif kind == "filters":
