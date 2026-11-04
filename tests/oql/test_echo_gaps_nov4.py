@@ -173,3 +173,18 @@ def test_the_general_form_writes_the_sentence_numbers():
         "finally, summarize using count, percent of those works, mean citation count, and sum citation count"))
     text = render_pipeline_line(oqo, None)
     assert text.endswith("using count, share, mean citations, and sum of citations")
+
+
+@pytest.mark.parametrize("text", [
+    "get works where title-abstract-keywords has (kelp); then group those works by author where mean "
+    "citations of those works is above 50 and count of those works is at least 5",
+    "get works where title-abstract-keywords has (kelp); then group those works by institution where "
+    "mean FWCI of those works is at least 2",
+])
+def test_a_group_filter_on_another_number_echoes_the_general_form(text):
+    # the sentence renderer handed `mean FWCI of those works ...` to the condition writer: a 500
+    from query_translation.oql_pipeline import render_pipeline_line
+    oqo = canonicalize_oqo(parse_either(text))
+    assert render_core(oqo) is None          # no sentence says it: the general form does
+    echo = render_pipeline_line(oqo, None)
+    assert canonicalize_oqo(parse_either(echo)).to_dict() == oqo.to_dict()

@@ -850,6 +850,10 @@ def _table(oqo, resolver):
             if g.column_id not in THING_NOUNS:
                 raise NotCore("which groups, on a split with no things")
             noun, parts, left, count = _thing_parts(g.where, THING_NOUNS[g.column_id], resolver)
+            if any(L._has_measure_filter(x) for x in left):
+                # `where mean citations of those works is above 50`: a number other than the
+                # count; the general form says it (the condition writer has no words for it)
+                raise NotCore("which groups, by a number other than the count")
             if left:
                 # the things' own fields no phrase says, key-value in their own words, last
                 # (`by author where last known institution is [X]`), as `_parse_things` reads
