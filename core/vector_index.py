@@ -21,6 +21,7 @@ from core.filter import filter_records
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.merged_ids import with_winners
 from core.utils import get_full_openalex_id
+from core.validate import validate_semantic_view
 
 logger = logging.getLogger(__name__)
 
@@ -692,6 +693,9 @@ def vector_semantic_search(params, index_name, connection):
             "Cursor pagination is not supported with semantic search. "
             "Use page/per_page pagination instead (max 50 results)."
         )
+
+    # Sort and sample can't be honored (oxjob #2003): refuse them rather than drop them.
+    validate_semantic_view(params)
 
     # Cap per_page for semantic search
     per_page = params.get("per_page", 25) or 25

@@ -1,6 +1,6 @@
 from core.paginate import get_per_page
 from core.utils import map_filter_params, map_sort_params, set_number_param
-from core.validate import validate_export_format, validate_params
+from core.validate import validate_export_format, validate_params, validate_sample_cursor
 
 
 def parse_params(request, extra_valid_params=()):
@@ -32,6 +32,7 @@ def parse_params(request, extra_valid_params=()):
     }
     if params["group_bys"]:
         params["group_bys"] = params["group_bys"].split(",")
+    validate_sample_cursor(params)
     return params
 
 

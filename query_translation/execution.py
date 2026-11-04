@@ -37,6 +37,7 @@ from core.shared_view import (
     set_source,
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
+from core.validate import validate_sample_cursor
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
 from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
@@ -505,6 +506,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     # Build the synthetic params dict that downstream shared_view stages expect.
     try:
         params = _build_params_from_oqo(oqo, request)
+        validate_sample_cursor(params)  # the URL door runs it in parse_params (oxjob #2003)
     except APIQueryParamsError as e:
         return _error_response(str(e), "invalid_params", status=400)
 
@@ -546,6 +548,9 @@ def _execute_oqo(oqo_or_dict, view_params=None):
                 "invalid_params",
                 status=400,
             )
+        if _rerank_asked():
+            from core import rerank
+            return _error_response(rerank.SEMANTIC_REFUSAL, "invalid_params", status=400)
         return _execute_semantic_oqo(
             oqo, params, index_name, connection, fields_dict, default_sort,
             MessageSchema,
@@ -695,7 +700,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
 
     result = format_response(response, params, index_name, fields_dict, s, connection)
     if rerank_on:
-        result["meta"]["reranked"] = False
+        result["meta"].update(reranked=False, rerank_reason=rerank.skip_reason(params))
     return _finalize_oqo_response(result, oqo, MessageSchema)
 
 
@@ -1130,6 +1135,9 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
         )
     message_schema = MessageSchema(only=only_fields) if only_fields else MessageSchema()
     serialized = message_schema.dump(result)
+    if "reranked" not in serialized.setdefault("meta", {}):
+        from core import rerank
+        serialized["meta"].update(rerank.shed_note(request) or {})  # the proxy shed rerank (oxjob #2003)
     # Honor the user's authored operand order (charter decision 30, #363/#475): this
     # is the OQL/builder execute path, and the SERP rebuilds `?oql=` from x_query, so
     # sorting commutative value-bag members here would silently alphabetize the user's

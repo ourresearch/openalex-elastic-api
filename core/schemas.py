@@ -22,6 +22,10 @@ class MetaSchema(Schema):
     # rerank=true (oxjob #1521): whether this page's order came from Jev. Present
     # only when rerank was asked for.
     reranked = fields.Bool()
+    # Why a page that asked for rerank came back in the normal order (oxjob #2003): search_busy (the proxy skipped it
+    # while search is under heavy load), past_window (the page starts past the top 100), model_unavailable (the
+    # reranking model didn't answer in time), disabled. Present only when reranked is false.
+    rerank_reason = fields.Str()
     # Private, unstable query echo {oql, oqo, url} the GUI rehydrates from (oxjob
     # #373/#378). `fields.Raw` is a pass-through: marshmallow drops undeclared meta
     # keys on dump, so this field is what lets `core.shared_view`'s injected

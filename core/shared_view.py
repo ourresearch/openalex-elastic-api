@@ -66,7 +66,9 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
         and index_name.lower().startswith("works")
     )
     if is_semantic and settings.USE_VECTOR_INDEX:
-        return vector_semantic_search(params, index_name, connection)
+        if rerank.rerank_requested(request):
+            raise APIQueryParamsError(rerank.SEMANTIC_REFUSAL)  # oxjob #2003: was dropped without a word
+        return with_shed_note(vector_semantic_search(params, index_name, connection), request)
 
     # rerank=true (oxjob #1521): Jev reorders the top 100 of a relevance-sorted works
     # search. A rerank cursor ("rr.") implies it, so a walk that started reranked
@@ -96,10 +98,20 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
     response = execute_search(s, params)
     result = format_response(response, params, index_name, fields_dict, s, connection)
     if rerank_on:
-        result["meta"]["reranked"] = False
+        result["meta"].update(reranked=False, rerank_reason=rerank.skip_reason(params))
+    else:
+        with_shed_note(result, request)
     attach_x_query(result, request, index_name)
     if settings.DEBUG:
         print(s.to_dict())
+    return result
+
+
+def with_shed_note(result, request):
+    """meta.reranked false + rerank_reason search_busy when the proxy shed this request's rerank (oxjob #2003)."""
+    note = rerank.shed_note(request)
+    if note and isinstance(result, dict) and "meta" in result:
+        result["meta"].update(note)
     return result
 
 

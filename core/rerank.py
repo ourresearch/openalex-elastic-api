@@ -99,12 +99,15 @@ def oqo_query_text(filter_rows):
     return " ; ".join(parts)
 
 
+SEMANTIC_REFUSAL = "rerank=true can't be combined with search.semantic, which already ranks by meaning."
+
+
 def validate(params, index_name, query=None):
     """400 for every combination rerank can't honor; never silently ignored."""
     if not index_name.lower().startswith("works"):
         raise APIQueryParamsError("rerank is only supported on /works.")
     if params.get("search_type") == "semantic":
-        raise APIQueryParamsError("rerank=true can't be combined with search.semantic, which already ranks by meaning.")
+        raise APIQueryParamsError(SEMANTIC_REFUSAL)
     if params.get("group_by") or params.get("group_bys"):
         raise APIQueryParamsError("rerank=true can't be combined with group_by: rerank orders results, and group_by returns counts.")
     if params.get("sample"):
@@ -301,6 +304,35 @@ def is_rerank_cursor(cursor):
     return bool(cursor) and cursor.startswith(CURSOR_PREFIX)
 
 
+# ---------- why a page wasn't reranked (oxjob #2003) ----------
+
+# The proxy drops rerank while search is under heavy load (its search-health ladder at YELLOW or worse) and says so
+# in this header, so the answer can say rerank was asked and skipped instead of looking as if it was never asked.
+SHED_HEADER = "X-Rerank-Shed"
+
+
+def _start(params):
+    """Where this page starts in the result list, or None for a normal cursor (the walk is past the reranked window)."""
+    cursor = params.get("cursor")
+    rr = decode_rerank_cursor(cursor)
+    if cursor and cursor != "*" and rr is None:
+        return None
+    return rr["o"] if rr else (0 if cursor == "*" else (params["page"] - 1) * params["per_page"])
+
+
+def skip_reason(params):
+    """meta.rerank_reason when a page asked for rerank comes back in the normal order."""
+    if not getattr(settings, "RERANK_ENABLED", True):
+        return "disabled"
+    start = _start(params)
+    return "past_window" if start is None or start >= settings.RERANK_WINDOW else "model_unavailable"
+
+
+def shed_note(request):
+    """{"reranked": False, "rerank_reason": "search_busy"} when the proxy shed rerank on this request, else None."""
+    return {"reranked": False, "rerank_reason": "search_busy"} if request.headers.get(SHED_HEADER) else None
+
+
 # ---------- the reranked page ----------
 
 def reranked_response(request, params, index_name, build_search, query=None, key_extra=None):
@@ -313,11 +345,9 @@ def reranked_response(request, params, index_name, build_search, query=None, key
     per_page = params["per_page"]
     cursor = params.get("cursor")
     rr = decode_rerank_cursor(cursor)
-    if cursor and cursor != "*" and rr is None:
-        return None  # a normal cursor: the walk is past the reranked window
-    start = rr["o"] if rr else (0 if cursor == "*" else (params["page"] - 1) * per_page)
-    if start >= window:
-        return None
+    start = _start(params)
+    if start is None or start >= window:
+        return None  # a normal cursor or a page past the reranked window
 
     first_page = dict(params, cursor=None, page=1)
     base = build_search(first_page)
@@ -335,7 +365,8 @@ def reranked_response(request, params, index_name, build_search, query=None, key
         resp = _window(base, start, per_page).execute()
         raw = resp.to_dict()["hits"]["hits"]
         last = raw[-1].get("sort") if len(raw) == per_page else None
-        return resp, {"reranked": False, "page": None, "next_cursor": encode_cursor(last) if last else None}
+        return resp, {"reranked": False, "rerank_reason": "model_unavailable", "page": None,
+                      "next_cursor": encode_cursor(last) if last else None}
 
     ids, scores = entry["ids"], entry["scores"]
     n = len(ids)

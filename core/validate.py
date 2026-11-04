@@ -148,6 +148,36 @@ def validate_sample_param(request):
         )
 
 
+def validate_sample_cursor(params):
+    """sample with a cursor bigger than one page (oxjob #2003): a random sample's hits carry no sort values, so the
+    first page can't hand out a next cursor, and a cursor walk stopped after one page with nothing saying so. Both
+    doors call this (parse_params for URLs, the OQL executor for OQL). A sample that fits on one page is fine."""
+    sample, cursor = params.get("sample"), params.get("cursor")
+    per_page = params.get("per_page") or 25
+    if sample and cursor and sample > per_page:
+        raise APIQueryParamsError(
+            f"cursor paging doesn't work with sample: the walk would stop after the first {per_page} of the {sample} "
+            f"sampled works. Page through the sample with a seed and page numbers instead: "
+            f"sample={sample}&seed=42&per_page={min(sample, 200)}&page=1, then page=2 and so on."
+        )
+
+
+def validate_semantic_view(params):
+    """Semantic search returns the closest matches by meaning, in that order (oxjob #2003): a sort or a sample used to
+    be dropped without a word. Called by vector_semantic_search, which both doors (URL and OQL) end in."""
+    sort = params.get("sort")
+    if sort and sort != {"relevance_score": "desc"}:
+        raise APIQueryParamsError(
+            "sort doesn't work with search.semantic, which always lists the closest matches by meaning first. "
+            "Drop sort, or use search= (or search.title_and_abstract=) to sort matches by another field."
+        )
+    if params.get("sample"):
+        raise APIQueryParamsError(
+            "sample doesn't work with search.semantic, which returns the closest matches by meaning (at most 50). "
+            "Drop sample, or use search= with sample to get a random sample of matches."
+        )
+
+
 def validate_search_param(request):
     # Collect all search params present in the request
     search_params_present = []
