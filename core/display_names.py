@@ -90,7 +90,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # what models write for it (#1494's log, oxjob #1555; Jason's yes 2026-10-09 18:14 CT)
         'last_known_institutions.country_code': {"display_name": 'institution country',
                                                  "aliases": ['last known institution country']},
-        'last_known_institutions.id': {"display_name": 'institution'},
+        # oxjob #594: "institution" is the lineage filter (the institution and its child
+        # organizations), as on works; the id alone is "exact institution".
+        'last_known_institutions.id': {"display_name": 'exact institution'},
         'last_known_institutions.type': {"display_name": 'institution type'},
         'observed_orcids': {"display_name": 'Observed ORCIDs'},  # column-only since #1340; the ORCID filter covers the list
         'orcid': {"display_name": 'ORCID'},
@@ -551,7 +553,7 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'affiliations.institution.ror': {"display_name": 'affiliation institution ROR'},
         'last_known_institutions.continent': {"display_name": 'last institution continent'},
         'last_known_institutions.is_global_south': {"display_name": 'last institution is in Global South'},
-        'last_known_institutions.lineage': {"display_name": 'last institution lineage'},
+        'last_known_institutions.lineage': {"display_name": 'institution'},  # oxjob #594
         'last_known_institutions.ror': {"display_name": 'last institution ROR'},
         'parsed_longest_name.first': {"display_name": 'first name'},
         'parsed_longest_name.middle': {"display_name": 'middle name'},

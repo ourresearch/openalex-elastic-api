@@ -442,7 +442,13 @@ CAP_COLUMN = "column"
 # every value answered a silent 0. The message points to `primary_location.raw_type:` (the source's own label, e.g.
 # journal-article on 124M works) and `type:`. A property removed = MAJOR per classify_properties_diff.py. Under Jason's
 # standing authority.
-PROPERTIES_VERSION = "22.0.0"
+# 22.1.0 (oxjob #594, 2026-11-04): authors' "institution" is the last known institution with its child organizations
+# (`last_known_institutions.lineage`, display_name "institution", now GUI-faceted), as works' "institution" is; the id
+# alone is "exact institution" (was "institution"). No filter key changes: `last_known_institutions.id:` URLs keep
+# their exact meaning. The OQL word `last known institution` now means lineage (`exact last known institution` = the
+# id), which the OQL gate covers, not this version. Labels + supported_by = MINOR per classify_properties_diff.py.
+# Ticket 22523 (Universite de Lorraine). Under Jason's standing authority.
+PROPERTIES_VERSION = "22.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

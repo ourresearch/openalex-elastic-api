@@ -1733,7 +1733,10 @@ def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measur
         # the record's own path: the column id (`summary_stats.h_index`), which is how
         # the document stores it (the filter field can be a flattened copy,
         # `summary_stats__h_index`)
-        paths = {m.key: m.column_id for m in wanted if m.column_id in g_fields}
+        # A lineage column (`last known institution`, oxjob #594) shows the institution
+        # itself, read from its `.id` sibling, not the ids of its parents.
+        paths = {m.key: _own_value_path(m.column_id, g_fields) for m in wanted
+                 if m.column_id in g_fields}
         if not paths:
             continue
         # an ID's name sits beside it (`last_known_institutions.display_name`)
@@ -1754,6 +1757,16 @@ def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measur
             src = found.get(r.get("key"))
             for key, path in paths.items():
                 r[key] = own_value(src, path, lv.group_entity)
+
+
+def _own_value_path(column_id: str, g_fields) -> str:
+    """Where a group's own field is read from its record: the column itself, except a
+    lineage column, whose value shown beside the group is its `.id` sibling."""
+    if column_id.endswith(".lineage"):
+        id_col = column_id[: -len("lineage")] + "id"
+        if id_col in g_fields:
+            return id_col
+    return column_id
 
 
 def own_value(src: Optional[dict], path: str, entity: str):

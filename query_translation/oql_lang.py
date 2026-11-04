@@ -267,7 +267,12 @@ _f("SDG", "sustainable_development_goals.id", "id",
 # oxjob #1312: closed study-designs vocabulary (bare slugs, like "listed in"); input
 # aliases ("study designs", "study_designs") live in the registry (core/display_names.py).
 _f("study design", "study_designs.id", "enum")
-_f("last known institution", "last_known_institutions.id", "id")
+# An author's last known institution, with its child organizations (a university's labs and
+# institutes), as `institution` on works and `at` on authors: one meaning for "institution"
+# everywhere (oxjob #594, ticket 22523). The id alone is `exact last known institution`, as works
+# say `exact institution`; old `last_known_institutions.id:` URLs keep their exact meaning.
+_f("last known institution", "last_known_institutions.lineage", "id")
+_f("exact last known institution", "last_known_institutions.id", "id")
 # `primary_topic.domain.id` is the canonical works column the GUI facets as "domain"
 # (entityToSelect domains); `domain.id` is the OQL-only shorthand. Fold the GUI param in
 # as an alias so it parses to / renders "domain" and drops off the #363 fallback. (#402)
@@ -5629,7 +5634,7 @@ _THING_VERB_FILLER = ("ever", "have", "has", "also", "all")   # `who have also p
 # `at [UBC]` with no years: any year in the record. OQL hides no assumptions (Jason
 # 2026-10-12, reversing the five-year default of 2026-10-09); `ever at` stays accepted
 # the author's record (`at` institutions, `in` countries): with years, now, ever
-_AT_NOW = {"at": "last_known_institutions.id", "in": "last_known_institutions.country_code"}
+_AT_NOW = {"at": "last_known_institutions.lineage", "in": "last_known_institutions.country_code"}
 _AT_EVER = {"at": "affiliations.institution.lineage", "in": "affiliations.institution.country_code"}
 _AT_YEARS = _AT_EVER
 # a place in a thing's own record: (country column, continent column)
@@ -6050,9 +6055,11 @@ def _entity_search_word(entity: str, cid: str) -> Optional[str]:
 
 
 # Curated words that say more than the registry's name for the same column, or say it
-# better (oxjob #1555): authors' `last_known_institutions.id` is "institution" in the
-# registry; sources' `has_issn` is "has issn"; sources' 2-year citedness "2yr ...".
-_KEEP_CURATED_WORDS = {"last known institution", "has ISSN", "2-year mean citedness"}
+# better (oxjob #1555): authors' `last_known_institutions.lineage` is "institution" in the
+# registry (and `.id` "exact institution", oxjob #594); sources' `has_issn` is "has issn";
+# sources' 2-year citedness "2yr ...".
+_KEEP_CURATED_WORDS = {"last known institution", "exact last known institution", "has ISSN",
+                       "2-year mean citedness"}
 _ENTITY_WORD_CACHE: Dict[Tuple[str, str], Optional[str]] = {}
 
 

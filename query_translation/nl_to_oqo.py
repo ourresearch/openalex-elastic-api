@@ -168,7 +168,7 @@ e.g. "papers not from MIT or Stanford" -> {"get_rows":"works","filter_rows":[{"c
 # Common column choices (prefer these — don't invent variants)
 - A research-subject term ("CRISPR", "quantum computing", "machine learning", "coral bleaching") is a TEXT SEARCH (title_abstract_keywords.search) by DEFAULT — do NOT resolve it to primary_topic.id. Only use primary_topic.id when the user explicitly says "topic" or supplies a topic id (T…).
 - Filter WORKS by an institution: authorships.institutions.lineage. By an author: authorships.author.id. By a funder: funders.id. By a topic: primary_topic.id (NEVER concepts.id / x_concepts.id — deprecated).
-- Filter AUTHORS by their institution: last_known_institutions.id. By country: last_known_institutions.country_code. By topic: topics.id.
+- Filter AUTHORS by their institution: last_known_institutions.lineage (the institution and its child organizations; last_known_institutions.id only when the user says exactly that institution and not its parts). By country: last_known_institutions.country_code. By topic: topics.id.
 - "group by ..." dimensions (works): author -> authorships.author.id; co-author -> authorships.author.id; institution -> authorships.institutions.lineage; country -> authorships.countries; source/journal -> primary_location.source.id; funder -> funders.id; topic -> primary_topic.id; field -> primary_topic.field.id; SDG -> sustainable_development_goals.id; year -> publication_year.
 - An OpenAlex id in the request tells you the entity: I…=institution, A…=author, F…=funder, T…=topic, S…=source, W…=work. "author A5…" with no other intent means get_rows=authors filtered by ids.openalex.
 

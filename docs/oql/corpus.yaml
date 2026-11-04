@@ -758,13 +758,13 @@ rows:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#37)"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/authors?filter=last_known_institutions.id:I114027177,topics.id:T10895'
+  oxurl: 'https://openalex.org/authors?filter=last_known_institutions.lineage:I114027177,topics.id:T10895'
   status: ok
   oql: |-
     authors where last known institution is (I114027177 [UNC])
       and topic is (T10895 [climate change])
   oqo: {get_rows: authors, filter_rows: [
-        {column_id: last_known_institutions.id, value: I114027177},
+        {column_id: last_known_institutions.lineage, value: I114027177},
         {column_id: topics.id, value: T10895}]}
 
 # ---------------------------------------------------------------------------

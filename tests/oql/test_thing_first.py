@@ -140,8 +140,9 @@ def test_authors_in_a_country_read_their_record():
                                                     since=2020)
     o = parse("get authors in [Brazil](BR) now who published works where topic is (T10166)")
     assert o.group_by[0].where.column_id == "last_known_institutions.country_code"
+    # `now at` is the last known institution with its child organizations, like `at` (oxjob #594)
     o = parse(f"get authors at {UBC} now who published works where topic is (T10166)")
-    assert o.group_by[0].where.column_id == "last_known_institutions.id"
+    assert o.group_by[0].where.column_id == "last_known_institutions.lineage"
 
 
 @pytest.mark.parametrize("q", [

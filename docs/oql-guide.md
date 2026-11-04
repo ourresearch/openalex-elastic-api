@@ -80,7 +80,7 @@ get [University of British Columbia](I141945490)'s open access articles since 20
 
 Years read in words, right after the type: `since 2020` (2020 or later), `from 2022` (that year), `before 2010` (2009 or earlier), `from 2018–2025` (both included). Full dates work the same way when you need them: `get works from 2020-10-01 through 2021-09-30 about kelp`. In a table split by year, the years go after `by year` instead: `get the count of [University of Florida](I33213144)'s works by year since 2004`.
 
-`added since` (when OpenAlex added the work; needs a paid plan) goes after `where`: `get [Massachusetts Institute of Technology](I63966007)'s works where added since 2026-10-01`.
+`added since` (when OpenAlex added the work; needs a Member+ or Partner plan, like the API's [sync filters](https://help.openalex.org/api/filtering/#sync-filters-member-and-partner)) goes after `where`: `get [Massachusetts Institute of Technology](I63966007)'s works where added since 2026-10-01`.
 
 ### What it's about: searching
 
@@ -192,7 +192,8 @@ Authors, institutions, journals and other things can be listed by their own fiel
 | `get authors at [University of British Columbia](I141945490) since 2022 with an h-index above 50` | UBC is on their record in 2022 or later |
 | `get authors at [University of British Columbia](I141945490) with an h-index above 50` | UBC is on their record in **any** year |
 | `get authors never at [University of British Columbia](I141945490) where last known institution is [University of Washington](I201448701)` | never on their record |
-| `get authors with an h-index above 50 where last known institution is [Massachusetts Institute of Technology](I63966007)` | OpenAlex's best guess at where they are now |
+| `get authors with an h-index above 50 where last known institution is [Massachusetts Institute of Technology](I63966007)` | OpenAlex's best guess at where they are now, labs and institutes included |
+| `get authors where exact last known institution is [Université de Lorraine](I90183372)` | that institution only, not its labs and institutes |
 | `get authors at [University of Kansas](I146416000) since 2022 where it has an ORCID` | yes/no fields as sentences |
 | `get authors where co-author is [Jason R Priem](A5023888391)` | everyone who has written with him |
 | `get institutions in [Austria](AT), most cited first` | institutions in a country, with an order |
@@ -205,6 +206,8 @@ Authors, institutions, journals and other things can be listed by their own fiel
 | `get topics in the field [Computer Science](17)` | topics in a field |
 
 `at [X]` reads each author's own record (the institutions on their profile, with years), not the papers' affiliations. Bare `at [X]` means any year, so it also finds people whose record lists X once, long ago or by mistake; for the people there now, write a window (`at [X] since 2022`) or `where last known institution is [X]`.
+
+An institution includes its child organizations everywhere in OQL: `at [X]`, `last known institution is [X]` and, on works, `institution is [X]` all count a university's labs and institutes as the university. For that institution only, write `exact last known institution` (authors) or `exact institution` (works).
 
 **Orders for things:** `, highest h-index first`, `, lowest h-index first`, `, highest i10-index first`, `, lowest i10-index first`, `, most cited first`, `, least cited first`, `, lowest works count first`. With no order, things come back most works first.
 

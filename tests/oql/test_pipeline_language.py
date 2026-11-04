@@ -290,7 +290,7 @@ def oqo_thing(oqo):
     # a name, code or text of the groups' own (the map's cow path, oxjob #1555): never
     # calculated, so only the group's own value fits
     ("get works where year > (2020); then group those works by author; then summarize "
-     "using count and last known institution", "last_known_institutions.id", "last known institution"),
+     "using count and last known institution", "last_known_institutions.lineage", "last known institution"),
     ("get works where year > (2020); then group those works by author; then summarize "
      "using count and institution country", "last_known_institutions.country_code", "institution country"),
     ("get works where year > (2020); then group those works by institution; then summarize "

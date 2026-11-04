@@ -2539,8 +2539,8 @@
       "isId": false,
       "hasExport": false
     },
-    "last_known_institutions.id": {
-      "key": "last_known_institutions.id",
+    "last_known_institutions.lineage": {
+      "key": "last_known_institutions.lineage",
       "entityToFilter": "authors",
       "entityToSelect": "institutions",
       "displayName": "institution",
@@ -2551,7 +2551,23 @@
         "group_by"
       ],
       "actionsPopular": [
+        "filter"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
+    "last_known_institutions.id": {
+      "key": "last_known_institutions.id",
+      "entityToFilter": "authors",
+      "entityToSelect": "institutions",
+      "displayName": "exact institution",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
         "filter",
+        "group_by"
+      ],
+      "actionsPopular": [
         "group_by"
       ],
       "isId": false,

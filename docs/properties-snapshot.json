@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "0c83497f32d6b1c144eac18f508ef51e742f124f2a01af1b48b2187e6a9e04b3",
+    "fingerprint": "1d0b92915f53bc69f64bf735af72d131486262c3830f7110f093144ff4d05282",
     "property_count": 958,
-    "version": "22.0.0"
+    "version": "22.1.0"
   },
   "properties": {
     "authors": {
@@ -570,7 +570,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "institution",
-        "display_name": "institution",
+        "display_name": "exact institution",
         "entity_type": "institutions",
         "name": "last_known_institutions.id",
         "operators": [
@@ -616,7 +616,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "last institution lineage",
+        "display_name": "institution",
         "entity_type": "institutions",
         "name": "last_known_institutions.lineage",
         "operators": [
@@ -625,7 +625,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "last_known_institutions.ror": {

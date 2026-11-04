@@ -162,6 +162,8 @@ get <things>[ <parts>][ <own thresholds>][ where <own-field conditions>][, <orde
 
 `at [X]` reads each author's own record (the institutions on their profile, with years), not the papers' affiliations. Bare `at [X]` means any year; a window is written out (`at [X] since 2022`). OpenAlex's best guess at where an author is now is the field `last known institution`.
 
+An institution includes its child organizations (a university's labs and institutes) in `at [X]`, `last known institution` and works' `institution`; `exact last known institution` and `exact institution` mean that institution only.
+
 ### Numbers
 
 Numbers are joined with `and`, with an Oxford comma for three or more. A number covers the matching works in each group.
