@@ -153,12 +153,16 @@ def register_extensions(app):
     # oxjob #1930: 24 connections a worker (the client's default 10 blocks past them). A set's reference lists are
     # read shard by shard, 24 single-shard requests in flight (KU's 29,137 works since 2020: 1.7-2.7 s; 4.2 s with
     # 10). A gunicorn worker serves one request at a time, so the pool only opens what that request uses.
+    # oxjob #2016: request bodies gzipped at level 1, not 9 (core/es_node.py): a set's 659K ids cost ~0.8 s of CPU a
+    # request at 9, ~0.05 s at 1; responses come gzipped as before.
+    from core.es_node import FastGzipNode
     connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True,
-                                  connections_per_node=24)
+                                  connections_per_node=24, node_class=FastGzipNode)
     connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=7, http_compress=True,
-                                  connections_per_node=24)
+                                  connections_per_node=24, node_class=FastGzipNode)
     if settings.ES_VECTOR_SEARCH_URL:
-        connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=7, http_compress=True)
+        connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=7, http_compress=True,
+                                      node_class=FastGzipNode)
     cache.init_app(app)
 
 
