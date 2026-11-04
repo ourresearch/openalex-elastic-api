@@ -1003,26 +1003,22 @@ FROM_KINDS = ("institutions", "countries", "continents")
 # `from [X]` and `in [X]` read either way for a place, an institution or a journal ("works
 # in Austria", "papers from Nature"); the echo writes `from` for places, `in` for journals
 _FROM_OR_IN_KINDS = FROM_KINDS + ("sources",)
-# the words other kinds of link take in a works phrase, for the fix when `from`/`in` meet one
-_KIND_WORDS = {"publishers": "published by", "funders": "funded by", "authors": "by",
-               "topics": "in the topic", "works": "citing"}
+# the fix when `from`/`in` meet another kind of link: the words it takes in a works phrase
+# (each fix reads back: tests/oql/test_echo_gaps_nov4.py)
+_KIND_FIXES = {"publishers": "a publisher reads `published by", "funders": "a funder reads `funded by",
+               "authors": "an author reads `by", "topics": "a topic reads `in the topic"}
 
 
 def _from_or_in(t: "_Text", word: str, ids: List[str]):
     """`from` / `in` + links -> the filter, by the first link's kind (#1589's list, 4 Nov)."""
     kind = _kind_of(ids[0])
-    if kind not in _FROM_OR_IN_KINDS:
-        name = next((n for n, i in t.links if i == ids[0] and n), "name")
-        link = f"[{name}]({ids[0]})"
-        words = _KIND_WORDS.get(kind)
-        what = THING_SINGULAR.get(kind or "", (kind or "").rstrip("s"))
-        fix = (f"{'an' if what[:1] in 'aeiou' else 'a'} {what} reads `{words} {link}`" if words
-               else f"`{word}` takes a place, an institution or a journal by its OpenAlex ID: "
-                    "`from [Austria](AT)`, `from [Africa](Q15)`, `from [MIT](I63966007)`, "
-                    "`in [Nature](S137773608)`")
-        raise NotCore(f"`{word} {link}`", fix)
-    col = "primary_location.source.id" if kind == "sources" else _works_column(kind)
-    return _any_of(col, ids)
+    if kind in _FROM_OR_IN_KINDS:
+        return _any_of(_works_column(kind), ids)
+    link = link_text(ids[0], kind or "", name=next((n for n, i in t.links if i == ids[0] and n), None))
+    fix = (f"{_KIND_FIXES[kind]} {link}`" if kind in _KIND_FIXES else
+           f"`{word}` takes a place, an institution or a journal by its OpenAlex ID: `from "
+           "[Austria](AT)`, `from [Africa](Q15)`, `from [MIT](I63966007)`, `in [Nature](S137773608)`")
+    raise NotCore(f"`{word} {link}`", fix)
 
 
 _DATE = r"(\d{4}-\d{2}-\d{2})"
@@ -1584,16 +1580,16 @@ def _parse_things_list(t, s) -> OQO:
             if ph != "works":
                 # the fix in the query's own words (#1589's list: `get institutions with at
                 # least 500 works in [Austria](AT)` read Austria as a works ID)
-                noun = (s.split() or ["authors"])[0].lower()
-                what = THING_SINGULAR.get(noun, "author")
-                count = f"with {COMPARATOR_WORDS.get(op, 'at least')} {_number(n)}"
+                count = f"with {COMPARATOR_WORDS[op]} {_number(n)}"
                 works = t.restore(ph)
-                place = re.fullmatch(r"works (?:in|from) (\S+)", works)
-                listed = (f"a place goes on the {noun}: `get {noun} in {place.group(1)} {count} "
-                          "works`; " if place and noun in ("authors", "institutions") else "")
-                raise NotCore("a count of matching works on a plain list",
-                              f"{listed}to count matching works, a table: `get the count of "
-                              f"{works} by {what}. Only {noun} {count} {works}.`")
+                fixes = [f"to count matching works, a table: `get the count of {works} by "
+                         f"{THING_SINGULAR[entity]}. Only {entity} {count} {works}.`"]
+                place = re.fullmatch(r"works (?:in|from) (⟦L\d+⟧)", ph)
+                if place and entity in ("authors", "institutions") \
+                        and _kind_of(t.link_id(place.group(1))) in ("countries", "continents"):
+                    fixes.insert(0, f"a place goes on the {entity}: `get {entity} in "
+                                    f"{t.restore(place.group(1))} {count} works`")
+                raise NotCore("a count of matching works on a plain list", "; ".join(fixes))
             # `authors with more than 1,000 works`: their own works count (#1589's recheck)
             it = LeafFilter("works_count", n, op)
         rows.append(it)

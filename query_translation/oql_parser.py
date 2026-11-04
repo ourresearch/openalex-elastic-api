@@ -89,10 +89,7 @@ def parse_either(oql: str) -> OQO:
             try:
                 return parse_core(oql, _collection_type)
             except (NotCore, _OQLError) as ce:
-                # core's own diagnosis (a NotCore with a fix) beats today's generic
-                # "unexpected text" (`get institutions with at least 500 works in [Austria](AT)`)
-                if _meant_as_a_sentence(oql, e) or (
-                        e.code == "OQL_TRAILING_TOKENS" and getattr(ce, "fix", "")):
+                if _core_reason_wins(oql, e, ce):
                     core_error = ce
         e.core_error = core_error
         raise
@@ -101,10 +98,14 @@ def parse_either(oql: str) -> OQO:
 _HEAD = re.compile(r"\s*get\s+\S+\s*", re.I)
 
 
-def _meant_as_a_sentence(oql: str, e) -> bool:
-    """Today's grammar stopped right after `get <word>` (`get works about ...`), so the
-    text was written as a sentence and core's reason is the one to show (#1589's recheck,
-    2026-10-23: the old error pointed at the old form)."""
+def _core_reason_wins(oql: str, e, ce) -> bool:
+    """Which error a `get` text neither grammar reads shows: core's reason when today's
+    grammar stopped right after `get <word>` (`get works about ...`: written as a sentence;
+    #1589's recheck, 2026-10-23: the old error pointed at the old form), or when core
+    diagnosed it (a NotCore with a fix) and today's grammar only says "unexpected text"
+    (`get institutions with at least 500 works in [Austria](AT)`, 2026-11-04)."""
+    if e.code == "OQL_TRAILING_TOKENS" and getattr(ce, "fix", ""):
+        return True
     head = _HEAD.match(oql)
     # at the word after the noun; an error AT the noun (`get workz ...`) keeps today's reason
     return head is not None and e.position is not None and head.end() - 1 <= e.position <= head.end()

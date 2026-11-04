@@ -935,13 +935,11 @@ def _coerce_number(val: str, fld: "Field", pos):
                 return float(val)
             except ValueError:
                 pass
+    # `citation count is above abc`: the comparison word met no number (#1589's list)
+    message = (f'"{fld.oql}" needs a number after its comparison word'
+               if val.lower() in _NUMBER_WORD_LEADS else f'"{val}" is not a number for "{fld.oql}"')
     example = f"{fld.oql} is 2020" if fld.oql == "year" else f"{fld.oql} is above 100"
-    if (val.lower(),) in _NUMBER_WORD_OPS or val.lower() in ("at", "more", "greater", "less", "fewer"):
-        # `citation count is above abc`: the comparison word met no number (#1589's list)
-        raise oql_error("OQL_BAD_NUMBER", f'a number goes after "{val}" for "{fld.oql}"',
-                        f"e.g. {example}", pos)
-    raise oql_error("OQL_BAD_NUMBER",
-                   f'"{val}" is not a number for "{fld.oql}"', f"e.g. {example}", pos)
+    raise oql_error("OQL_BAD_NUMBER", message, f"e.g. {example}", pos)
 
 
 def _range_endpoints(val: str):
@@ -1672,6 +1670,7 @@ NUMBER_WORDS = {">": "above", ">=": "at least", "<": "below", "<=": "at most"}  
 _NUMBER_WORD_OPS = {**{tuple(w.split()): op for op, w in NUMBER_WORDS.items()},
                     ("over",): ">", ("more", "than"): ">", ("greater", "than"): ">",
                     ("under",): "<", ("less", "than"): "<", ("fewer", "than"): "<"}
+_NUMBER_WORD_LEADS = {words[0] for words in _NUMBER_WORD_OPS}   # `above`, `at`, `more`, ...
 _NUMBER_RE = re.compile(r"^-?\d+(\.\d+)?$")   # a year too
 
 
@@ -2095,12 +2094,12 @@ class _Parser:
                 filters.append(self._parse_place_phrase(entity))
                 self._skip_annot()
         if (start_each or entity == "works") and self.word_is("in") \
-                and self._set_words(1) is not None \
-                and (start_each or not self._link_to_other_kind(self._set_words(1))):
+                and (set_at := self._set_words(1)) is not None \
+                and (start_each or not self._link_to_other_kind(set_at)):
             # `get works in (col_mylist)` too: a saved list of works (Haiku's cow path)
             # `get each institution in (MIT, Stanford)`: the start's own ids; one
             # reads `in [MIT](I63966007)`, a collection `in [Our lab](col_x)` (#1555)
-            self.i += self._set_words(1)
+            self.i += set_at
             filters.append(self._parse_in_set("openalex id", _BY_COLUMN["ids.openalex"], False))
             self._skip_annot()
         # After a complete entity with nothing typed yet, the cursor sits in the
@@ -4254,9 +4253,8 @@ class _Parser:
     def _link_to_other_kind(self, j: int) -> bool:
         """At a set's start (offset j): a link to something other than works or a
         collection, `get works in [Austria](AT)`, which the sentence reads as a place
-        (oxjob #1555, 4 Nov), not as works listed by ID."""
-        head = self.peek(j)
-        if head is None or head.kind != "ANNOT" or not _is_link_text(self.toks, self.i + j):
+        (oxjob #1555, 4 Nov), not as works listed by ID. (`_set_words` checked the link.)"""
+        if self.peek(j).kind != "ANNOT":
             return False
         t = self.peek(j + 2)
         v = t.val if t is not None and t.kind == "WORD" else ""

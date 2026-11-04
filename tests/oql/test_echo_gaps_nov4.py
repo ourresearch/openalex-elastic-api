@@ -3,8 +3,11 @@
 `from` and `in` read either way for a place, an institution or a journal; other kinds of
 link get a fix naming their own words; error fixes speak today's sentences.
 """
+import re
+
 import pytest
 
+from query_translation.diagnostics import DIAGNOSTICS, OQLError
 from query_translation.oql_core import NotCore, parse_core, render_core
 from query_translation.oql_parser import parse_either
 from query_translation.oqo_canonicalizer import canonicalize_oqo
@@ -12,6 +15,17 @@ from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 def _same(a: str, b: str) -> bool:
     return canonicalize_oqo(parse_either(a)).to_dict() == canonicalize_oqo(parse_either(b)).to_dict()
+
+
+def _error(text: str) -> OQLError:
+    with pytest.raises(OQLError) as e:
+        parse_either(text)
+    return e.value
+
+
+def _quoted_fixes(fix: str):
+    """The statements a fix suggests, in backticks."""
+    return [q for q in re.findall(r"`([^`]+)`", fix) if q.startswith("get ")]
 
 
 @pytest.mark.parametrize("typed,canonical", [
@@ -36,21 +50,21 @@ def test_the_echo_writes_the_canonical_word():
 
 def test_works_listed_by_id_still_read():
     # today's grammar: a set of works by ID or a works collection after `get works in`
-    oqo = parse_either("get works in (W2741809807, W2100837269)")
-    (branch,) = oqo.filter_rows
+    (branch,) = parse_either("get works in (W2741809807, W2100837269)").filter_rows
     assert {f.column_id for f in branch.filters} == {"ids.openalex"}
 
 
-@pytest.mark.parametrize("text,fix", [
+@pytest.mark.parametrize("text,fixed", [
     ("get works from [Springer](P4310319965) about kelp", "published by [Springer](P4310319965)"),
     ("get works in [NIH](F4320332161)", "funded by [NIH](F4320332161)"),
-    ("get works from [Einstein](A5023888391)", "an author reads `by [Einstein](A5023888391)`"),
+    ("get works from [Einstein](A5023888391)", "by [Einstein](A5023888391)"),
     ("get works in [Kelp forests](T10005)", "in the topic [Kelp forests](T10005)"),
 ])
-def test_other_kinds_get_their_own_words(text, fix):
+def test_other_kinds_get_their_own_words(text, fixed):
     with pytest.raises(NotCore) as e:
         parse_core(text)
-    assert fix in e.value.fix
+    assert f"`{fixed}`" in e.value.fix
+    parse_either("get works " + fixed)          # the fix reads
 
 
 def test_a_split_by_corresponding_institution_is_a_sentence():
@@ -63,21 +77,15 @@ def test_a_split_by_corresponding_institution_is_a_sentence():
 
 # --- error fixes speak today's sentences ------------------------------------------
 
-def _error(text):
-    from query_translation.diagnostics import OQLError
-    with pytest.raises(OQLError) as e:
-        parse_either(text)
-    return e.value
-
-
-def test_a_comparison_word_with_no_number_names_the_fix():
-    e = _error("get works where citation count is above abc")
-    assert e.message == 'a number goes after "above" for "citation count"'
+@pytest.mark.parametrize("text", ["get works where citation count is above abc",
+                                  "get works where citation count is at least abc"])
+def test_a_comparison_word_with_no_number_names_the_fix(text):
+    e = _error(text)
+    assert e.message == '"citation count" needs a number after its comparison word'
     assert e.fixit == "e.g. citation count is above 100"
 
 
 def test_no_fix_shows_the_retired_shapes():
-    from query_translation.diagnostics import DIAGNOSTICS
     for code in ("OQL_TRAILING_TOKENS", "OQL_BAD_NUMBER", "OQL_UNKNOWN_STEP"):
         fix = DIAGNOSTICS[code].default_fixit
         assert "sample N" not in fix and "sample (N)" not in fix and "(2020)" not in fix, code
@@ -89,16 +97,19 @@ def test_a_step_after_a_sentence_says_a_table_is_one_sentence():
     assert "no steps now" not in str(e.value) and "by year`" in e.value.fix
 
 
-def test_a_count_of_matching_works_on_a_list_says_both_fixes():
+@pytest.mark.parametrize("text,place_fix", [
     # read Austria as a works ID; then today's grammar's "unexpected text" hid core's reason
-    from query_translation.diagnostics import OQLError
-    with pytest.raises(OQLError) as e:
-        parse_either("get institutions with at least 500 works in [Austria](AT)")
-    fix = getattr(e.value, "core_error").fix
-    assert "`get institutions in [Austria](AT) with at least 500 works`" in fix
-    assert ("`get the count of works in [Austria](AT) by institution. Only institutions with at "
-            "least 500 works in [Austria](AT).`") in fix
-    for text in ("get institutions in [Austria](AT) with at least 500 works",
-                 "get the count of works in [Austria](AT) by institution. Only institutions with "
-                 "at least 500 works in [Austria](AT)."):
-        parse_either(text)
+    ("get institutions with at least 500 works in [Austria](AT)",
+     "get institutions in [Austria](AT) with at least 500 works"),
+    ("get institutions with at least 500 works from [United States](US)",
+     "get institutions in [United States](US) with at least 500 works"),
+    ("get institutions with at least 500 works in [Nature](S137773608)", None),   # not a place
+])
+def test_a_count_of_matching_works_on_a_list_says_how(text, place_fix):
+    fix = _error(text).core_error.fix
+    fixes = _quoted_fixes(fix)
+    assert (place_fix in fixes) if place_fix else not any(f.startswith("get institutions in") for f in fixes)
+    assert any(f.startswith("get the count of works ") and ". Only institutions with at least 500 works "
+               in f for f in fixes)
+    for statement in fixes:
+        parse_either(statement)                   # every suggested statement reads
