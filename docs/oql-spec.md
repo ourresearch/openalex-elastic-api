@@ -68,7 +68,7 @@ OQL has two ways to write a statement:
 - comparing one thing against the rest, or conditions, searches or periods side by side (`compare country [India](IN) versus country is not [India](IN)`); named things side by side are a table (`by country in ([United States](US), [China](CN))`);
 - walks (each author of a set, then all their works);
 - number bins, samples, and three splits;
-- splits by continent, institution type, source type, license, keyword or global south, and by corresponding institution;
+- splits by continent, institution type, source type, license, keyword or global south;
 - numbers outside the sentence's list (`mean reference count`, `min date`, `percent global south`), and counts of distinct things (`summarize all those authors using count`);
 - a filter on the groups by a number other than the count (`where mean FWCI of those works is at least 2`).
 
@@ -137,7 +137,7 @@ Rules the echo follows:
 - **`co-authored with`** replaces `from` for an institution when the table splits by institution: `get the count of works since 2015 co-authored with [Christian-Albrechts-Universität zu Kiel](I32021983) by company`.
 - **Time.** Years are whole years: `year > 2019` echoes `since 2020`; a closed range uses an en dash (`from 2018–2025`). Full dates appear only when the query carries them. In a table split by year, the time follows `by year` instead (`by year since 2000`).
 - **Searches** go in the order about, title, abstract, full text, title or abstract.
-- **Kinds.** `in [X]` alone means a source (a journal or repository). Every other value whose kind isn't obvious names it: `SDG`, `the topic`, `the subfield`, `the field`, `the domain`, `the collection`, `the ... license`. A role other than an entity's default names its key (`with [A](A5023888391) as corresponding author`).
+- **Kinds.** `in [X]` alone means a source (a journal or repository). Input is generous: `from` and `in` read either way for a place, an institution or a source (`get works in [Austria](AT)`, `from [Nature](S137773608)`), and the echo writes the word above. Every other value whose kind isn't obvious names it: `SDG`, `the topic`, `the subfield`, `the field`, `the domain`, `the collection`, `the ... license`. A role other than an entity's default names its key (`with [A](A5023888391) as corresponding author`).
 - **Lists of values.** Several institutions, countries, sources or funders that any work may match read `A or B`. Works that must match all of several places read `from both A and B` or `from all of A, B, and C`.
 - **Work titles** in `citing` and `cited by` are cut at a word boundary within 48 characters, with an ellipsis: `get works citing [The state of OA: a large-scale analysis of the…](W2741809807)`. The ID is what counts.
 - **`where`** holds only what the phrase can't say: an `or` across fields, nested groups, negations, and fields with no phrase. The easy parts stay in the phrase.
