@@ -225,7 +225,7 @@ get the count of works about kelp by author. Only authors with at least 20 works
 ```
 
 - The words: `Only <things> with <more than | at least | fewer than | at most> <N> <works phrase>.`
-- `<things>` is the plural of a split by things in the table.
+- `<things>` is the plural of a split by things in the table, or `corresponding authors` / `corresponding institutions` for those splits (a count only: `Only corresponding authors with at least 10 works about kelp.`).
 - The works phrase is the table's own; the echo writes it out in full (`Only authors with at least 20 works.` echoes with `about kelp`). A count over other works is refused.
 - A threshold on an own field folds into the split: `Only authors with an h-index above 50.` echoes as `by author with an h-index above 50`.
 

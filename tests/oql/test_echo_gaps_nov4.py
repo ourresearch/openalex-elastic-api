@@ -113,3 +113,32 @@ def test_a_count_of_matching_works_on_a_list_says_how(text, place_fix):
                in f for f in fixes)
     for statement in fixes:
         parse_either(statement)                   # every suggested statement reads
+
+
+# --- a count floor on a role split (corresponding author / institution) -------------
+
+@pytest.mark.parametrize("text", [
+    "get the count and mean FWCI of works about kelp by corresponding author, highest mean FWCI first. "
+    "Only corresponding authors with at least 10 works about kelp.",
+    "get the count of works about kelp by corresponding institution and year. "
+    "Only corresponding institutions with at least 50 works about kelp.",
+])
+def test_a_role_split_takes_a_count_floor(text):
+    oqo = canonicalize_oqo(parse_either(text))
+    floor = oqo.group_by[0].where
+    assert floor.measure == "count" and floor.operator == ">="
+    assert render_core(oqo) == text
+
+
+def test_the_general_form_floor_on_a_role_split_echoes_as_a_sentence():
+    oqo = canonicalize_oqo(parse_either(
+        "get works where title-abstract-keywords has (kelp); then group those works by corresponding "
+        "institution where count of those works >= (10)"))
+    assert render_core(oqo) == ("get the count of works about kelp by corresponding institution. "
+                                "Only corresponding institutions with at least 10 works about kelp.")
+
+
+def test_a_role_split_floor_is_a_count_only():
+    with pytest.raises(NotCore):
+        parse_core("get the count of works about kelp by corresponding author. "
+                   "Only corresponding authors at [MIT](I63966007) with at least 10 works about kelp.")

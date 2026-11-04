@@ -95,6 +95,9 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "corresponding_institution_ids": "corresponding institution",
         "is_retracted": "retracted", "authorships.author.id": "author"}
 DIM_COLUMNS = {v: k for k, v in DIMS.items()}
+# splits by a role on the works: their `Only` sentence's plural (a count floor only)
+ROLE_NOUNS = {"corresponding_author_ids": "corresponding authors",
+              "corresponding_institution_ids": "corresponding institutions"}
 _TYPE_NOUNS_LONGEST = sorted(NOUN_TYPES, key=lambda n: -len(n.split()))
 
 # rank: group column -> the things' plural noun
@@ -834,6 +837,15 @@ def _table(oqo, resolver):
             if g.column_id not in DIMS:
                 raise NotCore("a list on a split with no word")
             word = _dim_words(g, DIMS[g.column_id], w, resolver)
+        elif g.column_id in ROLE_NOUNS and g.where is not None:
+            # `by corresponding author. Only corresponding authors with at least 10 works ...`
+            count = g.where
+            if not (isinstance(count, MeasureFilter) and count.measure == "count"
+                    and not count.is_negated and count.operator in COMPARATOR_WORDS):
+                raise NotCore("which groups, on a role split: only a count floor")
+            word = DIMS[g.column_id]
+            only.append(f"Only {ROLE_NOUNS[g.column_id]} with {COMPARATOR_WORDS[count.operator]} "
+                        f"{_number(count.value)} {w.text(keep_time=True)}.")
         elif g.where is not None:
             if g.column_id not in THING_NOUNS:
                 raise NotCore("which groups, on a split with no things")
@@ -1684,9 +1696,16 @@ def _parse_table(t, s, collection_type, only):
     for o in only:
         # `Only institutions with at least 10 works about kelp.`: a count floor on the split of
         # those things, over the same works; anything else is refused, never dropped
-        o_noun, o_typ, o_items = _parse_things(t, o)
-        g = next((g for g in groups if THING_NOUNS.get(g.column_id) and g.values is None
-                  and NOUN_THINGS.get(o_noun) == g.column_id), None)
+        role = next((c for c, plural in ROLE_NOUNS.items() if o.startswith(plural + " ")), None)
+        if role:
+            # `Only corresponding authors with at least 10 works about kelp.`: a count floor only
+            o_noun, o_typ, o_items = _parse_things(t, "authors" + o[len(ROLE_NOUNS[role]):])
+            if not all(isinstance(it, tuple) for it in o_items):
+                raise NotCore("an `Only` sentence on a role split takes a count floor only")
+        else:
+            o_noun, o_typ, o_items = _parse_things(t, o)
+        g = next((g for g in groups if g.values is None and g.column_id == (
+            role or (THING_NOUNS.get(g.column_id) and NOUN_THINGS.get(o_noun)))), None)
         if g is None:
             raise NotCore("an `Only` sentence names things the table doesn't split by")
         extra = []
