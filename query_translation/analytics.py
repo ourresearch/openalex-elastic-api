@@ -80,7 +80,7 @@ class AnalyticsError(APIQueryParamsError):
     """A loud, fixable refusal: `code`, a message and the fix."""
 
     def __init__(self, code: str, message: str, fix: str, status: int = 400,
-                 too_big: bool = False, groups: Optional[int] = None):
+                 too_big: bool = False, groups: Optional[int] = None, slices: Optional[int] = None):
         super().__init__(f"{message} {fix}")
         self.code = code
         self.message = message
@@ -90,6 +90,8 @@ class AnalyticsError(APIQueryParamsError):
         # (`_nested_big`); `groups` is the estimated combinations when the refusal counted them
         self.too_big = too_big
         self.groups = groups
+        # an export of a set too big for one request: the slices it comes in (oxjob #1930, step 4)
+        self.slices = slices
 
     def to_dict(self):
         return {"error": self.code, "message": self.message, "fix": self.fix}
@@ -184,9 +186,10 @@ def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
         if m.measure == "median":
             aggs[name] = {"percentiles": {"field": es_field, "percents": [50]}}
         else:
-            agg = {"mean": "avg", "sum": "sum", "min": "min", "max": "max"}[m.measure]
+            # `values`: how many works hold a value, a mean's denominator (only an export's slices ask: oxjob #1930)
+            agg = {"mean": "avg", "sum": "sum", "min": "min", "max": "max", "values": "value_count"}[m.measure]
             aggs[name] = {agg: {"field": es_field}}
-            if "Date" in type(get_field(fields_dict, m.column_id)).__name__:
+            if m.measure != "values" and "Date" in type(get_field(fields_dict, m.column_id)).__name__:
                 aggs[name][agg]["format"] = "yyyy-MM-dd"   # the earliest / latest date
     return aggs
 
@@ -195,6 +198,16 @@ def _round(v):
     if isinstance(v, float):
         return round(v, 4)
     return v
+
+
+def _exact_sums() -> bool:
+    """An export's slice of a set too big for one request (oxjob #1930): its sums go out unrounded, so the slices
+    add up to the whole set's sum and mean (4-decimal sums made means differ in their 4th decimal)."""
+    try:
+        from flask import g
+        return bool(getattr(g, "oql_exact_sums", False))
+    except RuntimeError:   # outside a request
+        return False
 
 
 def _measure_value(m: Measure, bucket: dict, count: int, parent_count: Optional[int]):
@@ -214,6 +227,8 @@ def _measure_value(m: Measure, bucket: dict, count: int, parent_count: Optional[
         return _round((agg.get("values") or {}).get("50.0"))
     if m.measure == "sum" and count == 0:
         return 0
+    if m.measure == "sum" and _exact_sums():
+        return agg.get("value")
     if "value_as_string" in agg and m.measure in ("min", "max"):
         return agg["value_as_string"] if agg.get("value") is not None else None
     return _round(agg.get("value"))
@@ -3297,16 +3312,20 @@ def price(oqo: OQO) -> dict:
     return {"credits": credits, "usd": round(credits * CREDIT_USD, 6), "steps": steps}
 
 
-def export_price(query_price: dict, rows: int) -> dict:
+def export_price(query_price: dict, rows: int, slices: int = 1) -> dict:
     """What a download of `rows` rows costs: the query's price for every ROWS_PER_PRICE
     rows, like works exports (Jason, 2026-10-08; at least one unit, so an empty file
-    costs what the query costs)."""
+    costs what the query costs). One of `slices` of an export of a set too big for one
+    request (oxjob #1930) costs that share of it: most groups are in every slice, so the
+    whole export costs about what its quote says, not a full price per slice (as routed
+    pieces keep the plan's price)."""
     units = max(1, -(-rows // ROWS_PER_PRICE))
-    credits = query_price["credits"] * units
+    credits = -(-query_price["credits"] * units // slices)
+    each = f"x {units} for {rows:,} rows (the query's price per {ROWS_PER_PRICE} rows)"
     return {"credits": credits, "usd": round(credits * CREDIT_USD, 6),
             "steps": query_price.get("steps", []) + [
-                {"what": f"x {units} for {rows:,} rows (the query's price per "
-                         f"{ROWS_PER_PRICE} rows)", "credits": credits - query_price["credits"]}]}
+                {"what": each + (f", / {slices} slices" if slices > 1 else ""),
+                 "credits": credits - query_price["credits"]}]}
 
 
 def pages_by_cursor(oqo: OQO, fields_dict, index_name: str) -> bool:

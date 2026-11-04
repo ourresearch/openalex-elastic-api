@@ -121,14 +121,15 @@ def index():
         # format ("csv": a pipeline result as a CSV, oxjob #1530) and table ("groups"
         # or "summary": which CSV, oxjob #1550) ride the same way, and split (one split of
         # the summary on its own, oxjob #1598).
-        allowed_keys = ("oql", "oqo", "rerank", "format", "table", "split") + view_param_keys
+        # set_slice: one exact slice of a set too big for one request, for an export (oxjob #1930)
+        allowed_keys = ("oql", "oqo", "rerank", "format", "table", "split", "set_slice") + view_param_keys
         extra_keys = [k for k in body if k not in allowed_keys]
         if extra_keys:
             return _error_response(
                 "Unexpected top-level key(s) in request body: "
                 f"{', '.join(sorted(extra_keys))}. The body may contain one of "
                 "'oql'/'oqo' plus the sibling view params "
-                "(sort/select/page/per_page/cursor), rerank, format, table and split. sample/seed belong inside "
+                "(sort/select/page/per_page/cursor), rerank, format, table, split and set_slice. sample/seed belong inside "
                 "the OQO.",
                 "invalid_body",
                 status=400,
@@ -144,7 +145,7 @@ def index():
             k: body[k] for k in view_param_keys if body.get(k) is not None
         }
         from flask import g
-        for name in ("rerank", "format", "table", "split"):
+        for name in ("rerank", "format", "table", "split", "set_slice"):
             if body.get(name) is not None:
                 setattr(g, f"{name}_param", body[name])
         if "oqo" in body:

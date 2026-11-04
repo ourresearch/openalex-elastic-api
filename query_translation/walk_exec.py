@@ -82,6 +82,15 @@ MEMBER_PIECE = 125             # candidates a membership call checks (one `filte
 EST_LIST_ROWS_S = 3.0          # the candidates, their check, the count and the rows
 # the sample's partitions, the candidates, their checks, then the rows and the count
 LIST_SAMPLE_CALLS = SAMPLE_PARTS + 1 + math.ceil(CANDIDATES / MEMBER_PIECE) + 2
+# Exact exports of such a set (oxjob #1930, step 4; Jason was told 2026-11-02 "exact numbers come by export"): one
+# request can't hold it (Michigan's 3.0M cited works: listing them ~4.5 s, then a 3M-id filter ~6.6 s, on every page),
+# so an export comes in slices. `set_slice=s/S` resolves the set to exactly the works in SLICE_PARTS of ES's
+# S x SLICE_PARTS hash partitions of its references (each cited work is in exactly one), and the export worker adds the
+# slices' rows up by the rules `merge_rules` sends (X-Set-Merge). A slice is a sample's worth (Michigan's 3.0M: 9
+# slices of about 350K works). Only what adds up across disjoint slices is sliced: counts and sums add, a min or max is
+# the smallest or largest of the slices', a mean is a sum over a count of values and a percent a count over a count
+# (each slice sends those as helper columns), and a group's own field is the same in every slice.
+SLICE_PARTS = SAMPLE_PARTS
 _WORK = A.ID_PREFIX + "W"
 
 
@@ -91,11 +100,12 @@ class IdSet:
     is the canonical text of the query it came from (what `to_dict` echoes)."""
 
     def __init__(self, ids: List[str], label: str, column: Optional[str] = None,
-                 sample: Optional[dict] = None):
+                 sample: Optional[dict] = None, slice: Optional[Tuple[int, int]] = None):
         self.ids = list(ids)
         self.label = label
         self.column = column    # the leaf's column as written (`cited_by`), for labels
         self.sample = sample    # {"share", "works", "set_query"}: a uniform sample of a set too big to hold (#1930)
+        self.slice = slice      # (s, S): exactly slice s of S of a set too big to hold, for an export (#1930)
 
     def __len__(self):
         return len(self.ids)
@@ -137,13 +147,16 @@ def _over_budget(seconds: float, what: str, fix: str):
 # Context: one per executed query
 # ---------------------------------------------------------------------------
 class Ctx:
-    def __init__(self, connection, deadline: A.Deadline, query: Optional[OQO] = None, export: bool = False):
+    def __init__(self, connection, deadline: A.Deadline, query: Optional[OQO] = None, export: bool = False,
+                 slice: Optional[Tuple[int, int]] = None):
         from works.fields import fields_dict
         import settings
         self.connection = connection
         self.deadline = deadline
         self.query = query      # the query as written: what its sets may be read as (oxjob #1930)
         self.export = export    # an export needs every work: never a sample
+        self.slice = slice      # (s, S): an export's slice of a set too big to hold (step 4)
+        self.sliced = False     # a set was resolved to its slice (one a query)
         # a list (no calculation) runs its filter whole, unsplit: its sets keep the older limit, and past it its page
         # answers from a sample (_list_or_sample_cited)
         self.lists = query is not None and not query.calculates
@@ -205,13 +218,15 @@ def few_works(n_works: Optional[int]) -> bool:
     return n_works is not None and n_works < A.PARTITION_MIN_WORKS
 
 
-def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
-              map_hint: bool = False, first: Optional[int] = None) -> List:
+def list_keys(ctx: Ctx, query: dict, field: str, est: Optional[int], what: str,
+              map_hint: bool = False, first: Optional[int] = None,
+              parts: Optional[int] = None, start: int = 0) -> List:
     """Every distinct value of `field` in the works `query` matches, in hash
     partitions of about 50,000 listed side by side (each partition one call).
     `first`: only the first that many partitions (a uniform sample of the values:
-    ES places a value in a partition by its hash)."""
-    parts = _list_parts(est)
+    ES places a value in a partition by its hash), from partition `start` of `parts`
+    (when given, instead of sizing them from `est`)."""
+    parts = parts or _list_parts(est)
 
     def one(i):
         terms = {"field": field, "size": PIECE_KEYS,
@@ -228,7 +243,7 @@ def list_keys(ctx: Ctx, query: dict, field: str, est: int, what: str,
                                    "listed exactly.", "Narrow the starting set.")
         return [b["key"] for b in agg["buckets"]]
     out: List = []
-    for keys in _pmap(one, range(min(parts, first or parts))):
+    for keys in _pmap(one, range(start, min(parts, start + (first or parts)))):
         out.extend(keys)
     return out
 
@@ -394,11 +409,15 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx, top: bool = False) -> LeafFilter:
         works_q = _set_works_query(inner, ctx)
         # a list counts them to size a sample; a calculation, to read them (_reads)
         refs = _references(ctx, works_q, what) if ctx.lists or _reads(ctx) else None
+        if ctx.slice is not None:
+            # an export's slice (step 4): exactly the works in its hash partitions of the set's references
+            ids = slice_cited(ctx, works_q, refs, top, what)
+            return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by", slice=ctx.slice), "in", leaf.is_negated)
         seconds = None if ctx.lists else _read_seconds(refs)
         if seconds is not None:
             _over_budget(EST_OVERHEAD_S + seconds, f"reads the {refs:,} references of the set in parentheses",
                          NARROW_SET)
-            ids, sample = read_cited(ctx, works_q, what), None
+            ids, sample = read_cited(ctx, works_q, what, top), None
         else:
             ids, sample = _list_or_sample_cited(ctx, works_q, refs, top, what)
         return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by", sample), "in", leaf.is_negated)
@@ -470,7 +489,11 @@ def _cited_way(ctx: Ctx, est: int, refs: Optional[int], top: bool) -> str:
 def _cited_refusal(ctx: Ctx, est: int, refs: Optional[int], top: bool) -> A.AnalyticsError:
     if refs is None:
         return _too_big("needs the {n} works the set in parentheses cites", est, MAX_SET_IDS, NARROW_SET)
+    if _sliceable(ctx, top):
+        return _slices_refusal(est)
     why = ctx.why_not_sample() if top else "a set inside `not`, `or` or a split can't be sampled"
+    if ctx.export and top:
+        why += f", and it can't come in exact slices either: {_why_not_sliced(ctx.query)}"
     holds = (f"a list holds up to {MAX_SET_IDS:,} exactly" if ctx.lists else
              f"a calculation reads up to {READ_REFS_MAX:,} references naming up to {MAX_CITED_IDS:,} works exactly")
     return A.AnalyticsError(
@@ -515,9 +538,10 @@ def _list_parts(n: int) -> int:
     return max(1, math.ceil(n * 1.15 / LIST_PART))
 
 
-def read_cited(ctx: Ctx, works_q: dict, what: str) -> List[str]:
+def read_cited(ctx: Ctx, works_q: dict, what: str, top: bool = False) -> List[str]:
     """The works the set's works cite, read from their own reference lists, one shard at a time, READ_INFLIGHT in
-    flight; references are kept as numbers (W123 -> 123) to keep the worker small."""
+    flight; references are kept as numbers (W123 -> 123) to keep the worker small. Past MAX_CITED_IDS an export of
+    the set ANDed into its works comes in slices instead (`top`)."""
     import numpy as np
     from elasticsearch_dsl.connections import get_connection
     from query_translation import shard_route
@@ -548,6 +572,8 @@ def read_cited(ctx: Ctx, works_q: dict, what: str) -> List[str]:
     cited = np.unique(np.concatenate(_pmap(shard, range(shards), inflight=READ_INFLIGHT)))
     n = len(cited) + len(others)
     if n > MAX_CITED_IDS:
+        if _sliceable(ctx, top):
+            raise _slices_refusal(n)
         raise _too_big("needs the {n} works the set in parentheses cites", n, MAX_CITED_IDS,
                        NARROW_SET)
     ctx.deadline.calls += _list_parts(n)   # priced as the listing it replaces
@@ -555,6 +581,95 @@ def read_cited(ctx: Ctx, works_q: dict, what: str) -> List[str]:
     for i in range(0, len(cited), 100_000):   # in slices: a million Python ints at once is ~40 MB
         out.extend(_WORK + str(x) for x in cited[i:i + 100_000].tolist())
     out.extend(sorted(others))
+    return out
+
+
+# An export of a set too big to hold, in exact slices (oxjob #1930, step 4; see SLICE_PARTS). How each measure adds
+# up across slices (its X-Set-Merge rule, analytics_csv.merge_rules) and the helper measures each slice sends for it
+# ((measure, of the same column?)); a measure missing here (median, percent of those) can't be sliced.
+# shortcut: a table of its own; step 5 makes one registry of it, ESTIMABLE and id_split's merge rules.
+SLICE_RULES = {
+    "count": ("add", ()), "sum": ("add", ()), "values": ("add", ()),
+    "min": ("min", ()), "max": ("max", ()), "value": ("first", ()),
+    # a slice's numerator is percent x count / 100: exact while a slice holds under a million works (a partition holds
+    # at most 65,536 keys, list_keys refuses past it: SLICE_PARTS x 65,536 = 524,288)
+    "percent": ("percent", (("count", False),)),
+    "mean": ("mean", (("sum", True), ("values", True))),
+}
+SLICE_ERROR = "set_needs_slices"
+
+
+def _invalid_slice(why: str) -> A.AnalyticsError:
+    return A.AnalyticsError("invalid_slice", f"set_slice can't apply to this query: {why}.", "Drop set_slice.")
+
+
+def parse_slice(text: Optional[str]) -> Optional[Tuple[int, int]]:
+    """`set_slice=s/S` (1-based) as (s, S); None when not asked."""
+    if text is None or str(text).strip() == "":
+        return None
+    parts = str(text).strip().split("/")
+    if len(parts) == 2 and all(p.isdigit() for p in parts) and 1 <= int(parts[0]) <= int(parts[1]) <= 10_000:
+        return int(parts[0]), int(parts[1])
+    raise A.AnalyticsError("invalid_slice", f"set_slice must read s/S, from 1/S to S/S (got {text!r}).",
+                           "Ask for the slices the export's refusal names (`slices`), one at a time.")
+
+
+def _why_not_sliced(oqo: Optional[OQO]) -> Optional[str]:
+    """Why an export's numbers can't be added up from slices of its set (None: they can)."""
+    if oqo is None:
+        return "the query isn't known"
+    if not oqo.calculates:
+        return f"a list exports the works of a set that cites up to {MAX_SET_IDS:,}"
+    return _why_not_in_parts(oqo, SLICE_RULES, "added up across slices", "slice by slice")
+
+
+def _sliceable(ctx: Ctx, top: bool) -> bool:
+    """An export whose set ANDed into its works is too big to hold comes in slices."""
+    return ctx.export and top and _why_not_sliced(ctx.query) is None
+
+
+def slices_for(n: int) -> int:
+    """The slices an export of a set citing about `n` works comes in (each SLICE_PARTS hash partitions)."""
+    return max(1, math.ceil(_list_parts(n) / SLICE_PARTS))
+
+
+def _slices_refusal(n: int) -> A.AnalyticsError:
+    """An export of a set too big for one request: the slices to ask for instead (`slices` in the error's JSON)."""
+    k = slices_for(n)
+    return A.AnalyticsError(
+        SLICE_ERROR,
+        f"This export needs about {n:,} works the set in parentheses cites, more than one request holds, so it comes "
+        f"in {k} exact slices: ask for set_slice=1/{k} through set_slice={k}/{k} (each with the same format, table, "
+        f"split and cursor paging) and add their rows up as each answer's X-Set-Merge header says.",
+        "Export it from the website (its export does this), or narrow the set in parentheses.", slices=k)
+
+
+def slice_cited(ctx: Ctx, works_q: dict, refs: Optional[int], top: bool, what: str) -> List[str]:
+    """The works the set cites in the export's slice: its SLICE_PARTS of S x SLICE_PARTS hash partitions (prepare
+    has checked the query can be sliced)."""
+    if not top or ctx.sliced:
+        raise _invalid_slice("a set inside `not`, `or` or a split can't be sliced" if not top else
+                             "only one set a query can be sliced")
+    if refs is not None:
+        _over_budget(EST_OVERHEAD_S + _sample_seconds(refs),
+                     f"lists a slice of the {refs:,} references of the set in parentheses", NARROW_SET)
+    s, k = ctx.slice
+    ctx.sliced = True
+    return list_keys(ctx, works_q, "referenced_works", None, what, map_hint=True, first=SLICE_PARTS,
+                     parts=k * SLICE_PARTS, start=(s - 1) * SLICE_PARTS)
+
+
+def slice_of(oqo: OQO) -> Optional[Tuple[int, int]]:
+    """(s, S) when a resolved query's set ANDed into its works was resolved to an export's slice."""
+    return next((s.slice for s in _anded_sets(oqo) if s.slice), None)
+
+
+def slice_measures(calculate: List[Measure]) -> List[Measure]:
+    """The measures a slice answers: the query's, plus the helpers its slices add up by (SLICE_RULES)."""
+    out = list(calculate)
+    for m in calculate:
+        out += [h for h in (Measure(name, m.column_id if same else None) for name, same in SLICE_RULES[m.measure][1])
+                if h not in out]
     return out
 
 
@@ -870,23 +985,38 @@ def _why_not_estimable(oqo: Optional[OQO], export: bool) -> Optional[str]:
         if any(_is_semantic_leaf(f) for f in oqo.filter_rows):
             return "a semantic search can't run on a sample"
         return None
+    return _why_not_in_parts(oqo, ESTIMABLE, "estimated from a sample", "on a sample")
+
+
+def _why_not_in_parts(oqo: OQO, measures, how: str, where: str) -> Optional[str]:
+    """What a calculation answered from part of its set (a sample, or an export's slices) can't do: walks, a
+    measure outside `measures`, a filter on a calculation."""
     if oqo.walks or oqo.each:
-        return "a walk's numbers can't be scaled up from a sample"
-    bad = next((m.measure for m in oqo.calculate if m.measure not in ESTIMABLE), None)
+        return f"a walk's numbers can't be {how}"
+    bad = next((m.measure for m in oqo.calculate if m.measure not in measures), None)
     if bad:
-        return f"a {bad} can't be estimated from a sample"
+        return f"a {bad.replace('_', ' ')} can't be {how}"
     if any(A._has_measure(g.where) for g in oqo.group_by):
-        return "a filter on a calculation can't be checked on a sample"
+        return f"a filter on a calculation can't be checked {where}"
     return None
+
+
+def _anded_sets(oqo: OQO):
+    """The resolved sets ANDed into a query's works (not negated, not inside `or`): those a sample or a slice of may
+    stand for (_sampled_leaf agrees)."""
+    def walk(node):
+        if isinstance(node, BranchFilter) and node.join == "and" and not node.is_negated:
+            for f in node.filters:
+                yield from walk(f)
+        elif isinstance(node, LeafFilter) and isinstance(node.value, IdSet) and not node.is_negated:
+            yield node.value
+    for f in oqo.filter_rows:
+        yield from walk(f)
 
 
 def sample_of(oqo: OQO) -> Optional[dict]:
     """The sample a resolved query's works were read from, if a set ANDed into them was too big to hold."""
-    def find(node):
-        if isinstance(node, BranchFilter) and node.join == "and" and not node.is_negated:
-            return next((x for x in map(find, node.filters) if x), None)
-        return node.value.sample if _sampled_leaf(node) else None
-    return next((x for x in map(find, oqo.filter_rows) if x), None)
+    return next((s.sample for s in _anded_sets(oqo) if s.sample), None)
 
 
 def scale_estimate(body: dict, oqo: OQO, sample: dict):
@@ -1046,10 +1176,15 @@ def _core_filter(oqo: OQO, ctx: Ctx) -> Optional[dict]:
     return {"term": {"is_xpac": "false" if corpus == "core" else "true"}}
 
 
-def prepare(oqo: OQO, connection, deadline: A.Deadline, export: bool = False) -> Tuple[str, object]:
+def prepare(oqo: OQO, connection, deadline: A.Deadline, export: bool = False,
+            slice: Optional[Tuple[int, int]] = None) -> Tuple[str, object]:
     """Resolve an OQO's sets and walks. Returns ("oqo", an OQO the works path runs as
-    is) or ("body", a finished response body)."""
-    ctx = Ctx(connection, deadline, query=oqo, export=export)
+    is) or ("body", a finished response body). `slice`: an export's slice of a set too
+    big to hold (set_slice=s/S, oxjob #1930 step 4)."""
+    ctx = Ctx(connection, deadline, query=oqo, export=export, slice=slice)
+    why = _why_not_sliced(oqo) if ctx.slice is not None else None
+    if why:
+        raise _invalid_slice(why)
     back = next((w for w in oqo.walks if w.to is not None), None)
     out = next((w for w in oqo.walks if w.to is None), None)
     if back is None and not oqo.calculate and out is not None:
@@ -1061,6 +1196,9 @@ def prepare(oqo: OQO, connection, deadline: A.Deadline, export: bool = False) ->
                                                        where=out.where)],
                               calculate=[Measure("count")])
     oqo = resolve_sets(oqo, ctx)
+    if ctx.sliced:
+        # the slice's answer carries what its slices add up by (analytics_csv.merge_rules)
+        oqo = replace(oqo, calculate=slice_measures(oqo.calculate))
     if not oqo.walks and not oqo.each:
         return "oqo", oqo
     if not oqo.walks and oqo.each:

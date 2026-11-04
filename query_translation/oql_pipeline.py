@@ -67,7 +67,9 @@ class StepDirective:
 
 
 _MEASURE_SURFACE = {"mean": "mean", "median": "median", "sum": "sum",
-                    "min": "min", "max": "max", "percent": "percent"}
+                    "min": "min", "max": "max", "percent": "percent",
+                    # internal: a mean's count of values, an export slice's helper column (oxjob #1930)
+                    "values": "works with"}
 
 # The last step's verb (oxjob #1555, Jason 2026-10-05: "summarize" reads better than
 # "calculate"; "using" over "with", which `with seed` already uses). The parser also

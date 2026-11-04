@@ -214,6 +214,66 @@ def split_file(body: dict, oqo: OQO, n: int) -> Tuple[str, str]:
             _split_table(splits[n - 1], oqo.group_by[n - 1], oqo, body.get("group_by") or [], measures))
 
 
+def _header_names(body: dict, oqo: OQO) -> Tuple[List[str], dict]:
+    """(the groups table's header names, {measure key: its column's name}), as groups_csv writes them."""
+    splits = _splits(body, oqo)
+    measures = body.get("meta", {}).get("measures") or []
+    names = _unique([c for s in splits for c in _split_cols(s)] + [m["oql"] for m in measures])
+    return names, dict(zip([m["key"] for m in measures], names[len(names) - len(measures):]))
+
+
+def merge_rules(body: dict, oqo: OQO, asked: list, at: Tuple[int, int]) -> dict:
+    """X-Set-Merge for an export's slice of a set too big for one request (oxjob #1930, step 4): how the exporter
+    adds the slices up, by column name: `add` counts and sums, `min` / `max` the smallest / largest, `first` a group's
+    own field (the same in every slice), `percent` {column: its count column}, `mean` {column: [its sum, its count of
+    values]} (walk_exec.SLICE_RULES), `drop` the helper columns the query didn't ask for, `order` (merge_order).
+    Columns named in none of them are the groups' keys."""
+    from query_translation.oqo import Measure
+    from query_translation.walk_exec import SLICE_RULES
+    _, name = _header_names(body, oqo)
+    rules = {"slice": list(at), "add": [], "min": [], "max": [], "first": [], "percent": {}, "mean": {}}
+    for m in body.get("meta", {}).get("measures") or []:
+        rule, helpers = SLICE_RULES[m["measure"]]
+        parts = [name[Measure(h, m["column_id"] if same else None).key] for h, same in helpers]
+        if rule in ("percent", "mean"):
+            rules[rule][name[m["key"]]] = parts[0] if rule == "percent" else parts
+        else:
+            rules[rule].append(name[m["key"]])
+    asked_keys = {m.key for m in asked}
+    rules["drop"] = [name[m["key"]] for m in body.get("meta", {}).get("measures") or [] if m["key"] not in asked_keys]
+    rules["order"] = merge_order(body, oqo)
+    return rules
+
+
+def merge_order(body: dict, oqo: OQO) -> List[List[str]]:
+    """The order an export's slices read in once added up (oxjob #1930, step 4), for X-Set-Merge: [column,
+    direction] by priority, as the groups table names its columns (a file without a column skips its rule).
+    `asc` / `desc` compare numbers as numbers; `seen` keeps the order the slices first list a split's groups in
+    (listed values, searches, conditions and bins come in their own order). A single split by a column goes in key
+    order, as a whole export's cursor pages it, so the two files are the same; with several, each outer split goes in
+    key order and the innermost by the calculation the query sorts by, else years oldest first and anything else
+    most works first, as the page view orders it (analytics._level_order)."""
+    splits = _splits(body, oqo)
+    names, by_key = _header_names(body, oqo)
+    sort = oqo.sort_by[0] if oqo.sort_by else None
+    sort_col = by_key.get(sort.column_id) if sort is not None else None
+    order, at = [], 0
+    for i, s in enumerate(splits):
+        cols = names[at:at + len(_split_cols(s))]
+        at += len(cols)
+        # the key: its id (the key itself, short) where the groups have ids, else the label (a year, a code)
+        key = [cols[0], "seen"] if s["kind"] != "column" else [cols[-1], "asc"]
+        if i < len(splits) - 1 or s["kind"] != "column" or len(splits) == 1:
+            order.append(key)
+        elif sort_col is not None:
+            order += [[sort_col, sort.direction or "desc"], key]
+        elif s.get("key_order") == "year" or "count" not in by_key:
+            order.append(key)
+        else:
+            order += [[by_key["count"], "desc"], key]
+    return order
+
+
 def filename(oql_text: str, suffix: str = "", ext: str = "csv") -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", " ".join((oql_text or "").split()).lower())
     slug = slug.strip("-")[:80].strip("-")

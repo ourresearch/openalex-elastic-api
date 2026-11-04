@@ -767,12 +767,18 @@ def _run_walks(oqo: OQO, connection):
     g.oql_echo_oqo = oqo
     g.oql_deadline = deadline = analytics.Deadline()
     try:
-        kind, val = walk_exec.prepare(oqo, connection, deadline,
-                                      export=oqo.cursor is not None or _format_asked() == "csv")
+        csv_export = _format_asked() == "csv"
+        kind, val = walk_exec.prepare(oqo, connection, deadline, export=oqo.cursor is not None or csv_export,
+                                      slice=walk_exec.parse_slice(_param("set_slice")) if csv_export else None)
     except analytics.AnalyticsError as e:
-        return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
-                        "oqo": oqo.to_dict()}), e.status
+        out = {"error": e.code, "message": e.message, "fix": e.fix, "oqo": oqo.to_dict()}
+        if e.slices:
+            out["slices"] = e.slices   # an export of a set too big to hold comes in this many slices (#1930)
+        return jsonify(out), e.status
     if kind == "oqo":
+        # an export's slice sends its sums unrounded, so the slices add up exactly (oxjob #1930). shortcut: a
+        # request flag read in analytics._measure_value; the root fix rounds where cells are written, not computed
+        g.oql_exact_sums = walk_exec.slice_of(val) is not None
         return val
     val["meta"]["x_query"] = build_x_query(oqo, sort_operands=False, name_new_form=True)
     val["meta"]["cost_usd"] = val["meta"]["cost"]["usd"]
@@ -828,6 +834,14 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     csv_export = _format_asked() == "csv"
     if csv_export and _table_refusal() is not None:
         return _table_refusal()
+    from query_translation import walk_exec
+    sliced = walk_exec.slice_of(oqo)
+    if _param("set_slice") and not (csv_export and sliced):
+        # never the whole answer to a caller adding up slices (oxjob #1930, step 4)
+        return jsonify({"error": "invalid_slice",
+                        "message": "set_slice applies to the CSV export of a query whose works are cited by a set in "
+                                   "parentheses too big for one request; this one has none to slice.",
+                        "fix": "Drop set_slice."}), 400
     split = _split_asked()
     if split is not None:
         refused = _split_refusal(oqo, split, csv_export)
@@ -884,7 +898,7 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
             # its set was too big to hold: the answer comes from a sample of it (oxjob #1930)
             walk_exec.scale_estimate(body, oqo, sample)
     if csv_export:
-        return _csv_response(whole_oqo, body, cost, paging, split=split)
+        return _csv_response(whole_oqo, body, cost, paging, split=split, sliced=sliced)
     _add_baseline(body, _echo_oqo(oqo), index_name, connection, fields_dict, per_page, deadline)
     body["meta"]["x_query"] = build_x_query(_echo_oqo(oqo), sort_operands=False, name_new_form=True)
     body["meta"]["cost_usd"] = cost["usd"]
@@ -1035,13 +1049,16 @@ def _table_refusal():
                     "fix": "Drop table for the groups, or ask for table=summary."}), 400
 
 
-def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Optional[int] = None):
+def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Optional[int] = None,
+                  sliced: Optional[tuple] = None):
     """A pipeline result as a download (oxjob #1550): the groups as one flat CSV (with a
     cursor, one page of them and `X-Next-Cursor` for the next), or with table=summary
     the summary, one CSV or (with several tables) a zip of them; with split=<n> too, that
     split's by-<split>.csv alone (`body` is that split's answer; it pages like the groups,
     oxjob #1598). Priced per row, like works exports: the query's price for every 100
-    rows; refused (and free) when the caller can't pay for what came back."""
+    rows; refused (and free) when the caller can't pay for what came back. `sliced`:
+    (s, S), an export's slice of a set too big to hold (oxjob #1930, step 4): it says how
+    the exporter adds the slices up (X-Set-Merge) and costs 1/S of its rows' price."""
     from flask import Response
     from query_translation import analytics, analytics_csv
     from query_translation.oql_pipeline import render_pipeline
@@ -1049,7 +1066,7 @@ def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Opti
     # query.oql is the query as written (a walk's, not the works query it ran as, #1535)
     data, name, mimetype, rows = analytics_csv.build_download(
         body, oqo, render_pipeline(_echo_oqo(oqo)), table, split=split)
-    price = analytics.export_price(cost, rows)
+    price = analytics.export_price(cost, rows, slices=sliced[1] if sliced else 1)
     refused = _credit_refusal(price, "narrow the query, or export fewer groups")
     if refused is not None:
         return refused
@@ -1071,6 +1088,9 @@ def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Opti
     splits = meta.get("splits") or []
     capped = [i for i, part in enumerate((body.get("summary") or {}).get("splits") or [])
               if i < len(splits) and (part or {}).get("more_groups")]
+    if sliced:
+        headers["X-Set-Merge"] = json.dumps(
+            analytics_csv.merge_rules(body, oqo, _echo_oqo(oqo).calculate, sliced), separators=(",", ":"))
     if table == "summary" and split is None and capped:
         # the one-call summary lists each split's biggest groups; split=<n> pages every group of
         # split n (the exporter does, replacing that file in its zip: `n:<file>:<its groups,
