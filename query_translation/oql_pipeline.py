@@ -525,6 +525,15 @@ def measure_text(m: Measure, noun: str) -> str:
     return f"{_MEASURE_SURFACE[m.measure]} {L._oql_field(m.column_id)[0]}"
 
 
+def measure_words(m: Measure, noun: str) -> str:
+    """A number's words in a statement: the sentence's name when it has one (`share`, `mean
+    citations`, `sum of citations`; one word per concept across the two forms, #1589's
+    list), else `measure_text`'s field words. Column labels keep `measure_text`."""
+    from query_translation.oql_core import MEASURE_NAMES, TABLE_NAMES  # lazy: core imports this module
+    name = MEASURE_NAMES.get((m.measure, m.column_id)) if m.measure != "count" else None
+    return TABLE_NAMES.get(name, name) if name else measure_text(m, noun)
+
+
 def _number(v) -> str:
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
@@ -535,7 +544,7 @@ def _group_where_text(node, ctx: dict, resolver=None, top=True) -> str:
     """A group filter: measures on the groups' works, and the group's own fields."""
     noun = ctx["noun"]
     if isinstance(node, MeasureFilter):
-        what = "count" if node.measure == "count" else measure_text(
+        what = "count" if node.measure == "count" else measure_words(
             Measure(node.measure, node.column_id), noun)
         if node.operator in NUMBER_WORDS:     # `count of those works is above 5`
             lead = "not " if node.is_negated else ""
@@ -1157,7 +1166,7 @@ def _later_steps(oqo: OQO, steps: List[StepDirective], entity: str, noun: str,
     if oqo.group_by and is_compare_split(oqo.group_by[0]):
         # `compare institution [MIT] versus [Stanford] using count by year` (oxjob
         # #1555, Jason 2026-10-08): the measures inside the step, as in `summarize using`
-        measures = (english_list([measure_text(m, noun) for m in oqo.calculate])
+        measures = (english_list([measure_words(m, noun) for m in oqo.calculate])
                     if oqo.calculate else None)
         data = {"splits": [g.to_dict() for g in oqo.group_by]}
         if oqo.calculate:
@@ -1208,7 +1217,7 @@ def _summary_step(oqo: OQO, prefix: str, noun: str) -> StepDirective:
     """`summarize ... using <measures>`: the calculation's step."""
     return StepDirective(
         prefix=prefix,
-        segments=[_text(english_list([measure_text(m, noun) for m in oqo.calculate]))],
+        segments=[_text(english_list([measure_words(m, noun) for m in oqo.calculate]))],
         meta=StepMeta("calculate", data={
             "measures": [dict(m.to_dict(), key=m.key) for m in oqo.calculate]}))
 

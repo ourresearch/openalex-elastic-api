@@ -32,7 +32,7 @@ def _err(q):
     "get works where institution is (I63966007); then get each author of those works",
     "get works where topic is (T10878); then get authors of those works; then summarize using count",
     "get works where year >= (2020); then get each funder of those works; "
-    "then get all that funder's works; then summarize using mean citation count",
+    "then get all that funder's works; then summarize using mean citations",
     "get works where year >= (2020); then get SDGs of those works",
     "get works where year >= (2020); then get each SDG of those works; "
     "then get all that SDG's works where year >= (2024); then summarize using count",

@@ -142,3 +142,34 @@ def test_a_role_split_floor_is_a_count_only():
     with pytest.raises(NotCore):
         parse_core("get the count of works about kelp by corresponding author. "
                    "Only corresponding authors at [MIT](I63966007) with at least 10 works about kelp.")
+
+
+# --- one word per concept: the general form reads and writes the sentence's numbers -----
+
+GENERAL = "get works where year >= (2020); then group those works by country; finally, summarize using count and "
+
+
+@pytest.mark.parametrize("name,key", [
+    ("share", ("percent_of_those", None)),
+    ("percent of those works", ("percent_of_those", None)),      # the old words still read
+    ("sum of citations", ("sum", "cited_by_count")),
+    ("sum citation count", ("sum", "cited_by_count")),
+    ("mean citations", ("mean", "cited_by_count")),
+    ("mean citation count", ("mean", "cited_by_count")),
+    ("sum of APCs paid", ("sum", "apc_paid.value")),
+    ("percent with a DOI", ("percent", "has_doi")),
+    ("percent with an abstract", ("percent", "has_abstract")),
+    ("percent with full text", ("percent", "has_fulltext")),
+])
+def test_the_general_form_reads_the_sentence_numbers(name, key):
+    m = parse_either(GENERAL + name).calculate[-1]
+    assert (m.measure, m.column_id) == key
+
+
+def test_the_general_form_writes_the_sentence_numbers():
+    from query_translation.oql_pipeline import render_pipeline_line
+    oqo = canonicalize_oqo(parse_either(
+        "get works where year >= (2020); then group those works into ((country is (KE)), (country is (BE))); "
+        "finally, summarize using count, percent of those works, mean citation count, and sum citation count"))
+    text = render_pipeline_line(oqo, None)
+    assert text.endswith("using count, share, mean citations, and sum of citations")

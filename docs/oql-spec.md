@@ -605,9 +605,10 @@ The summary is always the last step. Its measures:
 | Measure | Meaning |
 |---|---|
 | `count` | how many |
-| `mean`, `median`, `sum`, `min`, `max` + a number field | over the works: `mean reference count`, `sum citation count`; `min` and `max` also of a date (`min date`) |
+| `mean`, `median`, `sum`, `min`, `max` + a number field | over the works: `mean reference count`, `max citation count`; `min` and `max` also of a date (`min date`) |
 | `percent` + a yes/no field | the rate: `percent open access`, `percent global south` |
-| `percent of those works` | each group's slice of its parent set |
+| `share` | each group's slice of its parent set (`percent of those works` still reads) |
+| the sentence's names | one word per concept across the two forms: `mean citations`, `median citations`, `sum of citations`, `sum of APCs paid`, `percent with a DOI`, `percent with an abstract`, `percent with full text` (the echo writes these) |
 | a thing's own field | after a split by things: `h-index` |
 
 A bare field is not a measure: `summarize using authors count` is refused with the fix `mean authors count`.
@@ -1042,7 +1043,8 @@ measures      ::= measure | measure 'and' measure | measure ( ',' measure )+ ','
 measure       ::= 'count'
                 | ( 'mean' | 'median' | 'sum' | 'min' | 'max' ) field
                 | 'percent' field
-                | 'percent of those works'
+                | 'share'                       /* 'percent of those works' still reads */
+                | sentenceName                  /* 'mean citations', 'sum of citations', 'percent with a DOI', ... */
                 | ownField
 
 sampleStep    ::= 'sample' NUMBER 'of those works' ( 'with seed' ( NUMBER | WORD ) )?

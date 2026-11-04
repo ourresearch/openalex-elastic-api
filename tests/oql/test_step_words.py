@@ -39,7 +39,7 @@ def test_transitions():
     "finally, summarize using count and mean FWCI",
     "get works where published since 2020; then, get each funder of those works; "
     "then, get all that funder's works; then, group those works by year; "
-    "finally, summarize using mean citation count",
+    "finally, summarize using mean citations",
 ])
 def test_echo_is_its_own_canonical_form(q):
     assert _line(q) == q

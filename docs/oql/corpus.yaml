@@ -4282,7 +4282,7 @@ rows:
   oql: |-
     get funders that funded works where country is [Kenya](KE)
       and published since 2015;
-    then, summarize each funder using count and mean citation count
+    then, summarize each funder using count and mean citations
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.countries", "value": "KE"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "funders.id"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "cited_by_count"}]}
 - id: 214
   tags: [pipeline, group-filter, collection]
@@ -4308,7 +4308,7 @@ rows:
   oql: |-
     get works where published since 2016;
     then, compare institution [KU Leuven](I99464096) versus country [Belgium](BE)
-      using count and percent of those works
+      using count and share
       by SDG
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
 - id: 216
@@ -4388,7 +4388,7 @@ rows:
   oql: |-
     get works where topic is [CRISPR and Genetic Engineering](T10878);
     then, summarize all those works
-      using count, mean FWCI, percent open access, and median citation count
+      using count, mean FWCI, percent open access, and median citations
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}, {"measure": "median", "column_id": "cited_by_count"}]}
 - id: 222
   tags: [pipeline, group-by]

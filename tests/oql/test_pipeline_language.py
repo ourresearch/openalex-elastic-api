@@ -41,7 +41,7 @@ EXAMPLES = [
     "get works where title-abstract has (kelp); then group those works by author where "
     "count of those works > (10) and co-author is not (A5023888391)",
     "get works where country is (KE) and year >= (2015); then group those works by funder; "
-    "then summarize using count, mean citation count",
+    "then summarize using count, mean citations",
     "get works where topic is in (col_abc123); then group those works by institution where "
     "collaborator is not (I63966007); then summarize using count",
 ]

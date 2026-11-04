@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import contextvars
 import datetime
+import functools
 import re
 from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
@@ -5303,6 +5304,10 @@ class _Parser:
         noun = _plural_noun(entity)
         t = self.peek()
         w = t.val.lower() if t is not None and t.kind == "WORD" else ""
+        named = self._sentence_measure()
+        if named is not None:
+            self._parse_of_those(entity)
+            return named
         if w in ("count", "number"):
             self.next()
             if w == "number" and self.word_is("of") and not self.word_is("those", k=1):
@@ -5330,7 +5335,7 @@ class _Parser:
                     f'percent takes a yes/no field; "{fld.oql}" isn\'t one',
                     f"e.g. summarize using percent open access; for the share of "
                     f"each {fld.oql}, split by it: group those {noun} by {fld.oql}; "
-                    f"finally, summarize using percent of those {noun}",
+                    "finally, summarize using share",
                     t.pos)
             # min / max of a date: the earliest / latest (`summarize using max date`)
             if name != "percent" and fld.kind != "num" and not (
@@ -5395,8 +5400,18 @@ class _Parser:
             "OQL_BAD_MEASURE",
             f'"{t.val if t is not None else ""}" isn\'t a calculation',
             "calculations: count; mean, median, sum, min, max of a number field; "
-            f"percent of a yes/no field; percent of those {noun}",
+            "percent of a yes/no field; share (a split's slice)",
             t.pos if t is not None else None)
+
+    def _sentence_measure(self) -> Optional[Measure]:
+        """A number named the way the sentence names it where the field words can't say it
+        (`share`, `sum of citations`, `percent with a DOI`): one word per concept across
+        the two forms (#1589's list, oxjob #1555). Consumes it; None when it isn't one."""
+        for words, key in _sentence_measure_words():
+            if all(self.word_is(w, k=i) for i, w in enumerate(words)):
+                self.i += len(words)
+                return Measure(*key)
+        return None
 
     def _group_own_field(self, entity: str, splits) -> Optional[Measure]:
         """A bare field in `summarize using` that belongs to a split's own things (an
@@ -5491,7 +5506,7 @@ class _Parser:
             if m.measure == "percent_of_those":
                 raise oql_error(
                     "OQL_BAD_GROUP_FILTER",
-                    f"a group filter can't test percent of those {noun}",
+                    "a group filter can't test the share",
                     f"filter on the count instead: count of those {noun} > (N)", t.pos)
             op = self._parse_operator()
             if op not in (">", ">=", "<", "<=", "is", "isnot"):
@@ -5614,6 +5629,16 @@ _MEASURE_WORDS = {
     "min": "min", "minimum": "min", "max": "max", "maximum": "max",
     "percent": "percent",
 }
+
+
+@functools.lru_cache(maxsize=1)
+def _sentence_measure_words():
+    """[(words, (measure, column))], longest first: the sentence's names for numbers that
+    the field words don't read (`share`, `sum of citations`, `percent with a DOI`)."""
+    from query_translation.oql_core import NAME_MEASURES   # lazy: oql_core imports this module
+    names = {n: k for n, k in NAME_MEASURES.items()
+             if k[0] not in ("value", "count") and (n == "share" or " of " in n or " with " in n)}
+    return sorted(((tuple(n.split()), k) for n, k in names.items()), key=lambda x: -len(x[0]))
 
 
 # -- thing-first (oxjob #1555, Jason 2026-10-09) -----------------------------------

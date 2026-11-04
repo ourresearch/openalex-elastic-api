@@ -42,7 +42,7 @@ ECHOES = [
      "(I99464096)), (country is (BE))); then group those works again by SDG; then summarize using "
      "count, percent of those works",
      "get works where published since 2016; then, compare institution (I99464096) versus country "
-     "[Belgium](BE) using count and percent of those works by SDG"),
+     "[Belgium](BE) using count and share by SDG"),
     # a compound item takes parentheses; comparisons keep their verb
     ("get works where institution is in (col_abc123); then group those works into ((year >= "
      "(2016) and year <= (2019)), (year >= (2021))); then group those works again by topic; "
@@ -53,7 +53,7 @@ ECHOES = [
     ("get works where institution is I146416000 and published since 2020; then compare open access "
      "versus not open access by field; summarize using count and median citation count",
      "get works where institution is (I146416000) and published since 2020; then, compare open "
-     "access versus not open access using count and median citation count by field"),
+     "access versus not open access using count and median citations by field"),
     # `and` inside an item is logic: papers with both countries
     ("get works where published since 2015; then compare (country US and CN) versus (country US and "
      "GB) by year; summarize using count",

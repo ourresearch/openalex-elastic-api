@@ -262,8 +262,8 @@ THING_FIRST_ECHO = {
         'get authors who published works where institution is (I63966007); then, summarize each author using mean FWCI',
     'get works where title-abstract has (kelp); then group those works by author where count of those works > (10) and co-author is not (A5023888391)':
         'get authors where co-author is not (A5023888391) who published more than 10 works where title-abstract has (kelp)',
-    'get works where country is (KE) and year >= (2015); then group those works by funder; then summarize using count, mean citation count':
-        'get funders that funded works where country is [Kenya](KE) and published since 2015; then, summarize each funder using count and mean citation count',
+    'get works where country is (KE) and year >= (2015); then group those works by funder; then summarize using count, mean citations':
+        'get funders that funded works where country is [Kenya](KE) and published since 2015; then, summarize each funder using count and mean citations',
     'get works where topic is in (col_abc123); then group those works by institution where collaborator is not (I63966007); then summarize using count':
         'get institutions where collaborator is not (I63966007) that published works where topic is in the collection (col_abc123); then, summarize each institution using count',
     'get works where year > (2020); then group those works by author where that author is not in (col_abc)':
@@ -276,8 +276,8 @@ THING_FIRST_ECHO = {
         'get publishers that published works where published after 2020; then, summarize each publisher using count, max date, and min date',
     'get works where topic is (T10878); then get authors of those works; then summarize using count':
         'get authors who published works where topic is (T10878); then, summarize all those authors using count',
-    "get works where year >= (2020); then get each funder of those works; then get all that funder's works; then summarize using mean citation count":
-        "get works where published since 2020; then, get each funder of those works; then, get all that funder's works; finally, summarize each funder using mean citation count",
+    "get works where year >= (2020); then get each funder of those works; then get all that funder's works; then summarize using mean citations":
+        "get works where published since 2020; then, get each funder of those works; then, get all that funder's works; finally, summarize each funder using mean citations",
     "get works where year >= (2020); then get each SDG of those works; then get all that SDG's works where year >= (2024); then summarize using count":
         "get works where published since 2020; then, get each SDG of those works; then, get all that SDG's works where published since 2024; finally, summarize each SDG using count",
     "get authors where h-index > (50); then get all those authors' works; then summarize using count":
