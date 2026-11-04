@@ -88,16 +88,20 @@ fields = [
     OpenAlexIDField(
         # Un-mangle artifact (Zendesk 22523 / oxjob #593): from 2026-01-15 to
         # 2026-07-15 an openalex-gui router rewrite corrupted authors URLs by bare
-        # substring replacement, turning `last_known_institutions.id` into this
-        # never-valid key, and users bookmarked/shared/scripted the result. Accept
-        # it forever as an execution alias of `last_known_institutions.id`, but
-        # never advertise it (`unlisted` drops it from the public /properties
-        # catalog — the is_xpac soft-retire mechanism, #498).
+        # substring replacement, turning the Institution chip's
+        # `last_known_institutions.id` into this never-valid key, and users
+        # bookmarked/shared/scripted the result. Accept it forever, but never
+        # advertise it (`unlisted` drops it from the public /properties catalog,
+        # the is_xpac soft-retire mechanism, #498). Since oxjob #594 the Institution
+        # chip means the institution with its labs and institutes, which is also
+        # what the key says and what ticket 22523 expected, so it is an alias of
+        # `last_known_institutions.lineage` (was `.id`, the #593 stopgap).
         param="last_known_authorships.institutions.lineage",
-        alias="last_known_institutions.id",
-        alternate_of="last_known_institutions.id",
+        custom_es_field="last_known_institutions.lineage",
+        alias="last_known_institutions.lineage",
+        alternate_of="last_known_institutions.lineage",
         unlisted=True,
-        sort_field="last_known_institutions.id",
+        sort_field="last_known_institutions.lineage",
     ),
     OpenAlexIDField(
         param="ids.openalex",

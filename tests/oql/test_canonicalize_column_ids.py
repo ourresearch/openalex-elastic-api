@@ -128,7 +128,8 @@ def test_unlisted_alias_canonicalizes_but_is_not_advertised():
     from core.properties import ENTITY_PROPERTIES
 
     mangled = "last_known_authorships.institutions.lineage"
-    canon = "last_known_institutions.id"
+    # #594: the Institution chip it came from now means lineage (was `.id`)
+    canon = "last_known_institutions.lineage"
     assert canonicalize_column_id(mangled, "authors") == canon
     props = ENTITY_PROPERTIES["authors"]
     assert mangled in props  # still a live, resolvable column
