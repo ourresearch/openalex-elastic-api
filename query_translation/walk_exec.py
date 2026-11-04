@@ -28,6 +28,7 @@ from typing import Dict, List, Optional, Tuple
 
 from elasticsearch_dsl import Q
 
+from extensions import cache_get, cache_set
 from query_translation import analytics as A
 from query_translation.id_split import INFLIGHT, PIECE_KEYS, WHOLE_MAX_IDS, _pmap, _terms, piece_full
 from query_translation.oqo import (
@@ -408,12 +409,12 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx, top: bool = False) -> LeafFilter:
     if leaf.column_id == "cited_by":
         # works cited by the set's works: their references
         works_q = _set_works_query(inner, ctx)
-        # a list counts them to size a sample; a calculation, to read them (_reads)
-        refs = _references(ctx, works_q, what) if ctx.lists or _reads(ctx) else None
         if ctx.slice is not None:
             # an export's slice (step 4): exactly the works in its hash partitions of the set's references
-            ids = slice_cited(ctx, works_q, refs, top, what)
+            ids = slice_cited(ctx, works_q, top, what)
             return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by", slice=ctx.slice), "in", leaf.is_negated)
+        # a list counts them to size a sample; a calculation, to read them (_reads)
+        refs = _references(ctx, works_q, what) if ctx.lists or _reads(ctx) else None
         seconds = None if ctx.lists else _read_seconds(refs)
         if seconds is not None:
             _over_budget(EST_OVERHEAD_S + seconds, f"reads the {refs:,} references of the set in parentheses",
@@ -588,10 +589,14 @@ def read_cited(ctx: Ctx, works_q: dict, what: str, top: bool = False) -> List[st
         raise _too_big("needs the {n} works the set in parentheses cites", n, MAX_CITED_IDS,
                        NARROW_SET)
     ctx.deadline.calls += _list_parts(n)   # priced as the listing it replaces
+    return _work_ids(cited) + sorted(others)
+
+
+def _work_ids(nums) -> List[str]:
+    """Work numbers (a numpy array) as full work ids, 100,000 at a time: a million Python ints at once is ~40 MB."""
     out: List[str] = []
-    for i in range(0, len(cited), 100_000):   # in slices: a million Python ints at once is ~40 MB
-        out.extend(_WORK + str(x) for x in cited[i:i + 100_000].tolist())
-    out.extend(sorted(others))
+    for i in range(0, len(nums), 100_000):
+        out.extend(_WORK + str(x) for x in nums[i:i + 100_000].tolist())
     return out
 
 
@@ -660,19 +665,58 @@ def _slices_refusal(n: int) -> A.AnalyticsError:
         "Export it from the website (its export does this), or narrow the set in parentheses.", slices=k)
 
 
-def slice_cited(ctx: Ctx, works_q: dict, refs: Optional[int], top: bool, what: str) -> List[str]:
+def slice_cited(ctx: Ctx, works_q: dict, top: bool, what: str) -> List[str]:
     """The works the set cites in the export's slice: its SLICE_PARTS of S x SLICE_PARTS hash partitions (prepare
-    has checked the query can be sliced)."""
+    has checked the query can be sliced), sorted, from the shared cache after the slice's first page."""
+    import zlib
+    import numpy as np
     if not top or ctx.sliced:
         raise _invalid_slice("a set inside `not`, `or` or a split can't be sliced" if not top else
                              "only one set a query can be sliced")
-    if refs is not None:
-        _over_budget(EST_OVERHEAD_S + _sample_seconds(refs),
-                     f"lists a slice of the {refs:,} references of the set in parentheses", NARROW_SET)
     s, k = ctx.slice
     ctx.sliced = True
-    return list_keys(ctx, works_q, "referenced_works", None, what, map_hint=True, first=SLICE_PARTS,
-                     parts=k * SLICE_PARTS, start=(s - 1) * SLICE_PARTS)
+    key = _slice_key(ctx, works_q)
+    refs_call = _reads(ctx)
+    cached = _cached_slice(key)
+    if cached is not None:
+        ctx.deadline.mark(f"{what}: the slice's ids, cached")
+        # priced as the calls it replaces (the references count and the listing), so every page costs the same
+        ctx.deadline.calls += SLICE_PARTS + refs_call
+        return _work_ids(cached)
+    if refs_call:
+        refs = _references(ctx, works_q, what)
+        _over_budget(EST_OVERHEAD_S + _sample_seconds(refs),
+                     f"lists a slice of the {refs:,} references of the set in parentheses", NARROW_SET)
+    ids = list_keys(ctx, works_q, "referenced_works", None, what, map_hint=True, first=SLICE_PARTS,
+                    parts=k * SLICE_PARTS, start=(s - 1) * SLICE_PARTS)
+    nums = _ref_nums(ids)
+    if len(nums) != len(ids):
+        return ids   # an id that isn't a work's (never seen): not kept, as it couldn't be told from a missing one
+    nums = np.sort(np.asarray(nums, dtype=np.int64))
+    cache_set(key, zlib.compress(np.diff(nums, prepend=0).tobytes(), 1), SLICE_CACHE_S)
+    return _work_ids(nums)
+
+
+# A slice's ids are kept SLICE_CACHE_S in the cache every dyno shares (Redis, flask-caching), so the pages of one slice
+# list it once (oxjob #2016): an export of works cited by systematic reviews by source comes in 31 slices of 4 calls,
+# and each call listed its slice again (1.1-3.0 s; 8.3 s of a slice's 19). It also keeps a slice's works the same
+# across its pages. Kept as sorted W numbers, delta-coded and compressed (about 1 MB for a slice's ~350K works).
+SLICE_CACHE_S = 600
+
+
+def _slice_key(ctx: Ctx, works_q: dict) -> str:
+    import hashlib
+    import json
+    raw = json.dumps([ctx.works_index, works_q, ctx.slice, SLICE_PARTS], sort_keys=True)
+    return "oql-slice:v1:" + hashlib.sha1(raw.encode()).hexdigest()
+
+
+def _cached_slice(key: str):
+    """A slice's work numbers (sorted) from the cache; None on a miss or with no cache (tests, desk)."""
+    import zlib
+    import numpy as np
+    blob = cache_get(key)
+    return np.cumsum(np.frombuffer(zlib.decompress(blob), dtype=np.int64)) if blob else None
 
 
 def slice_of(oqo: OQO) -> Optional[Tuple[int, int]]:

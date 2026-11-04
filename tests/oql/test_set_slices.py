@@ -17,9 +17,10 @@ class _Fake:
     """A Ctx.search for the cited-by resolver: the references total, the distinct count, hash partitions."""
 
     def __init__(self, refs, est, per_part=3):
-        self.refs, self.est, self.per_part, self.parts = refs, est, per_part, []
+        self.refs, self.est, self.per_part, self.parts, self.asked = refs, est, per_part, [], 0
 
     def __call__(self, body, what, index=None, **params):
+        self.asked += 1
         aggs = body.get("aggs") or {}
         if "refs" in aggs:
             return {"aggregations": {"refs": {"value": self.refs}}}
@@ -29,6 +30,30 @@ class _Fake:
         self.parts.append((inc["partition"], inc["num_partitions"]))
         return {"aggregations": {"k": {"buckets": [{"key": f"W{inc['partition']}-{i}"}
                                                    for i in range(self.per_part)]}}}
+
+
+class _Cache:
+    def __init__(self, broken=False):
+        self.data, self.broken = {}, broken
+
+    def get(self, key):
+        if self.broken:
+            raise ConnectionError("no cache")
+        return self.data.get(key)
+
+    def set(self, key, value, timeout=None):
+        if self.broken:
+            raise ConnectionError("no cache")
+        self.data[key] = value
+
+
+
+@pytest.fixture(autouse=True)
+def _own_cache(monkeypatch):
+    """Each test its own empty shared cache (a slice's ids are kept there, #2016), and sets read as a calculation's."""
+    import extensions
+    monkeypatch.setattr(extensions, "cache", _Cache())
+    monkeypatch.setattr(W, "_reads", lambda ctx: True)
 
 
 def _ctx(fake, calc=BY_SOURCE, export=True, slice=None):
@@ -79,7 +104,7 @@ def test_the_slices_cover_every_partition_once():
     for s in range(1, 4):
         fake = _Fake(refs=5_400_000, est=None)
         ctx = _ctx(fake, slice=(s, 3))
-        ids = W.slice_cited(ctx, {"match_all": {}}, 5_400_000, True, "listing")
+        ids = W.slice_cited(ctx, {"match_all": {}}, True, "listing")
         assert ctx.sliced and len(ids) == 3 * W.SLICE_PARTS
         assert {n for _, n in fake.parts} == {3 * W.SLICE_PARTS}
         seen += [p for p, _ in fake.parts]
@@ -89,11 +114,11 @@ def test_the_slices_cover_every_partition_once():
 def test_a_slice_applies_once_to_a_set_anded_into_the_works():
     ctx = _ctx(_Fake(5_400_000, None), slice=(1, 3))
     with pytest.raises(A.AnalyticsError) as e:
-        W.slice_cited(ctx, {"match_all": {}}, 5_400_000, False, "listing")
+        W.slice_cited(ctx, {"match_all": {}}, False, "listing")
     assert e.value.code == "invalid_slice" and "`not`" in e.value.message
-    W.slice_cited(ctx, {"match_all": {}}, 5_400_000, True, "listing")
+    W.slice_cited(ctx, {"match_all": {}}, True, "listing")
     with pytest.raises(A.AnalyticsError) as e:
-        W.slice_cited(ctx, {"match_all": {}}, 5_400_000, True, "listing")
+        W.slice_cited(ctx, {"match_all": {}}, True, "listing")
     assert "only one set" in e.value.message
 
 
@@ -299,3 +324,61 @@ def test_the_slices_ride_every_error_answer():
     assert W._slices_refusal(661_784).to_dict()["slices"] == 2
     assert 661_784 / 2 < W.MAX_SET_IDS                   # each of KU's 2 slices is small enough to send whole
     assert "slices" not in A.AnalyticsError("query_too_slow", "m", "f").to_dict()
+
+
+# A slice's ids are listed once and kept in the shared cache for the slice's other pages (oxjob #2016).
+class _Ids(_Fake):
+    """Partitions of real-looking work ids (W<partition><i>), so they can be kept."""
+
+    def __call__(self, body, what, index=None, **params):
+        got = super().__call__(body, what, index, **params)
+        for b in got.get("aggregations", {}).get("k", {}).get("buckets", []):
+            p, i = b["key"][1:].split("-")
+            b["key"] = f"https://openalex.org/W{int(p) * 1000 + int(i) + 1}"
+        return got
+
+
+def _slice_pages(monkeypatch, cache, pages=3, s=2, S=3):
+    import extensions
+    monkeypatch.setattr(extensions, "cache", cache)
+    out = []
+    for _ in range(pages):
+        fake = _Ids(refs=5_400_000, est=None)
+        ctx = W.Ctx("walden", A.Deadline(), query=parse(SET + BY_SOURCE), export=True, slice=(s, S))
+        ctx.search = fake
+        ids = W.slice_cited(ctx, {"term": {"type": "article"}}, True, "listing")
+        out.append((ids, fake.asked, ctx.deadline.calls))
+    return out
+
+
+def test_a_slice_is_listed_once_across_its_pages(monkeypatch):
+    cache = _Cache()
+    (first, listed, calls), *rest = _slice_pages(monkeypatch, cache)
+    assert listed == W.SLICE_PARTS + 1 and len(first) == W.SLICE_PARTS * 3       # its references count, its listing
+    assert first == sorted(first, key=lambda w: int(w.rsplit("W", 1)[1]))      # in work order, every page alike
+    assert all(ids == first and n == 0 for ids, n, _ in rest)                   # the same works, nothing asked
+    assert all(c == listed for _, _, c in rest)                                 # priced as the calls they replace
+    assert len(cache.data) == 1
+    _slice_pages(monkeypatch, cache, pages=1, s=3)                               # another slice: its own entry
+    assert len(cache.data) == 2
+
+
+def test_a_slice_is_listed_every_time_without_a_cache(monkeypatch):
+    assert [n for _, n, _ in _slice_pages(monkeypatch, _Cache(broken=True), pages=2)] == [W.SLICE_PARTS + 1] * 2
+
+
+def test_a_slice_with_an_id_that_isnt_a_work_isnt_kept(monkeypatch):
+    import extensions
+
+    class Odd(_Ids):
+        def __call__(self, body, what, index=None, **params):
+            got = super().__call__(body, what, index, **params)
+            for b in got.get("aggregations", {}).get("k", {}).get("buckets", [])[:1]:
+                b["key"] = "https://openalex.org/A1"
+            return got
+    cache = _Cache()
+    monkeypatch.setattr(extensions, "cache", cache)
+    ctx = W.Ctx("walden", A.Deadline(), query=parse(SET + BY_SOURCE), export=True, slice=(1, 3))
+    ctx.search = Odd(refs=5_400_000, est=None)
+    assert "https://openalex.org/A1" in W.slice_cited(ctx, {"match_all": {}}, True, "listing")
+    assert not cache.data

@@ -241,17 +241,13 @@ def _cache():
 
 
 def cache_get(key):
-    try:
-        return _cache().get(key)
-    except Exception:
-        return None
+    from extensions import cache_get
+    return cache_get(key)
 
 
 def cache_set(key, entry):
-    try:
-        _cache().set(key, entry, timeout=settings.RERANK_CACHE_SECONDS)
-    except Exception:
-        pass
+    from extensions import cache_set
+    cache_set(key, entry, settings.RERANK_CACHE_SECONDS)
 
 
 def compute_order(base_search, params, key, query=None):

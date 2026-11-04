@@ -19,6 +19,7 @@ from elasticsearch_dsl import A, Q, Search
 
 import settings
 from core.exceptions import APIQueryParamsError
+from extensions import cache_get, cache_set
 
 ID_PREFIX = "https://openalex.org/"
 COMPOSITE_PAGE = 50000  # under search.max_buckets (65,536)
@@ -49,11 +50,6 @@ def _entity_fields_and_index(entity):
     raise ValueError(f"no query-time join configured for entity {entity!r}")
 
 
-def _cache():
-    from extensions import cache
-    return cache
-
-
 def _cache_key(entity, param, value):
     raw = f"{entity}|{param}|{value}"
     return "join:v1:" + hashlib.sha1(raw.encode()).hexdigest()
@@ -70,10 +66,7 @@ def resolve_ids(entity, param, value, label):
     if values is not None:
         value = "|".join(sorted(str(v) for v in values))
     key = _cache_key(entity, param, value)
-    try:
-        cached = _cache().get(key)
-    except Exception:
-        cached = None
+    cached = cache_get(key)
     if cached is not None:
         return [ID_PREFIX + i for i in cached]
 
@@ -98,10 +91,7 @@ def resolve_ids(entity, param, value, label):
     # Big lists (e.g. an h-index range over most sources) aren't cached: arbitrary range values
     # could otherwise fill Redis with multi-MB entries.
     if len(short_ids) <= settings.JOIN_CACHE_MAX_IDS:
-        try:
-            _cache().set(key, short_ids, timeout=settings.JOIN_CACHE_SECONDS)
-        except Exception:
-            pass
+        cache_set(key, short_ids, settings.JOIN_CACHE_SECONDS)
     return [ID_PREFIX + i for i in short_ids]
 
 
@@ -130,10 +120,7 @@ def resolve_query_ids(entity, q, cache_text, limit, request_timeout=None):
     fields (oxjob #1530: authors with h-index > 20). Cached like `resolve_ids` when
     the list is small; `cache_text` names the query (its canonical OQO JSON)."""
     key = _cache_key(entity, "q", cache_text)
-    try:
-        cached = _cache().get(key)
-    except Exception:
-        cached = None
+    cached = cache_get(key)
     if cached is not None:
         return [ID_PREFIX + i for i in cached]
     _fields, index = _entity_fields_and_index(entity)
@@ -146,10 +133,7 @@ def resolve_query_ids(entity, q, cache_text, limit, request_timeout=None):
         return None
     short_ids = list_short_ids(base, request_timeout)
     if len(short_ids) <= settings.JOIN_CACHE_MAX_IDS:
-        try:
-            _cache().set(key, short_ids, timeout=settings.JOIN_CACHE_SECONDS)
-        except Exception:
-            pass
+        cache_set(key, short_ids, settings.JOIN_CACHE_SECONDS)
     return [ID_PREFIX + i for i in short_ids]
 
 
