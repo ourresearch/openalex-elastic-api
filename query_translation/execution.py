@@ -1057,6 +1057,16 @@ def _table_refusal():
                     "fix": "Drop table for the groups, or ask for table=summary."}), 400
 
 
+def _download_text(oqo) -> str:
+    """The text a download's file is named for: the query as the echo writes it (the
+    sentence under the core style, #1555) and as written (a walk's, not the works query it
+    ran as, #1535). No name lookups: links stay bare IDs."""
+    from query_translation.oql_pipeline import render_pipeline
+    from query_translation.x_query import effective_style, new_oql
+    echo = _echo_oqo(oqo)
+    return (new_oql(echo) if effective_style() == "core" else None) or render_pipeline(echo)
+
+
 def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Optional[int] = None,
                   sliced: Optional[tuple] = None):
     """A pipeline result as a download (oxjob #1550): the groups as one flat CSV (with a
@@ -1069,11 +1079,9 @@ def _csv_response(oqo, body: dict, cost: dict, paging: bool = False, split: Opti
     the exporter adds the slices up (X-Set-Merge) and costs 1/S of its rows' price."""
     from flask import Response
     from query_translation import analytics, analytics_csv
-    from query_translation.oql_pipeline import render_pipeline
     table = _table_asked()
-    # query.oql is the query as written (a walk's, not the works query it ran as, #1535)
     data, name, mimetype, rows = analytics_csv.build_download(
-        body, oqo, render_pipeline(_echo_oqo(oqo)), table, split=split)
+        body, oqo, _download_text(oqo), table, split=split)
     price = analytics.export_price(cost, rows, slices=sliced[1] if sliced else 1)
     refused = _credit_refusal(price, "narrow the query, or export fewer groups")
     if refused is not None:

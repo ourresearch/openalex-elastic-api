@@ -3,7 +3,8 @@
 `meta.measures[].oql` labels the website's table headers, chart legends, the connector's
 columns and the CSV headers. It said `mean citation count`, `percent of those works` and
 `percent has DOI` while the sentence above the table said `mean citations`, `share` and
-`percent with a DOI`: one word per concept.
+`percent with a DOI`: one word per concept. A download's file name follows the sentence
+too (it was the old general form's slug).
 """
 import pytest
 
@@ -54,3 +55,21 @@ def test_a_number_with_no_sentence_name_keeps_its_field_words():
 def test_a_sort_reads_the_label_and_the_older_words(word, key):
     oqo = parse_either(TABLE)
     assert _sort_column(word, word, oqo) == key
+
+
+# --- a download is named for the sentence ---------------------------------------------
+
+@pytest.mark.parametrize("style,start", [
+    ("core", "openalex-get-the-count-and-share-of-works-with-kelp-in-the-title-by-year"),
+    ("pipeline", "openalex-get-works-where-title-has-kelp-then"),
+])
+def test_a_download_is_named_for_the_echo(style, start):
+    from flask import Flask
+
+    from query_translation import analytics_csv
+    from query_translation.execution import _download_text
+    oqo = parse_either("get works where title has kelp; then, group those works by year; "
+                       "finally, summarize using count and percent of those works")
+    with Flask(__name__).test_request_context(f"/?oql_style={style}"):
+        name = analytics_csv.filename(_download_text(oqo))
+    assert name.startswith(start)
