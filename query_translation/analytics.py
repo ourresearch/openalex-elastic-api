@@ -3169,8 +3169,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
 
 
 def _too_many_to_sort(lv: Level, m: Optional[Measure], how_many: str, entity: str = "works"):
-    from query_translation.oql_pipeline import measure_text
-    what = measure_text(m, entity.replace("-", " ")) if m is not None else "that column"
+    from query_translation.oql_pipeline import measure_words
+    what = measure_words(m, entity.replace("-", " ")) if m is not None else "that column"
     return AnalyticsError(
         "too_many_groups",
         f"Sorting by {what} reads every {_split_noun(lv)} group, and there are "
@@ -3591,6 +3591,8 @@ def _count_entity_matches(lv: Level, part, deadline: Deadline,
 
 
 def _measure_meta(m: Measure, entity: str) -> dict:
-    from query_translation.oql_pipeline import measure_text
+    """A number's column: its label is the sentence's name for it (`mean citations`,
+    `share`), so the table says what the query says (one word per concept, #1555)."""
+    from query_translation.oql_pipeline import measure_words
     return {"key": m.key, "measure": m.measure, "column_id": m.column_id,
-            "oql": measure_text(m, entity.replace("-", " "))}
+            "oql": measure_words(m, entity.replace("-", " "))}

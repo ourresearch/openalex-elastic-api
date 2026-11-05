@@ -528,7 +528,8 @@ def measure_text(m: Measure, noun: str) -> str:
 def measure_words(m: Measure, noun: str) -> str:
     """A number's words in a statement: the sentence's name when it has one (`share`, `mean
     citations`, `sum of citations`; one word per concept across the two forms, #1589's
-    list), else `measure_text`'s field words. Column labels keep `measure_text`."""
+    list), else `measure_text`'s field words. Column labels (`meta.measures[].oql`) use it
+    too, so a table's headers say what its sentence says."""
     from query_translation.oql_core import MEASURE_NAMES, TABLE_NAMES  # lazy: core imports this module
     name = MEASURE_NAMES.get((m.measure, m.column_id)) if m.measure != "count" else None
     return TABLE_NAMES.get(name, name) if name else measure_text(m, noun)

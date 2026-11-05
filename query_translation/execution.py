@@ -328,9 +328,10 @@ def _sort_column(col: str, word: str, oqo: OQO) -> str:
         return col
     text = " ".join(word.split()).lower()
     if oqo.calculate:
-        from query_translation.oql_pipeline import measure_text
-        for m in oqo.calculate:
-            if text in (measure_text(m, "works").lower(), m.key.lower()):
+        from query_translation.oql_pipeline import measure_text, measure_words
+        for m in oqo.calculate:   # the column label, or the older field words
+            if text in (measure_words(m, "works").lower(), measure_text(m, "works").lower(),
+                        m.key.lower()):
                 return m.key
         if text in ("count", "works", "count of those works"):
             return "count"
