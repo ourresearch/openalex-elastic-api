@@ -83,6 +83,7 @@ def test_the_refusal_names_a_paging_recipe():
     with pytest.raises(APIQueryParamsError) as e:
         validate_sample_cursor({"sample": 5000, "cursor": "*", "per_page": 100})
     assert "sample=5000&seed=42&per_page=200&page=1" in str(e.value)
+    assert "works" not in str(e.value)  # every entity takes sample (the first live hit was /authors)
 
 
 # ---------- why a page wasn't reranked ----------

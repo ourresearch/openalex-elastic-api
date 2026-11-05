@@ -157,7 +157,7 @@ def validate_sample_cursor(params):
     if sample and cursor and sample > per_page:
         raise APIQueryParamsError(
             f"cursor paging doesn't work with sample: the walk would stop after the first {per_page} of the {sample} "
-            f"sampled works. Page through the sample with a seed and page numbers instead: "
+            f"sampled results. Page through the sample with a seed and page numbers instead: "
             f"sample={sample}&seed=42&per_page={min(sample, 200)}&page=1, then page=2 and so on."
         )
 
