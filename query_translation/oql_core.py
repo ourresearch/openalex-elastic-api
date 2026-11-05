@@ -93,7 +93,13 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "primary_location.source.host_organization_lineage": "publisher",
         "language": "language", "corresponding_author_ids": "corresponding author",
         "corresponding_institution_ids": "corresponding institution",
-        "is_retracted": "retracted", "authorships.author.id": "author"}
+        "is_retracted": "retracted", "authorships.author.id": "author",
+        # the general form's words, now in the sentence too (oxjob #1555, 5 Nov)
+        "authorships.institutions.continent": "continent",
+        "authorships.institutions.type": "institution type",
+        "authorships.institutions.is_global_south": "global south",
+        "primary_location.source.type": "source type", "primary_location.license": "license",
+        "keywords.id": "keyword"}
 DIM_COLUMNS = {v: k for k, v in DIMS.items()}
 # splits by a role on the works: their `Only` sentence's plural (a count floor only)
 ROLE_NOUNS = {"corresponding_author_ids": "corresponding authors",

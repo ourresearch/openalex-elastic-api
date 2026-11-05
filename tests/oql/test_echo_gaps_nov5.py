@@ -117,6 +117,30 @@ def test_works_ids_and_collections_after_in_are_unchanged(text):
     assert all("ids.openalex" in str(f) for f in _filters(text))
 
 
+@pytest.mark.parametrize("split,column", [
+    ("continent", "authorships.institutions.continent"),
+    ("institution type", "authorships.institutions.type"),
+    ("source type", "primary_location.source.type"),
+    ("license", "primary_location.license"),
+    ("keyword", "keywords.id"),
+    ("global south", "authorships.institutions.is_global_south"),
+])
+def test_the_general_forms_splits_read_as_sentences(split, column):
+    general = (f"get works where title has kelp; then, group those works by {split}; "
+               "finally, summarize using count")
+    oqo = canonicalize_oqo(parse_either(general))
+    assert [g.column_id for g in oqo.group_by] == [column]
+    sentence = render_core(oqo)
+    assert sentence == f"get the count of works with kelp in the title by {split}"
+    assert canonicalize_oqo(parse_either(sentence)).to_dict() == oqo.to_dict()
+
+
+def test_a_new_split_pairs_with_year():
+    oqo = canonicalize_oqo(parse_either("get the count and share of works about kelp by continent and year"))
+    assert [g.column_id for g in oqo.group_by] == ["authorships.institutions.continent", "publication_year"]
+    assert render_core(oqo) == "get the count and share of works about kelp by continent and year"
+
+
 def test_a_bare_link_of_another_kind_gets_its_words():
     with pytest.raises(OQLError) as e:
         parse_either("get works in (A5023888391)")

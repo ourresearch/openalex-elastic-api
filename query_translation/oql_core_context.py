@@ -323,9 +323,10 @@ _SPLIT_DOC = {"year": "`get the count of works about kelp by year since 2004`. T
               "country": "`get the count of works about \"quantum computing\" by country`.",
               "company": "`get the count of works co-authored with [Kiel University](I32021983) "
                          "by company`."}
-_SPLIT_ORDER = ["year", "country", "institution", "author", "journal", "source", "publisher",
-                "funder", "topic", "subfield", "field", "domain", "SDG", "type", "open access",
-                "open access status", "language", "corresponding author",
+_SPLIT_ORDER = ["year", "country", "continent", "global south", "institution", "institution type",
+                "author", "journal", "source", "source type", "publisher",
+                "funder", "topic", "subfield", "field", "domain", "keyword", "SDG", "type",
+                "open access", "open access status", "license", "language", "corresponding author",
                 "corresponding institution", "company",
                 "repository", "retracted"]
 SPLITS = {}

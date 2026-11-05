@@ -258,7 +258,7 @@ get the count and share of [France](FR)'s works by year since 2013 and open acce
 get the count of [Kenya](KE)'s works by open access
 ```
 
-Year is always the x-axis wherever you write it. A yes/no split gives two rows (`open access` and `not open access`). Splits by continent, institution type, source type, license, keyword or global south, number bins, and three splits need [the general form](#when-a-sentence-cant-say-it-the-general-form).
+Year is always the x-axis wherever you write it. A yes/no split gives two rows (`open access` and `not open access`). Continent, institution type, source type, license, keyword and global south are splits too (`get the count of works about kelp by continent and year`). Number bins and three splits need [the general form](#when-a-sentence-cant-say-it-the-general-form).
 
 ### Which groups
 
@@ -398,7 +398,7 @@ get works where title-abstract-keywords has (kelp); then, group those works by c
 get works where title-abstract-keywords has (kelp); then, group those works by year; finally, summarize using mean reference count and median authors count
 ```
 
-The first counts distinct CRISPR authors. Bins at `(1, 10, 100)` give `0`, `1-9`, `10-99` and `100+`; `into FWCI bins of 0.5` gives equal widths. A sample with a seed is the same sample every time. The general form splits up to three ways, by any field (continent, institution type, source type, license, keyword, global south), and takes `mean`, `median`, `sum`, `min` and `max` of any number field and `percent` of any yes/no field.
+The first counts distinct CRISPR authors. Bins at `(1, 10, 100)` give `0`, `1-9`, `10-99` and `100+`; `into FWCI bins of 0.5` gives equal widths. A sample with a seed is the same sample every time. The general form splits up to three ways, by any field (`exact institution`, `institution country`, `best OA version`), and takes `mean`, `median`, `sum`, `min` and `max` of any number field and `percent` of any yes/no field.
 
 ## What OQL assumes
 

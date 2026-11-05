@@ -68,7 +68,7 @@ OQL has two ways to write a statement:
 - comparing one thing against the rest, or conditions, searches or periods side by side (`compare country [India](IN) versus country is not [India](IN)`); named things side by side are a table (`by country in ([United States](US), [China](CN))`);
 - walks (each author of a set, then all their works);
 - number bins, samples, and three splits;
-- splits by continent, institution type, source type, license, keyword or global south;
+- splits by a field outside the sentence's list ([Splits](#splits)), such as `exact institution` or `institution country`;
 - numbers outside the sentence's list (`mean reference count`, `min date`, `percent global south`), and counts of distinct things (`summarize all those authors using count`);
 - a filter on the groups by a number other than the count (`where mean FWCI of those works is at least 2`).
 
@@ -186,8 +186,8 @@ A thing's own fields (`h-index`, `works count`) are not numbers about the works:
 
 One or two splits, joined with `and`, never the same split twice:
 
-- **Fields of the works:** `year`, `type`, `language`, `open access`, `open access status`, `retracted`, `topic`, `subfield`, `field`, `domain`, `SDG`.
-- **Things:** `author`, `corresponding author`, `institution`, `company`, `country`, `journal`, `source`, `repository`, `publisher`, `funder`.
+- **Fields of the works:** `year`, `type`, `language`, `open access`, `open access status`, `license`, `retracted`, `topic`, `subfield`, `field`, `domain`, `keyword`, `SDG`, `continent`, `global south`, `institution type`, `source type`.
+- **Things:** `author`, `corresponding author`, `corresponding institution`, `institution`, `company`, `country`, `journal`, `source`, `repository`, `publisher`, `funder`.
 
 ```
 get the count of works about kelp by year since 2000
@@ -925,8 +925,10 @@ splits        ::= split ( 'and' split )?            /* two different splits at m
 split         ::= 'year' time?
                 | fieldSplit valueSet?
                 | thingSplit ( valueSet | groupPart* )
-fieldSplit    ::= 'type' | 'language' | 'open access' | 'open access status' | 'retracted'
-                | 'topic' | 'subfield' | 'field' | 'domain' | 'SDG' | 'corresponding author'
+fieldSplit    ::= 'type' | 'language' | 'open access' | 'open access status' | 'license' | 'retracted'
+                | 'topic' | 'subfield' | 'field' | 'domain' | 'keyword' | 'SDG' | 'continent'
+                | 'global south' | 'institution type' | 'source type'
+                | 'corresponding author' | 'corresponding institution'
 thingSplit    ::= 'author' | 'institution' | 'company' | 'country' | 'journal' | 'source'
                 | 'repository' | 'publisher' | 'funder'
 valueSet      ::= 'in' '(' value ( ',' value )* ')'    /* up to 100 */
