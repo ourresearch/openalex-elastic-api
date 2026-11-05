@@ -1023,6 +1023,9 @@ _FROM_OR_IN_KINDS = FROM_KINDS + ("sources",)
 # (each fix reads back: tests/oql/test_echo_gaps_nov4.py)
 _KIND_FIXES = {"publishers": "a publisher reads `published by", "funders": "a funder reads `funded by",
                "authors": "an author reads `by", "topics": "a topic reads `in the topic"}
+# every kind of link `from` / `in` reads or explains: today's grammar leaves `get works in
+# (S137773608)` to the sentence for these, rather than read works listed by ID (oql_lang)
+IN_LINK_KINDS = _FROM_OR_IN_KINDS + tuple(_KIND_FIXES)
 
 
 def _from_or_in(t: "_Text", word: str, ids: List[str]):

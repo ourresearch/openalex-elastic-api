@@ -1,4 +1,10 @@
-"""A table's column labels say what its sentence says (oxjob #1555, 2026-11-05).
+"""Echo gaps fixed 2026-11-05 (oxjob #1555).
+
+A bare link reads like a named one: a journal URL's echo `get works in (S137773608)` read
+back as works listed by ID (a 400 on production), found by a sweep of every works filter's
+echo (`work/scripts/nov5_echo_sweep.py` in the oxjob).
+
+A table's column labels say what its sentence says.
 
 `meta.measures[].oql` labels the website's table headers, chart legends, the connector's
 columns and the CSV headers. It said `mean citation count`, `percent of those works` and
@@ -10,9 +16,11 @@ import pytest
 
 from query_translation import analytics as A
 from query_translation.execution import _sort_column
+from query_translation.diagnostics import OQLError
 from query_translation.oql_core import MEASURE_NAMES, render_core
-from query_translation.oql_parser import parse_either
+from query_translation.oql_parser import core_reason, parse_either
 from query_translation.oqo import Measure
+from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 TABLE = ("get the count, share, mean citations, median citations, sum of citations, "
          "percent with a DOI, percent open access, and mean FWCI of works about kelp by country")
@@ -73,3 +81,43 @@ def test_a_download_is_named_for_the_echo(style, start):
     with Flask(__name__).test_request_context(f"/?oql_style={style}"):
         name = analytics_csv.filename(_download_text(oqo))
     assert name.startswith(start)
+
+
+# --- a bare link after `in` reads like a named one -------------------------------------
+
+def _filters(text):
+    return canonicalize_oqo(parse_either(text)).to_dict()["filter_rows"]
+
+
+@pytest.mark.parametrize("url_filter", [
+    "primary_location.source.id:S137773608",
+    "primary_location.source.id:S137773608|S4210178049",
+    "authorships.institutions.lineage:I63966007",
+    "authorships.institutions.continent:Q15",
+])
+def test_a_url_filters_echo_reads_back_without_names(url_filter):
+    from query_translation.url_parser import parse_url_to_oqo
+    oqo = canonicalize_oqo(parse_url_to_oqo("works", filter_string=url_filter))
+    echo = render_core(oqo)
+    assert canonicalize_oqo(parse_either(echo)).to_dict() == oqo.to_dict()
+
+
+def test_a_bare_journal_after_in_is_the_journal():
+    assert _filters("get works in (S137773608)") == _filters("get works in [Nature](S137773608)")
+    assert _filters("get works in (S137773608)") == [
+        {"column_id": "primary_location.source.id", "value": "S137773608"}]
+
+
+@pytest.mark.parametrize("text", [
+    "get works in (W2741809807, W2100837269)",      # works listed by ID
+    "get works in (col_LV29j8URoX)",                # a works collection
+    "get works in (US)",                            # not a link to the sentence: unchanged
+])
+def test_works_ids_and_collections_after_in_are_unchanged(text):
+    assert all("ids.openalex" in str(f) for f in _filters(text))
+
+
+def test_a_bare_link_of_another_kind_gets_its_words():
+    with pytest.raises(OQLError) as e:
+        parse_either("get works in (A5023888391)")
+    assert "by (A5023888391)" in core_reason(e.value.core_error)[1]

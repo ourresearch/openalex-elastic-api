@@ -4254,7 +4254,19 @@ class _Parser:
     def _link_to_other_kind(self, j: int) -> bool:
         """At a set's start (offset j): a link to something other than works or a
         collection, `get works in [Austria](AT)`, which the sentence reads as a place
-        (oxjob #1555, 4 Nov), not as works listed by ID. (`_set_words` checked the link.)"""
+        (oxjob #1555, 4 Nov), not as works listed by ID. (`_set_words` checked the link.)
+        A link's name is optional, so a bare ID of another kind is one too: the echo
+        `get works in (S137773608)` read back as works listed by ID (a 400; 5 Nov)."""
+        if self.peek(j).kind == "LP":
+            from query_translation.oql_core import IN_LINK_KINDS  # lazy: core imports this module
+            k = j + 1
+            while self.peek(k) is not None and self.peek(k).kind == "LP":
+                k += 1          # `in ((S1) or (S2))`
+            t = self.peek(k)
+            v = t.val if t is not None and t.kind == "WORD" else ""
+            # a bare two-letter word isn't a country link to the sentence (it echoes `(US)'s works`)
+            return bool(v) and not _is_entity_id("works", v) and any(
+                _is_entity_id(kind, v) for kind in IN_LINK_KINDS if kind != "countries")
         if self.peek(j).kind != "ANNOT":
             return False
         t = self.peek(j + 2)
