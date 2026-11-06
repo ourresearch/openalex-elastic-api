@@ -54,6 +54,7 @@ def test_valid_members_pass(oql):
     "works where language is english",            # name, not code
     "works where sdg is 99",                      # out-of-range id
     "works where type is boguskind",
+    "works where type is libguides",              # retired 7 Nov 2026 (oxjob #1647)
     "works where open access status is sparkly",
 ])
 def test_non_members_rejected(oql):
@@ -72,6 +73,16 @@ def test_work_type_label_or_retired_type_suggests_the_type():  # oxjob #1836
     assert "Did you mean 'article'?" in msg
     [msg] = _invalid_value_errors("works where type is book-section")
     assert "Did you mean 'reference-entry'?" in msg
+
+
+def test_a_retired_type_nothing_replaced_says_when_and_why():  # oxjob #1647
+    [msg] = _invalid_value_errors("works where type is libguides")
+    assert "'libguides' is no longer a work type (removed 7 Nov 2026): library guides aren't scholarly works" in msg
+    assert "Did you mean" not in msg
+    [msg] = _invalid_value_errors("works where type is (article or libguides)")
+    assert "removed 7 Nov 2026" in msg
+    [msg] = _invalid_value_errors("works where type is grant")
+    assert "https://api.openalex.org/awards" in msg
 
 
 def test_language_name_suggests_code():
