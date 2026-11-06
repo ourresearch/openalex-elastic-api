@@ -486,8 +486,36 @@ def _measure_name(m: Measure) -> str:
     return name
 
 
-def _show(measures: List[Measure]) -> str:
-    return "Show " + english_list([_measure_name(m) for m in measures]) + "."
+def _show(measures: List[Measure], thing: Optional[str] = None) -> str:
+    return "Show " + english_list([MEASURE_NAMES.get((m.measure, m.column_id)) or _show_word(m.column_id, thing)
+                                   or _measure_name(m) for m in measures]) + "."
+
+
+def _show_word(col: str, thing: Optional[str]) -> Optional[str]:
+    """An own field's word in `Show` (`last known institution` beside authors, `country`
+    beside institutions): the general form's word, when it reads back on the things."""
+    if not thing:
+        return None
+    word = L.own_field_word(col) or L._oql_field(col)[0]
+    return word if L._word_column(thing, word) == col else None
+
+
+def _show_field(name: str, thing: Optional[str]) -> Measure:
+    """A `Show` name: a number's name, else a field of the split's things."""
+    try:
+        return _measure_named(name)
+    except NotCore:
+        col = L._word_column(thing, name) if thing else None
+        fld = L._BY_COLUMN.get(col) if col else None
+        if col is None or not L._is_column_of(col, thing) or (fld and fld.kind in ("search", "collection")):
+            raise
+        return Measure("value", col)
+
+
+def _thing_split(groups) -> Optional[str]:
+    """The plural of the things a table splits by (`authors`), if it splits by things."""
+    return next((THING_NOUNS[g.column_id] for g in groups
+                 if g.column_id in THING_NOUNS and g.values is None), None)
 
 
 # ---------------------------------------------------------------------------
@@ -831,11 +859,10 @@ def _table(oqo, resolver):
     measures = list(oqo.calculate) or [Measure("count")]
     nums = [m for m in measures if m.measure != "value"] or [Measure("count")]
     own = [m for m in measures if m.measure == "value"]
+    thing = _thing_split(oqo.group_by)
     for m in own:
-        if m.column_id not in OWN_FIELDS:
+        if m.column_id not in OWN_FIELDS and _show_word(m.column_id, thing) is None:
             raise NotCore(f"no words for {m.column_id}")
-    thing = next((THING_NOUNS[g.column_id] for g in oqo.group_by
-                  if g.column_id in THING_NOUNS and g.values is None), None)
     possessive = not any(g.column_id in STAR_COLUMNS for g in oqo.group_by)
     w = _works(oqo.filter_rows, resolver, possessive=possessive, thing=thing, corpus=oqo.corpus)
     year_dim = any(g.column_id == "publication_year" for g in oqo.group_by)
@@ -891,7 +918,7 @@ def _table(oqo, resolver):
     join = MEASURE_JOIN.get(_measure_name(nums[-1]), "of")
     text = f"get the {names} {join} {works_text} by {' and '.join(splits)}{order}"
     shown = [m for m in own if m is not sorted_own]
-    extras = ([_show(shown)] if shown else []) + only
+    extras = ([_show(shown, thing)] if shown else []) + only
     return text + (". " + " ".join(extras) if extras else "")
 
 
@@ -919,6 +946,8 @@ def _table_order(oqo, measures) -> Tuple[str, Optional[Measure]]:
     word = "highest" if desc else "lowest"
     if len(measures) == 1 and m.measure != "value":
         return f", {word} first", None      # one number: `highest first` says enough
+    if m.measure == "value" and m.column_id not in OWN_FIELDS:
+        raise NotCore(f"an order by {m.column_id}, which has no order words")
     name = OWN_FIELDS[m.column_id][1] if m.measure == "value" else _table_name(m)
     return f", {word} {name} first", (m if m.measure == "value" else None)
 
@@ -1339,10 +1368,13 @@ def _split_sentences(t: _Text) -> List[str]:
     return [p[:-1] if p.endswith(".") else p for p in parts]
 
 
+def _names(s: str) -> List[str]:
+    """`a, b, and c` (the Oxford comma, canonical) or `a, b and c`."""
+    return [n.strip() for n in re.split(r",\s*(?:and\s+)?|\s+and\s+", s) if n.strip()]
+
+
 def _parse_measures(t: _Text, s: str) -> List[Measure]:
-    # `a, b, and c` (the Oxford comma, canonical) or `a, b and c`
-    names = [n.strip() for n in re.split(r",\s*(?:and\s+)?|\s+and\s+", s) if n.strip()]
-    return [_measure_named(n) for n in names]
+    return [_measure_named(n) for n in _names(s)]
 
 
 def _measure_named(n: str) -> Measure:
@@ -1442,9 +1474,11 @@ def _parse_core(text: str, collection_type: Optional[Callable] = None) -> OQO:
         raise NotCore("an `Only` sentence follows a table")     # loud, never dropped
     if table:
         oqo = _parse_table(t, main[len("get the "):], collection_type, only)
+        thing = _thing_split(oqo.group_by)
         for e in show:
             oqo.calculate = list(oqo.calculate) + [
-                x for x in _parse_measures(t, e) if all(x.key != y.key for y in oqo.calculate)]
+                x for x in (_show_field(n, thing) for n in _names(e))
+                if all(x.key != y.key for y in oqo.calculate)]
         return oqo
     if low.startswith("get the "):
         oqo = _parse_number(t, main[len("get the "):], collection_type)
@@ -1706,8 +1740,7 @@ def _parse_table(t, s, collection_type, only):
         raise NotCore("the same split twice", "split two different ways: `by year and country`")
     if len(groups) > 2:
         raise NotCore("three splits", "a table splits two ways at most: `by year and country`")
-    thing = next((THING_NOUNS[g.column_id] for g in groups
-                  if g.column_id in THING_NOUNS and g.values is None), None)
+    thing = _thing_split(groups)
     rows = _parse_works(t, phrase, collection_type, thing=thing) + rows_extra
     for o in only:
         # `Only institutions with at least 10 works about kelp.`: a count floor on the split of

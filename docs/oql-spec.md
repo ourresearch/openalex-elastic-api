@@ -231,7 +231,7 @@ get the count of works about kelp by author. Only authors with at least 20 works
 
 ### Show
 
-`Show` adds a thing's own fields as columns: `Show h-index.`, `Show works count.`, `Show h-index and works count.` It needs a split by things that have the field. An order by an own field shows it without `Show`:
+`Show` adds a thing's own fields as columns, in their own names: `Show h-index.`, `Show works count.`, `Show h-index and last known institution.`, an institution's `Show country and type.` It needs a split by things that have the field. An order by an own number shows it without `Show`:
 
 ```
 get the count of works about kelp by author, highest h-index first. Show works count.

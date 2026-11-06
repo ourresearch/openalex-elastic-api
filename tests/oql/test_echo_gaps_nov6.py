@@ -8,12 +8,18 @@ answered but echoed `where country_codes is BR`, which doesn't parse.
 
 A count floor on a field split is its own `Only` sentence, like a thing split's
 (`Only keywords with at least 50 works about kelp.`; it fell back to the general form).
+
+`Show` takes any own field of the split's things, in the general form's words
+(`Show h-index and last known institution.`); it knew only h-index and works count, so a
+table of authors with their institution echoed `get authors who published works ...; then,
+summarize each author using ...`.
 """
 import pytest
 
 import tests.oql._qt_loader  # noqa: F401
 from core.properties import get_entity_properties
 from query_translation import oql_lang as L
+from query_translation.diagnostics import OQLError
 from query_translation.oql_context import parse_context
 from query_translation.oql_core import render_core
 from query_translation.oql_parser import parse_either
@@ -132,3 +138,36 @@ def test_the_editor_offers_the_splits_own_plural_after_only():
         ["institutions", "years"]
     assert "with at least" in _suggest(
         "get the count of works about kelp by corresponding author. Only corresponding authors |")
+
+
+# --- `Show` any own field of the split's things --------------------------------------------
+
+@pytest.mark.parametrize("general,sentence", [
+    ("get works where title-abstract has kelp and year >= 2020; then, group those works by author; "
+     "finally, summarize using count, h-index, and last known institution",
+     "get the count of works since 2020 with kelp in the title or abstract by author. "
+     "Show h-index and last known institution."),
+    ("get works where title-abstract has kelp; then, group those works by author; finally, summarize using count and ORCID",
+     "get the count of works with kelp in the title or abstract by author. Show ORCID."),
+    ("get works where title-abstract has kelp; then, group those works by institution; "
+     "finally, summarize using count, country, and type",
+     "get the count of works with kelp in the title or abstract by institution. Show country and type."),
+])
+def test_own_fields_beside_groups_echo_as_show(general, sentence):
+    oqo = canonicalize_oqo(parse_either(general))
+    assert render_core(oqo) == sentence
+    assert canonicalize_oqo(parse_either(sentence)).to_dict() == oqo.to_dict()
+
+
+@pytest.mark.parametrize("text", [
+    "get the count of works about kelp by author. Show citation count.",
+    "get the count of works about kelp by author. Show i10-index.",
+    "get the count of works about kelp by author, highest h-index first. Show last known institution.",
+])
+def test_show_reads_back(text):
+    assert render_core(canonicalize_oqo(parse_either(text))) == text
+
+
+def test_show_needs_a_split_by_things_that_have_the_field():
+    with pytest.raises(OQLError):
+        parse_either("get the count of works about kelp by year. Show last known institution.")
