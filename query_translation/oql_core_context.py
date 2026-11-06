@@ -698,7 +698,12 @@ _MEASURE_TABLE = _ptable(MAIN_MEASURES)
 _SHOW_TABLE = _ptable(SHOW_MEASURES + _HOVER_ONLY)
 _NOUN_TABLE = _ptable(list(ADJECTIVES) + list(NOUNS) + ["all"])
 _HEAD_ONLY_TABLE = _ptable(["the"] + list(THINGS))
-_THING_PLURAL_TABLE = _ptable(THINGS)
+# a role or field split's `Only` noun, by its split word (`keyword` -> `keywords`)
+_ONLY_PLURAL = {C.DIMS[c]: p for c, p in C.ONLY_PLURALS.items()}
+_ONLY_NOUNS = {p: _e(p, "noun", f"the {p} the table splits by",
+                     f"A count floor on the split: `Only {p} with at least 10 works about kelp.`")
+               for p in _ONLY_PLURAL.values()}
+_ONLY_NOUN_TABLE = _ptable(list(THINGS) + list(_ONLY_NOUNS))
 _SENTENCE_TABLE = _ptable(SENTENCE)
 _COMPARATOR_TABLE = _ptable(COMPARATORS)
 _COLLECTION_TABLE = _ptable([K["the collection"]])
@@ -1223,7 +1228,7 @@ class _Walk:
         if self.kind not in ("table", "things"):
             return []
         out = [SENTENCE["Show"]]
-        if self.kind == "table" and self.thing_split:
+        if self.kind == "table" and (self.thing_split or self.only_plurals()):
             out.append(SENTENCE["Only"])
         return [_with(o, insert=insert + o["value"] + " ") for o in out] if insert else out
 
@@ -1322,12 +1327,18 @@ class _Walk:
             else:
                 self.skip()
 
+    def only_plurals(self) -> List[str]:
+        """The table's role and field splits' `Only` nouns (`keywords`)."""
+        return [_ONLY_PLURAL[v] for v in self.splits if v in _ONLY_PLURAL]
+
     def only(self):
-        nouns = [THINGS[self.thing_split]] if self.thing_split in THINGS else list(THINGS.values())
-        slot = _Slot("noun", nouns, table=_THING_PLURAL_TABLE)
+        nouns = [THINGS[self.thing_split]] if self.thing_split in THINGS else []
+        nouns += [_ONLY_NOUNS[p] for p in self.only_plurals()]
+        nouns = nouns or list(THINGS.values())
+        slot = _Slot("noun", nouns, table=_ONLY_NOUN_TABLE)
         if self.tok() is None:
             self.stop(slot)
-        if self.match(_THING_PLURAL_TABLE, slot) is None:
+        if self.match(_ONLY_NOUN_TABLE, slot) is None:
             self.skip()
         if self.tok() is None:
             self.stop(S_COMPARATOR)

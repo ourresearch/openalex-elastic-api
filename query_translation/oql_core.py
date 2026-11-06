@@ -28,6 +28,7 @@ from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_tex
 from query_translation.oqo import (CORPUS_ALIASES, CORPUS_CANONICAL_PHRASE, OQO, AffiliationFilter,
                                    BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, SortBy,
                                    is_collection_id, normalize_corpus)
+from query_translation.oqo_canonicalizer import _sort_key
 from query_translation.walks import link_for
 
 # ---------------------------------------------------------------------------
@@ -101,9 +102,6 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "primary_location.source.type": "source type", "primary_location.license": "license",
         "keywords.id": "keyword"}
 DIM_COLUMNS = {v: k for k, v in DIMS.items()}
-# splits by a role on the works: their `Only` sentence's plural (a count floor only)
-ROLE_NOUNS = {"corresponding_author_ids": "corresponding authors",
-              "corresponding_institution_ids": "corresponding institutions"}
 _TYPE_NOUNS_LONGEST = sorted(NOUN_TYPES, key=lambda n: -len(n.split()))
 
 # rank: group column -> the things' plural noun
@@ -117,6 +115,11 @@ THING_TYPE_NOUNS = {("institutions", "company"): "companies", ("sources", "journ
                     ("sources", "repository"): "repositories"}
 NOUN_THINGS = {v: k for k, v in THING_NOUNS.items()}
 NOUN_THING_TYPES = {v: k for k, v in THING_TYPE_NOUNS.items()}
+# splits by a role or a field of the works (not things, not yes/no): their `Only` sentence's
+# plural, a count floor only (`Only keywords with at least 50 works about kelp.`)
+_PLURAL_OVERRIDES = {"open access status": "open access statuses"}
+ONLY_PLURALS = {c: _PLURAL_OVERRIDES.get(w, w + "s") for c, w in DIMS.items()
+                if c not in THING_NOUNS and getattr(L._BY_COLUMN.get(c), "kind", None) != "bool"}
 
 # measures: (measure, column) -> name
 MEASURE_NAMES = {("count", None): "count of works",
@@ -525,7 +528,7 @@ def _own_place(f, noun: str, resolver=None) -> Optional[str]:
     their record, `_record_text`, so no continent for authors)."""
     if not isinstance(f, LeafFilter) or f.is_negated or f.operator != "is":
         return None
-    if f.column_id == "country_code":
+    if f.column_id == L._THING_IN.get(noun, "country_code"):   # the parser's place columns
         return f"in {_link(f.value, 'authorships.countries', resolver)}"
     if f.column_id == "continent" and noun != "authors":
         return f"in {_link(f.value, 'authorships.institutions.continent', resolver)}"
@@ -843,14 +846,14 @@ def _table(oqo, resolver):
             if g.column_id not in DIMS:
                 raise NotCore("a list on a split with no word")
             word = _dim_words(g, DIMS[g.column_id], w, resolver)
-        elif g.column_id in ROLE_NOUNS and g.where is not None:
+        elif g.column_id in ONLY_PLURALS and g.where is not None:
             # `by corresponding author. Only corresponding authors with at least 10 works ...`
             count = g.where
             if not (isinstance(count, MeasureFilter) and count.measure == "count"
                     and not count.is_negated and count.operator in COMPARATOR_WORDS):
-                raise NotCore("which groups, on a role split: only a count floor")
-            word = DIMS[g.column_id]
-            only.append(f"Only {ROLE_NOUNS[g.column_id]} with {COMPARATOR_WORDS[count.operator]} "
+                raise NotCore("which groups, on a field split: only a count floor")
+            word = _dim_words(g, DIMS[g.column_id], w, resolver)     # `year since 2015`
+            only.append(f"Only {ONLY_PLURALS[g.column_id]} with {COMPARATOR_WORDS[count.operator]} "
                         f"{_number(count.value)} {w.text(keep_time=True)}.")
         elif g.where is not None:
             if g.column_id not in THING_NOUNS:
@@ -1709,10 +1712,10 @@ def _parse_table(t, s, collection_type, only):
     for o in only:
         # `Only institutions with at least 10 works about kelp.`: a count floor on the split of
         # those things, over the same works; anything else is refused, never dropped
-        role = next((c for c, plural in ROLE_NOUNS.items() if o.startswith(plural + " ")), None)
+        role = next((c for c, plural in ONLY_PLURALS.items() if o.startswith(plural + " ")), None)
         if role:
             # `Only corresponding authors with at least 10 works about kelp.`: a count floor only
-            o_noun, o_typ, o_items = _parse_things(t, "authors" + o[len(ROLE_NOUNS[role]):])
+            o_noun, o_typ, o_items = _parse_things(t, "authors" + o[len(ONLY_PLURALS[role]):])
             if not all(isinstance(it, tuple) for it in o_items):
                 raise NotCore("an `Only` sentence on a role split takes a count floor only")
         else:
@@ -1728,7 +1731,9 @@ def _parse_table(t, s, collection_type, only):
                 continue
             _, op, n, ph = it
             got = rows if ph.strip() == "works" else _parse_works(t, ph, collection_type, thing=thing)
-            if [r.to_dict() for r in got] != [r.to_dict() for r in rows]:
+            # the same conditions in any order: `by year since 2015 ... works since 2015 about
+            # kelp` puts the year first, the table's own phrase after the search
+            if sorted(map(_sort_key, got)) != sorted(map(_sort_key, rows)):
                 raise NotCore("an `Only` count over other works than the table counts")
             extra.append(MeasureFilter("count", op, n))
         if o_typ:

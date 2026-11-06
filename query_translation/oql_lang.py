@@ -1131,6 +1131,12 @@ def _entity_word_index(entity: str) -> Dict[str, str]:
         for name in names:
             if name:
                 idx.setdefault(name.lower(), cid)
+    # a flag's name made from its column id (`is global south` on institutions, where funders
+    # say `global south`) also answers to its word without `is`; a real name wins (oxjob #1555)
+    for cid, prop in props.items():
+        name = (getattr(prop, "display_name", "") or "").lower()
+        if name.startswith("is "):
+            idx.setdefault(name[3:], cid)
     _ENTITY_WORD_INDEX_CACHE[entity] = idx
     return idx
 
@@ -2642,6 +2648,12 @@ class _Parser:
                     break
                 words.append(tk.val)
             bp = _bool_phrase(words, self._entity)
+            if bp is not None and self._entity and _is_column_of(bp[0], self._entity):
+                # the sentence already names the entity's own column: an institution
+                # `it's from the global south` is its `is_global_south` (it read back as
+                # the works column, a 400, until 6 Nov, oxjob #1555)
+                self.i += bp[2]
+                return LeafFilter(bp[0], bp[1], "is")
             if bp is not None and bp[0] in _BY_COLUMN:
                 self.i += bp[2]
                 fld = _entity_resolve_field(_BY_COLUMN[bp[0]], self._entity)
@@ -4887,18 +4899,17 @@ class _Parser:
                              else "authorships.countries"]
         elif word == "in" and entity in _THING_IN:
             fld = _BY_COLUMN["authorships.countries"]
-            nt = self.peek(2) if self.peek() is not None and self.peek().kind == "ANNOT" \
-                else self.peek(1) if self.peek() is not None and self.peek().kind == "LP" \
-                else self.peek()
-            if nt is not None and re.fullmatch(r"(?i)(continents/)?Q\d+", nt.val or "") \
-                    and _THING_IN[entity][1]:
+            k = 0          # the first ID, past `(` and `[name]`: `in ([Europe](Q46) or ...)`
+            while (nt := self.peek(k)) is not None and nt.kind in ("LP", "ANNOT"):
+                k += 1
+            if nt is not None and re.fullmatch(r"(?i)(continents/)?Q\d+", nt.val or ""):
                 fld = _BY_COLUMN["authorships.institutions.continent"]
         else:
             raise oql_error(
                 "OQL_THING_PLACE",
                 f"{plural(entity)} have no place of their own to be {word}",
                 ("authors are `at` an institution or `in` a country; institutions, sources, "
-                 "funders and publishers are `in` a country"), t.pos)
+                 "funders and publishers are `in` a country or a continent"), t.pos)
         tree = self._parse_value_operand(fld)
         min_years = self._parse_min_years() if entity == "authors" else None
         since, through, mode = ((None, None, "now") if now and entity == "authors"
@@ -4913,8 +4924,7 @@ class _Parser:
                 return replace(f, filters=[leaf(c) for c in f.filters])
             v = f.value
             if entity != "authors":
-                cc, cont = _THING_IN[entity]
-                column = cont if fld.column.endswith("continent") else cc
+                column = "continent" if fld.column.endswith("continent") else _THING_IN[entity]
                 return replace(f, column_id=column)
             if mode == "now":
                 return replace(f, column_id=_AT_NOW[word])
@@ -5688,10 +5698,10 @@ _THING_VERB_FILLER = ("ever", "have", "has", "also", "all")   # `who have also p
 _AT_NOW = {"at": "last_known_institutions.lineage", "in": "last_known_institutions.country_code"}
 _AT_EVER = {"at": "affiliations.institution.lineage", "in": "affiliations.institution.country_code"}
 _AT_YEARS = _AT_EVER
-# a place in a thing's own record: (country column, continent column)
-_THING_IN = {"institutions": ("country_code", "continent"),
-             "sources": ("country_code", None), "funders": ("country_code", None),
-             "publishers": ("country_codes", None)}
+# a place in a thing's own record: its country column (each has a `continent` column too);
+# the echo writes these as `in [X]` (oql_core._own_place)
+_THING_IN = {"institutions": "country_code", "sources": "country_code", "funders": "country_code",
+             "publishers": "country_codes"}
 
 
 def _is_column_alias(entity: str, column: str, spelling: str) -> bool:

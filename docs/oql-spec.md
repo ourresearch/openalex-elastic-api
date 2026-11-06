@@ -225,7 +225,7 @@ get the count of works about kelp by author. Only authors with at least 20 works
 ```
 
 - The words: `Only <things> with <more than | at least | fewer than | at most> <N> <works phrase>.`
-- `<things>` is the plural of a split by things in the table, or `corresponding authors` / `corresponding institutions` for those splits (a count only: `Only corresponding authors with at least 10 works about kelp.`).
+- `<things>` is the plural of a split by things in the table, or of a split by a role or a field: `corresponding authors`, `corresponding institutions`, `keywords`, `languages`, `types`, `SDGs`, `continents`, `licenses`, `source types`, `institution types`, `years`, `domains`, `open access statuses` (a count only: `Only keywords with at least 50 works about kelp.`). Yes/no splits (`open access`, `retracted`, `global south`) take none.
 - The works phrase is the table's own; the echo writes it out in full (`Only authors with at least 20 works.` echoes with `about kelp`). A count over other works is refused.
 - A threshold on an own field folds into the split: `Only authors with an h-index above 50.` echoes as `by author with an h-index above 50`.
 
@@ -565,7 +565,7 @@ then, group those works into <number field> bins of <width>
 ```
 
 - **Up to three splits, in one step:** `by continent and year`; three with an Oxford comma, `by continent, institution type, and year`. A split next to bins, or after a group filter, takes its own `by`: `into citation count bins at (1, 10, 100) and by year`, `by year and by citation count bins at (1, 10, 100)`.
-- **Any field splits**, including the ones a sentence can't (`continent`, `institution type`, `source type`, `license`, `keyword`, `global south`). A decimal field can't split by value: it needs bins.
+- **Any field splits**, including the ones a sentence can't (`exact institution`, `institution country`, `best OA version`). A decimal field can't split by value: it needs bins.
 - **Bins** at edges `(1, 10, 100)` give `0`, `1-9`, `10-99` and `100+`; `bins of 0.5` gives equal widths.
 - **A group filter** after `where` keeps the groups by a number about their works (`mean FWCI of those works is at least 2`, `count of those works is above 5`) or by their own fields.
 
