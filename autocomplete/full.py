@@ -109,6 +109,13 @@ def get_filter_results(q):
             ],
         },
         {
+            "name": "is_traditional",
+            "matches": [
+                {"query": "traditional", "min_len": 5, "value": True},
+                {"query": "not traditional", "min_len": 7, "value": False},
+            ],
+        },
+        {
             "name": "is_retracted",
             "matches": [
                 {"query": "retracted", "min_len": 3, "value": True},

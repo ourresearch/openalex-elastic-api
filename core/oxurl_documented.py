@@ -36,7 +36,7 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'indexed_in',
     'ids.openalex', 'ids.pmcid', 'ids.pmid', 'institutions.continent',
     'institutions.country_code', 'institutions.id', 'institutions.ror',
-    'is_corresponding', 'is_oa', 'is_paratext', 'locations.is_accepted',
+    'is_corresponding', 'is_oa', 'is_paratext', 'is_traditional', 'locations.is_accepted',
     'locations.is_oa', 'locations.is_published', 'locations.license',
     'locations.source.host_institution_lineage', 'locations.source.host_organization',
     'locations.source.host_organization_lineage', 'locations.source.is_core',

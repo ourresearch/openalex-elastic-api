@@ -429,6 +429,13 @@ class BooleanField(Field):
     field_type = "boolean"
     operators = ["eq", "null"]
 
+    def __init__(self, *args, true_when_in=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A yes/no the index doesn't store, read from another field (oxjob #2064): (es_field, values).
+        # `true` = the field holds one of the values, `false` = it doesn't, so the two always split the
+        # results. works is_traditional = ("type", the traditional types).
+        self.true_when_in = true_when_in
+
     def query_for(self, value):
         """The query `filter=<param>:<value>` runs, for "true" or "false". group_by
         and analytics splits count with it, so they always match the filter (oxjob
@@ -439,6 +446,12 @@ class BooleanField(Field):
 
     def build_query(self):
         q = None
+        if self.true_when_in:
+            self.validate_true_false()
+            es_field, values = self.true_when_in
+            q = Q("terms", **{es_field: sorted(values)})
+            return q if self.value.lower().strip() == "true" else ~q
+
         if self.param in EXTERNAL_ID_FIELDS:
             self.validate_true_false()
             self.handle_external_id_fields()

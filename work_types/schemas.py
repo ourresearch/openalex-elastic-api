@@ -14,6 +14,8 @@ class TypesSchema(Schema):
     display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     description = fields.Str()
+    # oxjob #2064: openalex.common.work_types.is_traditional, synced into work-types-v1
+    is_traditional = fields.Bool()
     crossref_types = fields.List(fields.Str())
     works_count = fields.Int()
     cited_by_count = fields.Int()

@@ -14,6 +14,7 @@ ALTERNATE_NAMES = {
     "has_pmcid": ["pubmed", "central"],
     "has_references": ["outgoing", "citations"],
     "is_paratext": ["paratext", "cover", "table", "contents", "issue", "volume"],
+    "is_traditional": ["traditional", "scholarly", "literature", "publications", "papers"],
     "source.issn": ["issn", "journal"],
     "source.type": ["source", "type", "journal", "repository"],
     "sustainable_development_goals": ["un", "sdg"],

@@ -448,7 +448,13 @@ CAP_COLUMN = "column"
 # their exact meaning. The OQL word `last known institution` now means lineage (`exact last known institution` = the
 # id), which the OQL gate covers, not this version. Labels + supported_by = MINOR per classify_properties_diff.py.
 # Ticket 22523 (Universite de Lorraine). Under Jason's standing authority.
-PROPERTIES_VERSION = "22.1.0"
+# 22.2.0 (oxjob #2064, 2026-11-06): works gain `is_traditional` (filter, group_by, column): true = the work's type is
+# one of the 14 traditional types (core/work_type_classes.py), false = any other type; the filter expands to a terms
+# query on `type` (no reindex) and each work object computes the value from its type. Work types gain the response
+# column `is_traditional` (openalex.common.work_types, synced to work-types-v1). Decided by Jason + Kyle (5-6 Nov,
+# charter plans/worktype.md § 2). Two properties added = MINOR per classify_properties_diff.py. Under Jason's standing
+# authority.
+PROPERTIES_VERSION = "22.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

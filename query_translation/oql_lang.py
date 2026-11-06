@@ -419,6 +419,8 @@ _f("has PMCID", "has_pmcid", "bool")
 _f("MAG-only", "mag_only", "bool")
 _f("extended index", "is_xpac", "bool")
 _f("paratext", "is_paratext", "bool")
+# oxjob #2064: the work's type is traditional (core/work_type_classes.py)
+_f("traditional scholarly work", "is_traditional", "bool")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
 _f("best open version", "best_open_version", "string")

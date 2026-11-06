@@ -25,6 +25,7 @@ BOOL_PHRASES = {
     'mag_only': ("it's indexed by MAG only", "it's not indexed by MAG only"),
     'is_xpac': ("it's in the extended index", "it's not in the extended index"),
     'is_paratext': ("it's paratext", "it's not paratext"),
+    'is_traditional': ("it's a traditional scholarly work", "it's not a traditional scholarly work"),  # oxjob #2064
     'has_content.pdf': ("it's linked to a PDF", "it's not linked to a PDF"),
     'best_oa_location.is_accepted': ("it's open access accepted", "it's not open access accepted"),
     'best_oa_location.is_published': ("it's open access published", "it's not open access published"),

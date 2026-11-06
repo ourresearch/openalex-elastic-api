@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "1d0b92915f53bc69f64bf735af72d131486262c3830f7110f093144ff4d05282",
-    "property_count": 958,
-    "version": "22.1.0"
+    "fingerprint": "3c6fc38e268f6420e53a35e07f371e91d5fc2c68610a0f5904d9bb0fd1a613aa",
+    "property_count": 960,
+    "version": "22.2.0"
   },
   "properties": {
     "authors": {
@@ -15117,6 +15117,22 @@
         "supported_by": [],
         "type": "external_id"
       },
+      "is_traditional": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "traditional scholarly work",
+        "entity_type": null,
+        "name": "is_traditional",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "relevance_score": {
         "actions": [
           "column"
@@ -18220,6 +18236,32 @@
         ],
         "supported_by": [
           "gui"
+        ],
+        "type": "boolean"
+      },
+      "is_traditional": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by"
+        ],
+        "aliases": [
+          "traditional"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "traditional scholarly work",
+        "entity_type": null,
+        "name": "is_traditional",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },

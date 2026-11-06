@@ -1840,6 +1840,22 @@
       "isId": false,
       "hasExport": false
     },
+    "is_traditional": {
+      "key": "is_traditional",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "traditional scholarly work",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": true
+    },
     "type": {
       "key": "type",
       "entityToFilter": "works",

@@ -356,6 +356,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "description": "other",
         "crossref_types": "other",
         "display_name": "other",
+        "is_traditional": "other",  # oxjob #2064
     },
     "works": {
         "ids.openalex": "ids",
@@ -427,6 +428,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "has_orcid": "ids",
         "has_pmid": "ids",
         "is_retracted": "other",
+        "is_traditional": "other",  # oxjob #2064, beside type
         "language": "geo",
         "sustainable_development_goals.id": "aboutness",
         "study_designs.id": "aboutness",  # oxjob #1312, beside SDG

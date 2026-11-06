@@ -13,6 +13,7 @@ from core.schemas import (
     hide_relevance,
     relevance_score,
 )
+from core.work_type_classes import is_traditional as type_is_traditional
 
 logger = logging.getLogger(__name__)
 
@@ -371,6 +372,8 @@ class WorksSchema(Schema):
     volume = fields.Nested(VolumeSchema, dump_default=None)
     sources = fields.Nested(SourcesSchema, many=True)
     type = fields.Str()
+    # oxjob #2064: from the type (core/work_type_classes.py), so every work has it with no reindex
+    is_traditional = fields.Method("get_is_traditional")
     type_crossref = fields.Str()
     indexed_in = fields.List(fields.Str())
     open_access = fields.Nested(OpenAccessSchema)
@@ -486,6 +489,10 @@ class WorksSchema(Schema):
     @staticmethod
     def get_relevance_score(obj):
         return relevance_score(obj)
+
+    @staticmethod
+    def get_is_traditional(obj):
+        return type_is_traditional(getattr(obj, "type", None))
 
     @staticmethod
     def get_content_urls(obj):

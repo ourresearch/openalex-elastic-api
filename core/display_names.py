@@ -341,6 +341,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'crossref_types': {"display_name": 'CrossRef types'},
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
+        'is_traditional': {"display_name": 'traditional scholarly work'},  # oxjob #2064
     },
     'works': {
         'abstract': {"display_name": 'abstract'},
@@ -399,6 +400,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'institutions.is_global_south': {"display_name": 'global south'},
         'institutions_distinct_count': {"display_name": 'institutions count'},
         'is_retracted': {"display_name": 'retracted'},
+        # oxjob #2064: the GUI facet's displayName must match (label-consistency gate)
+        'is_traditional': {"display_name": 'traditional scholarly work', "aliases": ['traditional']},
         # DEPRECATED filter (#498): `is_xpac` is `unlisted` (dropped from public
         # /properties) — use the `corpus` selector instead (#481). This label is
         # kept only so the still-live column stays consistent with the GUI's

@@ -64,6 +64,7 @@ All entity IDs in OQO use a normalized format: `entityName/id`
 | `open_access.is_oa` | Work is Open Access | `{"column_id": "open_access.is_oa", "value": true}` |
 | `is_retracted` | Work has been retracted | `{"column_id": "is_retracted", "value": false}` |
 | `is_paratext` | Work is paratext (TOC, cover, etc.) | `{"column_id": "is_paratext", "value": false}` |
+| `is_traditional` | Work's type is a traditional scholarly work (article, book, chapter, dissertation, preprint...; not datasets, software, reports, paratext) | `{"column_id": "is_traditional", "value": true}` |
 | `has_doi` | Work has a DOI | `{"column_id": "has_doi", "value": true}` |
 | `has_abstract` | Work has an abstract (abstract_inverted_index is not null) | `{"column_id": "has_abstract", "value": true}` |
 | `has_fulltext` | Full text is searchable | `{"column_id": "has_fulltext", "value": true}` |
