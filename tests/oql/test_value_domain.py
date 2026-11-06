@@ -40,6 +40,7 @@ def _invalid_value_errors(oql):
     "works where sdg is 3",                       # sdgs (numeric id)
     "works where type is article",                # work-types
     "works where type is software-paper",         # served by /types since June; OQL rejected it (oxjob #1836)
+    "works where type is study-registration",     # added 7 Nov 2026 (oxjob #2063)
     "works where open access status is gold",     # oa-statuses
 ])
 def test_valid_members_pass(oql):

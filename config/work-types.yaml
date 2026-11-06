@@ -54,3 +54,5 @@ values:
   display_name: data-paper
 - id: types/software-paper
   display_name: software-paper
+- id: types/study-registration
+  display_name: study-registration

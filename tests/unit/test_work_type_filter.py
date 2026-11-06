@@ -22,14 +22,16 @@ def _error(value):
     return str(err.value)
 
 
-def test_the_list_is_the_24_live_types():
-    assert len(work_types()) == 24
+def test_the_list_is_the_25_live_types():
+    assert len(work_types()) == 25
     assert {"article", "software-paper", "data-paper", "conference-paper"} <= set(work_types())
     assert "libguides" not in work_types()  # retired 7 Nov 2026 (oxjob #1647)
+    assert "study-registration" in work_types()  # added 7 Nov 2026 (oxjob #2063)
 
 
 @pytest.mark.parametrize("value", [
     "article", "Article", "software-paper", "article|review", "!paratext", "!paratext|erratum",
+    "study-registration", "preprint|study-registration", "!study-registration",
     "types/article", "https://openalex.org/types/article", "https://openalex.org/work-types/book",
     "null", "!null", "article|null", '"article"',
 ])
@@ -113,3 +115,9 @@ def test_type_crossref_is_refused_and_points_to_raw_type():
     with pytest.raises(APIQueryParamsError) as err:
         filter_records(fields_dict, [{"type_crossref": "journal-article"}], Search())
     assert "primary_location.raw_type:journal-article" in str(err.value)
+
+
+def test_a_near_miss_of_study_registration_suggests_it():  # oxjob #2063
+    assert suggested_type("study_registration") == "study-registration"
+    assert suggested_type("study-registrations") == "study-registration"
+    assert "Did you mean type:study-registration?" in _error("studyregistration")
