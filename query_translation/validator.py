@@ -1066,11 +1066,14 @@ class OQOValidator:
         # Build a "did you mean" when the user typed a display name (the common
         # footgun, e.g. `country is Canada` -> code `ca`); else a generic hint.
         suggestion = vocab_name_to_code(namespace, f.value) if isinstance(f.value, str) else None
+        note = None
         if namespace == "types" and not suggestion and isinstance(f.value, str):
-            # a retired type, a source's label (journal-article) or a typo (oxjob #1836)
-            from core.work_type_values import suggested_type
+            # a retired type, a source's label (journal-article) or a typo (oxjob #1836); a retired
+            # type nothing replaced (grant, libguides) says when it left and why (oxjob #1647)
+            from core.work_type_values import retired_without_replacement, suggested_type
             suggestion = suggested_type(f.value)
-        hint = f" Did you mean '{suggestion}'?" if suggestion else ""
+            note = None if suggestion else retired_without_replacement(f.value)
+        hint = f" Did you mean '{suggestion}'?" if suggestion else (f" {note}" if note else "")
         return [ValidationError(
             type="invalid_value",
             message=(

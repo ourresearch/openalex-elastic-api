@@ -22,9 +22,10 @@ def _error(value):
     return str(err.value)
 
 
-def test_the_list_is_the_25_types_types_serves():
-    assert len(work_types()) == 25
+def test_the_list_is_the_24_live_types():
+    assert len(work_types()) == 24
     assert {"article", "software-paper", "data-paper", "conference-paper"} <= set(work_types())
+    assert "libguides" not in work_types()  # retired 7 Nov 2026 (oxjob #1647)
 
 
 @pytest.mark.parametrize("value", [
@@ -61,6 +62,19 @@ def test_grant_points_to_awards():
     assert "https://api.openalex.org/awards" in _error("grant")
 
 
+# Library guides left OpenAlex on 7 Nov 2026, and their type with them (oxjob #1647).
+@pytest.mark.parametrize("value", [
+    "libguides", "LibGuides", "types/libguides", "https://openalex.org/types/libguides",
+    "article|libguides", "!libguides", "!article|libguides", "article libguides", '"libguides"',
+])
+def test_libguides_is_retired_because_library_guides_are_not_scholarly(value):
+    msg = _error(value)
+    assert msg.startswith("'libguides' is no longer a work type (removed 7 Nov 2026): library guides "
+                          "aren't scholarly works, so OpenAlex no longer includes them.")
+    assert "Use type:" not in msg and "Did you mean" not in msg  # nothing replaced it
+    assert "article, book, book-chapter" in msg and "libguides," not in msg
+
+
 def test_a_crossref_label_names_the_type_and_the_raw_type_filter():
     msg = _error("journal-article")
     assert "Use type:article, or primary_location.raw_type:journal-article" in msg
@@ -83,6 +97,7 @@ def test_suggested_type_feeds_oql_fix_its():
     assert suggested_type("journal-article") == "article"
     assert suggested_type("book-section") == "reference-entry"
     assert suggested_type("grant") is None
+    assert suggested_type("libguides") is None
     assert suggested_type("journal") is None
     assert suggested_type("zzzzzz") is None
 

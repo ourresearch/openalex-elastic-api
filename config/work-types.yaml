@@ -22,8 +22,6 @@ values:
   display_name: review
 - id: types/paratext
   display_name: paratext
-- id: types/libguides
-  display_name: libguides
 - id: types/letter
   display_name: letter
 - id: types/other

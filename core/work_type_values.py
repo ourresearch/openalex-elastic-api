@@ -1,25 +1,34 @@
 """A works `type` filter value must name a work type (oxjob #1836).
 
 `filter=type:journal-article` used to answer a count of 0 with no message, so a typo, a source's own
-label, or a type we retired (29 Jun 2026) silently emptied a user's results. Now any value that isn't
-a work type answers a JSON 400 that says why and what to use. The list of work types is the registry's
+label, or a type we retired (29 Jun 2026; libguides 7 Nov 2026) silently emptied a user's results.
+Now any value that isn't a work type answers a JSON 400 that says why and what to use. The list of work types is the registry's
 (`config/work-types.yaml`, the same list OQL checks against); `null` / `!null` still mean "no type".
 
 Only values a user typed are checked (core/filter.py). Collections (`col_...`) resolve elsewhere.
 """
 import difflib
 from functools import lru_cache
+from typing import NamedTuple, Optional
 
 from core.exceptions import APIQueryParamsError
 from core.fields import TermField
 
-# Removed from the vocabulary on 29 Jun 2026 (oxjob #534). Value: the type most of their works now
-# carry (from each work's primary location raw type, 3 Nov 2026), or None when there is none.
+
+class Retired(NamedTuple):
+    removed: str                # the day it left the vocabulary
+    use: Optional[str] = None   # the type most of its works now carry (each work's primary location raw type, 3 Nov 2026)
+    why: Optional[str] = None   # with no such type: why it left, and where to look instead
+
+
+# Types removed from the vocabulary: the four of 29 Jun 2026 (oxjob #534), and libguides on 7 Nov 2026,
+# when library guides left OpenAlex (oxjob #1647, Jason and Kyle, 6 Nov 2026).
 RETIRED = {
-    "book-section": "reference-entry",
-    "database": "dataset",
-    "report-component": "report",
-    "grant": None,
+    "book-section": Retired("29 Jun 2026", use="reference-entry"),
+    "database": Retired("29 Jun 2026", use="dataset"),
+    "report-component": Retired("29 Jun 2026", use="report"),
+    "grant": Retired("29 Jun 2026", why="grants aren't works. Find them at https://api.openalex.org/awards."),
+    "libguides": Retired("7 Nov 2026", why="library guides aren't scholarly works, so OpenAlex no longer includes them."),
 }
 
 # A source's own label for the kind of work (Crossref's list), mapped to the type most works with that
@@ -83,12 +92,22 @@ def suggested_type(value, types=None):
     if code in types:
         return code
     if code in RETIRED:
-        return RETIRED[code]
+        return RETIRED[code].use
     if code in SOURCE_LABELS:
         return SOURCE_LABELS[code]
     if code in SOURCE_TYPES:
         return None
     return _did_you_mean(code, types)
+
+
+def retired_without_replacement(value):
+    """For a retired type no other type took over (grant, libguides): the sentence that says when it
+    left and why; else None. OQL's invalid_value message adds it where it has no "Did you mean"."""
+    code = _normalize(value)
+    retired = RETIRED.get(code)
+    if not retired or retired.use:
+        return None
+    return f"'{code}' is no longer a work type (removed {retired.removed}): {retired.why}"
 
 
 def unknown_type_message(value, types=None):
@@ -100,11 +119,10 @@ def unknown_type_message(value, types=None):
     use = suggested_type(code, types)
     if code in RETIRED:
         if use:
-            hint = (f"'{code}' is no longer a work type (removed 29 Jun 2026); most of those works are now "
-                    f"typed {use}. Use type:{use}.")
+            hint = (f"'{code}' is no longer a work type (removed {RETIRED[code].removed}); most of those works "
+                    f"are now typed {use}. Use type:{use}.")
         else:
-            hint = (f"'{code}' is no longer a work type (removed 29 Jun 2026): grants aren't works. "
-                    f"Find them at https://api.openalex.org/awards.")
+            hint = retired_without_replacement(code)
     elif code in SOURCE_TYPES:
         hint = (f"'{code}' is a source type, not a work type. To filter works by where they were published, "
                 f"use primary_location.source.type:{code}.")
