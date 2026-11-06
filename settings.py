@@ -32,8 +32,8 @@ if USERS_API_URL and not COLLECTION_RESOLVER_KEY:
     )
 
 # indexes
-AUTHORS_INDEX_WALDEN = "authors-v21"  # oxjob #1617: rebuilt beside v20 with institution_years, country_years
-AUTHORS_INDEX_LEGACY = "authors-v21"
+AUTHORS_INDEX_WALDEN = "authors-v22"  # oxjob #1565: rebuilt beside v21 for the topic re-parenting (v21: #1617)
+AUTHORS_INDEX_LEGACY = "authors-v22"
 AUTHORS_INDEX_OLD = "authors-v10"
 AWARDS_INDEX = "awards-v4"
 CONCEPTS_INDEX = "concepts-v9"
