@@ -82,9 +82,10 @@ def _query_one(sql, params):
 
 # oxjob #2082: fwci, citation_normalized_percentile and cited_by_percentile_year move every night without re-stamping a
 # work, so the stored doc keeps the values of its last re-stamp. lakebase.lakebase_work_metrics (one narrow row per work,
-# kept to the night's values by walden notebooks/lakebase/BuildLakebaseWorkMetrics) overrides them. Off until that
-# table is synced and granted to this role; on any error the plain doc query answers and the overlay stays off a while.
-METRICS_OVERLAY = False
+# kept to the night's values by walden notebooks/lakebase/BuildLakebaseWorkMetrics) overrides them. On since 7 Nov 2026
+# (table synced and granted to this role). On any error the plain doc query answers and the overlay stays off a while.
+# Off switch without a deploy: config var LAKEBASE_METRICS_OVERLAY=0.
+METRICS_OVERLAY = True
 METRICS_RETRY_S = 300
 _metrics_off_until = 0.0
 

@@ -57,8 +57,14 @@ def test_overlay_error_falls_back_to_plain_doc_and_pauses():
     assert sum("lakebase_work_metrics" in s for s in calls) == 1
 
 
-def test_overlay_off_by_default_uses_plain_query():
-    with mock.patch.object(lakebase, "_query_one", return_value=(json.dumps(DOC),)) as q, \
-            mock.patch.dict("os.environ", {}, clear=False):
+def test_overlay_off_uses_plain_query():
+    with mock.patch.object(lakebase, "METRICS_OVERLAY", False), \
+            mock.patch.object(lakebase, "_query_one", return_value=(json.dumps(DOC),)) as q:
         assert lakebase.get_work_doc(9) == DOC
     assert "lakebase_work_metrics" not in q.call_args[0][0]
+
+
+def test_config_var_turns_it_off():
+    with mock.patch.object(lakebase, "METRICS_OVERLAY", True), \
+            mock.patch.dict("os.environ", {"LAKEBASE_METRICS_OVERLAY": "0"}):
+        assert not lakebase.metrics_overlay_on()
