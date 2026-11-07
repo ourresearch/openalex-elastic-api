@@ -14,6 +14,7 @@ every dyno at once, while deploys roll gently. LAKEBASE_LOOKUP_PCT remains
 as an unset-by-default emergency override (e.g. slam to 0 without a deploy).
 """
 import json
+import logging
 import os
 import random
 import threading
@@ -79,9 +80,51 @@ def _query_one(sql, params):
         pool.putconn(conn)
 
 
+# oxjob #2082: fwci, citation_normalized_percentile and cited_by_percentile_year move every night without re-stamping a
+# work, so the stored doc keeps the values of its last re-stamp. lakebase.lakebase_work_metrics (one narrow row per work,
+# kept to the night's values by walden notebooks/lakebase/BuildLakebaseWorkMetrics) overrides them. Off until that
+# table is synced and granted to this role; on any error the plain doc query answers and the overlay stays off a while.
+METRICS_OVERLAY = False
+METRICS_RETRY_S = 300
+_metrics_off_until = 0.0
+
+_METRICS_COLS = "m.work_id, m.fwci, m.has_cnp, m.cnp_value, m.cnp_top_1, m.cnp_top_10, m.has_pct, m.pct_min, m.pct_max"
+
+
+def metrics_overlay_on():
+    override = os.getenv("LAKEBASE_METRICS_OVERLAY")
+    on = override == "1" if override in ("0", "1") else METRICS_OVERLAY
+    return on and time.time() >= _metrics_off_until
+
+
+def apply_metrics(doc, m):
+    """Overwrite the doc's three metric fields with the metrics row (work_id, fwci, has_cnp, ...); no row -> unchanged."""
+    if m is None or m[0] is None:
+        return doc
+    _, fwci, has_cnp, cnp_value, top_1, top_10, has_pct, pct_min, pct_max = m
+    doc["fwci"] = fwci
+    doc["citation_normalized_percentile"] = (
+        {"value": cnp_value, "is_in_top_1_percent": top_1, "is_in_top_10_percent": top_10} if has_cnp else None
+    )
+    doc["cited_by_percentile_year"] = {"min": pct_min, "max": pct_max} if has_pct else None
+    return doc
+
+
 def get_work_doc(work_id):
     """work_id (int) -> parsed doc dict, or None if absent."""
+    global _metrics_off_until
     shard = work_id % N_DOC_SHARDS
+    if metrics_overlay_on():
+        try:
+            row = _query_one(
+                f"SELECT d.doc, {_METRICS_COLS} FROM lakebase.lakebase_works_docs_{shard} d "
+                "LEFT JOIN lakebase.lakebase_work_metrics m ON m.work_id = d.work_id WHERE d.work_id = %s",
+                (work_id,),
+            )
+            return apply_metrics(json.loads(row[0]), row[1:]) if row else None
+        except Exception:
+            logging.getLogger(__name__).exception("lakebase metrics overlay failed; plain doc for %ss", METRICS_RETRY_S)
+            _metrics_off_until = time.time() + METRICS_RETRY_S
     row = _query_one(
         f"SELECT doc FROM lakebase.lakebase_works_docs_{shard} WHERE work_id = %s",
         (work_id,),
