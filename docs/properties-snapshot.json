@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "3c6fc38e268f6420e53a35e07f371e91d5fc2c68610a0f5904d9bb0fd1a613aa",
+    "fingerprint": "86c281d375615db2da4c261fdfb0aa7e5d0ac6c999db18b62bd17f902c5d6eda",
     "property_count": 960,
-    "version": "22.2.0"
+    "version": "23.0.0"
   },
   "properties": {
     "authors": {
@@ -1950,7 +1950,7 @@
         "bool_true": null,
         "category": "geo",
         "display_name": "institution awarded continent",
-        "entity_type": null,
+        "entity_type": "continents",
         "name": "institution_awarded.continent",
         "operators": [
           "eq",
@@ -1973,7 +1973,7 @@
         "bool_true": null,
         "category": "geo",
         "display_name": "awarded country",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "institution_awarded.country_code",
         "operators": [
           "eq",
@@ -1998,7 +1998,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "institution awarded id",
-        "entity_type": null,
+        "entity_type": "institutions",
         "name": "institution_awarded.id",
         "operators": [
           "eq",
@@ -2021,7 +2021,7 @@
         "bool_true": null,
         "category": "institution",
         "display_name": "awarded institution",
-        "entity_type": null,
+        "entity_type": "institutions",
         "name": "institution_awarded.lineage",
         "operators": [
           "eq",
@@ -2353,7 +2353,7 @@
         "bool_true": null,
         "category": "aboutness",
         "display_name": "domain",
-        "entity_type": null,
+        "entity_type": "domains",
         "name": "primary_topic.domain.id",
         "operators": [
           "eq",
@@ -2378,7 +2378,7 @@
         "bool_true": null,
         "category": "aboutness",
         "display_name": "field",
-        "entity_type": null,
+        "entity_type": "fields",
         "name": "primary_topic.field.id",
         "operators": [
           "eq",
@@ -2403,7 +2403,7 @@
         "bool_true": null,
         "category": "aboutness",
         "display_name": "topic",
-        "entity_type": null,
+        "entity_type": "topics",
         "name": "primary_topic.id",
         "operators": [
           "eq",
@@ -2428,7 +2428,7 @@
         "bool_true": null,
         "category": "aboutness",
         "display_name": "subfield",
-        "entity_type": null,
+        "entity_type": "subfields",
         "name": "primary_topic.subfield.id",
         "operators": [
           "eq",
@@ -2618,7 +2618,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "recipients id",
-        "entity_type": null,
+        "entity_type": "institutions",
         "name": "recipients.id",
         "operators": [
           "eq",
@@ -2976,7 +2976,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "topics domain id",
-        "entity_type": null,
+        "entity_type": "domains",
         "name": "topics.domain.id",
         "operators": [
           "eq",
@@ -2999,7 +2999,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "topics field id",
-        "entity_type": null,
+        "entity_type": "fields",
         "name": "topics.field.id",
         "operators": [
           "eq",
@@ -3022,7 +3022,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "topic",
-        "entity_type": null,
+        "entity_type": "topics",
         "name": "topics.id",
         "operators": [
           "eq",
@@ -3047,7 +3047,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "topics subfield id",
-        "entity_type": null,
+        "entity_type": "subfields",
         "name": "topics.subfield.id",
         "operators": [
           "eq",

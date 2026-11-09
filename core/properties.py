@@ -454,7 +454,15 @@ CAP_COLUMN = "column"
 # column `is_traditional` (openalex.common.work_types, synced to work-types-v1). Decided by Jason + Kyle (5-6 Nov,
 # charter plans/worktype.md § 2). Two properties added = MINOR per classify_properties_diff.py. Under Jason's standing
 # authority.
-PROPERTIES_VERSION = "22.2.0"
+# 23.0.0 (2026-11-09): awards columns gain the entity_type their works siblings have. awards/fields.py never called
+# annotate_entity_types, and institution_awarded.id / .lineage and recipients.id were not in ENTITY_ID_PARAM_TYPES, so
+# the GUI's Advanced search value picker had no entity to search ("awarded institution is university of helsinki" said
+# No matches, though the filter finds 1,123 awards). 13 properties: institution_awarded.id / .lineage and recipients.id
+# -> institutions (every live value is an I-id); institution_awarded.country_code -> countries, .continent ->
+# continents; primary_topic.* and topics.* id / domain / field / subfield -> topics / domains / fields / subfields.
+# institution_awarded.type stays untyped (one value is outside the institution-types vocab). An entity_type transition
+# = MAJOR per classify_properties_diff.py (precedent 7.0.0). Requested and approved by Kyle 2026-11-09.
+PROPERTIES_VERSION = "23.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

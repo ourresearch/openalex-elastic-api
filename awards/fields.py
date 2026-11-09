@@ -9,6 +9,7 @@ from core.fields import (
     TermField,
     TextTermField,
     JoinField,
+    annotate_entity_types,
 )
 
 fields = [
@@ -263,5 +264,9 @@ fields = [
               local_field="funder.id", like=TermField, entity_type="countries",
               docstring="The country of the award's funder"),
 ]
+
+# Awards never ran this, so its institution, topic and country columns carried no
+# entity_type: the Advanced search value picker had nothing to search ("No matches").
+annotate_entity_types(fields)
 
 fields_dict = {f.param: f for f in fields}

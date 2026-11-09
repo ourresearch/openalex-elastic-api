@@ -139,6 +139,10 @@ ENTITY_ID_PARAM_TYPES = {
     "topics.subfield.id": "subfields",
     # awards (native G-prefixed IDs)
     "awards.id": "awards",
+    # an award's institutions (awards-only params; every value is an I-id)
+    "institution_awarded.id": "institutions",
+    "institution_awarded.lineage": "institutions",
+    "recipients.id": "institutions",
 }
 
 
