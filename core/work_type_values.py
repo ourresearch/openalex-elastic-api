@@ -13,6 +13,7 @@ from typing import NamedTuple, Optional
 
 from core.exceptions import APIQueryParamsError
 from core.fields import TermField
+from core.quoted_values import filter_operands
 
 
 class Retired(NamedTuple):
@@ -135,25 +136,13 @@ def unknown_type_message(value, types=None):
     return f"{hint} The work types are: {', '.join(types)} (https://api.openalex.org/types)."
 
 
-def _operands(value, is_quoted):
-    """The values a filter value names, split as core.filter routes it (| = OR, space = AND unless
-    quoted), each without its leading `!`."""
-    if "|" in value:
-        parts = value.split("|")
-    elif " " in value and not is_quoted:
-        parts = value.split(" ")
-    else:
-        parts = [value]
-    return [p[1:] if p.startswith("!") else p for p in parts]
-
-
 def check_work_type_filter(field, value, is_quoted=False):
     """Raise APIQueryParamsError (a JSON 400) when a works `type` filter names something that isn't
     a work type. `value` is the filter value after quote handling, as core.filter routes it."""
     if not isinstance(field, TermField) or field.entity_type != "work-types":
         return
     types = work_types()
-    for operand in _operands(value, is_quoted):
+    for operand in filter_operands(value, is_quoted):
         message = operand and unknown_type_message(operand, types)
         if message:
             raise APIQueryParamsError(message)

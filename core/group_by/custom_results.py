@@ -1,6 +1,7 @@
 from elasticsearch_dsl import MultiSearch, Search, Q
 
 import settings
+from core.fields import BestOpenVersionField
 from core.filter import filter_records
 from core.search import full_search_query, scoped_search_query, full_search_query_exact, SearchOpenAlex
 from country_list import COUNTRIES_BY_CONTINENT
@@ -99,15 +100,8 @@ def group_by_best_open_version(field, index_name, params, fields_dict):
     versions = ["any", "acceptedOrPublished", "published"]
     for version in versions:
         s = search_and_filter(fields_dict, index_name, params)
-        submitted_query = Q("term", best_oa_location__version="submittedVersion")
-        accepted_query = Q("term", best_oa_location__version="acceptedVersion")
-        published_query = Q("term", best_oa_location__version="publishedVersion")
-        if version == "any":
-            query = submitted_query | accepted_query | published_query
-        elif version == "acceptedOrPublished":
-            query = accepted_query | published_query
-        elif version == "published":
-            query = published_query
+        # the filter's own table, so the two can't read a version differently (oxjob #2140)
+        query = Q("terms", best_oa_location__version=BestOpenVersionField.VERSIONS[version])
         ms = ms.add(s.filter(query))
 
     responses = ms.execute()

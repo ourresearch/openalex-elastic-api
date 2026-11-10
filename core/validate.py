@@ -2,7 +2,7 @@ from urllib.parse import quote_plus
 
 import settings
 from core.exceptions import APIQueryParamsError
-from core.utils import select_fields
+from core.utils import map_filter_params, select_fields
 
 
 # Search parameter prefixes that are accepted via dot notation
@@ -104,8 +104,8 @@ def validate_params(request, extra_valid_params=()):
 
 
 def validate_q_param(request):
-    """`q` narrows the group_by keys, so without group_by it did nothing and the list answered every
-    record (`/works?q=cancer` 315M works; ~2K requests a day, oxjob #2140). Say what to use instead."""
+    """`q` narrows the group_by keys; without group_by it did nothing and the list answered every
+    record (oxjob #2140). Say what to use instead."""
     q = (request.args.get("q") or "").strip()
     has_group_by = any(request.args.get(p) for p in ("group_by", "group-by", "group_bys", "group-bys"))
     if q and q != "''" and not has_group_by:
@@ -135,27 +135,22 @@ def xpac_flag_value(value, name="include_xpac"):
     )
 
 
+def has_xpac_clause(filter_string):
+    """True when a filter string may hold an include_xpac clause (cheap test before parsing it)."""
+    return "include_xpac:" in filter_string or "include-xpac:" in filter_string
+
+
 def xpac_controls(request):
     """(requested, named): whether the request asks for expansion works too, and whether it names
-    include_xpac at all. Read from the parameter and from an `include_xpac:` filter clause, the
-    spelling users reach for by analogy with is_xpac: the filter form was accepted with any value
-    and did nothing since 187e59f (oxjob #2140)."""
-    from core.utils import map_filter_params  # the filter door's own split
-
-    requested, named = False, False
-    for name in XPAC_PARAMS:
-        value = request.args.get(name)
-        if value is not None:
-            named = True
-            requested = xpac_flag_value(value, name) or requested
+    include_xpac at all, as the parameter or as an `include_xpac:` filter clause (oxjob #2140: the
+    clause was accepted with any value and did nothing)."""
+    pairs = [(name, value) for name in XPAC_PARAMS if (value := request.args.get(name)) is not None]
     filter_string = request.args.get("filter") or ""
-    if "xpac:" in filter_string:
-        for clause in map_filter_params(filter_string) or []:
-            for key, value in clause.items():
-                if key == "include_xpac":  # map_filter_params spells include-xpac this way
-                    named = True
-                    requested = xpac_flag_value(value, key) or requested
-    return requested, named
+    if has_xpac_clause(filter_string):  # map_filter_params spells include-xpac as include_xpac
+        pairs += [(key, value) for clause in map_filter_params(filter_string)
+                  for key, value in clause.items() if key == "include_xpac"]
+    flags = [xpac_flag_value(value, name) for name, value in pairs]  # every value is checked
+    return any(flags), bool(pairs)
 
 
 def validate_filter_param(request):

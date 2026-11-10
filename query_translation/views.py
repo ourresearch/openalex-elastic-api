@@ -23,6 +23,7 @@ import urllib.parse
 from flask import Blueprint, jsonify, request
 
 from core.properties import get_entity_properties, render_properties
+from core.validate import XPAC_PARAMS, xpac_flag_value
 from query_translation.oqo import OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_parser import parse_oql_to_oqo
@@ -328,9 +329,9 @@ def parse_url_input(entity_type: str, input_data):
             semantic_search_string = input_data.get("search.semantic")
             scoped_searches = input_data.get("scoped_searches")
             # Legacy corpus-expansion flag (#481 leftover, #498) → corpus="all".
-            include_xpac = (
-                input_data.get("include_xpac") in (True, "true")
-                or input_data.get("include-xpac") in (True, "true")
+            include_xpac = any(  # true in any case, as on the REST door (oxjob #2140)
+                xpac_flag_value(str(input_data.get(name)), name)
+                for name in XPAC_PARAMS if input_data.get(name) is not None
             )
             # First-class `corpus=` REST param (#763); beats the legacy flag.
             corpus = input_data.get("corpus")

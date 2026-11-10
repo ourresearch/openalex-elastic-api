@@ -248,13 +248,21 @@ def test_best_open_version_reads_the_best_open_copy():
         _q(works_fields, "best_open_version", "preprint")
 
 
+def test_best_open_version_null_in_an_or_list():
+    q = _q(works_fields, "best_open_version", "published|null")["query"]["bool"]["filter"][0]
+    assert {"terms": {"best_oa_location.version": ["publishedVersion"]}} in q["bool"]["should"]
+    assert {"bool": {"must_not": [{"exists": {"field": "best_oa_location.version"}}]}} in q["bool"]["should"]
+
+
 @pytest.mark.parametrize("sort, direction", [("cited_by_count:DESC", "desc"), ("cited_by_count:Asc", "asc"),
-                                             ("cited_by_count", "asc"), ("cited_by_count:desc", "desc")])
+                                             ("cited_by_count", "asc"), ("cited_by_count:desc", "desc"),
+                                             ("cited_by_count:", "asc")])
 def test_sort_direction_any_case(sort, direction):
     assert _parse(f"/works?sort={sort}")["sort"] == {"cited_by_count": direction}
+    assert parse_url_to_oqo("works", sort_string=sort).sort_by[0].direction == direction  # the OQL echo too
 
 
-@pytest.mark.parametrize("sort", ["cited_by_count:descending", "cited_by_count:-1", "cited_by_count:"])
+@pytest.mark.parametrize("sort", ["cited_by_count:descending", "cited_by_count:-1"])
 def test_other_sort_directions_are_a_400(sort):
     with pytest.raises(APIQueryParamsError) as err:
         _parse(f"/works?sort={sort}")

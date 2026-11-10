@@ -1838,39 +1838,38 @@ class TermField(Field):
 
 
 class BestOpenVersionField(TermField):
-    """`best_open_version`: the version of the work's best open copy, at least as good as asked
-    (`any` = submitted, accepted or published; `acceptedOrPublished`; `published`), the same
-    reading as its group_by. Before oxjob #2140 the filter read every location, so
-    best_open_version:published,is_oa:false answered 115M works; `!any` answered every work and
-    `any|published` none. Keeps the string type and operators of a TermField."""
+    """`best_open_version`: the version of the work's best open copy, at least as good as asked. The
+    filter and its group_by both read VERSIONS (oxjob #2140; the filter read every location, so
+    closed works matched). Keeps TermField's type and operators."""
 
-    VERSIONS = {
+    VERSIONS = {  # value -> the best_oa_location.version values it admits
         "any": ["submittedVersion", "acceptedVersion", "publishedVersion"],
-        "acceptedorpublished": ["acceptedVersion", "publishedVersion"],
+        "acceptedOrPublished": ["acceptedVersion", "publishedVersion"],
         "published": ["publishedVersion"],
     }
 
     def _versions(self, value):
-        versions = self.VERSIONS.get(value.lower())
-        if versions is None:
-            raise APIQueryParamsError(
-                f"Value for {self.param} must be one of any, acceptedOrPublished, published and not {value}."
-            )
-        return versions
+        for key, versions in self.VERSIONS.items():
+            if key.lower() == value.lower():
+                return versions
+        raise APIQueryParamsError(
+            f"Value for {self.param} must be one of {', '.join(self.VERSIONS)} and not {value}."
+        )
 
     def build_query(self):
-        field = self.es_field().replace("__", ".")
         if self.value in ("null", "!null"):
-            q = Q("exists", field=field)
-            return ~q if self.value == "null" else q
-        negated = self.value.startswith("!")
-        q = Q("terms", **{field: self._versions(self.value.lstrip("!"))})
-        return ~q if negated else q
+            return super().build_query()
+        q = self.build_terms_query([self.value.lstrip("!")])
+        return ~q if self.value.startswith("!") else q
 
     def build_terms_query(self, values):
-        wanted = {v for value in values for v in self._versions(value)}
-        versions = [v for v in self.VERSIONS["any"] if v in wanted]  # the single-value order
-        return Q("terms", **{self.es_field().replace("__", "."): versions})
+        wanted = {v for value in values if value != "null" for v in self._versions(value)}
+        versions = [v for v in self.VERSIONS["any"] if v in wanted]  # one order for every path
+        q = Q("terms", **{self.es_field(): versions}) if versions else None
+        if "null" in values:
+            missing = ~Q("exists", field=self.es_field())
+            q = missing if q is None else q | missing
+        return q
 
 
 class TextTermField(TermField):
@@ -1890,31 +1889,20 @@ class TextTermField(TermField):
         return Q("bool", should=clauses, minimum_should_match=1)
 
 
-_SHORT_OPENALEX_ID_RE = re.compile(r"[WAICFVPSTG]\d{2,}", re.IGNORECASE)
-
-
 class OpenAlexURLTermField(TermField):
-    """A string filter on a keyword that stores full OpenAlex URLs (`https://openalex.org/G123`). A bare
-    short id (`G123`, `g123`) reads as its URL, as on every OpenAlexIDField; before oxjob #2140 it
-    matched nothing (awards id:G2966666733 answered 0, ticket 22928). It keeps the string type and
-    operators of a TermField, so /properties is unchanged."""
+    """A string filter on a keyword that stores full OpenAlex URLs: a bare short id (`G123`) reads as
+    its URL, as on an OpenAlexIDField (oxjob #2140; it matched nothing). Keeps TermField's type and
+    operators, so /properties is unchanged."""
 
-    @staticmethod
-    def _as_url(value):
-        neg = ""
-        if value.startswith("!"):
-            neg, value = "!", value[1:]
-        if _SHORT_OPENALEX_ID_RE.fullmatch(value):
-            value = ID_URL_PREFIX + value.upper()
-        return neg + value
+    def _normalize_term_value(self, value):
+        neg, bare = ("!", value[1:]) if value.startswith("!") else ("", value)
+        if _CANONICAL_SHORT_ID_RE.fullmatch(bare.upper()):
+            bare = ID_URL_PREFIX + bare.upper()
+        return super()._normalize_term_value(neg + bare)
 
-    def _get_formatted_value(self):
-        self.value = self._as_url(self.value)
+    def _get_formatted_value(self):  # the OR path; build_query normalizes on its own
+        self.value = self._normalize_term_value(self.value)
         return super()._get_formatted_value()
-
-    def build_query(self):
-        self.value = self._as_url(self.value)
-        return super().build_query()
 
 
 class OrcidField(TermField):

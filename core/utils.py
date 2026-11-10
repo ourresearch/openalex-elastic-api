@@ -75,7 +75,7 @@ def map_sort_params(param):
                 key, value = param.split(":") if ":" in param else (param, "asc")
                 key = key.replace("-", "_")
                 # any other direction was dropped silently (`:DESC`, `:descending`; oxjob #2140)
-                value = value.strip().lower()
+                value = value.strip().lower() or "asc"
                 if value not in ("asc", "desc"):
                     raise APIQueryParamsError(
                         f"A sort direction is asc or desc, not '{value}': sort={key}:desc sorts "

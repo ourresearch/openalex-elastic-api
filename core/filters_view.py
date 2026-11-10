@@ -6,6 +6,7 @@ from flask import url_for
 
 import settings
 from core.exceptions import APIQueryParamsError
+from core.quoted_values import unquote_filter_value
 from core.search import full_search_query
 from core.utils import (get_country_name, get_display_name, get_field,
                         map_filter_params)
@@ -52,6 +53,9 @@ def shared_filter_view(request, params, fields_dict, index_name):
 
 
 def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
+    # Quotes on non-search values, read as the filter door reads them, for both passes (oxjob #2140)
+    filter_params = [{k: v if "search" in k else unquote_filter_value(v)[0] for k, v in f.items()}
+                     for f in filter_params]
     meta_results = []
     s = Search()
     s = s.extra(track_total_hits=True, size=0)
@@ -75,11 +79,6 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
                 break
 
             field = get_field(fields_dict, key)
-
-            # Strip surrounding quotes from non-search values
-            # (quotes preserve commas during parsing but aren't part of the value)
-            if value.startswith('"') and value.endswith('"') and "search" not in field.param:
-                value = value[1:-1]
 
             # OR queries have | in the param values
             if "|" in value:
