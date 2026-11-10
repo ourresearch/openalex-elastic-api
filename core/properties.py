@@ -462,7 +462,14 @@ CAP_COLUMN = "column"
 # continents; primary_topic.* and topics.* id / domain / field / subfield -> topics / domains / fields / subfields.
 # institution_awarded.type stays untyped (one value is outside the institution-types vocab). An entity_type transition
 # = MAJOR per classify_properties_diff.py (precedent 7.0.0). Requested and approved by Kyle 2026-11-09.
-PROPERTIES_VERSION = "23.0.0"
+# 23.1.0 (oxjob #1847, grants on author and institution profiles, 2026-11-09): awards gain the filters
+# `lead_investigator.author.id` and `investigators.author.id` (an OpenAlex author id, short or full; a merged-away id also matches
+# its winner) on the keyword `lead_investigator.author.id` / `investigators_full.author.id`, and each investigator carries its
+# author {id, display_name, orcid} and institutions[] (works' dehydrated institution; [] until filled) as works' authorships do
+# (Rohan + Casey 11-09); authors and institutions gain the range filter and
+# sort `awards_count` and the column `awards_api_url`. Purely additive = MINOR per classify_properties_diff.py. The version line is
+# set by Rohan (the human in the loop); Casey and Jason informed.
+PROPERTIES_VERSION = "23.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

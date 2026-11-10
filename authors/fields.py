@@ -137,6 +137,7 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
+    RangeField(param="awards_count", docstring="How many awards name the author as an investigator (oxjob #1847)"),
     SearchField(param="text.search", index="authors"),
     SearchField(param="default.search", index="authors", alternate_of="text.search"),
     SearchField(

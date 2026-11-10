@@ -81,6 +81,10 @@ class AuthorsSchema(Schema):
     display_name_alternatives = fields.List(fields.Str())
     block_key = fields.Str()
     works_api_url = fields.Str()
+    # Grants on the profile (oxjob #1847): how many awards name this author on an investigator slot, and the awards query
+    # that lists them, the same pattern as works_count / works_api_url.
+    awards_count = fields.Int(dump_default=0)
+    awards_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
 

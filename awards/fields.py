@@ -137,6 +137,21 @@ fields = [
         custom_es_field="lead_investigator.affiliation.country",
         docstring="The country of the lead investigator's affiliation"
     ),
+    # Grants on author profiles (oxjob #1847). investigators.author.id covers everyone named on the award (lead, co-lead
+    # and investigators[]) through the investigators_full object sibling (the authorships_full pattern; awards-v4 maps
+    # both author ids as keyword). A merged-away author id also matches its winner (OpenAlexIDField).
+    OpenAlexIDField(
+        param="lead_investigator.author.id",
+        custom_es_field="lead_investigator.author.id",
+        entity_type="authors",
+        docstring="The OpenAlex ID of the lead investigator's author profile",
+    ),
+    OpenAlexIDField(
+        param="investigators.author.id",
+        custom_es_field="investigators_full.author.id",
+        entity_type="authors",
+        docstring="The OpenAlex ID of the author profile of anyone named on the award: lead, co-lead or other investigator",
+    ),
     # Topic classification (oxjob #123.1, finalized in #123.2). awards-v4 has
     # `primary_topic` and `topics` declared as `nested`, with denormalized
     # `primary_topic_full` and `topics_full` siblings (object mapping, `keyword`

@@ -130,6 +130,7 @@ fields = [
     RangeField(param="works_count"),
     RangeField(param="works_count_with_children"),
     RangeField(param="works_count_with_children_and_predecessors"),
+    RangeField(param="awards_count", docstring="How many awards name the institution as the institution awarded"),
     SearchField(param="text.search", index="institutions"),
     SearchField(param="default.search", index="institutions", alternate_of="text.search"),
     SearchField(

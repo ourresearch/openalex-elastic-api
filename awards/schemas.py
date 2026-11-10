@@ -1,5 +1,6 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
+
 from core.schemas import (
     GroupBySchema,
     GroupBysSchema,
@@ -29,12 +30,44 @@ class AffiliationSchema(Schema):
         unknown = INCLUDE
 
 
+class InstitutionAwardedSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    ror = fields.Str(default=None)
+    country_code = fields.Str(default=None)
+    type = fields.Str(default=None)
+    lineage = fields.List(fields.Str(), default=None)
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
+class InvestigatorAuthorSchema(Schema):
+    """works' authorships[].author fields {id, display_name, orcid}, with orcid null when the profile has none, as works serve it
+    (the Nightly's to_json drops NULLs, so the default restores the key)."""
+    id = fields.Str()
+    display_name = fields.Str(default=None)
+    orcid = fields.Str(default=None)
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
 class InvestigatorSchema(Schema):
     given_name = fields.Str(default=None)
     family_name = fields.Str(default=None)
     orcid = fields.Str(default=None)
     role_start = fields.Str(default=None)
     affiliation = fields.Nested(AffiliationSchema, default=None)
+    # The OpenAlex author this person is (oxjob #1847, grants on author profiles), like authorships[].author on works.
+    # Set only for links that pass the checks (for now: the grant's ORCID, or the only same-name author on the grant's own
+    # papers); null otherwise, and null with the names on grants whose funder hides people after the grant ends.
+    author = fields.Nested(InvestigatorAuthorSchema, default=None)
+    # The institutions this person's affiliation matched (as authorships[].institutions on works; Casey 11-09). [] until Nightly
+    # Grants fills it; `affiliation` stays the raw value, like works' raw_affiliation_strings.
+    institutions = fields.Nested(InstitutionAwardedSchema, many=True, default=[])   # institution_awarded's shape and null defaults
 
     class Meta:
         ordered = True
@@ -46,19 +79,6 @@ class FunderSchema(Schema):
     display_name = fields.Str()
     ror = fields.Str()
     doi = fields.Str()
-
-    class Meta:
-        ordered = True
-        unknown = INCLUDE
-
-
-class InstitutionAwardedSchema(Schema):
-    id = fields.Str()
-    display_name = fields.Str()
-    ror = fields.Str(default=None)
-    country_code = fields.Str(default=None)
-    type = fields.Str(default=None)
-    lineage = fields.List(fields.Str(), default=None)
 
     class Meta:
         ordered = True

@@ -99,6 +99,10 @@ class InstitutionsSchema(Schema):
     is_super_system = fields.Bool()
     status = fields.Str()
     works_api_url = fields.Str()
+    # Grants on the profile: how many awards name this institution in institution_awarded, and the awards query that
+    # lists them, the same pattern as works_count / works_api_url (and as authors, oxjob #1847).
+    awards_count = fields.Int(dump_default=0)
+    awards_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
 
