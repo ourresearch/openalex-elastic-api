@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 import settings
 from core.exceptions import APIQueryParamsError
 from core.utils import select_fields
@@ -97,6 +99,63 @@ def validate_params(request, extra_valid_params=()):
     validate_select_param(request)
     validate_sample_param(request)
     validate_search_param(request)
+    validate_q_param(request)
+    xpac_controls(request)  # include_xpac=banana answers a 400 on every endpoint (oxjob #2140)
+
+
+def validate_q_param(request):
+    """`q` narrows the group_by keys, so without group_by it did nothing and the list answered every
+    record (`/works?q=cancer` 315M works; ~2K requests a day, oxjob #2140). Say what to use instead."""
+    q = (request.args.get("q") or "").strip()
+    has_group_by = any(request.args.get(p) for p in ("group_by", "group-by", "group_bys", "group-bys"))
+    if q and q != "''" and not has_group_by:
+        entity = request.path.strip("/").split("/")[-1] or "works"
+        quoted = quote_plus(q)
+        raise APIQueryParamsError(
+            f"q only filters the keys of a group_by, and this request has no group_by. "
+            f"To search {entity}, use search= (/{entity}?search={quoted}); for type-ahead, use "
+            f"/autocomplete/{entity}?q={quoted}."
+        )
+
+
+XPAC_PARAMS = ("include_xpac", "include-xpac")
+
+
+def xpac_flag_value(value, name="include_xpac"):
+    """True or False for an include_xpac value, in any case; a JSON 400 for anything else
+    (oxjob #2140: `include_xpac=True` read as false and `include_xpac:banana` as nothing)."""
+    v = (value or "").strip().strip('"').lower()
+    if v == "true":
+        return True
+    if v in ("false", ""):
+        return False
+    raise APIQueryParamsError(
+        f"{name} takes true or false, not '{value}'. include_xpac=true adds expansion works "
+        f"to the results; corpus=all does the same and is the preferred spelling."
+    )
+
+
+def xpac_controls(request):
+    """(requested, named): whether the request asks for expansion works too, and whether it names
+    include_xpac at all. Read from the parameter and from an `include_xpac:` filter clause, the
+    spelling users reach for by analogy with is_xpac: the filter form was accepted with any value
+    and did nothing since 187e59f (oxjob #2140)."""
+    from core.utils import map_filter_params  # the filter door's own split
+
+    requested, named = False, False
+    for name in XPAC_PARAMS:
+        value = request.args.get(name)
+        if value is not None:
+            named = True
+            requested = xpac_flag_value(value, name) or requested
+    filter_string = request.args.get("filter") or ""
+    if "xpac:" in filter_string:
+        for clause in map_filter_params(filter_string) or []:
+            for key, value in clause.items():
+                if key == "include_xpac":  # map_filter_params spells include-xpac this way
+                    named = True
+                    requested = xpac_flag_value(value, key) or requested
+    return requested, named
 
 
 def validate_filter_param(request):

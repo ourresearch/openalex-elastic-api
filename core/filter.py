@@ -10,7 +10,10 @@ from core.collection_resolver import (
     check_collection_reference_count,
     resolve_collection,
 )
+from core.country_values import check_country_filter
+from core.quoted_values import unquote_filter_value
 from core.utils import get_field
+from core.validate import xpac_flag_value
 from core.work_type_values import check_work_type_filter
 from settings import MAX_IDS_IN_FILTER
 
@@ -25,31 +28,22 @@ def filter_records(fields_dict, filter_params, s, sample=None):
     for filter in filter_params:
         for key, value in filter.items():
             if key == 'include_xpac' or key == 'include-xpac':
+                # The corpus choice, not a filter: works/views.py reads it (oxjob #2140).
+                xpac_flag_value(value, key)
                 continue
             field = get_field(fields_dict, key)
 
-            # Quoted non-search values are single exact values (spaces are
-            # literal, not AND operators).  Strip the quotes and skip the
-            # space-split AND logic below.
-            is_quoted = (
-                value.startswith('"') and value.endswith('"')
-                and "search" not in field.param
-            )
-            if is_quoted:
-                value = value[1:-1]
-            # The GUI negates a quoted value outside the quotes (`!"a b"`): same
-            # value as `"!a b"`. It used to search for the quotes literally and
-            # match nothing. (#1463 follow-up, from #1473)
-            elif (
-                len(value) >= 3
-                and value.startswith('!"') and value.endswith('"')
-                and "search" not in field.param
-            ):
-                value = "!" + value[2:-1]
-                is_quoted = True
+            # Quoted non-search values are single exact values (spaces are literal, not AND
+            # operators), and an OR list may quote each operand (`"New York"|California`,
+            # oxjob #2140). Search values keep their quotes: there they mean a phrase.
+            is_quoted = False
+            if "search" not in field.param:
+                value, is_quoted = unquote_filter_value(value)
 
             # A `type` value that isn't a work type answers a 400, not a silent 0 (oxjob #1836).
             check_work_type_filter(field, value, is_quoted)
+            # So does a country filter value that isn't a country code (oxjob #2140).
+            check_country_filter(field, value, is_quoted)
 
             # multiple OR queries have | in the param values.
             # A leading `!` on a SEARCH value also routes here even with no `|`:

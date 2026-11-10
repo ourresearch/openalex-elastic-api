@@ -9,6 +9,7 @@ from core.semantic import semantic_search
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
+from core.validate import xpac_controls
 from core.utils import (get_data_version_connection, get_entity_counts,
                         get_flattened_fields, get_valid_fields, process_only_fields)
 from settings import WORKS_INDEX
@@ -195,10 +196,11 @@ def works():
     default_filters = None
     if connection == 'walden':
         current_filter = request.args.get('filter', '')
-        include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
+        # the include_xpac parameter or an include_xpac:true filter clause (oxjob #2140)
+        include_xpac, xpac_named = xpac_controls(request)
         default_filters = resolve_corpus_default_filters(
             corpus=request.args.get('corpus'),
-            xpac_param_present='include_xpac' in request.args or 'include-xpac' in request.args,
+            xpac_param_present=xpac_named,
             xpac_in_filter='is_xpac:' in current_filter or 'is-xpac:' in current_filter,
             include_xpac=include_xpac,
         )

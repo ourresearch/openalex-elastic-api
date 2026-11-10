@@ -1,9 +1,11 @@
 from core.fields import (
+    BestOpenVersionField,
     BooleanField,
     DateField,
     DateTimeField,
     CollectionField,
     OpenAlexIDField,
+    OpenAlexURLTermField,
     RangeField,
     SearchField,
     TermField,
@@ -828,7 +830,7 @@ fields = [
         docstring="The source of our information about the work's APC. Works with OpenAPC data might have more accurate prices for APC paid.",
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
-    TermField(
+    OpenAlexURLTermField(  # I136199984 = its URL form (oxjob #2140)
         param="authorships.affiliations.institution_ids",
         custom_es_field="authorships_full.affiliations.institution_ids.keyword",
     ),
@@ -907,7 +909,8 @@ fields = [
         docstring="The version of the work that is available Open Access",
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
-    TermField(param="best_open_version", custom_es_field="locations_full.version"),
+    # the best open copy's version, as its group_by reads it (oxjob #2140; was every location's)
+    BestOpenVersionField(param="best_open_version", custom_es_field="best_oa_location.version"),
     TermField(param="biblio.first_page"),
     TermField(param="biblio.issue"),
     TermField(param="biblio.last_page"),

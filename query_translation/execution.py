@@ -38,7 +38,7 @@ from core.shared_view import (
     set_source,
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
-from core.validate import validate_sample_cursor
+from core.validate import validate_sample_cursor, xpac_controls
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
 from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
@@ -1379,10 +1379,7 @@ def _effective_corpus(oqo, connection):
         return None
     if oqo.corpus and oqo.corpus != "core":
         corpus = oqo.corpus
-    elif (
-        request.args.get("include_xpac") == "true"
-        or request.args.get("include-xpac") == "true"
-    ):
+    elif xpac_controls(request)[0]:  # true in any case, or an include_xpac:true filter (oxjob #2140)
         corpus = "all"
     else:
         corpus = "core"

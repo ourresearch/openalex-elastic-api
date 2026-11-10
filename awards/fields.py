@@ -4,6 +4,7 @@ from core.fields import (
     DateField,
     DateTimeField,
     OpenAlexIDField,
+    OpenAlexURLTermField,
     RangeField,
     SearchField,
     TermField,
@@ -99,7 +100,7 @@ fields = [
         docstring="The Digital Object Identifier for the project",
         sort_field="doi.keyword",
     ),
-    TermField(
+    OpenAlexURLTermField(  # id:G2966666733 = its URL form (oxjob #2140, ticket 22928)
         param="id",
         custom_es_field="id"
     ),

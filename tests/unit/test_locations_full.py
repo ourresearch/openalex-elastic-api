@@ -26,8 +26,10 @@ SAMPLE_VALUES = {
     "OpenAlexIDField": ["S4306400194", "!S4306400194", "S4306400194|S190740074", "null", "!null"],
     "TermField": ["cc-by", "!cc-by", "cc-by|cc-by-nc", "null|cc-by", "null", "!null"],
 }
+# best_open_version reads the best open copy (best_oa_location, one per work, no cap), as its group_by does
+# (oxjob #2140): reading every location let closed works match.
 LOCATION_PARAMS = [
-    "best_open_version", "doi", "has_oa_accepted_or_published_version", "has_oa_submitted_version", "has_pdf_url",
+    "doi", "has_oa_accepted_or_published_version", "has_oa_submitted_version", "has_pdf_url",
     "locations.is_accepted", "locations.is_oa", "locations.is_published", "locations.landing_page_url",
     "locations.license", "locations.license_id", "locations.raw_type", "locations.source.has_issn",
     "locations.source.host_organization", "locations.source.host_organization_lineage", "locations.source.id",

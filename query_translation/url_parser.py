@@ -8,6 +8,7 @@ Handles the traditional query parameter syntax:
 import re
 from typing import Dict, List, Optional, Tuple, Any
 from core.filter_split import split_filter_string  # same split as the filter door (oxjob #1883)
+from core.quoted_values import unquote_filter_value  # same quote reading as the filter door (oxjob #2140)
 from core.search_punctuation import wildcard_chars_as_punctuation
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids, normalize_corpus
 from query_translation.oql_lang import (
@@ -148,6 +149,18 @@ def parse_url_to_oqo(
 
     if path_id:
         filter_rows.append(LeafFilter(column_id="ids.openalex", value=path_id))
+
+    if filter_string and "xpac:" in filter_string:
+        # An include_xpac:true filter clause is the corpus choice, not a filter: the same as the
+        # include_xpac=true parameter (oxjob #2140; the REST view 400s any other value).
+        kept = []
+        for part in split_filter_string(filter_string):
+            key, _, val = part.partition(":")
+            if key.replace("-", "_") == "include_xpac":
+                include_xpac = include_xpac or val.strip().strip('"').lower() == "true"
+            else:
+                kept.append(part)
+        filter_string = ",".join(kept)
 
     if filter_string:
         filter_rows.extend(parse_filter_string(filter_string, entity_type))
@@ -428,27 +441,14 @@ def parse_single_filter(
 
     # Quoted non-search values: a single enclosing pair of double-quotes means
     # "the spaces inside are literal, not AND operators" — strip it before any
-    # further parsing, mirroring the live engine (core/filter.py `is_quoted`).
-    # The pipe-OR split below still applies, so `"a|b c|d"` is OR of [a, "b c", d]
-    # with the multi-word value kept whole. Search fields keep their quotes
-    # (exact-phrase semantics, handled in the .search path above). (#363)
-    if (
-        len(value) >= 2
-        and value.startswith('"')
-        and value.endswith('"')
-        and "search" not in field
-    ):
-        value = value[1:-1]
-    # The GUI negates a quoted value outside the quotes (`!"a b"`); same value as
-    # `"!a b"`. It used to keep the quotes inside the value and match nothing
-    # (#1463 follow-up, from #1473).
-    elif (
-        len(value) >= 3
-        and value.startswith('!"')
-        and value.endswith('"')
-        and "search" not in field
-    ):
-        value = "!" + value[2:-1]
+    # further parsing, mirroring the live engine (core/filter.py). The pipe-OR
+    # split below still applies, so `"a|b c|d"` is OR of [a, "b c", d] with the
+    # multi-word value kept whole (#363), and an OR list may quote each operand
+    # (`"New York"|California`, oxjob #2140). The GUI's `!"a b"` = `"!a b"`
+    # (#1463 follow-up, from #1473). Search fields keep their quotes
+    # (exact-phrase semantics, handled in the .search path above).
+    if "search" not in field:
+        value, _ = unquote_filter_value(value)
 
     # Handle OR (pipe) in values
     if "|" in value:

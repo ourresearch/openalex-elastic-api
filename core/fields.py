@@ -887,8 +887,9 @@ class RangeField(Field):
             q = Q("range", **kwargs)
         elif self.value == "!null":
             # "has a value", as on every other field type. It used to reach float("null"):
-            # HTTP 500 (Sentry OPENALEX-SEARCH-API-H, oxjob #1913).
-            q = Q("exists", field=self.es_field())
+            # HTTP 500 (Sentry OPENALEX-SEARCH-API-H, oxjob #1913). An exists query takes the
+            # dotted path: `apc_list__value_usd` named no field, so !null answered 0 (oxjob #2140).
+            q = Q("exists", field=self.es_field().replace("__", "."))
         elif self.value.startswith("!"):
             if "-" in self.value:
                 left_value, right_value = self.range_bounds(self.value[1:])
@@ -911,7 +912,7 @@ class RangeField(Field):
             }
             q = Q("range", **kwargs)
         elif self.value == "null":
-            q = ~Q("exists", field=self.es_field())
+            q = ~Q("exists", field=self.es_field().replace("__", "."))
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value}
@@ -1596,17 +1597,6 @@ class TermField(Field):
             country_codes = self.get_country_codes()
             kwargs = {self.es_field(): country_codes}
             q = Q("terms", **kwargs)
-        elif self.param == "best_open_version":
-            self.validate_best_open_version()
-            submitted_query = Q("term", **{self.custom_es_field: "submittedVersion"})
-            accepted_query = Q("term", **{self.custom_es_field: "acceptedVersion"})
-            published_query = Q("term", **{self.custom_es_field: "publishedVersion"})
-            if self.value.lower() == "any":
-                q = submitted_query | accepted_query | published_query
-            elif self.value.lower() == "acceptedorpublished":
-                q = accepted_query | published_query
-            elif self.value.lower() == "published":
-                q = published_query
         elif self.param == "language":
             kwargs = {self.es_field(): self.value.lower()}
             q = Q("term", **kwargs)
@@ -1846,12 +1836,41 @@ class TermField(Field):
             version = value
         return version
 
-    def validate_best_open_version(self):
-        valid_values = ["any", "acceptedOrPublished", "published"]
-        if self.value.lower() not in [value.lower() for value in valid_values]:
+
+class BestOpenVersionField(TermField):
+    """`best_open_version`: the version of the work's best open copy, at least as good as asked
+    (`any` = submitted, accepted or published; `acceptedOrPublished`; `published`), the same
+    reading as its group_by. Before oxjob #2140 the filter read every location, so
+    best_open_version:published,is_oa:false answered 115M works; `!any` answered every work and
+    `any|published` none. Keeps the string type and operators of a TermField."""
+
+    VERSIONS = {
+        "any": ["submittedVersion", "acceptedVersion", "publishedVersion"],
+        "acceptedorpublished": ["acceptedVersion", "publishedVersion"],
+        "published": ["publishedVersion"],
+    }
+
+    def _versions(self, value):
+        versions = self.VERSIONS.get(value.lower())
+        if versions is None:
             raise APIQueryParamsError(
-                f"Value for {self.param} must be one of {', '.join(valid_values)} and not {self.value}."
+                f"Value for {self.param} must be one of any, acceptedOrPublished, published and not {value}."
             )
+        return versions
+
+    def build_query(self):
+        field = self.es_field().replace("__", ".")
+        if self.value in ("null", "!null"):
+            q = Q("exists", field=field)
+            return ~q if self.value == "null" else q
+        negated = self.value.startswith("!")
+        q = Q("terms", **{field: self._versions(self.value.lstrip("!"))})
+        return ~q if negated else q
+
+    def build_terms_query(self, values):
+        wanted = {v for value in values for v in self._versions(value)}
+        versions = [v for v in self.VERSIONS["any"] if v in wanted]  # the single-value order
+        return Q("terms", **{self.es_field().replace("__", "."): versions})
 
 
 class TextTermField(TermField):
@@ -1869,6 +1888,33 @@ class TextTermField(TermField):
             self.value = v
             clauses.append(self.build_query())
         return Q("bool", should=clauses, minimum_should_match=1)
+
+
+_SHORT_OPENALEX_ID_RE = re.compile(r"[WAICFVPSTG]\d{2,}", re.IGNORECASE)
+
+
+class OpenAlexURLTermField(TermField):
+    """A string filter on a keyword that stores full OpenAlex URLs (`https://openalex.org/G123`). A bare
+    short id (`G123`, `g123`) reads as its URL, as on every OpenAlexIDField; before oxjob #2140 it
+    matched nothing (awards id:G2966666733 answered 0, ticket 22928). It keeps the string type and
+    operators of a TermField, so /properties is unchanged."""
+
+    @staticmethod
+    def _as_url(value):
+        neg = ""
+        if value.startswith("!"):
+            neg, value = "!", value[1:]
+        if _SHORT_OPENALEX_ID_RE.fullmatch(value):
+            value = ID_URL_PREFIX + value.upper()
+        return neg + value
+
+    def _get_formatted_value(self):
+        self.value = self._as_url(self.value)
+        return super()._get_formatted_value()
+
+    def build_query(self):
+        self.value = self._as_url(self.value)
+        return super().build_query()
 
 
 class OrcidField(TermField):

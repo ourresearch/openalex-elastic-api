@@ -41,6 +41,7 @@ from core.sort import (
     with_tie_break,
 )
 from core.utils import get_data_version_connection, get_field
+from core.validate import xpac_controls
 from core.vector_index import vector_semantic_search
 
 
@@ -190,10 +191,7 @@ def attach_x_query(result, request, index_name):
                 if request.args.get(p)
             }
             or None,
-            include_xpac=(
-                request.args.get("include_xpac") == "true"
-                or request.args.get("include-xpac") == "true"
-            ),
+            include_xpac=xpac_controls(request)[0],  # parameter or filter clause (oxjob #2140)
             # Top-level `corpus=` REST param (works-only, oxjob #763). The view
             # has already 400'd invalid values and corpus+xpac combos by the
             # time a result exists to attach x_query to.
