@@ -1183,6 +1183,9 @@ class TermField(Field):
             terms_query = Q("terms", **kwargs)
             if self.alias == "ids.doi":  # works: any location's DOI, not just the work's own (oxjob #1573)
                 terms_query |= Q("terms", locations_full__doi__lower=formatted_values)
+            held = [u for v in formatted_values for u in self._held_copy_urls(v)]
+            if held:  # works: any PubMed / PMC copy the work holds (oxjob #2155)
+                terms_query |= Q("terms", locations_full__landing_page_url=held)
 
         # Combine the literal-value terms clause with the null/missing clause.
         if terms_query is not None and null_query is not None:
@@ -1525,8 +1528,9 @@ class TermField(Field):
             # Same DOI forms as the positive path; the plain term below matched only the short form, which is
             # never stored, so `doi:!10.x/y` excluded nothing (oxjob #1573)
             q = ~self._doi_query(self.value[1:])
-        elif self.value.startswith("!") and self.param in ("pmcid", "ids.pmcid"):
-            q = ~Q("term", **{self.es_field(): self._pmcid_url(self.value[1:])})  # oxjob #1862
+        elif self.value.startswith("!") and self.param in ("pmid", "ids.pmid", "pmcid", "ids.pmcid"):
+            # the positive path's query, negated: `pmid:!123` was a term on the bare digits, never stored (oxjob #1862, #2155)
+            q = ~self._pubmed_id_query(self.value[1:])
         elif self.value.startswith("!"):
             query = self.value[1:]
             if (
@@ -1646,6 +1650,8 @@ class TermField(Field):
             q = Q("term", **kwargs)
         elif self.param == "doi":
             q = self._doi_query(self.value)
+        elif self.param in ("pmid", "ids.pmid", "pmcid", "ids.pmcid"):
+            q = self._pubmed_id_query(self.value)
         elif self.param in id_params:
             formatted_id = self.format_id()
             if formatted_id is None:
@@ -1746,6 +1752,28 @@ class TermField(Field):
         else:
             formatted = self.value
         return formatted
+
+    def _pubmed_id_query(self, value):
+        """The work serving this PMID / PMCID, or holding it on one of its PubMed / PMC copies (oxjob #2155)."""
+        self.value = value
+        formatted = self.format_id()
+        q = Q("term", **{self.es_field(): formatted})
+        held = self._held_copy_urls(formatted)
+        return q | Q("terms", locations_full__landing_page_url=held) if held else q
+
+    def _held_copy_urls(self, formatted):
+        """Landing pages of the work's own PubMed / PMC copies for a formatted ids.pmid / ids.pmcid value (oxjob #2155).
+        A work holding several PubMed records (a preprint merged with its article) serves one PMID and its PMCID; the
+        other records, and their PMC copies, are only its locations, so pmid: and pmcid: look there too, as doi: matches
+        any location's DOI (#1573). PubMed copies all read https://pubmed.ncbi.nlm.nih.gov/<n>; PMC copies read
+        https://pmc.ncbi.nlm.nih.gov/articles/PMC<n>/ (10.56M) or the served form .../pmc/articles/<n> (1.98M)."""
+        if self.custom_es_field == "ids.pmid" and formatted.startswith("https://pubmed.ncbi.nlm.nih.gov/"):
+            return [formatted]
+        if self.custom_es_field == "ids.pmcid" and formatted.startswith("https://www.ncbi.nlm.nih.gov/pmc/articles/"):
+            digits = formatted.rsplit("/", 1)[-1]
+            if digits.isdigit():
+                return [formatted, f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{digits}/"]
+        return []
 
     @staticmethod
     def _pmcid_url(value):

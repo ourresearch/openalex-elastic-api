@@ -124,6 +124,16 @@ def works_random_get():
     return works_schema.dump(response[0])
 
 
+def _held_id_search(s, served_q, copy_urls):
+    """The work serving this PMID / PMCID first; else a work holding it on one of its PubMed / PMC copies, e.g. the
+    preprint record of a merged preprint + article (oxjob #2155: 327K held PMIDs answered 404). Lakebase's id map
+    holds only served ids, so these reach ES; ties go to the lowest id, so the answer is the same every time."""
+    q = Q("bool", should=[Q("constant_score", filter=served_q, boost=2.0),
+                          Q("constant_score", filter=Q("terms", locations_full__landing_page_url=copy_urls), boost=1.0)],
+          minimum_should_match=1)
+    return s.query(q).sort({"_score": "desc"}, {"id": "asc"})
+
+
 @blueprint.route("/works/<path:id>")
 @blueprint.route("/entities/works/<path:id>")
 def works_id_get(id):
@@ -159,15 +169,14 @@ def works_id_get(id):
         if not clean_pmid:
             abort(404)
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
-        query = Q("term", ids__pmid=full_pmid)
-        s = s.filter(query)
+        s = _held_id_search(s, Q("term", ids__pmid=full_pmid), [full_pmid])
         lakebase_lookup = ("ext_id", full_pmid)
     elif id.startswith("pmcid:"):
         id = id.replace("pmcid:", "")
         clean_pmcid = normalize_pmcid(id)
         full_pmcid = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{clean_pmcid}"
-        query = Q("term", ids__pmcid=full_pmcid)
-        s = s.filter(query)
+        s = _held_id_search(s, Q("term", ids__pmcid=full_pmcid),
+                            [full_pmcid, f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{clean_pmcid}/"])
     elif id.startswith("doi:") or ("doi" in id):
         clean_doi = normalize_doi(id, return_none_if_error=True)
         if not clean_doi:
