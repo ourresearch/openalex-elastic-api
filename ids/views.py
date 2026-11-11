@@ -26,7 +26,11 @@ from study_designs.schemas import StudyDesignsSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
 from ids.utils import (
+    arxiv_copy_urls,
+    arxiv_doi,
+    arxiv_form,
     is_author_openalex_id,
+    is_bare_doi,
     is_award_openalex_id,
     is_concept_openalex_id,
     is_funder_openalex_id,
@@ -38,6 +42,8 @@ from ids.utils import (
     is_topic_openalex_id,
     is_pubmed_url,
     is_work_openalex_id,
+    lower_scheme,
+    normalize_arxiv,
     normalize_doi,
     normalize_issn,
     normalize_openalex_id,
@@ -124,12 +130,14 @@ def works_random_get():
     return works_schema.dump(response[0])
 
 
-def _held_id_search(s, served_q, copy_urls):
+def _held_id_search(s, served_q, copy_urls=(), held_q=None):
     """The work serving this PMID / PMCID first; else a work holding it on one of its PubMed / PMC copies, e.g. the
     preprint record of a merged preprint + article (oxjob #2155: 327K held PMIDs answered 404). Lakebase's id map
-    holds only served ids, so these reach ES; ties go to the lowest id, so the answer is the same every time."""
+    holds only served ids, so these reach ES; ties go to the lowest id, so the answer is the same every time.
+    held_q replaces the copy-page match (a DOI held on a location, oxjob #2157)."""
+    held_q = held_q or Q("terms", locations_full__landing_page_url=list(copy_urls))
     q = Q("bool", should=[Q("constant_score", filter=served_q, boost=2.0),
-                          Q("constant_score", filter=Q("terms", locations_full__landing_page_url=copy_urls), boost=1.0)],
+                          Q("constant_score", filter=held_q, boost=1.0)],
           minimum_should_match=1)
     return s.query(q).sort({"_score": "desc"}, {"id": "asc"})
 
@@ -147,6 +155,7 @@ def works_id_get(id):
     # the OpenAlex id this request asked for, set only by its own branch: the pmid:/pmcid: branches cut their
     # prefix off `id`, and "S0016-5085(16)00131-1" then reads like a source id (oxjob #1907)
     merged_lookup_id = None
+    id = lower_scheme(id)  # DOI:, PMID:, PMCID:, MAG:, arXiv: work like their lower-case forms (oxjob #2157)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -177,13 +186,22 @@ def works_id_get(id):
         full_pmcid = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{clean_pmcid}"
         s = _held_id_search(s, Q("term", ids__pmcid=full_pmcid),
                             [full_pmcid, f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{clean_pmcid}/"])
-    elif id.startswith("doi:") or ("doi" in id):
+    elif (arxiv_text := arxiv_form(id)) is not None:
+        # arxiv:<id>, an arxiv.org abs/pdf URL or a bare 2305.18290 -> arXiv's DOI, so the answer is the work
+        # doi:10.48550/arxiv.<id> returns; ES also finds a work holding only an arXiv page (oxjob #2157)
+        arxiv_id = normalize_arxiv(arxiv_text)
+        if not arxiv_id:
+            abort(404)
+        full_doi = arxiv_doi(arxiv_id)
+        s = _held_id_search(s, Q("term", ids__doi=full_doi), arxiv_copy_urls(arxiv_id))
+        lakebase_lookup = ("ext_id", full_doi)
+    elif "doi" in id.lower() or is_bare_doi(id):
         clean_doi = normalize_doi(id, return_none_if_error=True)
         if not clean_doi:
             abort(404)
         full_doi = f"https://doi.org/{clean_doi}"
-        query = Q("term", ids__doi=full_doi)
-        s = s.filter(query)
+        # a Lakebase miss (lag, error) still finds a DOI held on a location, as filter=doi: does (#1573, oxjob #2157)
+        s = _held_id_search(s, Q("term", ids__doi=full_doi), held_q=Q("term", locations_full__doi__lower=full_doi))
         lakebase_lookup = ("ext_id", full_doi)
     else:
         abort(404)

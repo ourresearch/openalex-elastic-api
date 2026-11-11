@@ -1496,6 +1496,10 @@ class TermField(Field):
                 "https://openalex.org/"
             ):
                 self.value = f"https://openalex.org/{self.value}"
+        if self.param == "ids.arxiv":
+            neg = self.value.startswith("!")
+            q = self._arxiv_query(self.value[1:] if neg else self.value)
+            return ~q if neg else q
         if self.value == "null":
             # (Works' `version` no longer needs a special case here — its
             # custom_es_field covers it; the hardcode broke the
@@ -1687,6 +1691,17 @@ class TermField(Field):
         return Q("bool", should=[Q("term", **{self.es_field(): {"value": v, "case_insensitive": True}})
                                  for v in forms], minimum_should_match=1)
 
+    def _arxiv_query(self, value):
+        """filter=ids.arxiv:<id>: the work holding arXiv's DOI record 10.48550/arxiv.<id>, served or on a location, as
+        /works/arxiv:<id> answers (oxjob #2157; ~4.4K requests a day answered 400). Takes any form /works/ takes."""
+        from ids.utils import arxiv_doi, arxiv_form, normalize_arxiv
+
+        arxiv_id = normalize_arxiv(arxiv_form(value) or value)
+        if not arxiv_id:
+            raise APIQueryParamsError(
+                f"{value} is not an arXiv id for {self.param}; use e.g. 2305.18290 or hep-th/9901001")
+        return self._doi_query(arxiv_doi(arxiv_id))
+
     def _doi_query(self, value):
         # Special handling for DOI to support both data versions:
         # v1: stores full URL like "https://doi.org/10.1590/..."
@@ -1694,7 +1709,12 @@ class TermField(Field):
         # DOIs are stored lowercase, so we must lowercase the query value
         if self._doi_on_keyword():
             return self._doi_keyword_query(value)
-        if "doi.org" in value:
+        from ids.utils import normalize_doi
+
+        clean = normalize_doi(value, return_none_if_error=True)
+        if clean:  # DOI:, doi:, http://dx.doi.org/, doi.org/: all the same DOI (oxjob #2157)
+            short_doi, full_doi = clean, f"https://doi.org/{clean}"
+        elif "doi.org" in value:
             short_doi = value.replace("https://doi.org/", "").lower()
             full_doi = value.lower()
         else:
@@ -1722,7 +1742,8 @@ class TermField(Field):
         elif (
             self.param == "pmid" or self.param == "ids.pmid"
         ) and "pubmed.ncbi.nlm.nih.gov" not in self.value:
-            formatted = f"https://pubmed.ncbi.nlm.nih.gov/{self.value}"
+            pmid = re.sub(r"^pmid:\s*", "", self.value.strip(), flags=re.I)  # PMID:123 = 123 (oxjob #2157)
+            formatted = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}"
         elif self.param == "pmcid" or self.param == "ids.pmcid":
             formatted = self._pmcid_url(self.value)
         elif (

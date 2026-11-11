@@ -930,6 +930,9 @@ fields = [
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
     TermField(param="doi_starts_with", custom_es_field="ids.doi"),
+    # arXiv id -> arXiv's DOI record (core.fields TermField._arxiv_query). Unlisted: kept out of /properties for now,
+    # but live for the ~4.4K requests a day that already send it (oxjob #2157).
+    TermField(param="ids.arxiv", alias="ids.doi", unlisted=True),
     TermField(param="fulltext_origin"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
