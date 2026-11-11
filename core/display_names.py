@@ -120,6 +120,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'institution_awarded.lineage': {"display_name": 'awarded institution'},
         'investigators': {"display_name": 'investigator'},
         'investigators.affiliation': {"display_name": 'institution'},
+        # Author-profile filters (oxjob #1847); 'investigator' is the name column above.
+        'investigators.author.id': {"display_name": 'investigator profile'},
+        'lead_investigator.author.id': {"display_name": 'lead investigator profile'},
         'landing_page_url': {"display_name": 'landing page'},
         'lead_investigator.affiliation.country': {"display_name": 'investigator country'},
         'lead_investigator.affiliation.name': {"display_name": 'investigator affiliation'},

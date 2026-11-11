@@ -2193,9 +2193,7 @@
       "displayName": "funder ROR",
       "displayNameVerbatim": false,
       "type": "search",
-      "actions": [
-        "filter"
-      ],
+      "actions": [],
       "actionsPopular": [],
       "isId": false,
       "hasExport": false
@@ -2287,6 +2285,23 @@
       "isId": false,
       "hasExport": false
     },
+    "investigators.author.id": {
+      "key": "investigators.author.id",
+      "entityToFilter": "awards",
+      "entityToSelect": "authors",
+      "displayName": "investigator profile",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
     "landing_page_url": {
       "key": "landing_page_url",
       "entityToFilter": "awards",
@@ -2296,6 +2311,21 @@
       "type": "url",
       "actions": [
         "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "lead_investigator.author.id": {
+      "key": "lead_investigator.author.id",
+      "entityToFilter": "awards",
+      "entityToSelect": "authors",
+      "displayName": "lead investigator profile",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -2458,6 +2488,22 @@
       "isId": false,
       "hasExport": false
     },
+    "awards_count": {
+      "key": "awards_count",
+      "entityToFilter": "authors",
+      "entityToSelect": null,
+      "displayName": "awards count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "authors",
@@ -2489,6 +2535,23 @@
         "group_by"
       ],
       "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "last_known_institutions.id": {
+      "key": "last_known_institutions.id",
+      "entityToFilter": "authors",
+      "entityToSelect": "institutions",
+      "displayName": "exact institution",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [
+        "group_by"
+      ],
       "isId": false,
       "hasExport": false
     },
@@ -2568,23 +2631,6 @@
       ],
       "actionsPopular": [
         "filter"
-      ],
-      "isId": false,
-      "hasExport": false
-    },
-    "last_known_institutions.id": {
-      "key": "last_known_institutions.id",
-      "entityToFilter": "authors",
-      "entityToSelect": "institutions",
-      "displayName": "exact institution",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": [
-        "group_by"
       ],
       "isId": false,
       "hasExport": false
@@ -3912,6 +3958,22 @@
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "awards_count": {
+      "key": "awards_count",
+      "entityToFilter": "institutions",
+      "entityToSelect": null,
+      "displayName": "awards count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
       "actionsPopular": [],
       "isId": false,
       "hasExport": false

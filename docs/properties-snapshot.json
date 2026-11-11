@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "5dc1611b1d866d1c54770769acf19f234c36d2a784f454726c3df3521ee73df2",
+    "fingerprint": "5c4015784da46d0b0228649780ec1bd7966d3ea1e9e5bb192d1dab24754b28aa",
     "property_count": 966,
-    "version": "23.1.0"
+    "version": "23.2.0"
   },
   "properties": {
     "authors": {
@@ -180,7 +180,9 @@
           "or",
           "range"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "block_key": {
@@ -1790,9 +1792,7 @@
           "null",
           "or"
         ],
-        "supported_by": [
-          "gui"
-        ],
+        "supported_by": [],
         "type": "string"
       },
       "funder_award_id": {
@@ -2148,7 +2148,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "investigators author id",
+        "display_name": "investigator profile",
         "entity_type": "authors",
         "name": "investigators.author.id",
         "operators": [
@@ -2157,7 +2157,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "landing_page_url": {
@@ -2248,7 +2250,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "lead investigator author id",
+        "display_name": "lead investigator profile",
         "entity_type": "authors",
         "name": "lead_investigator.author.id",
         "operators": [
@@ -2257,7 +2259,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "lead_investigator.family_name": {
@@ -6967,7 +6971,9 @@
           "or",
           "range"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "cited_by_count": {

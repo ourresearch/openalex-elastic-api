@@ -469,7 +469,14 @@ CAP_COLUMN = "column"
 # (Rohan + Casey 11-09); authors and institutions gain the range filter and
 # sort `awards_count` and the column `awards_api_url`. Purely additive = MINOR per classify_properties_diff.py. The version line is
 # set by Rohan (the human in the loop); Casey and Jason informed.
-PROPERTIES_VERSION = "23.1.0"
+# 23.2.0 (2026-11-11, oxjob #2168): client_registry.json refreshed for the GUI's award facets (openalex-gui 31a8d069).
+# supported_by [] -> ["gui"] on awards.investigators.author.id, awards.lead_investigator.author.id, authors.awards_count
+# and institutions.awards_count (so OQL accepts ?filter=investigators.author.id:A..., which fell out as "invalid");
+# awards.funder.ror ["gui"] -> [] (the GUI stopped offering it: the index has no funder.ror values). The two author-id
+# filters get display names "investigator profile" / "lead investigator profile" ("investigator" is the name column).
+# supported_by and display_name transitions = MINOR per classify_properties_diff.py. Version set on Kyle's explicit
+# approval in chat 2026-11-11 (precedent 23.0.0); Jason and Casey informed.
+PROPERTIES_VERSION = "23.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
