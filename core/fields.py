@@ -1183,9 +1183,6 @@ class TermField(Field):
             terms_query = Q("terms", **kwargs)
             if self.alias == "ids.doi":  # works: any location's DOI, not just the work's own (oxjob #1573)
                 terms_query |= Q("terms", locations_full__doi__lower=formatted_values)
-            held = [u for v in formatted_values for u in self._held_copy_urls(v)]
-            if held:  # works: any PubMed / PMC copy the work holds (oxjob #2155)
-                terms_query |= Q("terms", locations_full__landing_page_url=held)
 
         # Combine the literal-value terms clause with the null/missing clause.
         if terms_query is not None and null_query is not None:
@@ -1775,26 +1772,12 @@ class TermField(Field):
         return formatted
 
     def _pubmed_id_query(self, value):
-        """The work serving this PMID / PMCID, or holding it on one of its PubMed / PMC copies (oxjob #2155)."""
+        """The work serving this PMID / PMCID, in the stored URL form, so `pmid:!123` excludes it too (it was a term on
+        the bare digits, never stored, oxjob #2155). Only the served id: a PubMed / PMC copy a work merely holds is no
+        evidence the work is that article (oxjob #2155, 11 Nov: about 1 in 5 held PMIDs and 1 in 15 held PMC copies are
+        another article per NCBI), so those stay 404 until the record sits on its own work (oxjob #2167)."""
         self.value = value
-        formatted = self.format_id()
-        q = Q("term", **{self.es_field(): formatted})
-        held = self._held_copy_urls(formatted)
-        return q | Q("terms", locations_full__landing_page_url=held) if held else q
-
-    def _held_copy_urls(self, formatted):
-        """Landing pages of the work's own PubMed / PMC copies for a formatted ids.pmid / ids.pmcid value (oxjob #2155).
-        A work holding several PubMed records (a preprint merged with its article) serves one PMID and its PMCID; the
-        other records, and their PMC copies, are only its locations, so pmid: and pmcid: look there too, as doi: matches
-        any location's DOI (#1573). PubMed copies all read https://pubmed.ncbi.nlm.nih.gov/<n>; PMC copies read
-        https://pmc.ncbi.nlm.nih.gov/articles/PMC<n>/ (10.56M) or the served form .../pmc/articles/<n> (1.98M)."""
-        if self.custom_es_field == "ids.pmid" and formatted.startswith("https://pubmed.ncbi.nlm.nih.gov/"):
-            return [formatted]
-        if self.custom_es_field == "ids.pmcid" and formatted.startswith("https://www.ncbi.nlm.nih.gov/pmc/articles/"):
-            digits = formatted.rsplit("/", 1)[-1]
-            if digits.isdigit():
-                return [formatted, f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{digits}/"]
-        return []
+        return Q("term", **{self.es_field(): self.format_id()})
 
     @staticmethod
     def _pmcid_url(value):

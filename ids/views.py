@@ -131,10 +131,10 @@ def works_random_get():
 
 
 def _held_id_search(s, served_q, copy_urls=(), held_q=None):
-    """The work serving this PMID / PMCID first; else a work holding it on one of its PubMed / PMC copies, e.g. the
-    preprint record of a merged preprint + article (oxjob #2155: 327K held PMIDs answered 404). Lakebase's id map
-    holds only served ids, so these reach ES; ties go to the lowest id, so the answer is the same every time.
-    held_q replaces the copy-page match (a DOI held on a location, oxjob #2157)."""
+    """The work serving this id first; else a work holding it on one of its copies (an arXiv page, a DOI on a
+    location, oxjob #2157). Lakebase's id map holds only served ids, so these reach ES; ties go to the lowest id, so the
+    answer is the same every time. held_q replaces the copy-page match. Not for PMIDs / PMCIDs (oxjob #2155, 11 Nov):
+    about 1 in 5 held PubMed records and 1 in 15 held PMC copies are another article, so those answer 404."""
     held_q = held_q or Q("terms", locations_full__landing_page_url=list(copy_urls))
     q = Q("bool", should=[Q("constant_score", filter=served_q, boost=2.0),
                           Q("constant_score", filter=held_q, boost=1.0)],
@@ -178,14 +178,13 @@ def works_id_get(id):
         if not clean_pmid:
             abort(404)
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
-        s = _held_id_search(s, Q("term", ids__pmid=full_pmid), [full_pmid])
+        s = s.filter(Q("term", ids__pmid=full_pmid))  # served only, never a held copy (oxjob #2155)
         lakebase_lookup = ("ext_id", full_pmid)
     elif id.startswith("pmcid:"):
         id = id.replace("pmcid:", "")
         clean_pmcid = normalize_pmcid(id)
         full_pmcid = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{clean_pmcid}"
-        s = _held_id_search(s, Q("term", ids__pmcid=full_pmcid),
-                            [full_pmcid, f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{clean_pmcid}/"])
+        s = s.filter(Q("term", ids__pmcid=full_pmcid))  # served only, never a held copy (oxjob #2155)
     elif (arxiv_text := arxiv_form(id)) is not None:
         # arxiv:<id>, an arxiv.org abs/pdf URL or a bare 2305.18290 -> arXiv's DOI, so the answer is the work
         # doi:10.48550/arxiv.<id> returns; ES also finds a work holding only an arXiv page (oxjob #2157)

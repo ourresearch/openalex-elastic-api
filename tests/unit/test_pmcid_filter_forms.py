@@ -10,7 +10,6 @@ from core.filter import filter_records
 from works.fields import fields_dict as works_fields_dict
 
 SERVED = "https://www.ncbi.nlm.nih.gov/pmc/articles/1078728"
-HELD_PMC = "https://pmc.ncbi.nlm.nih.gov/articles/PMC1078728/"
 
 
 def _body(filters):
@@ -30,8 +29,8 @@ def _body(filters):
 def test_every_pmcid_form_reaches_the_served_form(param, value):
     body = _body([{param: value}])
     assert SERVED in body, body
-    # the PMC-prefixed form appears only as a PMC copy's landing page (oxjob #2155), never on ids.pmcid
-    assert body.replace(HELD_PMC, "").count("PMC1078728") == 0, body
+    # the PMC-prefixed form is never stored on ids.pmcid, and held PMC copies are not matched (oxjob #2155)
+    assert body.count("PMC1078728") == 0 and "landing_page_url" not in body, body
 
 
 def test_or_of_pmcids():
@@ -44,8 +43,8 @@ def test_negated_pmcid():
     assert SERVED in body and "must_not" in body, body
 
 
-# oxjob #2155: a work holding several PubMed records serves one PMID / PMCID; the others are its PubMed / PMC copies'
-# landing pages, and pmid: / pmcid: find the work by them too (as doi: matches any location's DOI, #1573).
+# oxjob #2155: pmid: / pmcid: match the served id only. A PubMed / PMC copy a work merely holds is another article
+# about 1 time in 5 (PMIDs) and 1 in 15 (PMC) per NCBI (11 Nov), so held copies are never matched (they were from 07:05 CT 11 Nov until this commit).
 PUBMED = "https://pubmed.ncbi.nlm.nih.gov/35202565"
 
 
@@ -55,25 +54,25 @@ def _clauses(filters):
 
 @pytest.mark.parametrize("param", ["pmid", "ids.pmid"])
 @pytest.mark.parametrize("value", ["35202565", PUBMED])
-def test_pmid_matches_served_or_held_copy(param, value):
+def test_pmid_matches_the_served_id_only(param, value):
     body = json.dumps(_clauses([{param: value}]))
     assert '"ids.pmid": "%s"' % PUBMED in body, body
-    assert '"locations_full.landing_page_url": ["%s"]' % PUBMED in body, body
+    assert "landing_page_url" not in body, body
 
 
-def test_pmcid_matches_both_pmc_copy_url_forms():
+def test_pmcid_matches_the_served_id_only():
     body = json.dumps(_clauses([{"pmcid": "PMC1078728"}]))
-    assert '"locations_full.landing_page_url": ["%s", "%s"]' % (SERVED, HELD_PMC) in body, body
+    assert SERVED in body and "landing_page_url" not in body, body
 
 
-def test_or_of_pmids_matches_held_copies():
+def test_or_of_pmids_matches_served_ids_only():
     body = json.dumps(_clauses([{"pmid": "35202565|34580676"}]))
     assert '"terms": {"ids.pmid": ["%s", "https://pubmed.ncbi.nlm.nih.gov/34580676"]}' % PUBMED in body, body
-    assert '"terms": {"locations_full.landing_page_url": ["%s", "https://pubmed.ncbi.nlm.nih.gov/34580676"]}' % PUBMED in body, body
+    assert "landing_page_url" not in body, body
 
 
-def test_negated_pmid_excludes_served_and_held():
+def test_negated_pmid_excludes_the_served_url_form():
     # was a must_not term on the bare digits, which ids.pmid never stores, so it excluded nothing
     body = json.dumps(_clauses([{"pmid": "!35202565"}]))
-    assert "must_not" in body and '"ids.pmid": "%s"' % PUBMED in body and "locations_full.landing_page_url" in body, body
-    assert '"ids.pmid": "35202565"' not in body, body
+    assert "must_not" in body and '"ids.pmid": "%s"' % PUBMED in body, body
+    assert '"ids.pmid": "35202565"' not in body and "landing_page_url" not in body, body
