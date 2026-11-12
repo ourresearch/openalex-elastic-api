@@ -82,7 +82,7 @@ def parse_either(oql: str) -> OQO:
         except NotCore as ce:
             core_error = ce          # reported if today's grammar can't read it either
     try:
-        return _engine_parse(oql)
+        return _typed_collection_works(_engine_parse(oql))
     except _OQLError as e:
         if core_error is None and oql.lstrip()[:4].lower() == "get ":
             # a core `get` sentence today's grammar refuses (`get [UBC]'s articles since 2020`)
@@ -125,6 +125,26 @@ def _parse_error(oql: str, e) -> "OQLParseError":
     perr = ParseError(message=message, position=e.position,
                       context=_error_context(oql, e.position))
     return OQLParseError(message, errors=[perr])
+
+
+def _typed_collection_works(oqo: OQO) -> OQO:
+    """`get works in the collection [X]` as today's grammar reads it is X's own works
+    (`ids.openalex`). For a collection of countries, sources, authors... it means the
+    works linked to X's members, as core reads the same words (`_works_column`), so read
+    it that way here too; before, it was a 400 "not valid for the `ids.openalex` filter"
+    (oxjob #885)."""
+    if oqo.get_rows != "works" or oqo.each or oqo.walks:
+        return oqo
+    from query_translation.oqo import LeafFilter, is_collection_id
+    from query_translation.oql_core import _works_column
+    for i, f in enumerate(oqo.filter_rows):
+        if (isinstance(f, LeafFilter) and f.column_id == "ids.openalex"
+                and f.operator == "in collection" and is_collection_id(f.value)):
+            ctype = _collection_type(f.value)
+            col = _works_column(ctype) if ctype not in (None, "works") else None
+            if col:
+                oqo.filter_rows[i] = LeafFilter(col, f.value, f.operator, f.is_negated)
+    return oqo
 
 
 def _collection_type(collection_id: str) -> Optional[str]:

@@ -29,7 +29,7 @@ from query_translation.oqo import (CORPUS_ALIASES, CORPUS_CANONICAL_PHRASE, OQO,
                                    BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, SortBy,
                                    is_collection_id, normalize_corpus)
 from query_translation.oqo_canonicalizer import _sort_key
-from query_translation.walks import link_for
+from query_translation.walks import WALK_LINKS, link_for
 
 # ---------------------------------------------------------------------------
 # Vocabulary
@@ -386,8 +386,13 @@ class _Works:
         elif op == "in collection":
             if col == "referenced_works":
                 self._add("citing", f"citing works in the collection {_link(val, col, r)}")
-            else:
+            elif col in _BARE_COLLECTION_COLUMNS:
                 self._add("in", f"in the collection {_link(val, col, r)}")
+            else:
+                # `in the collection [X]` reads back as X's own column, so any other column
+                # (corresponding institution or author, a work type) keeps its field in the
+                # `where` part, or the echo silently widens the query (oxjob #885)
+                raise _Leftover()
         elif op != "is" or isinstance(val, OQO):
             raise _Leftover()
         elif col == "authorships.author.id":
@@ -1032,6 +1037,13 @@ def _kind_of(id_: str) -> Optional[str]:
     if id_.startswith("col_"):
         return "collections"
     return next((k for k in _KINDS if L._is_entity_id(k, id_)), None)
+
+
+# the columns a bare `in the collection [X]` parses to, one per kind of collection (the
+# parser's `_works_column`, and `collection` for a works collection): the only columns the
+# echo may write that way
+_BARE_COLLECTION_COLUMNS = frozenset(
+    {"collection", "authorships.institutions.continent"} | set(WALK_LINKS.values()))
 
 
 def _works_column(kind: Optional[str]) -> Optional[str]:
