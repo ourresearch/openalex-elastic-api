@@ -153,6 +153,22 @@ fields = [
         entity_type="authors",
         docstring="The OpenAlex ID of the author profile of anyone named on the award: lead, co-lead or other investigator",
     ),
+    # Each person's institutions (oxjob #1847, item 9: Nightly Grants fills lead_investigator / investigators[].institutions[]
+    # as works' authorships.institutions). Works' authorships.institutions.id on the keyword lead_investigator.institutions.id /
+    # investigators_full.institutions.id (PatchInvestigatorAuthorsMapping maps both); full or short id. Institution ids are not
+    # merge-resolved (core.merged_ids covers work, author, source and funder ids only), as on works.
+    OpenAlexIDField(
+        param="lead_investigator.institutions.id",
+        custom_es_field="lead_investigator.institutions.id",
+        entity_type="institutions",
+        docstring="The OpenAlex ID of an institution the lead investigator's affiliation matched",
+    ),
+    OpenAlexIDField(
+        param="investigators.institutions.id",
+        custom_es_field="investigators_full.institutions.id",
+        entity_type="institutions",
+        docstring="The OpenAlex ID of an institution the affiliation of anyone named on the award matched: lead, co-lead or other investigator",
+    ),
     # Topic classification (oxjob #123.1, finalized in #123.2). awards-v4 has
     # `primary_topic` and `topics` declared as `nested`, with denormalized
     # `primary_topic_full` and `topics_full` siblings (object mapping, `keyword`

@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "5c4015784da46d0b0228649780ec1bd7966d3ea1e9e5bb192d1dab24754b28aa",
-    "property_count": 966,
-    "version": "23.2.0"
+    "fingerprint": "9018b9c9c31e3a0982618a0658278684ca237d186106e767e8ba3c58cf3e3e93",
+    "property_count": 968,
+    "version": "23.3.0"
   },
   "properties": {
     "authors": {
@@ -2162,6 +2162,29 @@
         ],
         "type": "openalex_id"
       },
+      "investigators.institutions.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "investigators institutions id",
+        "entity_type": "institutions",
+        "name": "investigators.institutions.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
+      },
       "landing_page_url": {
         "actions": [
           "column"
@@ -2307,6 +2330,29 @@
         ],
         "supported_by": [],
         "type": "string"
+      },
+      "lead_investigator.institutions.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "lead investigator institutions id",
+        "entity_type": "institutions",
+        "name": "lead_investigator.institutions.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
       },
       "lead_investigator.orcid": {
         "actions": [

@@ -476,7 +476,12 @@ CAP_COLUMN = "column"
 # filters get display names "investigator profile" / "lead investigator profile" ("investigator" is the name column).
 # supported_by and display_name transitions = MINOR per classify_properties_diff.py. Version set on Kyle's explicit
 # approval in chat 2026-11-11 (precedent 23.0.0); Jason and Casey informed.
-PROPERTIES_VERSION = "23.2.0"
+# 23.3.0 (oxjob #1847 item 9, investigators' institutions; Rohan 11-10): awards gain the filters
+# `lead_investigator.institutions.id` and `investigators.institutions.id` (works' authorships.institutions.id: an institution id,
+# short or full, entity type institutions) on the keyword `lead_investigator.institutions.id` / `investigators_full.institutions.id`,
+# which Nightly Grants fills from #9's institutions[] on each person. Purely additive = MINOR per classify_properties_diff.py. The
+# version line is set by Rohan.
+PROPERTIES_VERSION = "23.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
