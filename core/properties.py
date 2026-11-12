@@ -481,7 +481,11 @@ CAP_COLUMN = "column"
 # short or full, entity type institutions) on the keyword `lead_investigator.institutions.id` / `investigators_full.institutions.id`,
 # which Nightly Grants fills from #9's institutions[] on each person. Purely additive = MINOR per classify_properties_diff.py. The
 # version line is set by Rohan.
-PROPERTIES_VERSION = "23.3.0"
+# 23.4.0 (oxjob #2125, topics, keywords and SDGs on grants): awards gain the filters `keywords.id` and
+# `sustainable_development_goals.id` (works' params and values; awards-v4 maps both as the works index does) and the columns
+# `keywords` and `sustainable_development_goals` [{id, display_name, score}]. Purely additive = MINOR per
+# classify_properties_diff.py. The version line is set by Rohan.
+PROPERTIES_VERSION = "23.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

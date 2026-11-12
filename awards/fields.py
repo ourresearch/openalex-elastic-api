@@ -208,6 +208,17 @@ fields = [
         param="topics.subfield.id",
         custom_es_field="topics_full.subfield.id",
     ),
+    # Keywords and SDGs (oxjob #2125). awards-v4 maps both as the works index does (object, keyword id), so these are works'
+    # filters: the same params, the same accepted values (a keyword's slug or id; an SDG's number, sdgs/N or either URL).
+    TermField(
+        param="keywords.id",
+        custom_es_field="keywords.id",
+        docstring="The OpenAlex ID of a keyword the award's title and description were tagged with",
+    ),
+    TermField(
+        param="sustainable_development_goals.id",
+        docstring="The award's relevance to one or more of the United Nations' Sustainable Development Goals",
+    ),
     # institution_awarded (oxjob #123.2). awards-v4 has `institution_awarded`
     # as nested with a denormalized `institution_awarded_full` (object mapping)
     # sibling for filtering. Filter set mirrors the works `institutions.*`

@@ -123,6 +123,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # Author-profile filters (oxjob #1847); 'investigator' is the name column above.
         'investigators.author.id': {"display_name": 'investigator profile'},
         'lead_investigator.author.id': {"display_name": 'lead investigator profile'},
+        'keywords.id': {"display_name": 'keyword'},
         'landing_page_url': {"display_name": 'landing page'},
         'lead_investigator.affiliation.country': {"display_name": 'investigator country'},
         'lead_investigator.affiliation.name': {"display_name": 'investigator affiliation'},
@@ -133,6 +134,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'provenance': {"display_name": 'provenance'},
         'start_date': {"display_name": 'start date'},
         'start_year': {"display_name": 'start year'},
+        'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},
         # matches the GUI facet label + sibling entities (label-consistency gate;
         # surfaced by the #455 client_registry refresh)
         'topics.id': {"display_name": 'topic'},

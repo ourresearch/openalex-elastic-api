@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "9018b9c9c31e3a0982618a0658278684ca237d186106e767e8ba3c58cf3e3e93",
-    "property_count": 968,
-    "version": "23.3.0"
+    "fingerprint": "6a1d633fdbc9a9c59dae0012aa1371fc2c5162142308b0a565cb8df29ce784c4",
+    "property_count": 972,
+    "version": "23.4.0"
   },
   "properties": {
     "authors": {
@@ -2185,6 +2185,47 @@
         "supported_by": [],
         "type": "openalex_id"
       },
+      "keywords": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "keywords",
+        "entity_type": null,
+        "name": "keywords",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "keywords.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "keyword",
+        "entity_type": "keywords",
+        "name": "keywords.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "landing_page_url": {
         "actions": [
           "column"
@@ -3016,6 +3057,50 @@
         ],
         "supported_by": [],
         "type": "number"
+      },
+      "sustainable_development_goals": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "sustainable development goals",
+        "entity_type": null,
+        "name": "sustainable_development_goals",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "sustainable_development_goals.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "sustainable development goal",
+          "sustainable development goals"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "SDG",
+        "entity_type": "sdgs",
+        "name": "sustainable_development_goals.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
       },
       "text.search": {
         "actions": [

@@ -9,6 +9,7 @@ from core.schemas import (
     hide_relevance,
     relevance_score,
 )
+from works.schemas import KeywordsSchema, SDGSchema
 
 class AffiliationIdSchema(Schema):
     id = fields.Str()
@@ -191,6 +192,9 @@ class AwardsSchema(Schema):
     # Topic classification (oxjob #123.1)
     primary_topic = fields.Nested(TopicSchema, default=None)
     topics = fields.Nested(TopicSchema, many=True, default=None)
+    # Keywords and SDGs (oxjob #2125), as works have them; [] until Nightly Grants re-sends the award, and when it has none.
+    keywords = fields.Nested(KeywordsSchema, many=True, dump_default=list)
+    sustainable_development_goals = fields.Nested(SDGSchema, many=True, dump_default=list)
 
     # Institution(s) that received the award (oxjob #123.2)
     institution_awarded = fields.Nested(InstitutionAwardedSchema, many=True, default=None)
