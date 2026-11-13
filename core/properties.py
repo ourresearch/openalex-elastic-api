@@ -485,7 +485,12 @@ CAP_COLUMN = "column"
 # `sustainable_development_goals.id` (works' params and values; awards-v4 maps both as the works index does) and the columns
 # `keywords` and `sustainable_development_goals` [{id, display_name, score}]. Purely additive = MINOR per
 # classify_properties_diff.py. The version line is set by Rohan.
-PROPERTIES_VERSION = "23.4.0"
+# 23.5.0 (Casey's awards API review, 2026-11-12): funders gain the columns `works_api_url` and `awards_api_url` (the queries
+# that list what works_count and awards_count count, as authors and institutions have them; built from the id, not stored).
+# Two properties added = MINOR per classify_properties_diff.py. The same change serves DOIs as https://doi.org/... on awards
+# (`doi`, `funder.doi`) and funders (`ids.doi`), whose filters now take that form too, and `summary_stats.2yr_mean_citedness`
+# to 2 decimals on funders and sources: output values only, no property changes. The version line is set by Rohan.
+PROPERTIES_VERSION = "23.5.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

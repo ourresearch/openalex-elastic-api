@@ -3,6 +3,7 @@ from core.fields import (
     CollectionField,
     DateField,
     DateTimeField,
+    DoiTermField,
     OpenAlexIDField,
     OpenAlexURLTermField,
     RangeField,
@@ -89,7 +90,7 @@ fields = [
         custom_es_field="funder.ror",
         docstring="The ROR ID of the funding organization"
     ),
-    TermField(
+    DoiTermField(
         param="funder.doi",
         custom_es_field="funder.doi",
         docstring="The DOI of the funding organization"

@@ -8,6 +8,34 @@ from marshmallow import INCLUDE, Schema, fields, post_dump
 _GROUP_BY_METRIC_PREFIXES = ("mean_", "sum_", "min_", "max_")
 
 
+class Rounded(fields.Float):
+    """A float served to `places` decimals (Casey 11-12: 8.160333333333334 or 6.798047238270649e-08 reads as accuracy we
+    don't have). Output only: the index keeps the full value, so filters and sorts read what they read before."""
+
+    def __init__(self, places=2, **kwargs):
+        super().__init__(**kwargs)
+        self.places = places
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        value = super()._serialize(value, attr, obj, **kwargs)
+        return None if value is None else round(value, self.places)
+
+
+class DoiUrl(fields.Str):
+    """A DOI served as works serve theirs: https://doi.org/10.x/y, lower case (Casey 11-12). The index holds it bare
+    (10.13039/100000002) or in an older URL form (http://dx.doi.org/10.3030/777483); a value with no DOI in it is
+    served as stored."""
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        value = super()._serialize(value, attr, obj, **kwargs)
+        if not value:
+            return value
+        from ids.utils import normalize_doi   # ids.utils imports core: resolved at call time
+
+        bare = normalize_doi(value, return_none_if_error=True)
+        return f"https://doi.org/{bare}" if bare else value
+
+
 class MetaSchema(Schema):
     count = fields.Int()
     q = fields.Str()
@@ -138,6 +166,12 @@ class SummaryStatsSchema(Schema):
 
     class Meta:
         ordered = True
+
+
+class RoundedSummaryStatsSchema(SummaryStatsSchema):
+    """summary_stats with the mean to 2 decimals: funders and sources (Casey 11-12). Authors and institutions keep
+    SummaryStatsSchema until Casey or Jason says otherwise."""
+    two_year_mean_citedness = Rounded(2, attribute="2yr_mean_citedness", data_key="2yr_mean_citedness")
 
 
 class ValuesSchema(Schema):

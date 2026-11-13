@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "6a1d633fdbc9a9c59dae0012aa1371fc2c5162142308b0a565cb8df29ce784c4",
-    "property_count": 972,
-    "version": "23.4.0"
+    "fingerprint": "b911a7c03d946a162360e6f9fd6b4811cb42f38037c1f3b476890ad5d324b1f5",
+    "property_count": 974,
+    "version": "23.5.0"
   },
   "properties": {
     "authors": {
@@ -5620,6 +5620,22 @@
         "supported_by": [],
         "type": null
       },
+      "awards_api_url": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "awards api url",
+        "entity_type": null,
+        "name": "awards_api_url",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "awards_count": {
         "actions": [
           "column",
@@ -6355,6 +6371,22 @@
         "display_name": "updated date",
         "entity_type": null,
         "name": "updated_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "works api url",
+        "entity_type": null,
+        "name": "works_api_url",
         "operators": [],
         "supported_by": [],
         "type": null

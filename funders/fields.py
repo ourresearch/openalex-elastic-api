@@ -2,6 +2,7 @@ from core.fields import (
     BooleanField,
     DateField,
     DateTimeField,
+    DoiTermField,
     CollectionField,
     OpenAlexIDField,
     RangeField,
@@ -108,7 +109,7 @@ fields = [
         alternate_of="ids.wikidata",
     ),
     TermField(param="ids.crossref", custom_es_field="ids.crossref"),
-    TermField(param="ids.doi", custom_es_field="ids.doi.keyword"),
+    DoiTermField(param="ids.doi", custom_es_field="ids.doi.keyword"),
     CollectionField(entity_type="funders"),
 ]
 

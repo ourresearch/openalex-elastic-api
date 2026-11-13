@@ -2,6 +2,7 @@ from marshmallow import INCLUDE, Schema, fields, post_dump
 
 
 from core.schemas import (
+    DoiUrl,
     GroupBySchema,
     GroupBysSchema,
     MetaSchema,
@@ -79,7 +80,7 @@ class FunderSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     ror = fields.Str()
-    doi = fields.Str()
+    doi = DoiUrl()
 
     class Meta:
         ordered = True
@@ -178,7 +179,7 @@ class AwardsSchema(Schema):
     
     # URLs and identifiers
     landing_page_url = fields.Str(default=None)
-    doi = fields.Str(default=None)
+    doi = DoiUrl(default=None)
 
     provenance = fields.Str(default=None)
     

@@ -6,7 +6,7 @@ from core.schemas import (
     GroupBySchema,
     GroupBysSchema,
     MetaSchema,
-    SummaryStatsSchema,
+    RoundedSummaryStatsSchema,
     TopicSchema,
     XConceptsSchema,
     hide_relevance,
@@ -57,7 +57,7 @@ class SourcesSchema(Schema):
     works_count = fields.Int()
     oa_works_count = fields.Int()
     cited_by_count = fields.Int()
-    summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
+    summary_stats = fields.Nested(RoundedSummaryStatsSchema, dump_default=None)
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
     is_in_doaj_since_year = fields.Int()

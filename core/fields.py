@@ -1162,7 +1162,7 @@ class TermField(Field):
 
             # For DOI, we need to handle both v1 (full URL) and v2 (short form)
             # DOIs are stored lowercase, so we must lowercase the query values
-            if self.param == "doi" and not self._doi_on_keyword():
+            if self._is_doi() and not self._doi_on_keyword():
                 expanded_values = []
                 for val in values:
                     if "doi.org" in val:
@@ -1176,7 +1176,7 @@ class TermField(Field):
                 formatted_values = expanded_values
 
         terms_query = None
-        if values and self.param == "doi" and self._doi_on_keyword():
+        if values and self._is_doi() and self._doi_on_keyword():
             terms_query = Q("bool", should=[self._doi_keyword_query(v) for v in values], minimum_should_match=1)
         elif values:
             kwargs = {self.es_field(): formatted_values}
@@ -1525,7 +1525,7 @@ class TermField(Field):
 
             scopus = normalize_scopus(self.value)
             q = Q("match", **{"ids.scopus": scopus})
-        elif self.value.startswith("!") and self.param == "doi":
+        elif self.value.startswith("!") and self._is_doi():
             # Same DOI forms as the positive path; the plain term below matched only the short form, which is
             # never stored, so `doi:!10.x/y` excluded nothing (oxjob #1573)
             q = ~self._doi_query(self.value[1:])
@@ -1649,7 +1649,7 @@ class TermField(Field):
                 formatted_version = self.value
             kwargs = {self.es_field(): formatted_version}
             q = Q("term", **kwargs)
-        elif self.param == "doi":
+        elif self._is_doi():
             q = self._doi_query(self.value)
         elif self.param in ("pmid", "ids.pmid", "pmcid", "ids.pmcid"):
             q = self._pubmed_id_query(self.value)
@@ -1672,6 +1672,9 @@ class TermField(Field):
         (authors / institutions topic_share.id are case-sensitive keywords). A full URL used to leave
         the query unset (an HTML 500) and !T<n> excluded nothing (oxjob #1901)."""
         return get_full_openalex_id(value) or value
+
+    def _is_doi(self):
+        return self.param == "doi"
 
     def _doi_on_keyword(self):
         """The DOI sits in a raw keyword field that keeps each record's own spelling (awards
@@ -1867,6 +1870,18 @@ class TermField(Field):
         else:
             version = value
         return version
+
+
+class DoiTermField(TermField):
+    """A DOI the index holds bare and the API serves as https://doi.org/... (awards `funder.doi`, funders `ids.doi`): the
+    filter takes the bare DOI, the served URL, http://dx.doi.org/ or doi:, in any case, alone, negated or in an OR list, as
+    awards `doi` does. The served URL used to match nothing."""
+
+    def _is_doi(self):
+        return True
+
+    def _doi_on_keyword(self):
+        return True
 
 
 class BestOpenVersionField(TermField):
