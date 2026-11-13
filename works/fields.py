@@ -23,7 +23,7 @@ DOCSTRINGS = {
     "is_corresponding": "The work has corresponding author information available",
     "is_oa": "The work is Open Access, meaning that you can read the full text without needing to pay money or log in",
     "source.is_oa": "The work is in a source that is Open Access. This is different than whether the work itself is Open Access, because the OA status of a source can change",
-    "source.is_in_doaj": "The work is published in a journal that is in DOAJ, the Directory of Open Access Journals",
+    "source.is_in_doaj": "The work is published in a journal that is on the journal list of DOAJ, the Directory of Open Access Journals. Journal level: whether DOAJ's article index holds a record of the work itself is a different filter, indexed_in:doaj",
     "is_accepted": "The work has {location_type} that has been accepted for publication",
     "is_published": "The work has {location_type} that has been published",
     "has_abstract": "The work has an abstract (abstract_inverted_index is not null)",
@@ -939,6 +939,7 @@ fields = [
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
     TermField(
         param="indexed_in",
+        docstring="The indexes that hold a record of the work (arxiv, crossref, datacite, doaj, pubmed). doaj is article level: DOAJ's article index holds a record of this work. Whether its journal is on DOAJ's journal list is a different filter, primary_location.source.is_in_doaj; a work in a DOAJ journal lacks doaj here when DOAJ holds no record of that article",
     ),
     TermField(param="institution_assertions.country_code"),
     TermField(param="institution_assertions.ror"),

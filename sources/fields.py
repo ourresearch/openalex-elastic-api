@@ -35,7 +35,7 @@ fields = [
     BooleanField(param="has_issn", custom_es_field="ids.issn_l"),
     BooleanField(
         param="is_in_doaj",
-        docstring="The journal is in DOAJ, the Directory of Open Access Journals",
+        docstring="The journal is on the journal list of DOAJ, the Directory of Open Access Journals. Journal level: whether DOAJ's article index holds a record of a single work is a different filter on works, indexed_in:doaj",
         documentation_link="https://developers.openalex.org/api-reference/sources",
         alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
     ),
