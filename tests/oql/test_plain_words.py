@@ -4,7 +4,15 @@ import pytest
 
 from query_translation import oql_core as C
 from query_translation.editor_views import _add_plain_words
+from query_translation import oql_plain_words as P
 from query_translation.oql_plain_words import find
+
+
+@pytest.fixture(autouse=True)
+def no_wall_clock(monkeypatch):
+    """These cases test WHICH words are plain, not how fast: the 80 ms DEADLINE (a /validate latency guard) made the longest case
+    (`... written by people at stanford ...`, ~77 ms cold on a laptop) fail on a slow CI runner (run 43262664315)."""
+    monkeypatch.setattr(P, "DEADLINE", 10.0)
 
 
 def plain(q):
@@ -104,3 +112,9 @@ def test_validate_body_gains_plain_words_or_a_typo():
     unchanged = body()
     _add_plain_words("get works about kelp since", unchanged)     # still typing
     assert unchanged == body()
+
+
+def test_out_of_time_the_whole_statement_is_plain_words(monkeypatch):
+    monkeypatch.setattr(P, "DEADLINE", -1.0)     # the guard itself: no run tried in time -> the whole statement
+    q = "get works about kelp written by people at stanford since 2020, most cited first"
+    assert plain(q) == (q, None)
