@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from core.filter_split import split_filter_string  # same split as the filter door (oxjob #1883)
 from core.quoted_values import unquote_filter_value  # same quote reading as the filter door (oxjob #2140)
 from core.validate import has_xpac_clause
-from core.search_punctuation import wildcard_chars_as_punctuation
+from core.search_punctuation import pasted_door, wildcard_chars_as_punctuation
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids, normalize_corpus
 from query_translation.oql_lang import (
     canonical_exact_search_value,
@@ -407,7 +407,7 @@ def parse_single_filter(
     # A title's `?` (or a lone `*`) is punctuation, as the engine reads it (oxjob #1327), so the
     # echoed OQL runs the same query as the URL.
     if field.endswith((".search", ".search.exact")):
-        value = wildcard_chars_as_punctuation(value)
+        value = wildcard_chars_as_punctuation(value, pasted=pasted_door(field, entity_type))
     # Lucene-style boolean inside a search value (AND/OR/NOT keywords,
     # optionally with parens) lifts to a BranchFilter tree of has-leaves.
     # See _parse_search_boolean for grammar. Applies to `.search.exact` too

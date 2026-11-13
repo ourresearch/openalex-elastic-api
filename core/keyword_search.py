@@ -141,9 +141,15 @@ def segment(tokens, found):
 
 def query_string_leaves(q):
     """(start, end, text) for each plain term or quoted phrase in a Boolean query.
-    Proximity phrases, wildcards, field-qualified terms and stopwords are left alone."""
+    Proximity phrases, wildcards, field-qualified terms and stopwords are left alone.
+    So is a leaf with no letter or digit (`,` `×` `°` `=`): the analyzers drop it from the
+    text, but the keywords index lists symbols as synonyms ('comma', 'multiplication'), so
+    `"climate change", "public health"` became `(, OR keywords.id:"comma")` and matched
+    nothing (oxjob #2201)."""
     leaves = []
     for m in QS_LEAF.finditer(q):
+        if not norm(m.group(1) if m.group(1) is not None else m.group(3)).strip("-_ "):
+            continue
         if m.group(1) is not None:
             if m.group(2):
                 continue

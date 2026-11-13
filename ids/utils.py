@@ -276,6 +276,20 @@ def lower_scheme(value, schemes=WORK_ID_SCHEMES):
     return value
 
 
+# What a sentence, a citation or Markdown leaves on the end of a pasted DOI.
+_DOI_TRAILING_PUNCTUATION = ".,;:!?*)]}>\"'\u201d\u2019\u00bb"
+
+
+def doi_without_trailing_punctuation(doi):
+    """'10.1103/physrevlett.104.211103.' -> '10.1103/physrevlett.104.211103'; None when the DOI ends in none.
+    A few real DOIs end in '.', so callers try the DOI as typed first (oxjob #2201: ~12K lookups a day answered
+    404 for a trailing '.', ',' or ';')."""
+    if not doi:
+        return None
+    stripped = doi.rstrip(_DOI_TRAILING_PUNCTUATION + " ")
+    return stripped if stripped and stripped != doi else None
+
+
 def is_bare_doi(value):
     """A DOI with no prefix, '10.1038/nature12373'. Must START with 10.<registrant>/ so no other id form matches."""
     return re.match(r"10\.\d{4,9}/\S", value.strip()) is not None

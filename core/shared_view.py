@@ -348,7 +348,12 @@ def _build_one_search_operand(
     """Validate + build the query for ONE search operand (no `!`/`|` operators left)."""
     # A title's `?` (or a lone `*`) is punctuation, not a wildcard (oxjob #1327); done first so the
     # validators, the text query and the keyword lookup all read the same text.
-    query_str = wildcard_chars_as_punctuation(query_str)
+    # On works a multi-word search is also read as pasted text: a starred title, a Markdown
+    # reference (oxjob #2201).
+    pasted = None
+    if index_name.lower().startswith("works"):
+        pasted = "exact" if search_type == "exact" else "stemmed"
+    query_str = wildcard_chars_as_punctuation(query_str, pasted=pasted)
     validate_search_terms(query_str)
 
     if search_scope and not index_name.lower().startswith("works"):

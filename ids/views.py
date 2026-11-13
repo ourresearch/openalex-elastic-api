@@ -31,6 +31,7 @@ from ids.utils import (
     arxiv_form,
     is_author_openalex_id,
     is_bare_doi,
+    doi_without_trailing_punctuation,
     is_award_openalex_id,
     is_concept_openalex_id,
     is_funder_openalex_id,
@@ -155,6 +156,7 @@ def works_id_get(id):
     # the OpenAlex id this request asked for, set only by its own branch: the pmid:/pmcid: branches cut their
     # prefix off `id`, and "S0016-5085(16)00131-1" then reads like a source id (oxjob #1907)
     merged_lookup_id = None
+    doi_as_typed = None  # set by the DOI branch: a miss retries without trailing punctuation (oxjob #2201)
     id = lower_scheme(id)  # DOI:, PMID:, PMCID:, MAG:, arXiv: work like their lower-case forms (oxjob #2157)
 
     if is_openalex_id(id):
@@ -199,6 +201,7 @@ def works_id_get(id):
         if not clean_doi:
             abort(404)
         full_doi = f"https://doi.org/{clean_doi}"
+        doi_as_typed = clean_doi
         # a Lakebase miss (lag, error) still finds a DOI held on a location, as filter=doi: does (#1573, oxjob #2157)
         s = _held_id_search(s, Q("term", ids__doi=full_doi), held_q=Q("term", locations_full__doi__lower=full_doi))
         lakebase_lookup = ("ext_id", full_doi)
@@ -238,6 +241,10 @@ def works_id_get(id):
             merged = redirect_if_merged("ids.works_id_get", merged_lookup_id, connection)
             if merged:
                 return merged
+        # No work has the DOI as typed: try it without the punctuation a sentence left on its end
+        # ('10.1038/s41598-024-79743-y,'). As typed first, since a few real DOIs end in '.' (oxjob #2201).
+        if doi_as_typed and doi_without_trailing_punctuation(doi_as_typed):
+            return works_id_get("doi:" + doi_without_trailing_punctuation(doi_as_typed))
         abort(404)
     works_schema = WorksSchema(
         context={"display_relevance": False, "single_record": True}, only=only_fields

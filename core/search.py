@@ -6,7 +6,7 @@ from core.exceptions import APIQueryParamsError
 from core.keyword_search import STOP_EN
 from core.knn import KNNQuery
 from core.search_negation import has_leading_not, whole_query_negation_operand
-from core.search_punctuation import wildcard_chars_as_punctuation
+from core.search_punctuation import pasted_door, wildcard_chars_as_punctuation
 import requests
 
 import settings

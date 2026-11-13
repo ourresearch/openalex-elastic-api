@@ -18,6 +18,7 @@ from core.search import (
     full_search_query,
     full_search_query_exact,
     wildcard_chars_as_punctuation,
+    pasted_door,
     strip_singleton_wildcard_quotes,
     validate_wildcard_requires_exact,
     validate_wildcards,
@@ -978,7 +979,8 @@ class SearchField(Field):
         # A title's `?` (or a lone `*`) is punctuation, not a wildcard (oxjob #1327), before
         # validating: `title.search:What is life?` finds that title.
         if self.param != "semantic.search":
-            self.value = wildcard_chars_as_punctuation(self.value)
+            self.value = wildcard_chars_as_punctuation(
+                self.value, pasted=pasted_door(self.param, self.index))  # pasted text: oxjob #2201
         self.validate(self.value)
         # fulltext.search routes through the same broad builder as default.search —
         # title + abstract + full text, NOT body-only (oxjob #374). Its old body-only
@@ -1173,6 +1175,12 @@ class TermField(Field):
                         short_doi = val.lower()
                         full_doi = f"https://doi.org/{val}".lower()
                         expanded_values.extend([short_doi, full_doi])
+                # a pasted DOI ending in '.', ',' or ';' also matches without it (oxjob #2201)
+                from ids.utils import doi_without_trailing_punctuation
+                for short_doi in [v for v in expanded_values if not v.startswith("https://doi.org/")]:
+                    stripped = doi_without_trailing_punctuation(short_doi)
+                    if stripped:
+                        expanded_values.extend([stripped, f"https://doi.org/{stripped}"])
                 formatted_values = expanded_values
 
         terms_query = None
@@ -1720,9 +1728,20 @@ class TermField(Field):
         else:
             short_doi = value.lower()
             full_doi = f"https://doi.org/{value}".lower()
-        q = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
-        if self.alias == "ids.doi":  # works also match any location's DOI (always the full URL form, oxjob #1573)
-            q |= Q("term", locations_full__doi__lower=full_doi)
+        from ids.utils import doi_without_trailing_punctuation
+
+        # A pasted DOI that ends in '.', ',' or ';' also matches without it; a few real DOIs end in '.', so the
+        # DOI as typed still matches (oxjob #2201).
+        forms = [(short_doi, full_doi)]
+        stripped = doi_without_trailing_punctuation(short_doi)
+        if stripped:
+            forms.append((stripped, f"https://doi.org/{stripped}"))
+        q = None
+        for short_doi, full_doi in forms:
+            one = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
+            if self.alias == "ids.doi":  # works also match any location's DOI (the full URL form, oxjob #1573)
+                one |= Q("term", locations_full__doi__lower=full_doi)
+            q = one if q is None else q | one
         return q
 
     def es_field(self) -> str:
