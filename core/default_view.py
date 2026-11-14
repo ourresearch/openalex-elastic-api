@@ -6,8 +6,17 @@ encyclopedia entry, a figure, a file, one record of a data series) is hidden by 
     hidden = has_parent_work:true AND is_traditional:false
 
 Nothing else decides it: not the relationship, not whether the work has children, not citations.
-There is no public word, field or filter for "hidden"; the rule is made of the two public filters'
-own queries, so `corpus=all` minus `has_parent_work:true,is_traditional:false` reproduces it.
+There is no public word, field or filter for "hidden": `corpus=all` minus
+`has_parent_work:true,is_traditional:false` reproduces it.
+
+The query reads ONE internal boolean in the works index, HIDDEN_PIECE_FIELD, which walden's
+sync_works writes: true exactly when the work has a parent and its type is not traditional, absent
+or false otherwise (a doc without the field is not hidden). Reading the two public filters on
+every works query cost about 100 ms on a whole-corpus count (measured 13 Nov 2026 on a 26M-work
+stand-in field); one term costs nothing measurable. The boolean is a fold of the public rule,
+not a second rule: `hidden_by_public_filters_query` is that rule, a unit test states the
+equivalence, and scripts/check_default_view_fold.py compares the two counts on the live index
+(run it after a backfill and whenever TRADITIONAL_TYPES changes).
 
 It rides with the core corpus: `corpus=core` (the /works default) leaves hidden pieces out;
 `corpus=all` and `corpus=expansion` don't apply it. A filter on a parent-child column brings the
@@ -30,14 +39,26 @@ HIDDEN_PIECES_KEY = "_default.hide_pieces"
 HIDE_PIECES_FILTER = {HIDDEN_PIECES_KEY: "true"}
 
 
+# The works-index boolean the default view reads. Internal: not in the work record, not a filter,
+# not in /properties, OQL or OQO. Walden writes it (notebooks/elastic/sync_works). The one place
+# the name is spelled.
+HIDDEN_PIECE_FIELD = "is_non_traditional_child"
+
+
 def visible_works_query():
-    """Works the default view keeps: NOT (has_parent_work:true AND is_traditional:false), built
-    from the two public filters' own queries."""
+    """Works the default view keeps: every work that is not a hidden piece."""
+    return Q("bool", must_not=[Q("term", **{HIDDEN_PIECE_FIELD: True})])
+
+
+def hidden_by_public_filters_query():
+    """The hidden set as the public rule states it: has_parent_work:true AND is_traditional:false,
+    from those two filters' own queries. HIDDEN_PIECE_FIELD must be true on exactly these works
+    (tests/unit/test_default_view.py; scripts/check_default_view_fold.py checks the live index)."""
     from works.fields import fields_dict  # here: works.fields imports core at load time
 
     has_parent = fields_dict["has_parent_work"].query_for("true")
     not_traditional = fields_dict["is_traditional"].query_for("false")
-    return Q("bool", must_not=[Q("bool", filter=[has_parent, not_traditional])])
+    return Q("bool", filter=[has_parent, not_traditional])
 
 
 def lifts_hiding(filter_keys):

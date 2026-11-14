@@ -11,8 +11,9 @@ import pytest
 from elasticsearch_dsl import Search
 from flask import Flask
 
-from core.default_view import (HIDDEN_PIECES_KEY, HIDE_PIECES_FILTER, PIECE_FILTER_KEYS, hides_pieces,
-                               lifts_hiding, request_filter_keys, request_filter_params, visible_works_query)
+from core.default_view import (HIDDEN_PIECE_FIELD, HIDDEN_PIECES_KEY, HIDE_PIECES_FILTER, PIECE_FILTER_KEYS,
+                               hidden_by_public_filters_query, hides_pieces, lifts_hiding, request_filter_keys,
+                               request_filter_params, visible_works_query)
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.properties import ENTITY_PROPERTIES
@@ -28,7 +29,7 @@ logging.getLogger("core.merged_ids").setLevel(logging.CRITICAL)
 
 HAS_PARENT = {"exists": {"field": "parent_works.id"}}
 TRADITIONAL = {"terms": {"type": sorted(TRADITIONAL_TYPES)}}
-VISIBLE = {"bool": {"must_not": [{"bool": {"filter": [HAS_PARENT, {"bool": {"must_not": [TRADITIONAL]}}]}}]}}
+VISIBLE = {"bool": {"must_not": [{"term": {"is_non_traditional_child": True}}]}}
 CORE = {"term": {"is_xpac": "false"}}
 
 
@@ -37,14 +38,33 @@ def _filters(filter_params):
 
 
 # --- the rule ------------------------------------------------------------------------------------
-def test_visible_works_are_not_has_parent_and_not_traditional():
-    assert visible_works_query().to_dict() == VISIBLE
+def test_the_default_view_reads_one_internal_boolean():
+    assert HIDDEN_PIECE_FIELD == "is_non_traditional_child"
+    assert visible_works_query().to_dict() == VISIBLE  # a doc without the field is not hidden
 
 
-def test_the_rule_is_made_of_the_two_public_filters_own_queries():
-    """corpus=all minus `has_parent_work:true,is_traditional:false` reproduces the hidden set."""
-    hidden = _filters([{"has_parent_work": "true"}, {"is_traditional": "false"}])
-    assert VISIBLE == {"bool": {"must_not": [{"bool": {"filter": hidden}}]}}
+def test_the_boolean_is_a_fold_of_the_public_rule():
+    """The equivalence the default view rests on: walden writes `is_non_traditional_child: true` on
+    exactly the works `has_parent_work:true AND is_traditional:false` returns (it has a parent, and
+    its type is not in TRADITIONAL_TYPES), so
+
+        corpus=all minus filter=has_parent_work:true,is_traditional:false  ==  the default view's hidden set
+
+    This test pins the public side (the query below is what those two filters run); the live index
+    is compared by scripts/check_default_view_fold.py."""
+    public = hidden_by_public_filters_query().to_dict()
+    assert public == {"bool": {"filter": [HAS_PARENT, {"bool": {"must_not": [TRADITIONAL]}}]}}
+    assert public["bool"]["filter"] == _filters([{"has_parent_work": "true"}, {"is_traditional": "false"}])
+
+
+def test_the_boolean_stays_internal():
+    from works.schemas import WorksSchema
+
+    assert HIDDEN_PIECE_FIELD not in fields_dict
+    assert HIDDEN_PIECE_FIELD not in ENTITY_PROPERTIES["works"]
+    assert HIDDEN_PIECE_FIELD not in WorksSchema._declared_fields
+    with pytest.raises(APIQueryParamsError):
+        _filters([{HIDDEN_PIECE_FIELD: "true"}])
 
 
 def test_no_public_word_for_hidden():

@@ -11,11 +11,8 @@ from unittest.mock import patch
 import pytest
 from elasticsearch_dsl import MultiSearch, Search
 
-from core.work_type_classes import TRADITIONAL_TYPES
 
-HAS_PARENT = {"exists": {"field": "parent_works.id"}}
-VISIBLE = {"bool": {"must_not": [{"bool": {"filter": [
-    HAS_PARENT, {"bool": {"must_not": [{"terms": {"type": sorted(TRADITIONAL_TYPES)}}]}}]}}]}}
+VISIBLE = {"bool": {"must_not": [{"term": {"is_non_traditional_child": True}}]}}
 CORE = {"term": {"is_xpac": "false"}}
 EXPANSION = {"term": {"is_xpac": "true"}}
 

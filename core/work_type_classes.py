@@ -11,6 +11,16 @@ value from `openalex.common.work_types.is_traditional` (Databricks, synced to wo
 type in config/work-types.yaml in exactly one of the two sets below, so a new type can't ship unclassified.
 """
 
+# ┌─ CHANGING THIS LIST? RE-SYNC THE WORKS INDEX BOOLEAN (oxjob #2065) ─────────────────────────────┐
+# │ The default works view hides `is_non_traditional_child:true` (core/default_view.py), a boolean │
+# │ walden's notebooks/elastic/sync_works writes from openalex.common.work_types.is_traditional:   │
+# │ true when a work has a parent and its type is NOT in this list. Move a type in or out here and │
+# │ that boolean is wrong on every child of that type until Databricks' work_types table has the   │
+# │ same change AND those works are re-synced. Until then the default view hides or shows the      │
+# │ wrong works while `is_traditional:` (read from this list at query time) says otherwise.        │
+# │ Check: `PYTHONPATH=. venv/bin/python scripts/check_default_view_fold.py` (the two counts must  │
+# │ match).                                                                                        │
+# └────────────────────────────────────────────────────────────────────────────────────────────────┘
 TRADITIONAL_TYPES = frozenset({
     "article",
     "book",
