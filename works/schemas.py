@@ -329,9 +329,12 @@ class StudyDesignSchema(Schema):
     display_name = fields.String()
 
 
-class VolumeSchema(Schema):
+class ParentWorkSchema(Schema):
+    """A parent work, dehydrated, and how this work relates to it (oxjob #2065)."""
+
     id = fields.String()
     display_name = fields.String()
+    relationship = fields.String()
 
     class Meta:
         ordered = True
@@ -368,8 +371,12 @@ class WorksSchema(Schema):
     ids = fields.Nested(IDsSchema)
     language = fields.Str()
     primary_location = fields.Nested(LocationSchema)
-    # oxjob #1554: the work this work is part of (a chapter's book); null when none.
-    volume = fields.Nested(VolumeSchema, dump_default=None)
+    # oxjob #2065: parent and child works. The index stores `lineage` and `child_works_count` only on
+    # works that have a parent or a child; every other work is its own lineage and has 0 children.
+    # (`volume`, the chapter's book of oxjob #1554, is retired: it is one of the parent works.)
+    parent_works = fields.Method("get_parent_works")
+    lineage = fields.Method("get_lineage")
+    child_works_count = fields.Method("get_child_works_count")
     sources = fields.Nested(SourcesSchema, many=True)
     type = fields.Str()
     # oxjob #2064: from the type (core/work_type_classes.py), so every work has it with no reindex
@@ -489,6 +496,22 @@ class WorksSchema(Schema):
     @staticmethod
     def get_relevance_score(obj):
         return relevance_score(obj)
+
+    @staticmethod
+    def get_parent_works(obj):
+        return ParentWorkSchema(many=True).dump(getattr(obj, "parent_works", None) or [])
+
+    @staticmethod
+    def get_lineage(obj):
+        lineage = getattr(obj, "lineage", None)
+        if lineage:
+            return list(lineage)
+        own_id = getattr(obj, "id", None)
+        return [own_id] if own_id else []
+
+    @staticmethod
+    def get_child_works_count(obj):
+        return getattr(obj, "child_works_count", None) or 0
 
     @staticmethod
     def get_is_traditional(obj):

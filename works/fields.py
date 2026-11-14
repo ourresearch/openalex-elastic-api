@@ -7,6 +7,8 @@ from core.fields import (
     OpenAlexIDField,
     OpenAlexURLTermField,
     RangeField,
+    WorkLineageField,
+    ZeroWhenMissingRangeField,
     SearchField,
     TermField,
     annotate_entity_types,
@@ -15,6 +17,11 @@ from core.fields import (
 )
 from core.alternate_names import ALTERNATE_NAMES
 from core.work_type_classes import TRADITIONAL_TYPES
+
+PARENT_WORKS_DOCS = "https://help.openalex.org/data/parent-and-child-works/"
+# oxjob #2065: said by every `volume.id` filter, group_by and sort
+VOLUME_RETIRED = ("volume was retired on 14 November 2026: a work's book is now one of its parent_works. "
+                  "Use parent_works.id (the same work id), e.g. filter=parent_works.id:W123")
 
 # shared docstrings for when multiple fields share the same docstring (such as aliases)
 DOCSTRINGS = {
@@ -1085,12 +1092,55 @@ fields = [
         docstring="How the research reported in the work was done (e.g. randomized controlled trial, systematic review), from PubMed's publication types where a MEDLINE-indexed record has them, otherwise assigned automatically; empty when the work reports no study",
         documentation_link="https://help.openalex.org/data/study-designs/",
     ),
+    # oxjob #2065: parent and child works. A work that is part of another names its parents in
+    # `parent_works` [{id, display_name, relationship}]. ES holds the full work id on keyword +
+    # `.lower` (W123 expands) and the relationship key (volume, component, data-series, part) on
+    # keyword + `.lower`.
     OpenAlexIDField(
-        # oxjob #1554: the work this work is part of (a chapter's book), a work id. ES holds
-        # the full id on keyword + `.lower` like primary_location.source.id, so W123 expands.
+        param="parent_works.id",
+        docstring="A work this work is part of, such as a chapter's book or a figure's article; the filter "
+                  "lists the works whose parent is that work (a book's chapters)",
+        documentation_link=PARENT_WORKS_DOCS,
+        alternate_names=ALTERNATE_NAMES.get("parent_works"),
+    ),
+    TermField(
+        # entity_type relationships (core.fields.ENTITY_ID_PARAM_TYPES): values check against
+        # config/relationships.yaml and group_by rows are named from it
+        param="parent_works.relationship",
+        docstring="How the work relates to a parent work: volume (in a book or proceedings volume), component "
+                  "(a figure, table, file or supplement), data-series (one record of a data series) or part "
+                  "(any other declared part)",
+        documentation_link="https://help.openalex.org/data/relationships/",
+    ),
+    BooleanField(
+        param="has_parent_work",
+        custom_es_field="parent_works.id",
+        sortable=False,
+        docstring="The work is part of another work (true when it lists any parent_works)",
+        documentation_link=PARENT_WORKS_DOCS,
+        alternate_names=ALTERNATE_NAMES.get("has_parent_work"),
+    ),
+    WorkLineageField(
+        # stored only on works that have a parent or a child: the filter also matches the work itself
+        param="lineage",
+        docstring="The work itself and every work above it (its parent, its parent's parent...), nearest "
+                  "first; lineage:W123 lists W123 and every work under it",
+        documentation_link=PARENT_WORKS_DOCS,
+        alternate_names=ALTERNATE_NAMES.get("lineage"),
+    ),
+    ZeroWhenMissingRangeField(
+        # stored only on works that have a parent or a child: no stored value counts as 0
+        param="child_works_count",
+        docstring="The number of works that name this work as a parent (a book's chapters, an article's "
+                  "figures and supplements)",
+        documentation_link=PARENT_WORKS_DOCS,
+        alternate_names=ALTERNATE_NAMES.get("child_works_count"),
+    ),
+    # oxjob #2065 (Jason, 13 Nov 2026): `volume` is retired; a work's book is one of its parent works.
+    # The filter, group_by and sort answer a JSON 400 that says so (filter_refusal, oxjob #1901).
+    OpenAlexIDField(
         param="volume.id",
-        docstring="The work this work is part of, such as a chapter's book; the filter lists the chapters of a book",
-        documentation_link="https://help.openalex.org/data/works/attributes/",
+        filter_refusal=VOLUME_RETIRED,
     ),
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topics.field.id", custom_es_field="topics.field.id"),

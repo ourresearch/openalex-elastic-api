@@ -46,10 +46,10 @@ def _extra_keys(doc):
 
 
 def test_all_config_files_present():
-    # 26 entity config files (one per browsable entity type; locations joined
+    # 27 entity config files (relationships 2026-11-13, oxjob #2065) (one per browsable entity type; locations joined
     # 2026-08-30 — oxjob #850; source-lists 2026-09-18 — oxjob #1205;
     # study-designs 2026-09-25 — oxjob #1312).
-    assert len(_config_files()) == 26
+    assert len(_config_files()) == 27
 
 
 def test_every_config_yaml_only_has_allowlisted_keys():

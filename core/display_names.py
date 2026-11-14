@@ -287,6 +287,10 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
     },
+    'relationships': {  # oxjob #2065
+        'description': {"display_name": 'description'},
+        'display_name': {"display_name": 'name'},
+    },
     'source-lists': {
         'display_name': {"display_name": 'name'},
         'sources_count': {"display_name": 'sources'},
@@ -454,8 +458,14 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # what kind of document it is.
         'study_designs.id': {"display_name": 'study design', "aliases": ['study designs', 'study_designs', 'study_designs.id']},
         'title.search': {"display_name": 'title'},
-        # oxjob #1554: the work this work is part of (a chapter's book)
-        'volume.id': {"display_name": 'volume'},
+        # oxjob #2065: parent and child works (`volume.id`, oxjob #1554, is retired into
+        # parent_works.id). The GUI facets' displayNames must match (label-consistency gate).
+        # "work lineage", not "lineage": the institution and publisher lineage columns keep theirs.
+        'parent_works.id': {"display_name": 'parent work', "aliases": ['parent works', 'parent_works', 'part of']},
+        'parent_works.relationship': {"display_name": 'relationship to parent work', "aliases": ['parent work relationship', 'relationship']},
+        'has_parent_work': {"display_name": 'has parent work'},
+        'lineage': {"display_name": 'work lineage'},
+        'child_works_count': {"display_name": 'child works count', "aliases": ['child works', 'parts count']},
         'title_and_abstract.search': {"display_name": 'title-abstract', "aliases": ['title/abstract', 'title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         # oxjob #1521: title + abstract text OR the keywords a query phrase names.
         # Hyphenated labels since 2026-10-03 (#1512): slashes belong to ids; the slash forms stay aliases.

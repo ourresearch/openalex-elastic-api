@@ -1,9 +1,9 @@
 {
   "meta": {
-    "entity_count": 26,
-    "fingerprint": "b911a7c03d946a162360e6f9fd6b4811cb42f38037c1f3b476890ad5d324b1f5",
-    "property_count": 974,
-    "version": "23.5.0"
+    "entity_count": 27,
+    "fingerprint": "46ca04446aa7a6fd54c6871e07ae3d34a02df50ba882ffa0b4e8a580198b000c",
+    "property_count": 993,
+    "version": "24.0.0"
   },
   "properties": {
     "authors": {
@@ -11161,6 +11161,306 @@
         "type": "number"
       }
     },
+    "relationships": {
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "relationships",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "supported_by": [],
+        "type": "collection"
+      },
+      "created_date": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "created date",
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "description": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "description",
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "display_name": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "name",
+        "entity_type": null,
+        "name": "display_name",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "display_name.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "name"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "display name",
+        "entity_type": null,
+        "name": "display_name.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
+      },
+      "from_created_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from created date",
+        "entity_type": null,
+        "name": "from_created_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
+      },
+      "from_updated_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from updated date",
+        "entity_type": null,
+        "name": "from_updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "datetime"
+      },
+      "id": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "ids",
+        "display_name": "id",
+        "entity_type": "relationships",
+        "name": "id",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "external_id"
+      },
+      "relevance_score": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "relevance score",
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
+      },
+      "to_created_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "to created date",
+        "entity_type": null,
+        "name": "to_created_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
+      },
+      "to_updated_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "to updated date",
+        "entity_type": null,
+        "name": "to_updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "datetime"
+      },
+      "updated_date": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "updated date",
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "works api url",
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_count": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "works count",
+        "entity_type": null,
+        "name": "works_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "number"
+      }
+    },
     "sdgs": {
       "cited_by_count": {
         "actions": [
@@ -16926,6 +17226,36 @@
         ],
         "type": "string"
       },
+      "child_works_count": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [
+          "child works",
+          "parts count"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "child works count",
+        "entity_type": null,
+        "name": "child_works_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "number"
+      },
       "citation_normalized_percentile": {
         "actions": [
           "column"
@@ -18015,6 +18345,29 @@
         ],
         "type": "boolean"
       },
+      "has_parent_work": {
+        "actions": [
+          "filter",
+          "group_by"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "has parent work",
+        "entity_type": null,
+        "name": "has_parent_work",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "boolean"
+      },
       "has_pdf_url": {
         "actions": [
           "filter",
@@ -18647,6 +19000,31 @@
         ],
         "type": "string"
       },
+      "lineage": {
+        "actions": [
+          "column",
+          "filter"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "work lineage",
+        "entity_type": null,
+        "name": "lineage",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "openalex_id"
+      },
       "locations": {
         "actions": [
           "column"
@@ -19239,6 +19617,81 @@
         ],
         "supported_by": [
           "gui"
+        ],
+        "type": "string"
+      },
+      "parent_works": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "parent works",
+        "entity_type": null,
+        "name": "parent_works",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "parent_works.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "parent works",
+          "parent_works",
+          "part of"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "source",
+        "display_name": "parent work",
+        "entity_type": null,
+        "name": "parent_works.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "openalex_id"
+      },
+      "parent_works.relationship": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "parent work relationship",
+          "relationship"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "relationship to parent work",
+        "entity_type": "relationships",
+        "name": "parent_works.relationship",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -20752,48 +21205,6 @@
         "operators": [],
         "supported_by": [],
         "type": null
-      },
-      "volume": {
-        "actions": [
-          "column"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "volume",
-        "entity_type": null,
-        "name": "volume",
-        "operators": [],
-        "supported_by": [],
-        "type": null
-      },
-      "volume.id": {
-        "actions": [
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "source",
-        "display_name": "volume",
-        "entity_type": null,
-        "name": "volume.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [
-          "gui",
-          "oxurl"
-        ],
-        "type": "openalex_id"
       }
     }
   }

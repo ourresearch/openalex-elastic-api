@@ -490,7 +490,17 @@ CAP_COLUMN = "column"
 # Two properties added = MINOR per classify_properties_diff.py. The same change serves DOIs as https://doi.org/... on awards
 # (`doi`, `funder.doi`) and funders (`ids.doi`), whose filters now take that form too, and `summary_stats.2yr_mean_citedness`
 # to 2 decimals on funders and sources: output values only, no property changes. The version line is set by Rohan.
-PROPERTIES_VERSION = "23.5.0"
+# 24.0.0 (oxjob #2065, 2026-11-13): parent and child works. Works gain the columns `parent_works` [{id, display_name,
+# relationship}], `lineage` (the work, then its ancestors nearest first) and `child_works_count`, with the filters
+# `parent_works.id` (group_by too), `parent_works.relationship` (group_by too; entity relationships), `has_parent_work`
+# (group_by too), `lineage` (filter only: `lineage:W1` is W1 and every work under it) and `child_works_count` (range,
+# sort; a work with no stored value counts as 0). New entity `relationships` (volume, component, data-series, part;
+# ES work-relationships-v1, built by walden). Works `volume` and `volume.id` (17.0.0, oxjob #1554) are RETIRED: the
+# column leaves the record and the filter, group_by, sort and select answer a JSON 400 naming `parent_works.id` /
+# `parent_works` (Field filter_refusal; core.utils.REMOVED_SELECT_FIELDS). Two properties removed = MAJOR per
+# classify_properties_diff.py. Jason approved retiring `volume` on 13 Nov 2026: "let's make our users bite the bullet
+# on this one so that we can move faster."
+PROPERTIES_VERSION = "24.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -523,6 +533,7 @@ ENTITY_FIELDS_MODULES = {
     "source-lists": "source_lists.fields",
     "source-types": "source_types.fields",
     "study-designs": "study_designs.fields",
+    "relationships": "relationships.fields",
     "institution-types": "institution_types.fields",
     "work-types": "work_types.fields",
     "awards": "awards.fields",

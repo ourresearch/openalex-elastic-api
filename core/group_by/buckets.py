@@ -7,7 +7,7 @@ from core.exceptions import APIQueryParamsError
 from core.group_by.utils import get_bucket_keys, is_boolean_field, is_works_version_group_by
 from core.validate import validate_group_by
 from core.preference import clean_preference
-from core.utils import get_field
+from core.utils import get_field, is_field_class
 
 
 # Multi-dimensional (nested) group_by — oxjob #387. ES nests terms aggs natively
@@ -164,8 +164,16 @@ def _group_order(fields_dict, key, direction):
     metric_field, metric = parse_metric_sort_key(key)
     if metric_field and metric:
         es_field = resolve_metric_es_field(fields_dict, metric_field)
-        return {GROUP_BY_METRIC_AGG_NAME: direction}, (GROUP_BY_METRICS[metric], es_field)
+        return {GROUP_BY_METRIC_AGG_NAME: direction}, (
+            GROUP_BY_METRICS[metric], es_field, _metric_options(fields_dict[metric_field]))
     return None
+
+
+def _metric_options(field):
+    """Extra options for a metric agg over `field`: a count stored only where it isn't 0 (works
+    child_works_count, oxjob #2065) aggregates a record with no stored value as 0."""
+    missing = getattr(field, "sort_missing", None)
+    return {} if missing is None else {"missing": missing}
 
 
 def _apply_group_order(a, spec):
@@ -174,7 +182,7 @@ def _apply_group_order(a, spec):
     order, metric = spec
     a.order = order
     if metric:
-        a.metric(GROUP_BY_METRIC_AGG_NAME, metric[0], field=metric[1])
+        a.metric(GROUP_BY_METRIC_AGG_NAME, metric[0], field=metric[1], **metric[2])
 
 
 def resolve_metric_es_field(fields_dict, metric_field):
@@ -188,7 +196,7 @@ def resolve_metric_es_field(fields_dict, metric_field):
             f"requires a numeric field, e.g. cited_by_count.mean:desc."
         )
     field = fields_dict[metric_field]
-    if type(field).__name__ != "RangeField":
+    if not is_field_class(field, "RangeField"):
         raise APIQueryParamsError(
             f"Cannot compute a metric aggregate over non-numeric field "
             f"'{metric_field}'. Metric-aggregate group sort "
@@ -218,7 +226,7 @@ def create_boolean_group_by_buckets(
     order = last_group_sort(sort_params)
     spec = _group_order(fields_dict, *order) if order else None
     if spec and spec[1]:
-        a.metric(GROUP_BY_METRIC_AGG_NAME, spec[1][0], field=spec[1][1])
+        a.metric(GROUP_BY_METRIC_AGG_NAME, spec[1][0], field=spec[1][1], **spec[1][2])
     s.aggs.bucket(bucket_keys["default"], a)
     return s
 
@@ -385,7 +393,7 @@ SINGLE_LIST_SHARD_SIZE = 20_000
 
 def get_missing(field):
     if (
-        type(field).__name__ == "RangeField"
+        is_field_class(field, "RangeField")
         or field.param == "ids.crossref"
     ):
         missing = -111

@@ -119,6 +119,8 @@ ENTITY_ID_PARAM_TYPES = {
     "primary_location.source.listed_in": "source-lists",
     # study-designs (oxjob #1312): works `study_designs.id`
     "study_designs.id": "study-designs",
+    # relationships (oxjob #2065): how a work relates to its parent work
+    "parent_works.relationship": "relationships",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",
@@ -307,6 +309,12 @@ class Field(ABC):
     # filter computes like has_oa_submitted_version, a text field), so
     # sort=<param> answers a JSON 400 and /properties leaves "sort" off.
     sortable = True
+    # Why group_by=<param> can never run, for a field whose stored values don't cover every
+    # record (oxjob #2065); None = the usual rules (core.validate.group_by_rejection).
+    group_by_refusal = None
+    # The value records that store none count as: in an ascending sort (Elasticsearch `missing`;
+    # None = they sort last, its default) and in OQL calculations (oxjob #2065).
+    sort_missing = None
 
     def __init__(
         self,
@@ -484,6 +492,7 @@ class BooleanField(Field):
             or self.param == "has_pdf_url"
             or self.param == "has_raw_affiliation_strings"
             or self.param == "has_references"
+            or self.param == "has_parent_work"   # works: exists on parent_works.id (oxjob #2065)
             or self.param == "has_parent_award"   # awards: exists on parent_awards_full.id (unlinked docs carry no field until resent)
             or self.param == "has_recipient_country"   # awards: exists on recipient_countries_full.country_code (a term on "true" matched nothing, 10-15)
         ):
@@ -826,6 +835,49 @@ class OpenAlexIDField(Field):
         return openalex_ids
 
 
+class WorkLineageField(OpenAlexIDField):
+    """works `lineage` (oxjob #2065): the work itself, then its ancestors nearest first. The index
+    stores it only on works that have a parent or a child; every other work's lineage is just
+    itself. So `lineage:W1` is "the work is W1, or its stored lineage holds W1": W1 and
+    everything under it. Never null (`null` matches nothing, `!null` everything)."""
+
+    sortable = False
+    group_by_refusal = ("the index stores a lineage only on works that have a parent or a child, so the "
+                        "groups would leave most works out. Group by parent_works.id instead.")
+
+    def build_query(self):
+        if self.value == "null":
+            return Q("match_none")
+        if self.value == "!null":
+            return Q("match_all")
+        negated = self.value.startswith("!")
+        value = self.value[1:] if negated else self.value
+        self.validate(value)
+        full_id = get_full_openalex_id(value)
+        q = Q("bool", should=[Q("term", id=full_id), Q("term", **{self.es_field(): full_id})],
+              minimum_should_match=1)
+        return ~q if negated else q
+
+    def validate(self, query):
+        super().validate(query)
+        short_id = normalize_openalex_id(query)
+        if not short_id.startswith("W"):  # the bare name `lineage` can't go in the shared id-type map
+            given = entity_for_id_prefix(short_id[0])
+            raise APIQueryParamsError(
+                f"'{short_id}' is an OpenAlex {given or 'non-work'} ID; {self.param} takes works IDs."
+            )
+
+    def build_terms_query(self, values):
+        """An OR of works (a collection of works, or an OQL list)."""
+        full_ids = []
+        for val in values:
+            self.value = val
+            self.validate(val)
+            full_ids.append(get_full_openalex_id(val))
+        return Q("bool", should=[Q("terms", id=full_ids), Q("terms", **{self.es_field(): full_ids})],
+                 minimum_should_match=1)
+
+
 class PhraseField(Field):
     field_type = "phrase"
     operators = ["phrase"]
@@ -955,6 +1007,46 @@ class RangeField(Field):
             raise APIQueryParamsError(message)
         if not _is_plain_number(query):
             raise APIQueryParamsError(message)
+
+
+class ZeroWhenMissingRangeField(RangeField):
+    """A count the index stores only where it isn't 0 (oxjob #2065: works `child_works_count`,
+    stored on works that have a parent or a child). A record with no stored value counts as 0:
+    `:0`, `:<1` and `:0-3` include it, `:>0` leaves it out, and each negation is the exact
+    complement. Never null (`null` matches nothing, `!null` everything). Sorts as 0 too."""
+
+    sort_missing = 0
+
+    def build_query(self):
+        if self.value == "null":
+            return Q("match_none")
+        if self.value == "!null":
+            return Q("match_all")
+        negated = self.value.startswith("!")
+        positive = copy.copy(self)
+        positive.value = self.value[1:] if negated else self.value
+        q = RangeField.build_query(positive)  # validates the number(s)
+        if positive._zero_matches():
+            no_value = ~Q("exists", field=self.es_field().replace("__", "."))
+            q = Q("bool", should=[q, no_value], minimum_should_match=1)
+        return ~q if negated else q
+
+    def _zero_matches(self):
+        """Whether 0 satisfies this (un-negated, already validated) value: the same forms, in the
+        same order, as RangeField.build_query."""
+        v = self.value
+        if "<" in v:
+            return 0 < float(v[1:])
+        if v.startswith("-"):
+            return 0 <= float(v[1:])
+        if ">" in v:
+            return 0 > float(v[1:])
+        if v.endswith("-"):
+            return 0 >= float(v[:-1])
+        if "-" in v:
+            low, high = self.range_bounds(v)
+            return float(low) <= 0 <= float(high)
+        return float(v) == 0
 
 
 def _is_plain_number(value):
@@ -1281,6 +1373,9 @@ class TermField(Field):
             value = self._normalize_study_design_value(value)
         elif self.param == "language":
             value = self._strip_openalex_prefix(value, "languages/")
+        elif self.param == "parent_works.relationship":
+            # oxjob #2065: the work holds the short key (`volume`), as `type` does
+            value = self._strip_openalex_prefix(value, "relationships/")
         elif (
             self.param == "type"
             or self.param == "last_known_institution.type"
@@ -1352,6 +1447,8 @@ class TermField(Field):
             return self._normalize_study_design_value(self.value)
         elif self.param == "language":
             return self._strip_openalex_prefix(self.value, "languages/").lower()
+        elif self.param == "parent_works.relationship":
+            return self._strip_openalex_prefix(self.value, "relationships/")
         elif self.param == "type" or self.param == "last_known_institution.type":
             return self._strip_openalex_prefix(
                 self.value,
@@ -2289,6 +2386,7 @@ ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
     "sdgs": "sdgs",
     "source-lists": "source-lists",
     "source-types": "source-types",
+    "relationships": "relationships",
     "study-designs": "study-designs",
     "subfields": "subfields",
     "work-types": "types",

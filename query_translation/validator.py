@@ -108,6 +108,9 @@ CLOSED_VOCAB_NAMESPACE = {
     # study-designs (oxjob #1312): the seven PubMed-backed values in
     # config/study-designs.yaml; a slug outside them is invalid_value
     "study-designs": "study-designs",
+    # relationships (oxjob #2065): the four kinds of parent-child link between works in
+    # config/relationships.yaml (volume, component, data-series, part)
+    "relationships": "relationships",
     # Tier-1.5: the topic-hierarchy code vocabs — small, fully-enumerable closed
     # sets (domains 4, fields 26, subfields 252; complete in `config/*.yaml` and
     # matching the live API). Identity-mapped (namespace == entity_type ==

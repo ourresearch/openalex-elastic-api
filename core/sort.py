@@ -49,11 +49,22 @@ def get_sort_fields(fields_dict, group_by, sort_params):
         refusal = sort_refusal(key, field)
         if refusal:
             raise APIQueryParamsError(refusal)
-        if value == "asc":
+        if getattr(field, "sort_missing", None) is not None and value == "asc":
+            # A record with no stored value sorts as that value (0 for a count), not last (oxjob
+            # #2065). Descending needs nothing: Elasticsearch already puts the missing ones last.
+            sort_fields.append({field.es_sort_field(): {"order": "asc", "missing": field.sort_missing}})
+        elif value == "asc":
             sort_fields.append(field.es_sort_field())
         elif value == "desc":
             sort_fields.append(f"-{field.es_sort_field()}")
     return sort_fields
+
+
+def _sort_key(sort_field):
+    """The field a sort entry sorts on: "-x" and {"x": {...}} are both x."""
+    if isinstance(sort_field, dict):
+        return next(iter(sort_field))
+    return sort_field[1:] if sort_field.startswith("-") else sort_field
 
 
 # Filters that hold no value to sort by, and what people sorting by them mean (oxjob #1900).
@@ -109,7 +120,7 @@ def with_tie_break(sort_fields, default_sort, index_name):
     """
     if not sort_fields:
         return sort_fields
-    seen = {f[1:] if f.startswith("-") else f for f in sort_fields}
+    seen = {_sort_key(f) for f in sort_fields}
     if "id" in seen:
         return sort_fields
     tail = WORKS_TIE_BREAK_SORT if index_name.startswith("works") else default_sort

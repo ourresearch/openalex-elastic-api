@@ -14,6 +14,11 @@ ALTERNATE_NAMES = {
     "has_pmcid": ["pubmed", "central"],
     "has_references": ["outgoing", "citations"],
     "is_paratext": ["paratext", "cover", "table", "contents", "issue", "volume"],
+    # oxjob #2065: parent and child works
+    "has_parent_work": ["parent", "part", "chapter", "component", "book", "volume"],
+    "parent_works": ["parent", "part", "book", "volume", "chapters", "container"],
+    "lineage": ["parent", "ancestor", "descendant", "children", "parts"],
+    "child_works_count": ["children", "parts", "chapters", "components"],
     "is_traditional": ["traditional", "scholarly", "literature", "publications", "papers"],
     "source.issn": ["issn", "journal"],
     "source.type": ["source", "type", "journal", "repository"],

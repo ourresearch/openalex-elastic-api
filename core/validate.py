@@ -2,7 +2,7 @@ from urllib.parse import quote_plus
 
 import settings
 from core.exceptions import APIQueryParamsError
-from core.utils import map_filter_params, select_fields
+from core.utils import is_field_class, map_filter_params, select_fields
 
 
 # Search parameter prefixes that are accepted via dot notation
@@ -384,11 +384,13 @@ def group_by_rejection(field):
     cursor × boolean interaction) stay in `validate_group_by`."""
     if field.filter_refusal:  # no record stores it: its groups were silently empty (oxjob #1901)
         return f"Cannot group by {field.param}: {field.filter_refusal}"
+    if field.group_by_refusal:  # its stored values leave most records out (oxjob #2065)
+        return f"Cannot group by {field.param}: {field.group_by_refusal}"
     if (
         type(field).__name__ == "DateField"
         or type(field).__name__ == "DateTimeField"
         or (
-            type(field).__name__ == "RangeField"
+            is_field_class(field, "RangeField")
             and field.param not in GROUP_BY_RANGE_FIELD_EXCEPTIONS
         )
         or type(field).__name__ == "SearchField"

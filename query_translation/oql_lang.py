@@ -352,11 +352,10 @@ _f("corresponding institution", "corresponding_institution_ids", "id")
 
 # Bibliographic coordinates (kind string — issues/pages are free-text labels, e.g. "S1",
 # "iv"). PROPERTIES_VERSION 1.9.0 curated the registry display_names from the raw
-# "biblio issue"/… humanized ids. oxjob #1554 (Jason, 2026-10-10): "volume" is the volume
-# itself (volume.id, a work id, e.g. a chapter's book); the citation's volume NUMBER
-# (biblio.volume) has no OQL word at all, not even its raw id (it is unlisted, see
-# works/fields.py).
-_f("volume", "volume.id", "id")
+# "biblio issue"/… humanized ids. The citation's volume NUMBER (biblio.volume) has no OQL
+# word at all, not even its raw id (it is unlisted, see works/fields.py). oxjob #2065
+# (Jason, 13 Nov 2026): the word "volume" (volume.id, a chapter's book, oxjob #1554) is
+# retired too: a work's book is its "parent work"; the parser says so (_RETIRED_FIELD_WORDS).
 _f("issue", "biblio.issue", "string")
 _f("first page", "biblio.first_page", "string")
 _f("last page", "biblio.last_page", "string")
@@ -421,6 +420,16 @@ _f("extended index", "is_xpac", "bool")
 _f("paratext", "is_paratext", "bool")
 # oxjob #2064: the work's type is traditional (core/work_type_classes.py)
 _f("traditional scholarly work", "is_traditional", "bool")
+# oxjob #2065: parent and child works. "parent work" is a work id (lists a book's chapters);
+# the relationship is a closed vocabulary of bare keys (volume, component, data-series, part),
+# like "study design". Input aliases live in the registry (core/display_names.py).
+_f("parent work", "parent_works.id", "id")
+_f("relationship to parent work", "parent_works.relationship", "enum")
+_f("has parent work", "has_parent_work", "bool")
+# No curated row for works `lineage` ("work lineage" in the registry): a curated row names its
+# column on EVERY entity at render, and institutions and publishers have their own `lineage`.
+# The registry word and the raw id both parse on works; it renders as `lineage`.
+_f("child works count", "child_works_count", "num")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
 _f("best open version", "best_open_version", "string")
@@ -559,6 +568,15 @@ for _spellings, _fld in _FIELDS:
 # 5-word "any location source listed in" silently failed to parse (oxjob #1205).
 _MAX_ALIAS_WORDS = max(len(_s.split()) for _s in _ALIAS)
 
+# Works field words that no longer exist, with what replaced them: (why, fix-it). The parser
+# answers them with the unknown-field diagnostic plus these words (oxjob #2065).
+_RETIRED_FIELD_WORDS = {
+    "volume": ("a work's book is now one of its parent works.",
+               "Use parent work, e.g. works where parent work is W123"),
+    "volume.id": ("a work's book is now one of its parent works.",
+                  "Use parent work, e.g. works where parent work is W123"),
+}
+
 # Parser entity vocabulary. Single source of truth is the OQO validator's
 # `oqo.VALID_ENTITY_TYPES` (hyphenated canonical forms, e.g. `source-types`,
 # `institution-types`, `oa-statuses`) so the two can't drift again (oxjob #621:
@@ -613,6 +631,7 @@ _ID_SHAPES = {
     "work-types": r"[a-z][a-z-]*", "oa-statuses": r"[a-z]+", "licenses": r"[a-z0-9][a-z0-9-]*",
     "source-types": r"[a-z][a-z -]*", "institution-types": r"[a-z][a-z-]*",
     "indexes": r"[a-z]+", "study-designs": r"[a-z0-9][a-z0-9-]*",
+    "relationships": r"[a-z][a-z-]*",
     "source-lists": r"[a-z0-9][a-z0-9-]*",
 }
 _UPPER_ID_TYPES = {"authors", "institutions", "sources", "publishers", "funders", "topics",
@@ -1558,8 +1577,8 @@ _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     # values are links with names (oxjob #1555) and autocomplete as those entities
     "co_author": "authors",
     "collaborator": "institutions",
-    # oxjob #1554: a work's volume (a chapter's book) is a work id, typed like the edges.
-    "volume.id": "works",
+    # oxjob #2065: a work's parent works and lineage are work ids, typed like the edges.
+    "parent_works.id": "works",
 }
 
 # A row's OWN id never name-annotates: a resolver miss there means "no name
@@ -2892,6 +2911,9 @@ class _Parser:
                 self._ctx = (CTX_FIELD, {})
                 raise _CtxFound()
             t = self.peek()
+            retired = _RETIRED_FIELD_WORDS.get(t.val.lower()) if t and self._entity in (None, "works") else None
+            if retired:
+                raise oql_error("OQL_UNKNOWN_FIELD", f'"{t.val}" was retired: {retired[0]}', retired[1], t.pos)
             raise oql_error("OQL_UNKNOWN_FIELD",
                            f'unknown field "{t.val if t else ""}"',
                            None, t.pos if t else None)

@@ -79,6 +79,8 @@ _ES = None
 def index_name(entity):
     """The live index an entity reads (looked up on use: some unit tests swap in a fake settings)."""
     import settings
+    if entity == "relationships":  # its index is named for what it relates (oxjob #2065)
+        return settings.WORK_RELATIONSHIPS_INDEX
     return settings.AUTHORS_INDEX_WALDEN if entity == "authors" else getattr(settings, entity.upper().replace("-", "_") + "_INDEX")
 
 

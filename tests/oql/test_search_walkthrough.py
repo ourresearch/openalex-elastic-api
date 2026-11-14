@@ -153,12 +153,20 @@ def test_case3_3_raw_string_columns_accepted(oql, expect):
     assert _leaves(oql) == expect
 
 
-# oxjob #1554 (Jason, 2026-10-10): "volume" is the volume itself (volume.id, a chapter's
-# book). The citation's volume NUMBER (biblio.volume) has no OQL surface at all: no
-# "volume number" word and no raw column id (it is unlisted, a legacy REST filter only).
-def test_volume_word_is_the_volume_work():
-    assert _leaves("works where volume is W3109397498") == [
-        {"column_id": "volume.id", "value": "W3109397498"}]
+# oxjob #2065 (Jason, 13 Nov 2026): the word "volume" (volume.id, a chapter's book, oxjob #1554)
+# is retired; the book is the chapter's "parent work". The citation's volume NUMBER
+# (biblio.volume) has no OQL surface at all: no "volume number" word and no raw column id
+# (it is unlisted, a legacy REST filter only).
+def test_parent_work_word_is_the_parent_work():
+    assert _leaves("works where parent work is W3109397498") == [
+        {"column_id": "parent_works.id", "value": "W3109397498"}]
+
+
+@pytest.mark.parametrize("oql", ["works where volume is W3109397498", "works where volume.id is W3109397498"])
+def test_the_volume_word_is_retired_and_names_parent_work(oql):
+    with pytest.raises(OQLError) as err:
+        parse(oql)
+    assert "retired" in str(err.value) and "parent work" in str(err.value.fixit)
 
 
 @_needs_registry

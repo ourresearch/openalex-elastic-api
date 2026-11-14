@@ -156,9 +156,24 @@ def get_display_names_keywords_licenses_topics(ids, connection='default'):
     return results
 
 
+def get_relationship_display_name(key):
+    """The name of a parent-child relationship key (`data-series` -> "Data series"), from the
+    closed vocabulary in config/relationships.yaml (oxjob #2065); the key itself if unknown."""
+    from core.entities import get_entity_type
+
+    ent = get_entity_type("relationships")
+    for row in (ent.values if ent and ent.values else []):
+        if row["id"] == f"relationships/{key}":
+            return row["display_name"]
+    return key
+
+
 def get_key_display_name(b, group_by):
     if b.key == "unknown":
         return "unknown"
+
+    if group_by == "parent_works.relationship":
+        return get_relationship_display_name(b.key)
 
     if group_by.endswith("country_code") or group_by.endswith("countries"):
         from core.country_names import get_country_name

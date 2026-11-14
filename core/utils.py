@@ -192,6 +192,13 @@ def get_country_name(country_id):
     return friendly_country_name(country_id, default=country_id)
 
 
+def is_field_class(field, class_name):
+    """True when `field` is a `class_name` or a subclass of it. The engine's rules are keyed on the
+    class NAME (a number can't be grouped, an OpenAlex ID has a display name...), so a small
+    subclass must keep its parent's rules (oxjob #2065)."""
+    return any(c.__name__ == class_name for c in type(field).__mro__)
+
+
 def select_fields(request):
     """The field names in ?select=, or None when it names none. An empty select
     (`select=`, `select=,`) means every field, as if it were absent; a stray comma
@@ -208,6 +215,11 @@ REMOVED_SELECT_FIELDS = {
     "sustainable_development_goals_aurora": (
         "sustainable_development_goals_aurora was removed on 2 November 2026 (deprecated since October 2026). "
         "Use sustainable_development_goals. See https://help.openalex.org/api/deprecations/"
+    ),
+    # oxjob #2065: a work's book is now one of its parent works.
+    "volume": (
+        "volume was retired on 14 November 2026: a work's book is now one of its parent_works. "
+        "Use select=parent_works (each entry has the same id and display_name, plus relationship)."
     ),
 }
 

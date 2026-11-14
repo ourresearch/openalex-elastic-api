@@ -9,7 +9,7 @@ from core.exceptions import APIQueryParamsError
 from core.quoted_values import unquote_filter_value
 from core.search import full_search_query
 from core.utils import (get_country_name, get_display_name, get_field,
-                        map_filter_params)
+                        is_field_class, map_filter_params)
 
 
 def shared_filter_view(request, params, fields_dict, index_name):
@@ -230,7 +230,7 @@ def set_url(search_param, key, value, index_name):
 
 
 def set_display_name(value, field):
-    if type(field).__name__ == "OpenAlexIDField":
+    if is_field_class(field, "OpenAlexIDField"):
         display_name = get_display_name(value)
     elif field.param.endswith("country_code") or field.param.endswith("country-code"):
         display_name = get_country_name(value.lower())

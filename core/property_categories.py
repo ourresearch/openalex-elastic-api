@@ -394,7 +394,12 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "best_oa_location.is_published": "open access",
         "apc_paid.value_usd": "other",
         "primary_location.source.id": "source",
-        "volume.id": "source",  # oxjob #1554, a chapter's book
+        # oxjob #2065: parent and child works (parent_works.id sits where volume.id did)
+        "parent_works.id": "source",
+        "parent_works.relationship": "other",
+        "has_parent_work": "other",
+        "lineage": "other",
+        "child_works_count": "other",
         "locations.source.id": "source",
         "primary_location.source.issn": "ids",
         "primary_location.source.type": "source",

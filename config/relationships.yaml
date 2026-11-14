@@ -1,0 +1,16 @@
+id: relationships
+displayName: relationships
+displayNameSingular: relationship
+descr: how a work relates to its parent work
+descrFull: How a work relates to a parent work it is part of, such as a chapter in a book volume or a figure that is a component of an article.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/relationships\/|relationships\/)([a-z-]+)
+values:
+- id: relationships/volume
+  display_name: Volume
+- id: relationships/component
+  display_name: Component
+- id: relationships/data-series
+  display_name: Data series
+- id: relationships/part
+  display_name: Part

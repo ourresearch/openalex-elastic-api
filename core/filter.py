@@ -12,7 +12,7 @@ from core.collection_resolver import (
 )
 from core.country_values import check_country_filter
 from core.quoted_values import unquote_filter_value
-from core.utils import get_field
+from core.utils import get_field, is_field_class
 from core.validate import xpac_flag_value
 from core.work_type_values import check_work_type_filter
 from settings import MAX_IDS_IN_FILTER
@@ -62,7 +62,7 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 " " in value
                 and not is_quoted
                 and "search" not in field.param
-                and type(field).__name__ != "RangeField"
+                and not is_field_class(field, "RangeField")
                 and type(field).__name__ != "BooleanField"
             ):
                 s = handle_and_query(field, s, value)

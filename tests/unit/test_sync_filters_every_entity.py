@@ -12,7 +12,8 @@ import pytest
 
 ENTITY_MODULES = [
     "authors", "awards", "concepts", "continents", "countries", "domains", "fields", "funders", "indexes",
-    "institution_types", "institutions", "keywords", "languages", "licenses", "oa_statuses", "publishers", "sdgs",
+    "institution_types", "institutions", "keywords", "languages", "licenses", "oa_statuses", "publishers",
+    "relationships", "sdgs",
     "source_lists", "source_types", "sources", "study_designs", "subfields", "topics", "work_types", "works",
 ]
 EXPECTED = {

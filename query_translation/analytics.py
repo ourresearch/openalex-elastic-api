@@ -195,6 +195,14 @@ def _true_query(fields_dict, column_id: str):
     return get_field(fields_dict, column_id).query_for("true")
 
 
+def _count_missing_as(agg_body: dict, fld) -> None:
+    """A count the index stores only where it isn't 0 (works child_works_count, oxjob #2065): a
+    record with no stored value is aggregated as that value, so a mean or a bin counts it."""
+    missing = getattr(fld, "sort_missing", None)
+    if missing is not None:
+        agg_body["missing"] = missing
+
+
 def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
     from core.utils import get_field
     aggs = {}
@@ -209,9 +217,11 @@ def _measure_aggs(measures: List[Measure], fields_dict) -> Dict[str, dict]:
         es_field = _es_number_field(fields_dict, m.column_id)
         if agg == "percentiles":
             aggs[name] = {"percentiles": {"field": es_field, "percents": [50]}}
+            _count_missing_as(aggs[name]["percentiles"], get_field(fields_dict, m.column_id))
         else:
             # `values`: how many works hold a value, a mean's denominator (only an export's slices ask: oxjob #1930)
             aggs[name] = {agg: {"field": es_field}}
+            _count_missing_as(aggs[name][agg], get_field(fields_dict, m.column_id))
             if m.measure != "values" and "Date" in type(get_field(fields_dict, m.column_id)).__name__:
                 aggs[name][agg]["format"] = "yyyy-MM-dd"   # the earliest / latest date
     return aggs
@@ -615,6 +625,7 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
             labels = _bin_labels(column_id, edges, is_float)
             lv = Level(i, g, "range", column_id=column_id, is_float=is_float)
             lv.agg = {"range": {"field": es_field, "ranges": ranges, "keyed": False}}
+            _count_missing_as(lv.agg["range"], fld)
             for j, lab in enumerate(labels):
                 lv.labels[f"b{j}"] = (lab, lab)
                 lv.order_keys.append(f"b{j}")
@@ -622,6 +633,7 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
         width = g.bins["of"]
         lv = Level(i, g, "histogram", column_id=column_id, is_float=is_float, key_kind="number")
         lv.agg = {"histogram": {"field": es_field, "interval": width, "min_doc_count": 1}}
+        _count_missing_as(lv.agg["histogram"], fld)
         return lv
     if "continent" in fld.param and g.bins is None:
         # a split by continent (#1494's cow path, oxjob #1555): continents come from
@@ -638,6 +650,12 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
         return lv
     # a plain column
     ftype = type(fld).__name__
+    if getattr(fld, "sort_missing", None) is not None:
+        # most works store no value (it counts as 0), and a plain split would leave them out (oxjob #2065)
+        raise AnalyticsError(
+            "split_needs_bins",
+            f"{column_id} can't split works by each value.",
+            "Split it into bins: group those works into ... bins at (1, 2, 10)")
     if fld.param in _UNSUPPORTED_SPLITS or "continent" in fld.param or "version" in fld.param:
         raise AnalyticsError(
             "split_not_available",

@@ -29,6 +29,7 @@ import locations
 import meta
 import oa_statuses
 import publishers
+import relationships
 import query_translation
 import query_translation.editor_views  # #357 OQL editor support (separate blueprint)
 import query_translation.spec_views  # #361 OQL/OQO spec-artifact serving (separate blueprint)
@@ -125,6 +126,7 @@ def register_blueprints(app):
     app.register_blueprint(raw_affiliation_strings.views.blueprint)
     app.register_blueprint(sdgs.views.blueprint)
     app.register_blueprint(snapshots.views.blueprint)
+    app.register_blueprint(relationships.views.blueprint)
     app.register_blueprint(sources.views.blueprint)
     app.register_blueprint(source_lists.views.blueprint)
     app.register_blueprint(source_types.views.blueprint)

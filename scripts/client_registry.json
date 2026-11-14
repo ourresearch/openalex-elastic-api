@@ -336,6 +336,21 @@
       "isId": false,
       "hasExport": false
     },
+    "child_works_count": {
+      "key": "child_works_count",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "child works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": true
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "works",
@@ -877,6 +892,21 @@
       "isId": false,
       "hasExport": false
     },
+    "has_parent_work": {
+      "key": "has_parent_work",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has parent work",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "has_pmcid": {
       "key": "has_pmcid",
       "entityToFilter": "works",
@@ -1289,6 +1319,21 @@
       "isId": true,
       "hasExport": false
     },
+    "parent_works.id": {
+      "key": "parent_works.id",
+      "entityToFilter": "works",
+      "entityToSelect": "works",
+      "displayName": "parent work",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "has_content.pdf": {
       "key": "has_content.pdf",
       "entityToFilter": "works",
@@ -1478,6 +1523,21 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": true
+    },
+    "parent_works.relationship": {
+      "key": "parent_works.relationship",
+      "entityToFilter": "works",
+      "entityToSelect": "relationships",
+      "displayName": "relationship to parent work",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
     },
     "is_retracted": {
       "key": "is_retracted",
@@ -1896,16 +1956,15 @@
       "isId": false,
       "hasExport": false
     },
-    "volume.id": {
-      "key": "volume.id",
+    "lineage": {
+      "key": "lineage",
       "entityToFilter": "works",
       "entityToSelect": "works",
-      "displayName": "volume",
+      "displayName": "work lineage",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
-        "filter",
-        "group_by"
+        "filter"
       ],
       "actionsPopular": null,
       "isId": false,
@@ -6118,6 +6177,53 @@
     "works_count": {
       "key": "works_count",
       "entityToFilter": "study-designs",
+      "entityToSelect": null,
+      "displayName": "works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "relationships": {
+    "description": {
+      "key": "description",
+      "entityToFilter": "relationships",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "display_name": {
+      "key": "display_name",
+      "entityToFilter": "relationships",
+      "entityToSelect": null,
+      "displayName": "name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "works_count": {
+      "key": "works_count",
+      "entityToFilter": "relationships",
       "entityToSelect": null,
       "displayName": "works count",
       "displayNameVerbatim": false,
