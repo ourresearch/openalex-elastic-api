@@ -18,7 +18,7 @@ from core.fields import (
 from core.alternate_names import ALTERNATE_NAMES
 from core.work_type_classes import TRADITIONAL_TYPES
 
-PARENT_WORKS_DOCS = "https://help.openalex.org/data/parent-and-child-works/"
+PARENT_WORKS_DOCS = "https://help.openalex.org/data/relationships/"
 # oxjob #2065: said by every `volume.id` filter, group_by and sort
 VOLUME_RETIRED = ("volume was retired on 14 November 2026: a work's book is now one of its parent_works. "
                   "Use parent_works.id (the same work id), e.g. filter=parent_works.id:W123")
