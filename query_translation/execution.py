@@ -38,6 +38,7 @@ from core.shared_view import (
     set_source,
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
+from core.default_view import HIDE_PIECES_FILTER, lifts_hiding, visible_works_query
 from core.validate import validate_sample_cursor, xpac_controls
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
@@ -578,10 +579,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     #   expansion → is_xpac:true  (the expansion corpus alone)
     #   all       → no constraint (core + expansion)
     # Precedence lives in _effective_corpus (shared with the semantic path).
-    extra_qs = []
-    corpus = _effective_corpus(oqo, connection)
-    if corpus is not None:
-        extra_qs.append(Q("term", is_xpac="false" if corpus == "core" else "true"))
+    extra_qs = _corpus_qs(oqo, connection)
 
     # Mirror the /authors works_count>0 default (authors/views.py, #287): hide
     # curation-emptied (0-works) authors unless the OQO explicitly references
@@ -796,10 +794,7 @@ def _echo_oqo(oqo: OQO) -> OQO:
 def _extra_qs(oqo, connection):
     """The implicit filters every executed OQO carries: the corpus (is_xpac) and the
     /authors works_count > 0 default."""
-    extra = []
-    corpus = _effective_corpus(oqo, connection)
-    if corpus is not None:
-        extra.append(Q("term", is_xpac="false" if corpus == "core" else "true"))
+    extra = _corpus_qs(oqo, connection)
     if oqo.get_rows == "authors" and not _oqo_mentions_column(oqo.filter_rows, "works_count"):
         extra.append(Q("range", works_count={"gt": 0}))
     return extra
@@ -1250,6 +1245,8 @@ def _execute_semantic_oqo(
     corpus = _effective_corpus(oqo, connection)
     if corpus is not None:
         filters = filters + [{"is_xpac": "false" if corpus == "core" else "true"}]
+    if _hides_pieces(oqo, connection):  # the works default view (oxjob #2065), also checked there
+        filters = filters + [HIDE_PIECES_FILTER]
     params["filters"] = filters or None
 
     # Two-phase vector index (the prod path: USE_VECTOR_INDEX=true). Builds and
@@ -1385,6 +1382,36 @@ def _effective_corpus(oqo, connection):
     else:
         corpus = "core"
     return corpus if corpus in ("core", "expansion") else None
+
+
+def _oqo_columns(filter_rows):
+    """Every column a filter tree names, at any depth."""
+    for f in filter_rows or []:
+        if hasattr(f, "column_id"):
+            yield f.column_id
+        if hasattr(f, "filters"):
+            yield from _oqo_columns(f.filters)
+
+
+def _hides_pieces(oqo, connection, works_filters=True):
+    """Whether this execution leaves out pieces of other works (core/default_view.py, oxjob #2065):
+    the core corpus does, unless a filter on a parent-child column, at any depth, asks for them.
+    Mirrors works/views.py. `works_filters=False`: the filters are another entity's (a walk back
+    to works from institutions, whose own `lineage` is not the works column), so none lifts it."""
+    if _effective_corpus(oqo, connection) != "core":
+        return False
+    return not (works_filters and lifts_hiding(_oqo_columns(oqo.filter_rows)))
+
+
+def _corpus_qs(oqo, connection, works_filters=True):
+    """The corpus as filter queries: is_xpac for core / expansion, and core's hidden pieces."""
+    qs = []
+    corpus = _effective_corpus(oqo, connection)
+    if corpus is not None:
+        qs.append(Q("term", is_xpac="false" if corpus == "core" else "true"))
+    if _hides_pieces(oqo, connection, works_filters):
+        qs.append(visible_works_query())
+    return qs
 
 
 def _set_size(params, s):

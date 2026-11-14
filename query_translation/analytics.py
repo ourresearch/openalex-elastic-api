@@ -36,6 +36,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from elasticsearch_dsl import Q, Search
 
+from core.default_view import visible_works_query
 from core.exceptions import APIQueryParamsError
 from core.group_by.buckets import SINGLE_LIST_SHARD_SIZE, _MAP_HINT_FIELDS
 from core.preference import clean_preference
@@ -734,7 +735,8 @@ def _coauthor_keys(works_index, connection, column_ids: List[str], key_field: st
     collaborators of an institution), as full ids, plus the ids themselves."""
     ids = [_value_key(match_field, v) for v in column_ids]
     body = {"size": 0, "query": {"bool": {"filter": [
-        {"terms": {match_field: ids}}, {"term": {"is_xpac": False}}]}},
+        {"terms": {match_field: ids}}, {"term": {"is_xpac": False}},
+        visible_works_query().to_dict()]}},   # core works, as the default view lists them (oxjob #2065)
         "aggs": {"k": {"terms": {"field": key_field, "size": 65_000}}}}
     res = _search(works_index, connection, body, deadline, what)
     keys = {b["key"] for b in res["aggregations"]["k"]["buckets"]}

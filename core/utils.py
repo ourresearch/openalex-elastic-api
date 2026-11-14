@@ -43,6 +43,10 @@ def map_filter_params(filter_params):
             for param in params:
                 key, value = param.split(":", 1)
                 key = key.replace("-", "_")  # convert key to underscore
+                if key == "_default.hide_pieces":
+                    # core.default_view.HIDDEN_PIECES_KEY: how the works default view travels
+                    # inside the API, never something a request can name (oxjob #2065)
+                    raise APIQueryParamsError(f"{key} is not a valid field.")
                 # Keep surrounding quotes on non-search values so filter_records
                 # can distinguish quoted single values (spaces are literal) from
                 # unquoted multi-values (spaces mean AND).  Quotes are stripped

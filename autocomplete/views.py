@@ -6,6 +6,7 @@ from flask import Blueprint, request
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import (
+    hides_pieces_in_autocomplete,
     search_canonical_id_full,
     single_entity_autocomplete,
 )
@@ -20,6 +21,7 @@ from autocomplete.full import (
 )
 from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
+from core.default_view import visible_works_query
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
 from core.utils import get_data_version_connection
@@ -103,6 +105,10 @@ def autocomplete_full():
         if not canonical_id_found:
             s = build_full_search_query(q, s, sort)
             filter_results = get_filter_results(q)
+            # Works that are pieces of other works are not suggested (oxjob #2065). The clause
+            # reads works-only fields, so it removes nothing from the other indexes searched.
+            if hides_pieces_in_autocomplete(request):
+                s = s.filter(visible_works_query())
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)

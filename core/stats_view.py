@@ -5,9 +5,11 @@ from core.search import full_search_query
 from core.utils import map_filter_params
 
 
-def shared_stats_view(request, fields_dict, index_name, stats_fields, entity_name):
+def shared_stats_view(request, fields_dict, index_name, stats_fields, entity_name, base_query=None):
     s = Search(index=index_name)
     s = s.extra(size=0)
+    if base_query is not None:  # the works default view (oxjob #2065)
+        s = s.filter(base_query)
 
     # params
     filter_params = map_filter_params(request.args.get("filter"))

@@ -12,7 +12,9 @@ from autocomplete.utils import (
     matching_alternative,
 )
 from autocomplete.validate import validate_entity_autocomplete_params
+from core.default_view import filter_keys, lifts_hiding, visible_works_query
 from core.filter import filter_records
+from core.validate import XPAC_PARAMS, xpac_flag_value
 from core.search import full_search_query
 from core.utils import map_filter_params
 from core.preference import clean_preference
@@ -23,6 +25,14 @@ from ids import utils as id_utils
 KEYWORD_NAME_MATCH_BONUS = 2
 # Lifts an exact display_name above an exact alternative; above any works_count gap.
 KEYWORD_EXACT_NAME_BONUS = 100
+
+
+def hides_pieces_in_autocomplete(request, filter_params=None):
+    """Autocomplete has no corpus default (expansion works are suggested), so only an explicit
+    corpus=all / corpus=expansion, include_xpac=true or a parent-child filter lifts the rule."""
+    corpus = (request.args.get("corpus") or "core").strip().lower()
+    include_xpac = any(xpac_flag_value(request.args.get(name), name) for name in XPAC_PARAMS)
+    return corpus == "core" and not include_xpac and not lifts_hiding(filter_keys(filter_params))
 
 
 def single_entity_autocomplete(fields_dict, index_name, request, connection='default'):
@@ -51,6 +61,11 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
         # filters
         if filter_params:
             s = filter_records(fields_dict, filter_params, s)
+        # Works: pieces of other works are left out, as in the default /works view, unless a
+        # parent-child filter or the whole corpus is asked for (oxjob #2065). An id typed as `q`
+        # (the branch above) still finds any work.
+        if index_name.startswith("work") and hides_pieces_in_autocomplete(request, filter_params):
+            s = s.filter(visible_works_query())
 
         # Popularity field used both to rank q-matches and as the sort tiebreaker.
         popularity_field = (

@@ -1248,11 +1248,13 @@ def cited_first(connection, deadline: A.Deadline, set_query: dict, ids: List[str
 
 def _core_filter(oqo: OQO, ctx: Ctx) -> Optional[dict]:
     """The corpus filter the walked-back works carry (core works by default)."""
-    from query_translation.execution import _effective_corpus
-    corpus = _effective_corpus(replace(oqo, get_rows="works"), ctx.connection)
-    if corpus is None:
+    from query_translation.execution import _corpus_qs
+    # is_xpac, and for the core corpus the works default view's hidden pieces (oxjob #2065)
+    qs = [q.to_dict() for q in _corpus_qs(replace(oqo, get_rows="works"), ctx.connection,
+                                          works_filters=oqo.get_rows == "works")]
+    if not qs:
         return None
-    return {"term": {"is_xpac": "false" if corpus == "core" else "true"}}
+    return qs[0] if len(qs) == 1 else {"bool": {"filter": qs}}
 
 
 def prepare(oqo: OQO, connection, deadline: A.Deadline, export: bool = False,

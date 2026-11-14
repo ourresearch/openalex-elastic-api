@@ -17,6 +17,7 @@ from elasticsearch_dsl import Search, connections
 
 import settings
 from core.exceptions import APIQueryParamsError, SemanticSearchBusyError
+from core.default_view import HIDDEN_PIECES_KEY
 from core.filter import filter_records
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.merged_ids import with_winners
@@ -330,10 +331,11 @@ def _pop_corpus_clause(params):
     """Take the is_xpac filters (the corpus, incl. the /works default is_xpac:false) out of params["filters"] and
     return the works-index query /works builds for them, or None when there are none."""
     filters = params.get("filters") or []
-    corpus = [f for f in filters if "is_xpac" in f]
+    # with the works default view's hidden pieces (oxjob #2065): the vector index has no parent fields either
+    corpus = [f for f in filters if "is_xpac" in f or HIDDEN_PIECES_KEY in f]
     if not corpus:
         return None
-    params["filters"] = [f for f in filters if "is_xpac" not in f]
+    params["filters"] = [f for f in filters if f not in corpus]
     from works.fields import fields_dict  # here, not at the top: importing works.fields at load time is circular
     return filter_records(fields_dict, corpus, Search()).to_dict()["query"]
 

@@ -12,8 +12,10 @@ from core.utils import (get_country_name, get_display_name, get_field,
                         is_field_class, map_filter_params)
 
 
-def shared_filter_view(request, params, fields_dict, index_name):
-    """View used for filters view such as /works/filters/display_name.search:hello"""
+def shared_filter_view(request, params, fields_dict, index_name, base_query=None):
+    """View used for filters view such as /works/filters/display_name.search:hello
+
+    `base_query`: a filter every count carries (the works default view, oxjob #2065)."""
     filter_params = map_filter_params(params)
     search = request.args.get("search")
     if search and search != '""':
@@ -24,7 +26,7 @@ def shared_filter_view(request, params, fields_dict, index_name):
     # filter
     if filter_params:
         ms, meta_results = filter_records_filters_view(
-            fields_dict, filter_params, ms, index_name
+            fields_dict, filter_params, ms, index_name, base_query
         )
     else:
         raise APIQueryParamsError(
@@ -52,13 +54,15 @@ def shared_filter_view(request, params, fields_dict, index_name):
     return results
 
 
-def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
+def filter_records_filters_view(fields_dict, filter_params, ms, index_name, base_query=None):
     # Quotes on non-search values, read as the filter door reads them, for both passes (oxjob #2140)
     filter_params = [{k: v if "search" in k else unquote_filter_value(v)[0] for k, v in f.items()}
                      for f in filter_params]
     meta_results = []
     s = Search()
     s = s.extra(track_total_hits=True, size=0)
+    if base_query is not None:
+        s = s.filter(base_query)  # the OR pass below builds on `s`, so it carries it too
 
     # first pass apply entire query, but do not add OR values to meta response
     for filter in filter_params:
