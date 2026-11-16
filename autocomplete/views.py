@@ -21,7 +21,7 @@ from autocomplete.full import (
 )
 from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
-from core.default_view import visible_works_query
+from core.default_view import hides_pulled, not_pulled_query, visible_works_query
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
 from core.utils import get_data_version_connection
@@ -109,6 +109,9 @@ def autocomplete_full():
             # reads works-only fields, so it removes nothing from the other indexes searched.
             if hides_pieces_in_autocomplete(request):
                 s = s.filter(visible_works_query())
+            # Nor are pulled works, unless include_pulled=true (oxjob #2264); works-only field again.
+            if hides_pulled(request.args, []):
+                s = s.filter(not_pulled_query())
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)

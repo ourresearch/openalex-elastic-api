@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, redirect, request
 
 from combined_config import all_entities_config
 from core.entities import get_entity_type
@@ -9,8 +9,9 @@ from core.semantic import semantic_search
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.default_view import (HIDE_PIECES_FILTER, PARTS_PARAMS, hides_pieces, include_parts_requested,
-                               lifts_hiding, request_filter_keys, request_filter_params, visible_works_query)
+from core.default_view import (HIDE_PIECES_FILTER, HIDE_PULLED_FILTER, PARTS_PARAMS, PULLED_PARAMS,
+                               default_view_query, hides_pieces, hides_pulled, include_parts_requested,
+                               lifts_hiding, pulled_redirect_location, request_filter_keys, request_filter_params)
 from core.validate import xpac_controls
 from core.utils import (get_data_version_connection, get_entity_counts,
                         get_flattened_fields, get_valid_fields, process_only_fields)
@@ -198,6 +199,11 @@ def works():
 
     default_filters = None
     if connection == 'walden':
+        # oxjob #2264: a filter naming is_pulled / is_retracted is a shortcut for include_pulled=true; the redirect
+        # puts it in the URL (core/default_view.py)
+        location = pulled_redirect_location(request.path, request.query_string.decode(), request.args)
+        if location:
+            return redirect(location, code=302)
         current_filter = request.args.get('filter', '')
         # the include_xpac parameter or an include_xpac:true filter clause (oxjob #2140)
         include_xpac, xpac_named = xpac_controls(request)
@@ -212,9 +218,12 @@ def works():
         if hides_pieces(request.args.get('corpus'), include_xpac, request_filter_params(current_filter),
                         include_parts):
             default_filters = (default_filters or []) + [HIDE_PIECES_FILTER]
+        # oxjob #2264: pulled works are left out whatever the corpus, unless include_pulled=true
+        if hides_pulled(request.args, request_filter_params(current_filter)):
+            default_filters = (default_filters or []) + [HIDE_PULLED_FILTER]
 
     result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters,
-                         extra_valid_params=("corpus", "rerank") + PARTS_PARAMS)
+                         extra_valid_params=("corpus", "rerank") + PARTS_PARAMS + PULLED_PARAMS)
     if is_group_by_export(request):
         return export_group_by(result, request)
     message_schema = MessageSchema(only=only_fields)
@@ -227,16 +236,36 @@ def _shows_pieces(filter_string):
     return include_parts_requested(request.args) or lifts_hiding(request_filter_keys(filter_string))
 
 
+def _default_view_query(filter_string):
+    """What /works/filters and /works/stats leave out: pieces of other works (oxjob #2065) and pulled works
+    (oxjob #2264), each unless its include parameter or a filter naming it brings them back."""
+    return default_view_query(not _shows_pieces(filter_string),
+                              hides_pulled(request.args, request_filter_params(filter_string)))
+
+
+def _pulled_redirect():
+    """The redirect a filter naming is_pulled / is_retracted gets on /v2/works and /works/stats, or None."""
+    location = pulled_redirect_location(request.path, request.query_string.decode(), request.args)
+    return redirect(location, code=302) if location else None
+
+
 @blueprint.route("/v2/works")
 def v2_works():
     index_name = WORKS_INDEX
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
+    redirect_response = _pulled_redirect()
+    if redirect_response:
+        return redirect_response
     # No corpus default here (expansion works are listed); pieces of other works are left out as
     # on /works, unless include_parts=true or a parent-child filter asks for them (oxjob #2065).
-    default_filters = None if _shows_pieces(request.args.get('filter')) else [HIDE_PIECES_FILTER]
+    default_filters = [] if _shows_pieces(request.args.get('filter')) else [HIDE_PIECES_FILTER]
+    # and pulled works, unless include_pulled=true (oxjob #2264)
+    if hides_pulled(request.args, request_filter_params(request.args.get('filter'))):
+        default_filters.append(HIDE_PULLED_FILTER)
     result = shared_view(request, fields_dict, index_name, default_sort, connection='walden',
-                         default_filters=default_filters, extra_valid_params=PARTS_PARAMS)
+                         default_filters=default_filters or None,
+                         extra_valid_params=PARTS_PARAMS + PULLED_PARAMS)
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
@@ -244,9 +273,9 @@ def v2_works():
 @blueprint.route("/works/filters/<path:params>")
 def works_filters(params):
     index_name = WORKS_INDEX
-    # counts as the default /works view gives them: pieces of other works left out unless
-    # include_parts=true or a parent-child filter asks for them (oxjob #2065)
-    base_query = None if _shows_pieces(params) else visible_works_query()
+    # counts as the default /works view gives them: pieces of other works and pulled works left out unless
+    # include_parts=true / include_pulled=true or a filter naming them asks for them (oxjob #2065, #2264)
+    base_query = _default_view_query(params)
     results = shared_filter_view(request, params, fields_dict, index_name, base_query=base_query)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
@@ -262,7 +291,10 @@ def works_stats():
     ]
     index_name = WORKS_INDEX
     entity_name = "works"
-    base_query = None if _shows_pieces(request.args.get("filter")) else visible_works_query()
+    redirect_response = _pulled_redirect()
+    if redirect_response:
+        return redirect_response
+    base_query = _default_view_query(request.args.get("filter"))
     result = shared_stats_view(
         request, fields_dict, index_name, stats_fields, entity_name, base_query=base_query
     )

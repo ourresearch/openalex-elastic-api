@@ -16,6 +16,8 @@ def validate_entity_autocomplete_params(request):
         "corpus",
         "include_parts",
         "include-parts",
+        "include_pulled",  # oxjob #2264
+        "include-pulled",
         "api-key",
         "api_key",
     ]
@@ -46,6 +48,8 @@ def validate_full_autocomplete_params(request):
         "corpus",
         "include_parts",
         "include-parts",
+        "include_pulled",  # oxjob #2264
+        "include-pulled",
         "api-key",
         "api_key",
     ]

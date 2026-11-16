@@ -20,7 +20,7 @@ equivalence, and scripts/check_default_view_fold.py compares the two counts on t
 
 The switch is `include_parts=true` (Jason, 15 Nov 2026, decision 4a in plans/retractions.md: one
 parameter per kind of work the default leaves out, tied to a use case; `include_pulled` is the
-next). It brings the pieces back and changes nothing else: the corpus stays whatever it was.
+second, at the end of this module). It brings the pieces back and changes nothing else: the corpus stays whatever it was.
 Every door that applies the rule reads it: /works (list, search, group_by), /v2/works,
 /works/filters, /works/stats, /autocomplete and the OQO executor (query_translation/execution.py).
 
@@ -32,6 +32,8 @@ leaves the corpus as it is. /works/W... is never filtered.
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
+
+# Pulled works (oxjob #2264) are the second kind the default view leaves out; their section is at the end.
 
 # The switch that brings the pieces back, in both spellings the other parameters take.
 PARTS_PARAMS = ("include_parts", "include-parts")
@@ -139,3 +141,95 @@ def hides_pieces(corpus, include_xpac, filter_params, include_parts=False):
     else:
         core = not include_xpac and not _names_expansion(filter_params)
     return core and not lifts_hiding(filter_keys(filter_params))
+
+
+# ── Pulled works (oxjob #2264) ────────────────────────────────────────────────────────────────────
+# Jason, 15 Nov 2026 (oxjobs plans/retractions.md § 5, decisions 3-4a; kept over Kyle's review 16 Nov): works their
+# publisher, host or authors retracted, withdrew or removed (`is_pulled`) are left out of every works list, search,
+# count and group_by, whatever the corpus. `include_pulled=true` brings them back and changes nothing else. A lookup
+# by ID or DOI (/works/W...) always answers, with the flag showing; nothing is deleted; entity counts (works_count,
+# h-index) still count pulled works.
+#
+# Parameters add works, filters subtract (decision 4a, refined): a filter naming is_pulled or is_retracted stays as a
+# shortcut, but /works, /v2/works and /works/stats answer it with a redirect to the same URL plus include_pulled=true,
+# so the URL says what added the works. Doors with no URL of their own to redirect (/works/filters, autocomplete and
+# the OQO executor) read such a filter as include_pulled=true.
+
+# The switch that brings pulled works back, in both spellings the other parameters take.
+PULLED_PARAMS = ("include_pulled", "include-pulled")
+
+# Filters whose name brings pulled works back (via the redirect). Matched as whole keys, hyphens read as underscores.
+PULLED_FILTER_KEYS = frozenset({"is_pulled", "is_retracted"})
+
+# How the rule travels in a parsed filter list, beside HIDE_PIECES_FILTER. Internal, like HIDDEN_PIECES_KEY:
+# core.filter applies it, core.utils.map_filter_params refuses it in a request.
+HIDDEN_PULLED_KEY = "_default.hide_pulled"
+HIDE_PULLED_FILTER = {HIDDEN_PULLED_KEY: "true"}
+
+# The works-index boolean (walden sync_works). Only docs re-stamped since night 2026-11-17 carry it, so "not pulled"
+# is NOT true, as works.fields' is_pulled:false is.
+PULLED_FIELD = "is_pulled"
+
+
+def pulled_flag_value(value, name="include_pulled"):
+    """True or False for an include_pulled value, in any case; a JSON 400 for anything else."""
+    v = (value or "").strip().strip('"').lower()
+    if v == "true":
+        return True
+    if v in ("false", ""):
+        return False
+    raise APIQueryParamsError(
+        f"{name} takes true or false, not '{value}'. include_pulled=true brings back works their publisher, host "
+        f"or authors retracted, withdrew or removed, which the default view leaves out."
+    )
+
+
+def include_pulled_requested(args):
+    """True when request args ask for pulled works. Every value given is checked."""
+    flags = [pulled_flag_value(args.get(name), name) for name in PULLED_PARAMS if args.get(name) is not None]
+    return any(flags)
+
+
+def not_pulled_query():
+    """Works the default view keeps: every work that is not pulled (what is_pulled:false matches)."""
+    return Q("bool", must_not=[Q("term", **{PULLED_FIELD: "true"})])
+
+
+def names_pulled(filter_keys):
+    """True when any filter key is is_pulled or is_retracted."""
+    return any((key or "").replace("-", "_") in PULLED_FILTER_KEYS for key in filter_keys)
+
+
+def hides_pulled(args, filter_params):
+    """Whether a works request leaves pulled works out. include_pulled, when given, decides (true brings them back;
+    false keeps them out even beside an is_retracted filter: filters only subtract). Without it, a filter naming
+    is_pulled / is_retracted brings them back; the redirect doors never get here with one. The corpus has no say."""
+    return pulled_hidden(args, filter_keys(filter_params))
+
+
+def pulled_hidden(args, keys):
+    """hides_pulled, from the filter keys (the OQO executor's columns)."""
+    if any(args.get(name) is not None for name in PULLED_PARAMS):
+        return not include_pulled_requested(args)
+    return not names_pulled(keys)
+
+
+def pulled_redirect_location(path, query_string, args):
+    """Where a works request whose filter names is_pulled / is_retracted is sent: the same path and query string
+    plus include_pulled=true. None when the request already gives include_pulled (true or false) or names neither
+    filter. Relative, so it survives the proxies in front of the API."""
+    if any(args.get(name) is not None for name in PULLED_PARAMS):
+        include_pulled_requested(args)  # include_pulled=banana answers a 400, not a redirect
+        return None
+    if not names_pulled(request_filter_keys(args.get("filter"))):
+        return None
+    joiner = "&" if query_string else ""
+    return f"{path}?{query_string}{joiner}include_pulled=true"
+
+
+def default_view_query(hide_pieces, hide_pulled):
+    """The default view as one query, for the doors that take a base query; None when nothing is hidden."""
+    qs = ([visible_works_query()] if hide_pieces else []) + ([not_pulled_query()] if hide_pulled else [])
+    if not qs:
+        return None
+    return qs[0] if len(qs) == 1 else Q("bool", filter=qs)
