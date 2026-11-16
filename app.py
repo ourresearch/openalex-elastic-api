@@ -1,4 +1,5 @@
 import json
+import re
 import time
 
 import sentry_sdk
@@ -6,6 +7,7 @@ from elasticsearch.exceptions import BadRequestError as ESBadRequestError
 from elasticsearch.exceptions import ConnectionTimeout as ESConnectionTimeout
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify, request
+from werkzeug.exceptions import HTTPException, NotFound
 
 import awards
 import authors
@@ -225,6 +227,47 @@ def register_errorhandlers(app):
         return handle_exception(APIQueryParamsError(message))
 
     app.errorhandler(ESBadRequestError)(handle_es_bad_request)
+
+    def handle_http_exception(err):
+        """Werkzeug's own errors (every `abort(404)` / `abort(503)`, most in ids/views.py;
+        a 405, a malformed body) answered as JSON like every other API error, instead of
+        Werkzeug's HTML page. The docs promise JSON (help.openalex.org/api/errors:
+        `404 "Work W9999999999 not found"`); ZD 5750 asked for it (oxjob #1093)."""
+        if err.code is None or err.code < 400 or err.response is not None:
+            return err  # redirects, and an abort() that carries its own response
+        response = err.get_response()  # keeps the status and headers (Allow on a 405)
+        message = err.description
+        if err.code == 404 and message == NotFound.description:
+            message = not_found_message(request.path)
+        response.data = json.dumps({"error": err.name, "message": message})
+        response.content_type = "application/json"
+        if err.code == 503:
+            response.headers.setdefault("Retry-After", "30")
+        return response
+
+    app.errorhandler(HTTPException)(handle_http_exception)
+
+
+# Record type named in a 404 message, by the path's first part (aliases included).
+NOT_FOUND_NAMES = {
+    "works": "Work", "authors": "Author", "people": "Author", "sources": "Source", "journals": "Source",
+    "institutions": "Institution", "topics": "Topic", "keywords": "Keyword", "concepts": "Concept",
+    "publishers": "Publisher", "funders": "Funder", "awards": "Award", "domains": "Domain",
+    "fields": "Field", "subfields": "Subfield", "sdgs": "SDG", "countries": "Country",
+    "continents": "Continent", "languages": "Language", "licenses": "License",
+    "institution-types": "Institution type", "source-types": "Source type", "work-types": "Work type",
+    "types": "Work type", "locations": "Location", "oa-statuses": "OA status",
+    "study-designs": "Study design", "source-lists": "Source list", "indexes": "Index",
+}
+
+
+def not_found_message(path):
+    """'Work W9999999999 not found' for a record lookup (also /entities/x/ and /v2/x/);
+    else 'Nothing found at <path>'."""
+    m = re.match(r"^/(?:entities/|v2/)?([a-z-]+)/(.+)$", path)
+    if m and m.group(1) in NOT_FOUND_NAMES:
+        return "{} {} not found".format(NOT_FOUND_NAMES[m.group(1)], m.group(2)[:300])
+    return "Nothing found at {}".format(path[:300])
 
 
 if __name__ == '__main__':
