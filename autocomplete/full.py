@@ -123,6 +123,13 @@ def get_filter_results(q):
             ],
         },
         {
+            "name": "is_pulled",  # oxjob #2264
+            "matches": [
+                {"query": "pulled", "min_len": 3, "value": True},
+                {"query": "not pulled", "min_len": 5, "value": False},
+            ],
+        },
+        {
             "name": "open_access.is_oa",
             "matches": [
                 {"query": "open access", "min_len": 3, "value": True},

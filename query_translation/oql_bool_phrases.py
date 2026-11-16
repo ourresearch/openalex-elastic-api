@@ -13,6 +13,7 @@ BOOL_PHRASES = {
     'authorships.institutions.is_global_south': ("it's from the global south", "it's not from the global south"),
     'is_global_south': ("it's from the global south", "it's not from the global south"),   # institutions, sources
     'is_retracted': ("it's retracted", "it's not retracted"),
+    'is_pulled': ("it's pulled", "it's not pulled"),  # oxjob #2264
     'has_doi': ('it has a DOI', "it doesn't have a DOI"),
     'has_orcid': ('it has an ORCID', "it doesn't have an ORCID"),
     'open_access.any_repository_has_fulltext': ('it has fulltext in a repository', "it doesn't have fulltext in a repository"),

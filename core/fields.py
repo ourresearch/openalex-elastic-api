@@ -442,12 +442,16 @@ class BooleanField(Field):
     field_type = "boolean"
     operators = ["eq", "null"]
 
-    def __init__(self, *args, true_when_in=None, **kwargs):
+    def __init__(self, *args, true_when_in=None, absent_means_false=False, **kwargs):
         super().__init__(*args, **kwargs)
         # A yes/no the index doesn't store, read from another field (oxjob #2064): (es_field, values).
         # `true` = the field holds one of the values, `false` = it doesn't, so the two always split the
         # results. works is_traditional = ("type", the traditional types).
         self.true_when_in = true_when_in
+        # A yes/no only some docs carry yet (oxjob #2264: walden writes works is_pulled when a work
+        # re-stamps): `false` = NOT true, so a doc without the field counts as false, and true/false
+        # split every work, in the filter and in group_by.
+        self.absent_means_false = absent_means_false
 
     def query_for(self, value):
         """The query `filter=<param>:<value>` runs, for "true" or "false". group_by
@@ -463,6 +467,11 @@ class BooleanField(Field):
             self.validate_true_false()
             es_field, values = self.true_when_in
             q = Q("terms", **{es_field: sorted(values)})
+            return q if self.value.lower().strip() == "true" else ~q
+
+        if self.absent_means_false:
+            self.validate_true_false()
+            q = Q("term", **{self.es_field(): "true"})
             return q if self.value.lower().strip() == "true" else ~q
 
         if self.param in EXTERNAL_ID_FIELDS:

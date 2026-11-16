@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 27,
-    "fingerprint": "7db36fc1f1d53959b54829716b1d6e99f90b06dc51cf0ff88cf36d0451b4c49a",
-    "property_count": 994,
-    "version": "24.1.0"
+    "fingerprint": "0bc73a1ca81bbd85fc90924c444672ecc8e7b2bf7be53b02d6b3bbae9d60480a",
+    "property_count": 995,
+    "version": "24.2.0"
   },
   "properties": {
     "authors": {
@@ -18878,6 +18878,30 @@
         "supported_by": [
           "gui",
           "oxurl"
+        ],
+        "type": "boolean"
+      },
+      "is_pulled": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "pulled",
+        "entity_type": null,
+        "name": "is_pulled",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
