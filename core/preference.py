@@ -41,12 +41,31 @@ def combine_preferences(search_strings):
 
 
 # The search filters whose value pins shard routing, so scores and tie-breaks repeat.
+# Without it each page request may land on a different copy of a shard, whose BM25 statistics
+# differ slightly, so works with near-equal scores swap places between pages: paging a
+# title_and_abstract.search by relevance returned 316 rows with only 315 distinct works, one
+# repeated and one never shown (ZD 4463, oxjob #1035, 15 Nov 2026). Every lexical search filter
+# pins it now; semantic.search ranks by vector, not BM25, so it stays out.
 PREFERENCE_SEARCH_FILTERS = (
     "abstract.search",
+    "abstract.search.exact",
+    "default.search",
+    "default.search.exact",
     "display_name.search",
-    "title.search",
+    "display_name.search.exact",
+    "fulltext.search",
+    "fulltext.search.exact",
+    "keyword.search",
     "raw_affiliation_strings.search",
     "raw_affiliation_strings.search.exact",  # its honest name (oxjob #400)
+    "raw_author_name.search",
+    "text.search",
+    "title.search",
+    "title.search.exact",
+    "title_abstract_keywords.search",
+    "title_abstract_keywords.search.exact",
+    "title_and_abstract.search",
+    "title_and_abstract.search.exact",
 )
 
 

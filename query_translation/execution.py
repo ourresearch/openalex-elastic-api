@@ -1313,10 +1313,10 @@ def _oql_parse_error_response(exc: OQLParseError):
 
 # The search clauses legacy pins ES shard routing on (#323 Pattern C). Legacy sets
 # preference=clean_preference(<value>) for a `?search=` query (which lands in the
-# OQO as a `default.search` filter) and for the four `*.search` filters that
-# core/shared_view.set_preference_for_filter_search inspects. Other search kinds
-# (fulltext/keyword/semantic) get no preference in legacy, so they're excluded here
-# for parity. Empirically verified against the legacy path (see EXPLORE session 5).
+# OQO as a `default.search` filter) and for the `*.search` filters that
+# core/shared_view.set_preference_for_filter_search inspects: every lexical search
+# filter since oxjob #1035 (ZD 4463: unpinned title_and_abstract.search pages repeated
+# and dropped works). semantic.search gets none in either path, for parity.
 PREFERENCE_SEARCH_COLUMNS = {"default.search", *PREFERENCE_SEARCH_FILTERS}
 
 

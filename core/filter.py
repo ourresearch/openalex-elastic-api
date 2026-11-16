@@ -15,7 +15,7 @@ from core.default_view import HIDDEN_PIECES_KEY, visible_works_query
 from core.quoted_values import unquote_filter_value
 from core.utils import get_field, is_field_class
 from core.validate import xpac_flag_value
-from core.work_type_values import check_work_type_filter
+from core.work_type_values import SOURCE_TYPES, check_work_type_filter
 from settings import MAX_IDS_IN_FILTER
 
 
@@ -45,6 +45,8 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             is_quoted = False
             if "search" not in field.param:
                 value, is_quoted = unquote_filter_value(value)
+                if not is_quoted and _is_multiword_source_type(field, value):
+                    is_quoted = True
 
             # A `type` value that isn't a work type answers a 400, not a silent 0 (oxjob #1836).
             check_work_type_filter(field, value, is_quoted)
@@ -84,6 +86,31 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 else:
                     s = s.filter(q)
     return s
+
+
+# Source types whose name has a space (config/source-types.yaml): `ebook platform`, `book series`.
+_MULTIWORD_SOURCE_TYPES = frozenset(t for t in SOURCE_TYPES if " " in t)
+# The filters whose value is a source type. `type` is one on /sources; on /works its check
+# (core/work_type_values.py) then names the right filter instead of complaining about 'ebook'.
+_SOURCE_TYPE_PARAMS = frozenset({
+    "primary_location.source.type", "locations.source.type", "best_oa_location.source.type", "type",
+})
+
+
+def _is_multiword_source_type(field, value):
+    """True when an unquoted, pipeless value is a source type whose name has a space.
+
+    A space in a filter value means AND (`a b` = a AND b), so
+    `primary_location.source.type:ebook platform` asked for works whose source type is both
+    `ebook` and `platform` and answered 0, while group_by listed 808,814 ebook-platform works for
+    2024 and the API's own 400 told users to type exactly that (ZD 5246, oxjob #1035, 15 Nov 2026).
+    No source type is one word of another, so such a value is the one type, read as if quoted.
+    """
+    if field.param not in _SOURCE_TYPE_PARAMS or "|" in value:
+        return False
+    v = value[1:] if value.startswith("!") else value
+    v = TermField._strip_openalex_prefix(v.strip(), "source-types/").replace("%20", " ")
+    return v.lower() in _MULTIWORD_SOURCE_TYPES
 
 
 BLOCKED_AUTHOR_IDS = {"A9999999999", "a9999999999"}
