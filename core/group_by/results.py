@@ -275,7 +275,10 @@ def get_default_group_by_results(
 
     if requires_display_name_conversion(group_by):
         keys = [b.key for b in buckets]
-        lookup = group_by if repositories_only else "locations.source.id"
+        # only `repository` swaps its lookup on cursor pages; every other group_by
+        # keeps its own (a subfield key sent to the source lookup answered 400, #1089)
+        swap = group_by == "repository" and not repositories_only
+        lookup = "locations.source.id" if swap else group_by
         key_display_names = get_display_name_mapping(keys, lookup, connection)
     else:
         key_display_names = {}
