@@ -1095,6 +1095,29 @@ def locations_id_get(id):
 # Universal
 
 
+# Retired endpoints answer 410 with where to go instead, not the catch-all's
+# "OpenAlex ID format not recognized" (oxjob #1108; ZD 21934 and 7365 hit that).
+_SEMANTIC_RETIRED = ("This semantic search endpoint is retired. Use "
+                     "/works?search.semantic=<your text> instead: "
+                     "https://help.openalex.org/api/semantic-search/")
+RETIRED_ENDPOINTS = {
+    "changefiles": ("The changefiles endpoint was retired in August 2026. Daily "
+                    "updates come from the daily snapshot and the API's sync "
+                    "filters: https://help.openalex.org/access/sync/"),
+    "find/works": _SEMANTIC_RETIRED,
+    "discover/works": _SEMANTIC_RETIRED,
+}
+
+
+def retired_endpoint_message(path):
+    """The retirement message for a path under a retired endpoint, else None."""
+    p = path.strip("/").lower()
+    for prefix, message in RETIRED_ENDPOINTS.items():
+        if p == prefix or p.startswith(prefix + "/"):
+            return message
+    return None
+
+
 @blueprint.route("/<path:openalex_id>")
 def universal_get(openalex_id):
     if not openalex_id:
@@ -1103,6 +1126,10 @@ def universal_get(openalex_id):
     # Skip if this is an entities route (e.g., /entities/works)
     if openalex_id.startswith("entities/"):
         abort(404)
+
+    retired = retired_endpoint_message(openalex_id)
+    if retired:
+        return {"error": "Endpoint retired", "message": retired}, 410
 
     if not is_openalex_id(openalex_id):
         return {"message": "OpenAlex ID format not recognized"}, 404

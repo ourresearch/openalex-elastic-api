@@ -341,3 +341,19 @@ class TestIDSelect:
         res = client.get("/W2894744280?select=id,display_name", follow_redirects=True)
         json_data = res.get_json()
         assert json_data.keys() == {"id", "display_name"}
+
+
+class TestRetiredEndpoints:
+    # oxjob #1108: retired endpoints say so (410 + where to go), not the
+    # catch-all's "OpenAlex ID format not recognized".
+    def test_retired_endpoints_answer_410(self, client):
+        for path in ("/changefiles", "/changefiles/2026-06-11",
+                     "/changefiles/2026-06-11/works.jsonl.gz",
+                     "/find/works?query=x", "/discover/works"):
+            res = client.get(path)
+            assert res.status_code == 410, path
+            assert "help.openalex.org" in res.get_json()["message"], path
+
+    def test_lookalike_paths_still_404(self, client):
+        for path in ("/changefilesx", "/findings"):
+            assert client.get(path).status_code == 404, path
