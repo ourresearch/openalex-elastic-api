@@ -7,7 +7,7 @@ from elasticsearch_dsl import Search
 
 import settings
 from core import merged_ids, rerank
-from core.cursor import get_next_cursor, handle_cursor
+from core.cursor import drop_peeked_hit, get_next_cursor, handle_cursor, peek_one_more
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
 from core.group_by.results import (
@@ -756,8 +756,12 @@ def execute_search(s, params):
     if params["group_by"]:
         return s.execute()
     else:
+        peek = peek_one_more(params)  # oxjob #1029: a full last cursor page ends the walk
         try:
-            return s[paginate.start:paginate.end].execute()
+            response = s[paginate.start:paginate.end + peek].execute()
+            if peek:
+                drop_peeked_hit(response, paginate.end - paginate.start)
+            return response
         except RequestError as e:
             if "search_after has" in str(e) and "sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
