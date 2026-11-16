@@ -1,5 +1,5 @@
-"""Filters for /relationships: the kinds of link between a work and its parent work
-(oxjob #2065). A small entity with its own endpoint, like /types."""
+"""Filters for /relationships: the kinds of link between two works: citation (oxjob #1490) and the
+part-of kinds of parent_works (oxjob #2065). A small entity with its own endpoint, like /types."""
 from core.fields import (
     CollectionField,
     DateField,

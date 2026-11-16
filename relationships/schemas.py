@@ -21,8 +21,8 @@ class StandardTermSchema(Schema):
 
 
 class RelationshipsSchema(Schema):
-    """One kind of link between a work and its parent work (oxjob #2065): volume,
-    component, data-series, part. `works_count` = works that have a parent of this kind.
+    """One kind of link between two works: citation (oxjob #1490), or a part-of kind (oxjob #2065): volume,
+    component, data-series, part. `works_count` = works that carry a link of this kind.
     Values are nouns that name the link, not one end of it; `standard_terms` gives the
     matching verbs in standard vocabularies (Jason, 15 Nov 2026, oxjob #1490)."""
 

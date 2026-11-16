@@ -15,7 +15,7 @@ from relationships.fields import fields_dict
 from relationships.schemas import RelationshipsSchema, MessageSchema
 from settings import WORK_RELATIONSHIPS_INDEX
 
-# oxjob #2065: the kinds of link between a work and its parent work (volume, component,
+# oxjob #2065, #1490: the kinds of link between two works (citation, volume, component,
 # data-series, part). `/work-relationships` is an alias, as `/work-types` is for `/types`.
 blueprint = Blueprint("relationships", __name__)
 

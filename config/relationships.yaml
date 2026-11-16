@@ -1,11 +1,13 @@
 id: relationships
 displayName: relationships
 displayNameSingular: relationship
-descr: how a work relates to its parent work
-descrFull: How a work relates to a parent work it is part of, such as a chapter in a book volume or a figure that is a component of an article.
+descr: the kind of link between two works
+descrFull: The kind of link between two works, such as a citation, a chapter in a book volume, or a figure that is a component of an article.
 isNative: false
 idRegex: (?:https:\/\/openalex\.org\/relationships\/|relationships\/)([a-z-]+)
 values:
+- id: relationships/citation
+  display_name: Citation
 - id: relationships/volume
   display_name: Volume
 - id: relationships/component

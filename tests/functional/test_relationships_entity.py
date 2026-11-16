@@ -1,4 +1,5 @@
-"""relationships entity wiring (oxjob #2065): the kinds of link between a work and its parent work.
+"""relationships entity wiring (oxjob #2065): the kinds of link between two works (citation, oxjob #1490, and the
+four part-of kinds).
 Uses the tests/conftest `client` fixture; ES is never reached (walden builds work-relationships-v1).
 
     PYTHONPATH=. venv/bin/python -m pytest tests/functional/test_relationships_entity.py -q
@@ -9,8 +10,9 @@ from elasticsearch_dsl import AttrDict
 import ids.views
 from relationships.schemas import RelationshipsSchema
 
-# The four records walden syncs (id, display_name, description).
+# The five records walden syncs (id, display_name, description).
 RECORDS = [
+    ("citation", "Citation", "The work cites another work: that work is in its reference list."),
     ("volume", "Volume",
      "The work is in a book or proceedings volume: a chapter, entry, front matter or paper of that volume."),
     ("component", "Component",
@@ -54,7 +56,7 @@ def test_single_record_lookup_uses_the_relationships_path_segment(client, monkey
 
 
 @pytest.mark.parametrize("path", ["/relationships/config", "/work-relationships/config"])
-def test_config_route_serves_the_four_values(client, path):
+def test_config_route_serves_the_five_values(client, path):
     r = client.get(path)
     assert r.status_code == 200
     assert [(v["id"], v["display_name"]) for v in r.get_json()["values"]] == [
