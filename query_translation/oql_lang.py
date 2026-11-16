@@ -213,9 +213,10 @@ _f("citation percentile by subfield", "citation_normalized_percentile.value", "n
 # EXPLORE.md). The bound columns are registered too (drops them off the #363 raw
 # fallback) and render via the axis word: `date >= 2020-01-01`.
 #
-# Plan-gating: the created/updated axes are Premium/Institutional/Partner only
-# (free keys get HTTP 200 {"error":"Plan upgrade required"}); the engine enforces
-# this at query time — OQL just surfaces the fields. Never put a free-tier
+# Plan-gating: the created/updated axes are daily sync (Member+ and Partner, plus older
+# Premium/Institutional plans). The API proxy enforces it, not the engine: it reads the
+# engine's meta.x_query and answers HTTP 403 {"error":"Plan upgrade required"}
+# (oxjobs #1689, #1850). OQL just surfaces the fields. Never put a free-tier
 # created/updated example in user-facing links; `date` (publication) is free.
 _f("date", "publication_date", "date",
    date_from_col="from_publication_date", date_to_col="to_publication_date")
