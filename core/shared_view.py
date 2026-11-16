@@ -701,7 +701,7 @@ def apply_grouping(params, fields_dict, s):
         for group_by_item in params["group_bys"]:
             group_by, include_unknown = parse_group_by(group_by_item)
             s = create_group_by_buckets(
-                fields_dict, group_by, include_unknown, s, params
+                fields_dict, group_by, include_unknown, s, params, scoped=True
             )
     return s
 

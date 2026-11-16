@@ -24,7 +24,8 @@ def export_group_by(result, request):
     if group_by_key:
         group_by_results = format_group_by_results(result, group_by_key)
     else:
-        group_by_results = format_group_bys_results(result)
+        group_by_results = {**format_sum_blocks(result, request),
+                            **format_group_bys_results(result)}
     timestamp = get_timestamp()
     export_format = request.args.get("format")
     filename = f"openalex-group-by-{timestamp}.{export_format.lower()}"
@@ -41,7 +42,7 @@ def export_group_by(result, request):
 def export_group_by_csv(filename, group_by_results):
     string_io = io.StringIO()
 
-    max_rows = max(len(rows) for rows in group_by_results.values())
+    max_rows = max((len(rows) for rows in group_by_results.values()), default=0)
 
     csv_writer = csv.writer(string_io)
 
@@ -74,7 +75,7 @@ def export_group_by_xlsx(filename, group_by_results):
     wb = Workbook()
     ws = wb.active
 
-    max_rows = max(len(rows) for rows in group_by_results.values())
+    max_rows = max((len(rows) for rows in group_by_results.values()), default=0)
 
     col_index = 1
     for group_by_key in group_by_results.keys():
@@ -129,10 +130,32 @@ def format_group_by_results(result, group_by_key):
     return group_by_results
 
 
+def format_sum_blocks(result, request):
+    """The citation and APC sums asked for inside group_bys (core/params.py
+    SUM_GROUP_BYS), one block each, in the order asked (ZD 3885, oxjob #1027)."""
+    asked = (request.args.get("group_bys") or request.args.get("group-bys") or "").split(",")
+    meta = result.get("meta") or {}
+    blocks = {}
+    for key in asked:
+        if key == "cited_by_count_sum" and meta.get("cited_by_count_sum") is not None:
+            blocks[key] = [_sum_row("Citations", meta["cited_by_count_sum"])]
+        elif key == "apc_sum" and (meta.get("apc_list_sum_usd") is not None
+                                   or meta.get("apc_paid_sum_usd") is not None):
+            blocks[key] = [_sum_row("APC list price (USD)", meta.get("apc_list_sum_usd")),
+                           _sum_row("APC paid (USD)", meta.get("apc_paid_sum_usd"))]
+    return blocks
+
+
+def _sum_row(name, value):
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return {"key": name, "key_display_name": name, "count": value if value is not None else ""}
+
+
 def format_group_bys_results(result):
     group_by_results = {}
 
-    for item in result["group_bys"]:
+    for item in result.get("group_bys") or []:
         group_by_key = item.get("group_by_key")
         groups = item.get("groups", [])
 
@@ -157,6 +180,8 @@ def get_timestamp():
 
 def friendly_header_name(header):
     manual_conversions = {
+        "cited_by_count_sum": "Citations Sum",
+        "apc_sum": "APC Sum",
         "oa_status": "Open Access Status",
         "source.is_oa": "Source Is Open Access",
         "source.is_in_doaj": "Source Is In DOAJ",

@@ -3,6 +3,10 @@ from core.utils import map_filter_params, map_sort_params, set_number_param
 from core.validate import validate_export_format, validate_params, validate_sample_cursor
 
 
+# Sums the website sends inside group_bys (see parse_params).
+SUM_GROUP_BYS = ("cited_by_count_sum", "apc_sum")
+
+
 def parse_params(request, extra_valid_params=()):
     """Extract and validate parameters from the request."""
     validate_params(request, extra_valid_params)
@@ -32,6 +36,14 @@ def parse_params(request, extra_valid_params=()):
     }
     if params["group_bys"]:
         params["group_bys"] = params["group_bys"].split(",")
+        # The website's "Export N facets" lists its citation and APC sum widgets among
+        # the groups; they are sums of the whole result set, not groups, and answered
+        # HTTP 400 "cited_by_count_sum is not a valid field" (ZD 3885, oxjob #1027).
+        # Compute them as the meta sums; the CSV/XLSX export writes each as a block.
+        for key in SUM_GROUP_BYS:
+            if key in params["group_bys"]:
+                params["group_bys"] = [g for g in params["group_bys"] if g != key]
+                params[key] = "true"
     validate_sample_cursor(params)
     return params
 

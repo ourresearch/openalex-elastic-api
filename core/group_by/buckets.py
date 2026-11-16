@@ -1,4 +1,4 @@
-from elasticsearch_dsl import A, AttrDict
+from elasticsearch_dsl import A, AttrDict, Q
 from flask import current_app as app
 
 
@@ -57,7 +57,26 @@ Bucket creation.
 """
 
 
-def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
+class _AggTarget:
+    """Stands in for a Search when a group's terms aggregation must hang under a
+    `filter` aggregation instead of the search root: the builders below only call
+    `s.aggs.bucket(...)` on it."""
+
+    def __init__(self, parent_agg):
+        self.aggs = parent_agg
+
+
+def scope_bucket_key(group_by):
+    """The `filter` aggregation that holds a scoped group's terms aggregation."""
+    return get_bucket_keys(group_by)["default"] + "__scope"
+
+
+def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params, scoped=False):
+    """`scoped=True` (the plural `group_bys` path): a field whose groups count only
+    some works (repository, journal) filters inside its own aggregation, so the
+    other side-by-side groups and meta.count keep the whole result set. As a
+    search-level filter it cut every group of `group_bys=...,repository` down to
+    the works with a repository copy (ZD 1493: 68 of 396 works; oxjob #1027)."""
     cursor = params.get("cursor")
     q = params.get("q")
     per_page = 500 if q else params.get("per_page")
@@ -85,7 +104,13 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
     missing = get_missing(field)
     shard_size = determine_shard_size(q)
 
-    s = filter_by_repository_or_journal(field, s)
+    scope = scope_filter(field)
+    if scoped and scope is not None and not cursor:
+        target = _AggTarget(
+            s.aggs.bucket(scope_bucket_key(group_by), "filter", filter=scope))
+    else:
+        s = filter_by_repository_or_journal(field, s)
+        target = s
 
     if sort_params:
         create_sorted_group_by_buckets(
@@ -94,7 +119,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
             include_unknown,
             missing,
             per_page,
-            s,
+            target,
             shard_size,
             sort_params,
             fields_dict,
@@ -114,7 +139,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
             include_unknown,
             missing,
             per_page,
-            s,
+            target,
             shard_size,
         )
 
@@ -402,14 +427,24 @@ def get_missing(field):
     return missing
 
 
-def filter_by_repository_or_journal(field, s):
+def scope_filter(field):
+    """The works a group_by field counts, when that's not all of them: works with
+    a repository copy for `repository` and host-institution lineage, works whose
+    primary location is a journal for `journal`. None for every other field."""
     if (
         field.param == "repository"
         or field.param == "locations.source.host_institution_lineage"
     ):
-        s = s.filter("term", **{"locations_full.source.type": "repository"})
+        return Q("term", **{"locations_full.source.type": "repository"})
     if field.param == "journal":
-        s = s.filter("term", **{"primary_location.source.type": "journal"})
+        return Q("term", **{"primary_location.source.type": "journal"})
+    return None
+
+
+def filter_by_repository_or_journal(field, s):
+    scope = scope_filter(field)
+    if scope is not None:
+        s = s.filter(scope)
     return s
 
 
@@ -420,7 +455,11 @@ Bucket retrieval.
 
 def get_default_buckets(group_by, response):
     bucket_keys = get_bucket_keys(group_by)
-    buckets = response.aggregations[bucket_keys["default"]].buckets
+    aggregations = response.aggregations
+    scope_key = scope_bucket_key(group_by)
+    if scope_key in aggregations:  # a scoped group of `group_bys` (create_group_by_buckets)
+        aggregations = aggregations[scope_key]
+    buckets = aggregations[bucket_keys["default"]].buckets
     buckets = transform_paginated_buckets(buckets)
     return buckets
 
