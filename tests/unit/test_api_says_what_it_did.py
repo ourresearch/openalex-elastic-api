@@ -160,3 +160,55 @@ def test_oql_semantic_refuses_sort_and_sample(monkeypatch, oql, view_params, exp
     monkeypatch.setattr(vector_index, "embed_query", lambda text: pytest.fail("embedded a refused search"))
     status, message = _oql(oql, view_params)
     assert status == 400 and expect in message
+
+
+# ---------- the rerank surcharge follows the answer (oxjob #2034) ----------
+
+@pytest.mark.parametrize("meta, want", [
+    ({"reranked": False, "rerank_reason": "past_window"}, 10),
+    ({"reranked": False, "rerank_reason": "model_unavailable"}, 10),
+    ({"count": 3}, 10),                     # no reranked field: not reranked
+    ({"reranked": True}, None),             # reranked: the up-front price stands
+])
+def test_surcharge_owed_only_when_reranked(meta, want):
+    assert rerank.price_without_surcharge("0.002", "10", meta) == want
+
+
+@pytest.mark.parametrize("charged, surcharge, meta", [
+    ("0.002", None, {"reranked": False}),   # the proxy charged no surcharge (a shed, or never asked)
+    ("0.002", "", {"reranked": False}),
+    ("0.002", "0", {"reranked": False}),
+    ("0.002", "ten", {"reranked": False}),  # malformed: the up-front price stands
+    ("abc", "10", {"reranked": False}),
+    ("0.002", "10", None),
+])
+def test_no_surcharge_no_change(charged, surcharge, meta):
+    assert rerank.price_without_surcharge(charged, surcharge, meta) is None
+
+
+def test_never_below_zero_and_grandfathered():
+    assert rerank.price_without_surcharge("0.0011", "10", {"reranked": False}) == 1  # grandfathered search, 1 + 10
+    assert rerank.price_without_surcharge("0.0005", "10", {"reranked": False}) == 0
+
+
+def test_the_url_door_answer_carries_the_settled_price():
+    import app as app_module
+    hooked = flask.Flask("hooked")
+
+    @hooked.route("/works")
+    def works():
+        reranked = flask.request.args.get("page") == "1"
+        return flask.jsonify({"meta": {"count": 181, "reranked": reranked}, "results": []})
+
+    hooked.after_request(app_module.inject_cost_usd)
+    client = hooked.test_client()
+    headers = {"X-Cost-USD": "0.002", rerank.SURCHARGE_HEADER: "10"}
+    past = client.get("/works?search=coral&rerank=true&page=6", headers=headers)
+    assert past.headers["X-Credits-Cost"] == "10"
+    assert past.get_json()["meta"]["cost_usd"] == 0.001
+    first = client.get("/works?search=coral&rerank=true&page=1", headers=headers)
+    assert "X-Credits-Cost" not in first.headers
+    assert first.get_json()["meta"]["cost_usd"] == 0.002
+    plain = client.get("/works?search=coral&page=6", headers={"X-Cost-USD": "0.001"})
+    assert "X-Credits-Cost" not in plain.headers
+    assert plain.get_json()["meta"]["cost_usd"] == 0.001

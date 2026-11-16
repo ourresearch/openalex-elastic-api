@@ -329,6 +329,27 @@ def shed_note(request):
     return {"reranked": False, "rerank_reason": "search_busy"} if request.headers.get(SHED_HEADER) else None
 
 
+# ---------- what rerank costs (oxjob #2034) ----------
+
+# The proxy puts the rerank surcharge in the up-front price (X-Cost-USD) and says how many credits of it in this
+# header. It is owed only when the answer says meta.reranked true, the rule the OQL door's plain_price follows.
+SURCHARGE_HEADER = "X-Credits-Rerank"
+CREDITS_PER_USD = 10_000  # the proxy's creditsToUsd
+
+
+def price_without_surcharge(charged_usd, surcharge, meta):
+    """The request's price in credits once the answer is known: the up-front price less the rerank surcharge when the
+    proxy charged one and the page wasn't reranked (past the top 100, the model didn't answer). None when the up-front
+    price stands. Never more than the up-front price."""
+    if not surcharge or not isinstance(meta, dict) or meta.get("reranked") is True:
+        return None
+    try:
+        charged, extra = round(float(charged_usd) * CREDITS_PER_USD), int(surcharge)
+    except (TypeError, ValueError):
+        return None
+    return max(0, charged - extra) if extra > 0 else None
+
+
 # ---------- the reranked page ----------
 
 def reranked_response(request, params, index_name, build_search, query=None, key_extra=None):

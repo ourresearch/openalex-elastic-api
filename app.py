@@ -46,6 +46,7 @@ import suggest
 import topics
 import works
 import work_types
+from core import rerank
 from core.collection_resolver import CollectionUrlIdsInQuery
 from core.exceptions import APIError, APIQueryParamsError, QueryTimeoutError
 from core.origin_key import init_origin_key_check
@@ -72,28 +73,38 @@ def create_app(config_object="settings"):
         response.headers['Access-Control-Allow-Headers'] = '*'
         return response
 
-    @app.after_request
-    def inject_cost_usd(response):
-        # A query priced from its plan (oxjob #1530) carries its own cost; the
-        # proxy's up-front charge (X-Cost-USD) doesn't apply to it.
-        if response.headers.get("X-Credits-Cost") is not None:
-            return response
-        cost_header = response.headers.get("X-Cost-USD") or request.headers.get("X-Cost-USD")
-        if (
-            cost_header is not None
-            and response.content_type
-            and "application/json" in response.content_type
-        ):
-            try:
-                data = response.get_json(silent=True)
-                if data and isinstance(data, dict) and "meta" in data:
-                    data["meta"]["cost_usd"] = float(cost_header)
-                    response.data = json.dumps(data, sort_keys=False)
-            except (ValueError, TypeError):
-                pass
-        return response
+    app.after_request(inject_cost_usd)
 
     return app
+
+
+def inject_cost_usd(response):
+    # A query priced from its plan (oxjob #1530) carries its own cost; the
+    # proxy's up-front charge (X-Cost-USD) doesn't apply to it.
+    if response.headers.get("X-Credits-Cost") is not None:
+        return response
+    cost_header = response.headers.get("X-Cost-USD") or request.headers.get("X-Cost-USD")
+    if (
+        cost_header is not None
+        and response.content_type
+        and "application/json" in response.content_type
+    ):
+        try:
+            data = response.get_json(silent=True)
+            if data and isinstance(data, dict) and "meta" in data:
+                cost_usd = float(cost_header)
+                # A rerank surcharge on a page that wasn't reranked comes back (oxjob #2034): priced here, settled
+                # by the proxy from X-Credits-Cost, as on the OQL door.
+                credits = rerank.price_without_surcharge(
+                    cost_header, request.headers.get(rerank.SURCHARGE_HEADER), data["meta"])
+                if credits is not None:
+                    response.headers["X-Credits-Cost"] = str(credits)
+                    cost_usd = round(credits / rerank.CREDITS_PER_USD, 6)
+                data["meta"]["cost_usd"] = cost_usd
+                response.data = json.dumps(data, sort_keys=False)
+        except (ValueError, TypeError):
+            pass
+    return response
 
 
 def register_blueprints(app):
