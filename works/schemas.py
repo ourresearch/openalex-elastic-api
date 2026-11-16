@@ -437,7 +437,10 @@ class WorksSchema(Schema):
             else None
         )
     )
-    cited_by_api_url = fields.Str()
+    # oxjob #1046 (Zendesk 6184, 6138, 6191): computed, as Walden's ES and Lakebase work docs don't carry it, so the
+    # v1 key had vanished from every work since data version 2 (Nov 2025) while `select=cited_by_api_url` still
+    # accepted it.
+    cited_by_api_url = fields.Method("get_cited_by_api_url")
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
@@ -538,6 +541,17 @@ class WorksSchema(Schema):
         if count is None:
             return None
         return count > len(getattr(obj, "authorships", None) or [])
+
+    @staticmethod
+    def get_cited_by_api_url(obj):
+        """The works that cite this one, as v1 gave it: `https://api.openalex.org/works?filter=cites:W...`
+        (oxjob #1046). Built from the work's own id, so lists, single works and `select` all carry it.
+        None when the doc has no id."""
+        openalex_id = getattr(obj, "id", None)
+        if not openalex_id:
+            return None
+        work_id = str(openalex_id).rstrip("/").split("/")[-1]
+        return f"https://api.openalex.org/works?filter=cites:{work_id}"
 
     @staticmethod
     def get_content_urls(obj):
