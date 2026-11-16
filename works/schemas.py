@@ -1,7 +1,7 @@
 import json
 import logging
 
-from marshmallow import fields, INCLUDE, Schema, post_dump, pre_dump
+from marshmallow import fields, INCLUDE, missing, Schema, post_dump, pre_dump
 
 from core.schemas import (
     CountsByYearSchema,
@@ -394,7 +394,9 @@ class WorksSchema(Schema):
     apc_list = fields.Nested(APCSchema)
     apc_paid = fields.Nested(APCSchema)
     fwci = fields.Float()
-    is_authors_truncated = fields.Bool(attribute="authorships_truncated")
+    # oxjob #1043: computed, as Walden never wrote the old Logstash `authorships_truncated`, so the key had
+    # vanished from every response while `select=is_authors_truncated` still accepted it.
+    is_authors_truncated = fields.Method("get_is_authors_truncated")
     has_fulltext = fields.Bool()
     fulltext_origin = fields.Str()
     cited_by_count = fields.Int()
@@ -445,8 +447,6 @@ class WorksSchema(Schema):
                 data.authorships = data.authorships_full
             if hasattr(data, "locations_full"):
                 data.locations = data.locations_full
-            if hasattr(data, "authorships_truncated"):
-                del data.authorships_truncated
         return data
 
     @post_dump
@@ -516,6 +516,21 @@ class WorksSchema(Schema):
     @staticmethod
     def get_is_traditional(obj):
         return type_is_traditional(getattr(obj, "type", None))
+
+    def get_is_authors_truncated(self, obj):
+        """On a list of works: true when `authorships` holds fewer authors than the work has (oxjob #1043).
+
+        Lists show the first 100 authorships (walden sync_works: slice(authorships_full, 1, 100)); `authors_count`,
+        in every doc's _source, is the work's own count (walden keeps up to 5,000: CreateWorksEnriched). A single
+        work shows every authorship it keeps, so it leaves the key out, as v1 did (and as the snapshot smoke test's
+        API-vs-snapshot field check expects). None when the doc has no `authors_count`.
+        """
+        if self.context.get("single_record"):
+            return missing
+        count = getattr(obj, "authors_count", None)
+        if count is None:
+            return None
+        return count > len(getattr(obj, "authorships", None) or [])
 
     @staticmethod
     def get_content_urls(obj):
