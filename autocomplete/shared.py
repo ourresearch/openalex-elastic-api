@@ -12,7 +12,7 @@ from autocomplete.utils import (
     matching_alternative,
 )
 from autocomplete.validate import validate_entity_autocomplete_params
-from core.default_view import filter_keys, lifts_hiding, visible_works_query
+from core.default_view import filter_keys, include_parts_requested, lifts_hiding, visible_works_query
 from core.filter import filter_records
 from core.validate import XPAC_PARAMS, xpac_flag_value
 from core.search import full_search_query
@@ -28,8 +28,11 @@ KEYWORD_EXACT_NAME_BONUS = 100
 
 
 def hides_pieces_in_autocomplete(request, filter_params=None):
-    """Autocomplete has no corpus default (expansion works are suggested), so only an explicit
-    corpus=all / corpus=expansion, include_xpac=true or a parent-child filter lifts the rule."""
+    """Autocomplete has no corpus default (expansion works are suggested), so only include_parts=true,
+    an explicit corpus=all / corpus=expansion, include_xpac=true or a parent-child filter lifts the
+    rule."""
+    if include_parts_requested(request.args):
+        return False
     corpus = (request.args.get("corpus") or "core").strip().lower()
     include_xpac = any(xpac_flag_value(request.args.get(name), name) for name in XPAC_PARAMS)
     return corpus == "core" and not include_xpac and not lifts_hiding(filter_keys(filter_params))

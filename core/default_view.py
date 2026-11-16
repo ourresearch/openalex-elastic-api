@@ -18,13 +18,44 @@ not a second rule: `hidden_by_public_filters_query` is that rule, a unit test st
 equivalence, and scripts/check_default_view_fold.py compares the two counts on the live index
 (run it after a backfill and whenever TRADITIONAL_TYPES changes).
 
-It rides with the core corpus: `corpus=core` (the /works default) leaves hidden pieces out;
-`corpus=all` and `corpus=expansion` don't apply it. A filter on a parent-child column brings the
-pieces back and leaves the corpus as it is. /works/W... is never filtered.
+The switch is `include_parts=true` (Jason, 15 Nov 2026, decision 4a in plans/retractions.md: one
+parameter per kind of work the default leaves out, tied to a use case; `include_pulled` is the
+next). It brings the pieces back and changes nothing else: the corpus stays whatever it was.
+Every door that applies the rule reads it: /works (list, search, group_by), /v2/works,
+/works/filters, /works/stats, /autocomplete and the OQO executor (query_translation/execution.py).
+
+Until #2264 moves the corpus to the expansion alone, the rule still rides with the core corpus as
+well: `corpus=core` (the /works default) leaves hidden pieces out; `corpus=all` and
+`corpus=expansion` don't apply it. A filter on a parent-child column brings the pieces back and
+leaves the corpus as it is. /works/W... is never filtered.
 """
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
+
+# The switch that brings the pieces back, in both spellings the other parameters take.
+PARTS_PARAMS = ("include_parts", "include-parts")
+
+
+def parts_flag_value(value, name="include_parts"):
+    """True or False for an include_parts value, in any case; a JSON 400 for anything else."""
+    v = (value or "").strip().strip('"').lower()
+    if v == "true":
+        return True
+    if v in ("false", ""):
+        return False
+    raise APIQueryParamsError(
+        f"{name} takes true or false, not '{value}'. include_parts=true brings back pieces of other "
+        f"works (figures, book front matter, single records of a data series) that the default view "
+        f"leaves out."
+    )
+
+
+def include_parts_requested(args):
+    """True when request args ask for pieces of other works. Every value given is checked, so
+    include_parts=banana answers a 400 even beside include-parts=true."""
+    flags = [parts_flag_value(args.get(name), name) for name in PARTS_PARAMS if args.get(name) is not None]
+    return any(flags)
 
 # Filters that ask about parents and children: any of them lifts the rule. Matched as WHOLE keys.
 # A substring test (as `'is_xpac:' in filter` is) would also fire on
@@ -93,13 +124,16 @@ def _names_expansion(filter_params):
     return any(v in ("true", "!false") for v in values)
 
 
-def hides_pieces(corpus, include_xpac, filter_params):
+def hides_pieces(corpus, include_xpac, filter_params, include_parts=False):
     """Whether a works request leaves hidden pieces out.
 
         corpus: the `corpus=` value, or None when absent
         include_xpac: the legacy flag is true (it means corpus=all)
         filter_params: the request's parsed filter list
+        include_parts: the request says include_parts=true
     """
+    if include_parts:
+        return False
     if corpus is not None:
         core = corpus.strip().lower() == "core"
     else:

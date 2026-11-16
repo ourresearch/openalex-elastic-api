@@ -14,6 +14,8 @@ def validate_entity_autocomplete_params(request):
         "include_xpac",
         "include-xpac",
         "corpus",
+        "include_parts",
+        "include-parts",
         "api-key",
         "api_key",
     ]
@@ -42,6 +44,8 @@ def validate_full_autocomplete_params(request):
         "include_xpac",
         "include-xpac",
         "corpus",
+        "include_parts",
+        "include-parts",
         "api-key",
         "api_key",
     ]

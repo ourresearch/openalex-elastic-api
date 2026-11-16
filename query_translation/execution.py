@@ -38,7 +38,7 @@ from core.shared_view import (
     set_source,
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
-from core.default_view import HIDE_PIECES_FILTER, lifts_hiding, visible_works_query
+from core.default_view import HIDE_PIECES_FILTER, include_parts_requested, lifts_hiding, visible_works_query
 from core.validate import validate_sample_cursor, xpac_controls
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
@@ -1395,10 +1395,17 @@ def _oqo_columns(filter_rows):
 
 def _hides_pieces(oqo, connection, works_filters=True):
     """Whether this execution leaves out pieces of other works (core/default_view.py, oxjob #2065):
-    the core corpus does, unless a filter on a parent-child column, at any depth, asks for them.
-    Mirrors works/views.py. `works_filters=False`: the filters are another entity's (a walk back
-    to works from institutions, whose own `lineage` is not the works column), so none lifts it."""
+    the core corpus does, unless the request says include_parts=true or a filter on a parent-child
+    column, at any depth, asks for them. Mirrors works/views.py. `works_filters=False`: the filters
+    are another entity's (a walk back to works from institutions, whose own `lineage` is not the
+    works column), so none lifts it; include_parts=true still does.
+
+    include_parts is read from the request, as include_xpac is in _effective_corpus: the OQO has no
+    field for it yet, so an OQL query can't say it and the x_query echo leaves it out (#2264 adds
+    include_pulled the same way; a first-class OQO field for both can follow)."""
     if _effective_corpus(oqo, connection) != "core":
+        return False
+    if include_parts_requested(request.args):
         return False
     return not (works_filters and lifts_hiding(_oqo_columns(oqo.filter_rows)))
 

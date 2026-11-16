@@ -195,3 +195,108 @@ def test_vector_path_checks_the_rule_on_the_works_index():
     params = {"filters": [{"is_xpac": "false"}, HIDE_PIECES_FILTER, {"type": "article"}]}
     assert _pop_corpus_clause(params) == {"bool": {"filter": [CORE, VISIBLE]}}
     assert params["filters"] == [{"type": "article"}]  # the vector index never sees the internal key
+
+
+# --- include_parts=true: the switch (Jason, 15 Nov 2026, decision 4a) ---------------------------
+from flask import request as flask_request  # noqa: E402
+from werkzeug.datastructures import MultiDict  # noqa: E402
+
+from autocomplete.shared import hides_pieces_in_autocomplete  # noqa: E402
+from autocomplete.validate import validate_entity_autocomplete_params, validate_full_autocomplete_params  # noqa: E402
+from core.default_view import PARTS_PARAMS, include_parts_requested, parts_flag_value  # noqa: E402
+from core.validate import validate_params  # noqa: E402
+
+
+@pytest.mark.parametrize("value,expected", [
+    ("true", True), ("True", True), ("TRUE", True), ('"true"', True), (" true ", True),
+    ("false", False), ("False", False), ("", False),
+])
+def test_include_parts_takes_true_or_false_in_any_case(value, expected):
+    assert parts_flag_value(value) is expected
+
+
+@pytest.mark.parametrize("value", ["banana", "1", "yes", "t"])
+def test_include_parts_refuses_anything_else(value):
+    with pytest.raises(APIQueryParamsError) as err:
+        parts_flag_value(value)
+    assert "include_parts takes true or false" in str(err.value)
+
+
+def test_include_parts_both_spellings_and_every_value_checked():
+    assert PARTS_PARAMS == ("include_parts", "include-parts")
+    assert include_parts_requested(MultiDict({"include-parts": "true"}))
+    assert not include_parts_requested(MultiDict({}))
+    assert not include_parts_requested(MultiDict({"include_parts": "false"}))
+    with pytest.raises(APIQueryParamsError):
+        include_parts_requested(MultiDict({"include_parts": "true", "include-parts": "banana"}))
+
+
+@pytest.mark.parametrize("corpus,include_xpac,filter_string", [
+    (None, False, ""), ("core", False, ""), ("core", False, "type:dataset"), (None, False, "is_xpac:false"),
+])
+def test_include_parts_lifts_the_rule(corpus, include_xpac, filter_string):
+    params = request_filter_params(filter_string)
+    assert hides_pieces(corpus, include_xpac, params)          # absent: the rule holds
+    assert hides_pieces(corpus, include_xpac, params, False)   # false: the rule holds
+    assert not hides_pieces(corpus, include_xpac, params, True)
+
+
+def test_oqo_include_parts_lifts_only_the_rule():
+    assert _oqo_qs(args="?include_parts=true") == [CORE]   # the corpus stays core
+    assert _oqo_qs(args="?include-parts=TRUE") == [CORE]
+    assert _oqo_qs(args="?include_parts=false") == [CORE, VISIBLE]
+    assert _oqo_qs(corpus="expansion", args="?include_parts=true") == [{"term": {"is_xpac": "true"}}]
+    with pytest.raises(APIQueryParamsError):
+        _oqo_qs(args="?include_parts=banana")
+
+
+def test_oqo_include_parts_lifts_it_on_a_walk_back_from_another_entity():
+    from dataclasses import replace
+    institutions = OQO.from_dict({"get_rows": "institutions", "filter_rows": []})
+    with Flask(__name__).test_request_context("/?include_parts=true"):
+        assert not _hides_pieces(replace(institutions, get_rows="works"), "walden", works_filters=False)
+
+
+@pytest.mark.parametrize("args,hides", [
+    ("", True), ("?include_parts=true", False), ("?include-parts=true", False), ("?include_parts=false", True),
+    ("?corpus=all", False),
+])
+def test_autocomplete_honors_include_parts(args, hides):
+    with Flask(__name__).test_request_context("/autocomplete/works" + args):
+        assert hides_pieces_in_autocomplete(flask_request) is hides
+        assert not hides_pieces_in_autocomplete(flask_request, [{"lineage": "W1"}])
+
+
+def test_autocomplete_refuses_a_bad_include_parts():
+    with Flask(__name__).test_request_context("/autocomplete/works?include_parts=banana"):
+        with pytest.raises(APIQueryParamsError):
+            hides_pieces_in_autocomplete(flask_request)
+
+
+def test_autocomplete_accepts_the_parameter():
+    for path in ("/autocomplete/works?q=kelp&include_parts=true", "/autocomplete?q=kelp&include-parts=true"):
+        with Flask(__name__).test_request_context(path):
+            validate_entity_autocomplete_params(flask_request)
+            validate_full_autocomplete_params(flask_request)
+
+
+def test_works_accept_include_parts_other_entities_refuse_it_like_corpus():
+    with Flask(__name__).test_request_context("/works?include_parts=true"):
+        validate_params(flask_request, ("corpus", "rerank") + PARTS_PARAMS)
+    for param in ("include_parts=true", "corpus=all"):
+        with Flask(__name__).test_request_context(f"/authors?{param}"):
+            with pytest.raises(APIQueryParamsError) as err:
+                validate_params(flask_request)
+            assert "is not a valid parameter" in str(err.value)
+
+
+def test_v2_filters_and_stats_doors_honor_include_parts():
+    from works.views import _shows_pieces
+    with Flask(__name__).test_request_context("/works/filters/type:dataset?include_parts=true"):
+        assert _shows_pieces("type:dataset")
+    with Flask(__name__).test_request_context("/works/stats/?filter=type:dataset"):
+        assert not _shows_pieces("type:dataset")
+        assert _shows_pieces("type:dataset,parent_works.id:W1")
+    with Flask(__name__).test_request_context("/v2/works?include_parts=banana"):
+        with pytest.raises(APIQueryParamsError):
+            _shows_pieces(None)

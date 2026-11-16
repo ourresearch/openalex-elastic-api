@@ -9,8 +9,8 @@ from core.semantic import semantic_search
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.default_view import (HIDE_PIECES_FILTER, hides_pieces, lifts_hiding, request_filter_keys,
-                               request_filter_params, visible_works_query)
+from core.default_view import (HIDE_PIECES_FILTER, PARTS_PARAMS, hides_pieces, include_parts_requested,
+                               lifts_hiding, request_filter_keys, request_filter_params, visible_works_query)
 from core.validate import xpac_controls
 from core.utils import (get_data_version_connection, get_entity_counts,
                         get_flattened_fields, get_valid_fields, process_only_fields)
@@ -194,6 +194,7 @@ def works():
 
     connection = get_data_version_connection(request)
     index_name = WORKS_INDEX
+    include_parts = include_parts_requested(request.args)  # include_parts=banana answers a 400 here
 
     default_filters = None
     if connection == 'walden':
@@ -206,16 +207,24 @@ def works():
             xpac_in_filter='is_xpac:' in current_filter or 'is-xpac:' in current_filter,
             include_xpac=include_xpac,
         )
-        # oxjob #2065: the core corpus also leaves out pieces of other works (core/default_view.py)
-        if hides_pieces(request.args.get('corpus'), include_xpac, request_filter_params(current_filter)):
+        # oxjob #2065: the core corpus also leaves out pieces of other works, unless include_parts=true
+        # (core/default_view.py)
+        if hides_pieces(request.args.get('corpus'), include_xpac, request_filter_params(current_filter),
+                        include_parts):
             default_filters = (default_filters or []) + [HIDE_PIECES_FILTER]
 
     result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters,
-                         extra_valid_params=("corpus", "rerank"))
+                         extra_valid_params=("corpus", "rerank") + PARTS_PARAMS)
     if is_group_by_export(request):
         return export_group_by(result, request)
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
+
+
+def _shows_pieces(filter_string):
+    """/v2/works, /works/filters and /works/stats have no corpus default: pieces of other works come
+    back with include_parts=true or a parent-child filter (oxjob #2065)."""
+    return include_parts_requested(request.args) or lifts_hiding(request_filter_keys(filter_string))
 
 
 @blueprint.route("/v2/works")
@@ -224,10 +233,10 @@ def v2_works():
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
     # No corpus default here (expansion works are listed); pieces of other works are left out as
-    # on /works, unless a parent-child filter asks for them (oxjob #2065).
-    default_filters = None if lifts_hiding(request_filter_keys(request.args.get('filter'))) else [HIDE_PIECES_FILTER]
+    # on /works, unless include_parts=true or a parent-child filter asks for them (oxjob #2065).
+    default_filters = None if _shows_pieces(request.args.get('filter')) else [HIDE_PIECES_FILTER]
     result = shared_view(request, fields_dict, index_name, default_sort, connection='walden',
-                         default_filters=default_filters)
+                         default_filters=default_filters, extra_valid_params=PARTS_PARAMS)
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
@@ -235,9 +244,9 @@ def v2_works():
 @blueprint.route("/works/filters/<path:params>")
 def works_filters(params):
     index_name = WORKS_INDEX
-    # counts as the default /works view gives them: pieces of other works left out unless a
-    # parent-child filter asks for them (oxjob #2065)
-    base_query = None if lifts_hiding(request_filter_keys(params)) else visible_works_query()
+    # counts as the default /works view gives them: pieces of other works left out unless
+    # include_parts=true or a parent-child filter asks for them (oxjob #2065)
+    base_query = None if _shows_pieces(params) else visible_works_query()
     results = shared_filter_view(request, params, fields_dict, index_name, base_query=base_query)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
@@ -253,7 +262,7 @@ def works_stats():
     ]
     index_name = WORKS_INDEX
     entity_name = "works"
-    base_query = None if lifts_hiding(request_filter_keys(request.args.get("filter"))) else visible_works_query()
+    base_query = None if _shows_pieces(request.args.get("filter")) else visible_works_query()
     result = shared_stats_view(
         request, fields_dict, index_name, stats_fields, entity_name, base_query=base_query
     )
