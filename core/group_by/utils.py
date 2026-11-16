@@ -22,6 +22,12 @@ def is_boolean_field(field):
     return type(field).__name__ == "BooleanField"
 
 
+def group_page_size(params):
+    """How many groups a group list serves: 500 when `q` will pick the matches by
+    name afterwards (core/group_by/search.py), else per_page."""
+    return 500 if params.get("q") else params.get("per_page")
+
+
 def get_bucket_keys(group_by):
     return {"default": format_key("groupby", group_by)}
 

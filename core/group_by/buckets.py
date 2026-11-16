@@ -4,7 +4,8 @@ from flask import current_app as app
 
 from core.cursor import decode_group_by_cursor
 from core.exceptions import APIQueryParamsError
-from core.group_by.utils import get_bucket_keys, is_boolean_field, is_works_version_group_by
+from core.group_by.utils import (get_bucket_keys, group_page_size, is_boolean_field,
+                                 is_works_version_group_by)
 from core.validate import validate_group_by
 from core.preference import clean_preference
 from core.utils import get_field, is_field_class
@@ -79,7 +80,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params, s
     the works with a repository copy (ZD 1493: 68 of 396 works; oxjob #1027)."""
     cursor = params.get("cursor")
     q = params.get("q")
-    per_page = 500 if q else params.get("per_page")
+    per_page = group_page_size(params)
     sort_params = params.get("sort")
 
     s = s.params(preference=clean_preference(group_by))
@@ -104,6 +105,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params, s
     missing = get_missing(field)
     shard_size = determine_shard_size(q)
 
+    size = group_list_size(field, per_page)
     scope = scope_filter(field)
     if scoped and scope is not None and not cursor:
         target = _AggTarget(
@@ -118,7 +120,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params, s
             group_by_field,
             include_unknown,
             missing,
-            per_page,
+            size,
             target,
             shard_size,
             sort_params,
@@ -138,7 +140,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params, s
             group_by_field,
             include_unknown,
             missing,
-            per_page,
+            size,
             target,
             shard_size,
         )
@@ -360,7 +362,7 @@ def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
         )
 
     q = params.get("q")
-    per_page = 500 if q else params.get("per_page")
+    per_page = group_page_size(params)
     shard_size = determine_shard_size(q, nested=True)
 
     preference_seed = ",".join(group_by for group_by, _ in dimensions)
@@ -425,6 +427,22 @@ def get_missing(field):
     else:
         missing = "unknown"
     return missing
+
+
+REPOSITORY_EXTRA_GROUPS = 100
+
+
+def group_list_size(field, per_page):
+    """How many groups to ask ES for. `repository` asks for more than the page
+    shows: its terms agg counts every location source of the works that hold a
+    repository copy (`locations_full` is not nested, so ES can't tie a location's
+    type to its id), and the journals, ebook platforms and aggregators among them
+    are dropped after the agg (results.keep_repository_buckets). In the top 200 of
+    three live searches on 16 Nov 2026, 21, 39 and 46 groups were not
+    repositories (oxjob #106, ZD 1148; #2270). The extra keeps the page full."""
+    if field.param == "repository" and per_page:
+        return per_page * 2 + REPOSITORY_EXTRA_GROUPS
+    return per_page
 
 
 def scope_filter(field):

@@ -14,7 +14,9 @@ from core.group_by.custom_results import (
     group_by_version,
 )
 from core.group_by.utils import (
+    group_page_size,
     parse_group_by,
+    parse_group_by_dimensions,
     get_all_groupby_values,
     is_boolean_field,
     is_works_version_group_by,
@@ -67,9 +69,12 @@ def get_group_by_results(
         )
     else:
         results = get_default_group_by_results(
-            group_by, response, index_name, connection, get_metric_result_key(params)
+            group_by, response, index_name, connection, get_metric_result_key(params),
+            repositories_only=not params.get("cursor"),
         )
     results = add_zero_values(results, include_unknown, index_name, group_by, params, connection)
+    if field.param == "repository":  # asked ES for more (buckets.group_list_size)
+        results = results[: group_page_size(params)]
 
     # support new id formats so duplicates do not show up with 0 values
     if (
@@ -164,6 +169,7 @@ def _build_nested_level(
         key_display_names = get_display_name_mapping(keys, group_by, connection) or {}
     else:
         key_display_names = {}
+    buckets = keep_repository_buckets(buckets, group_by, key_display_names)
 
     has_child = level + 1 < len(dimensions)
     if has_child:
@@ -193,8 +199,6 @@ def _build_nested_level(
 
 def calculate_nested_group_by_count(params, response):
     """`meta.groups_count` for a nested group_by = number of top-level buckets."""
-    from core.group_by.utils import parse_group_by_dimensions
-
     dimensions = parse_group_by_dimensions(params["group_by"])
     bucket_key = get_bucket_keys(dimensions[0][0])["default"]
     return len(response.aggregations[bucket_key].buckets)
@@ -256,10 +260,14 @@ def get_metric_result_key(params):
 
 
 def get_default_group_by_results(
-    group_by, response, index_name, connection='default', metric_key=None
+    group_by, response, index_name, connection='default', metric_key=None,
+    repositories_only=True,
 ):
     """
-    Default group by results.
+    Default group by results. `repositories_only=False` (cursor pages): a
+    `repository` cursor walks the agg's keys in id order, and the first
+    thousands of ids are journals, so dropping them served empty pages. Those
+    pages stay as they were: every source, each named (oxjob #106).
     """
     group_by_results = []
     buckets = get_default_buckets(group_by, response)
@@ -267,9 +275,12 @@ def get_default_group_by_results(
 
     if requires_display_name_conversion(group_by):
         keys = [b.key for b in buckets]
-        key_display_names = get_display_name_mapping(keys, group_by, connection)
+        lookup = group_by if repositories_only else "locations.source.id"
+        key_display_names = get_display_name_mapping(keys, lookup, connection)
     else:
         key_display_names = {}
+    if repositories_only:
+        buckets = keep_repository_buckets(buckets, group_by, key_display_names)
 
     for b in buckets:
         result = get_result(b, key_display_names, group_by, index_name, metric_key)
@@ -277,6 +288,26 @@ def get_default_group_by_results(
             group_by_results.append(result)
 
     return group_by_results
+
+
+def keep_repository_buckets(buckets, group_by, key_display_names):
+    """`repository` groups keep only repository sources. Its terms agg counts every
+    location source of the works that hold a repository copy, so the search's own
+    journals, ebook platforms and aggregators came back as "repositories" (ZD 1148,
+    oxjob #106; #2270). `key_display_names` holds only the repositories
+    (display_names.get_display_names_repositories); `unknown` stays when asked for."""
+    if group_by != "repository":
+        return buckets
+    return [b for b in buckets if b.key == "unknown" or b.key in key_display_names]
+
+
+def outer_group_is_repository(group_by_param):
+    """True when the (outer) group list is `repository`, whose groups are dropped
+    after the ES agg, so `meta.groups_count` must count the groups served."""
+    if not group_by_param:
+        return False
+    (outer, _), *_ = parse_group_by_dimensions(group_by_param)
+    return outer == "repository"
 
 
 def get_topics_group_by_results(

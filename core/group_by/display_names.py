@@ -8,6 +8,7 @@ from settings import (
     FIELDS_INDEX,
     KEYWORDS_INDEX,
     LICENSES_INDEX,
+    SOURCES_INDEX,
     SUBFIELDS_INDEX
 )
 
@@ -82,6 +83,21 @@ def get_id_display_names(ids, connection='default'):
     for item in response:
         results[item.id] = item.display_name
     return results
+
+
+def get_display_names_repositories(ids, connection='default'):
+    """Names of the ids whose source is a repository; every other id (a journal,
+    an ebook platform, an aggregator, a source no longer in the index) is left
+    out, so the `repository` group_by can drop it (oxjob #106, ZD 1148)."""
+    ids = [openalex_id for openalex_id in ids if openalex_id and openalex_id != "unknown"]
+    if not ids:
+        return {}
+    s = Search(index=SOURCES_INDEX, using=connection)
+    s = s.extra(size=len(ids))
+    s = s.source(["id", "display_name"])
+    s = s.filter("terms", id=ids).filter("term", type="repository")
+    response = s.execute()
+    return {item.id: item.display_name for item in response}
 
 
 def get_display_names_host_organization(ids, connection='default'):
@@ -214,6 +230,9 @@ def get_display_name_mapping(keys, group_by, connection='default'):
         "license": get_display_names_keywords_licenses_topics,
         "license_id": get_display_names_keywords_licenses_topics,
     }
+
+    if group_by == "repository":
+        return get_display_names_repositories(keys, connection)
 
     for key, func in display_name_functions.items():
         if group_by.endswith(key):

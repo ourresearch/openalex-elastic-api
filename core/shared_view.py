@@ -11,6 +11,7 @@ from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
 from core.group_by.results import (
+    outer_group_is_repository,
     get_group_by_results,
     get_nested_group_by_results,
     calculate_group_by_count,
@@ -781,6 +782,8 @@ def format_response(response, params, index_name, fields_dict, s, connection='de
 
     if params["group_by"]:
         result["group_by"] = format_group_by(response, params, index_name, fields_dict, connection)
+        if outer_group_is_repository(params["group_by"]):
+            result["meta"]["groups_count"] = len(result["group_by"])
     elif params["group_bys"]:
         result["group_bys"] = format_group_bys(
             response, params, index_name, fields_dict, connection
