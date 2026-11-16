@@ -8,7 +8,9 @@ already followed to a live winner); `merge-funders` by `MergeFunders.ipynb`.
 
 Two callers: the single-record GET answers a loser ID with a 301 to the winner (ids/views.py), and
 ID filters also match the winner (core.fields.OpenAlexIDField), so `filter=authorships.author.id:<loser>`
-returns the winner's works.
+returns the winner's works. A list response then names each loser its filters read as a winner in
+`meta.merged_ids` (oxjob #1975), so a batched lookup (`openalex_id:A1|A2`) can map every record it gets
+back to the ID it asked for.
 """
 import logging
 import re
@@ -17,6 +19,7 @@ import time
 from collections import OrderedDict
 
 from elasticsearch_dsl.connections import get_connection
+from flask import g, has_app_context
 
 import settings
 from core.rerank import Breaker
@@ -102,8 +105,28 @@ def with_winners(full_ids):
         return list(full_ids)
     shorts = [v.removeprefix(URL_PREFIX) for v in full_ids]
     winners = merged_winners(shorts)
+    note_resolved({s: winners[s] for s in shorts if s in winners})
     extra = [URL_PREFIX + winners[s] for s in shorts if s in winners]
     return list(full_ids) + [w for w in extra if w not in full_ids]
+
+
+_REQUEST_KEY = "_merged_ids_resolved"
+
+
+def note_resolved(pairs):
+    """Remember, for this request, each merged-away ID (short form) a filter read as its winner: {loser: winner}.
+    Outside a request (scripts, unit tests building queries) it does nothing (oxjob #1975)."""
+    if pairs and has_app_context():
+        g.setdefault(_REQUEST_KEY, {}).update(pairs)
+
+
+def resolved_in_request():
+    """[{"id": loser, "merge_into_id": winner}] (full URLs, as in the snapshot's merged_ids.csv.gz) for every
+    merged-away ID this request's filters read as its winner, in the order they were read; [] if none."""
+    if not has_app_context():
+        return []
+    return [{"id": URL_PREFIX + loser, "merge_into_id": URL_PREFIX + winner}
+            for loser, winner in g.get(_REQUEST_KEY, {}).items()]
 
 
 def prefetch(raw_values):

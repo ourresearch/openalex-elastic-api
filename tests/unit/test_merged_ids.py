@@ -205,3 +205,82 @@ def test_get_on_missing_external_id_is_404_without_merge_lookup(es, app_client, 
         r = app_client.get(path)
     assert r.status_code == 404, (path, r.status_code)
     assert es.calls == []  # only an OpenAlex id the request asked for is looked up in the merge indexes
+
+
+# oxjob #1975 (IDfuse, ZD 26415): a list response names, in meta.merged_ids, each merged-away ID its filters read as
+# the winner, so a batched lookup can map every record back to the ID it asked for.
+
+URL = "https://openalex.org/"
+
+
+def _noted(filters, fields=works_fields_dict):
+    from flask import Flask
+    with Flask(__name__).test_request_context():
+        filter_records(fields, filters, Search())
+        return merged_ids.resolved_in_request()
+
+
+def test_meta_pairs_name_each_loser_once_in_order(es):
+    pairs = _noted([{"authorships.author.id": "A5107411446|A5000000001"},
+                    {"primary_location.source.id": "s4306502279"},
+                    {"authorships.author.id": "A5107411446"}])
+    assert pairs == [{"id": URL + "A5107411446", "merge_into_id": URL + "A5107863564"},
+                     {"id": URL + "S4306502279", "merge_into_id": URL + "S4306502280"}]
+
+
+def test_meta_pairs_empty_when_nothing_merged(es):
+    assert _noted([{"authorships.author.id": "A5000000001|A5000000002"}]) == []
+
+
+def test_meta_pairs_cover_negated_and_cited_by(es):
+    assert _noted([{"authorships.author.id": "!A5107411446"}]) == [
+        {"id": URL + "A5107411446", "merge_into_id": URL + "A5107863564"}]
+    with mock.patch("elasticsearch_dsl.Search.execute", lambda self: []):
+        assert _noted([{"cited_by": "W4251036366"}]) == [
+            {"id": URL + "W4251036366", "merge_into_id": URL + "W1623399274"}]
+
+
+def test_meta_pairs_skip_long_lists_that_are_not_resolved(es):
+    # only a collection's member list can be this long (a URL filter stops at MAX_IDS_IN_FILTER)
+    from flask import Flask
+    ids = [f"A{5000000000 + i}" for i in range(merged_ids.MAX_LOOKUP_IDS)] + ["A5107411446"]
+    with Flask(__name__).test_request_context():
+        works_fields_dict["authorships.author.id"].build_terms_query(ids)
+        assert merged_ids.resolved_in_request() == []
+
+
+def test_meta_pairs_outside_a_request_do_nothing(es):
+    _body([{"authorships.author.id": "A5107411446"}])
+    assert merged_ids.resolved_in_request() == []
+
+
+def _fake_list_execute(self):
+    from elasticsearch_dsl.response import Response
+    hits = [{"_index": "authors", "_id": URL + "A5107863564", "_score": 1.0,
+             "_source": {"id": URL + "A5107863564", "display_name": "Sonia Luquín"}}]
+    return Response(self, {"took": 3, "timed_out": False,
+                           "hits": {"total": {"value": 1, "relation": "eq"}, "max_score": 1.0, "hits": hits}})
+
+
+@pytest.mark.parametrize("path", [
+    "/authors?filter=openalex_id:A5107411446|A5000000001",
+    "/authors?filter=ids.openalex:a5107411446|A5000000001&select=id,display_name",
+    "/works?filter=authorships.author.id:https://openalex.org/A5107411446",
+])
+def test_list_response_names_the_merged_id_it_read(es, app_client, path):
+    with mock.patch("elasticsearch_dsl.Search.execute", _fake_list_execute), \
+            mock.patch("works.lakebase.should_route", return_value=False):
+        r = app_client.get(path)
+    assert r.status_code == 200, r.get_data(as_text=True)[:500]
+    assert r.json["meta"]["merged_ids"] == [{"id": URL + "A5107411446", "merge_into_id": URL + "A5107863564"}]
+
+
+def test_list_response_without_merged_ids_has_no_key(es, app_client):
+    with mock.patch("elasticsearch_dsl.Search.execute", _fake_list_execute), \
+            mock.patch("works.lakebase.should_route", return_value=False):
+        r = app_client.get("/authors?filter=openalex_id:A5107863564|A5000000001")
+        r2 = app_client.get("/authors?filter=openalex_id:A5107411446")
+        r3 = app_client.get("/authors?filter=openalex_id:A5107863564")
+    assert r.status_code == 200 and "merged_ids" not in r.json["meta"]
+    assert r2.json["meta"]["merged_ids"][0]["id"] == URL + "A5107411446"
+    assert "merged_ids" not in r3.json["meta"]  # nothing carries over from the previous request

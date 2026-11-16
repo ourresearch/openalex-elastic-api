@@ -6,7 +6,7 @@ from elasticsearch.exceptions import RequestError
 from elasticsearch_dsl import Search
 
 import settings
-from core import rerank
+from core import merged_ids, rerank
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
@@ -69,7 +69,7 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
     if is_semantic and settings.USE_VECTOR_INDEX:
         if rerank.rerank_requested(request):
             raise APIQueryParamsError(rerank.SEMANTIC_REFUSAL)  # oxjob #2003: was dropped without a word
-        return with_shed_note(vector_semantic_search(params, index_name, connection), request)
+        return with_shed_note(attach_merged_ids(vector_semantic_search(params, index_name, connection)), request)
 
     # rerank=true (oxjob #1521): Jev reorders the top 100 of a relevance-sorted works
     # search. A rerank cursor ("rr.") implies it, so a walk that started reranked
@@ -89,6 +89,7 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
             response, meta_overrides = got
             result = format_response(response, params, index_name, fields_dict, None, connection)
             result["meta"].update(meta_overrides)
+            attach_merged_ids(result)
             attach_x_query(result, request, index_name)
             return result
         if rerank.is_rerank_cursor(params.get("cursor")):
@@ -102,6 +103,7 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
         result["meta"].update(reranked=False, rerank_reason=rerank.skip_reason(params))
     else:
         with_shed_note(result, request)
+    attach_merged_ids(result)
     attach_x_query(result, request, index_name)
     if settings.DEBUG:
         print(s.to_dict())
@@ -113,6 +115,16 @@ def with_shed_note(result, request):
     note = rerank.shed_note(request)
     if note and isinstance(result, dict) and "meta" in result:
         result["meta"].update(note)
+    return result
+
+
+def attach_merged_ids(result):
+    """meta.merged_ids (oxjob #1975): each merged-away ID the request's filters named, with the surviving ID it was
+    read as, so a batched lookup (`filter=openalex_id:A1|A2`) can map each record back to the ID it asked for
+    (IDfuse, ZD 26415). Same names as the snapshot's merged_ids.csv.gz. Present only when a filter named one."""
+    pairs = merged_ids.resolved_in_request()
+    if pairs and isinstance(result, dict) and "meta" in result:
+        result["meta"]["merged_ids"] = pairs
     return result
 
 

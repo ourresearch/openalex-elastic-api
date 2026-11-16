@@ -66,6 +66,10 @@ class MetaSchema(Schema):
     # estimate, and `estimate` says how (sample_share, set_works, count_margin, rows, message). Present only then.
     approximate = fields.Bool()
     estimate = fields.Raw()
+    # Each merged-away ID the request's filters named, with the surviving ID it was read as: [{id, merge_into_id}],
+    # the snapshot's merged_ids.csv.gz columns (oxjob #1975). A list of objects, not a map keyed by ID (keys that are
+    # data count as a breaking shape: RULINGS "Schema changes", 12 Nov). Present only when a filter named one.
+    merged_ids = fields.List(fields.Dict())
 
     class Meta:
         ordered = True
