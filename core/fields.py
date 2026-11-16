@@ -653,8 +653,8 @@ class OpenAlexIDField(Field):
 
     @staticmethod
     def _id_query(field, value):
-        """`term` on `field` for one OpenAlex ID. A merged-away author, source or funder ID also
-        matches its winner, so a filter on a stored pre-merge ID finds the surviving record's works
+        """`term` on `field` for one OpenAlex ID. A merged-away work, author, source, institution or funder ID
+        also matches its winner, so a filter on a stored pre-merge ID finds the surviving record's works
         (oxjob #1124)."""
         ids = with_winners([get_full_openalex_id(value)])
         return Q("term", **{field: ids[0]}) if len(ids) == 1 else Q("terms", **{field: ids})
@@ -667,13 +667,11 @@ class OpenAlexIDField(Field):
             elif self.value == "!null":
                 q = Q("exists", field=field_name)
             elif self.value.startswith("!"):
-                query = get_full_openalex_id(self.value[1:])
                 self.validate(self.value)
-                q = ~Q("term", **{field_name: query})
+                q = ~self._id_query(field_name, self.value[1:])  # merged institutions too (#1037)
             else:
-                query = get_full_openalex_id(self.value)
                 self.validate(self.value)
-                q = Q("term", **{field_name: query})
+                q = self._id_query(field_name, self.value)
             return q
         elif self.value == "null" and self.param not in ["repository", "journal"]:
             field_name = self.es_field()
@@ -804,7 +802,7 @@ class OpenAlexIDField(Field):
                     f"'{val}' is not a valid OpenAlex ID."
                 )
             formatted_values.append(formatted)
-        # merged-away author / source / funder IDs also match their winners (oxjob #1124)
+        # merged-away work / author / source / institution / funder IDs also match their winners (oxjob #1124, #1037)
         formatted_values = with_winners(formatted_values)
         if self.param in (
             "authorships.institutions.id",

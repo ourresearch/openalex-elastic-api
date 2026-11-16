@@ -79,7 +79,7 @@ blueprint = Blueprint("ids", __name__)
 
 
 def redirect_if_merged(endpoint, short_id, connection):
-    """301 to the winner when `short_id` (work, author, source or funder) was merged away, else None.
+    """301 to the winner when `short_id` (work, author, source, institution or funder) was merged away, else None.
     Best effort, no permanence promise (Jason 2026-10-27, #1037).
 
     Merge losers have no doc in the entity index; the merge-* indexes name the winner
@@ -417,6 +417,7 @@ def institutions_id_get(id):
 
     s = Search(index=settings.INSTITUTIONS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, InstitutionsSchema)
+    merged_lookup_id = None
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -426,6 +427,7 @@ def institutions_id_get(id):
             )
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/I{clean_id}"
+        merged_lookup_id = f"I{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
     elif id.startswith("mag:"):
@@ -449,6 +451,10 @@ def institutions_id_get(id):
 
     response = most_works_first(s).execute()
     if not response.hits:
+        if merged_lookup_id:  # merged-away institution: 301 to the survivor (#1037, ZD 4322)
+            merged = redirect_if_merged("ids.institutions_id_get", merged_lookup_id, connection)
+            if merged:
+                return merged
         abort(404)
 
     institutions_schema = InstitutionsSchema(

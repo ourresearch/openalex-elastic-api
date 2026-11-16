@@ -12,7 +12,7 @@ from core.filter import filter_records
 from works.fields import fields_dict as works_fields_dict
 
 MERGES = {"A5107411446": "A5107863564", "S4306502279": "S4306502280", "F4320307874": "F4320311904",
-          "W4251036366": "W1623399274"}
+          "W4251036366": "W1623399274", "I4210133110": "I166825849"}
 
 
 class FakeES:
@@ -91,9 +91,15 @@ def test_funder_filter(es):
 
 
 def test_other_entity_ids_never_looked_up(es):
-    _body([{"authorships.institutions.id": "I27837315"}])
     _body([{"primary_topic.id": "T10001"}])
     assert es.calls == []
+
+
+def test_institution_filter_on_loser_also_matches_winner(es):
+    # #1037 (ZD 4322, 23578): merged institution IDs, same best effort as works, authors and sources
+    body = _body([{"authorships.institutions.id": "I4210133110"}])
+    assert "https://openalex.org/I166825849" in body and "https://openalex.org/I4210133110" in body
+    assert es.calls == [("merge-institutions", ["https://openalex.org/I4210133110"])]
 
 
 def test_work_id_filters_also_match_the_winner(es):
@@ -172,6 +178,18 @@ def test_get_on_loser_redirects_301(es, app_client, path, location):
         r = app_client.get(path)
     assert r.status_code == 301
     assert r.headers["Location"].endswith(location)
+
+
+def test_get_on_merged_institution_redirects_301(es, app_client):
+    # the institutions view reads response.hits, so the fake response needs that attribute
+    with mock.patch("elasticsearch_dsl.Search.execute", return_value=mock.Mock(hits=[])):
+        r = app_client.get("/institutions/I4210133110?select=id")
+        assert r.status_code == 301
+        assert r.headers["Location"].endswith("/institutions/I166825849?select=id")
+        assert app_client.get("/institutions/I1000").status_code == 404
+        assert app_client.get("/institutions/ror:00000000").status_code == 404
+    assert ("merge-institutions", ["https://openalex.org/I1000"]) in es.calls
+    assert all("ror" not in str(c) for c in es.calls)
 
 
 def test_get_on_unmerged_missing_id_is_404(es, app_client):
