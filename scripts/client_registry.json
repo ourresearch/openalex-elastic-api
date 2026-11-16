@@ -1479,6 +1479,22 @@
       "isId": false,
       "hasExport": false
     },
+    "is_pulled": {
+      "key": "is_pulled",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "pulled",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": true
+    },
     "raw_affiliation_strings.search.exact": {
       "key": "raw_affiliation_strings.search.exact",
       "entityToFilter": "works",

@@ -42,6 +42,7 @@ DOCSTRINGS = {
     "has_references": "The work has references, also known as outgoing citations",
     "is_paratext": 'We have marked the work as "paratext". Paratext means things like front/back cover, table of contents, and issue information.',
     "is_retracted": "The work has been retracted",
+    "is_pulled": "The work's publisher, host or authors retracted, withdrew or removed it. Includes every retracted work",
     "is_traditional": "The work's type is a traditional scholarly work (article, book, book chapter, dissertation, conference paper, preprint, review, editorial, letter, erratum, retraction, book review, data paper, software paper). false = any other type (dataset, software, report, paratext...). Not the same as peer-reviewed.",
     "source.issn": "The work's journal, by ISSN",
     "source.type": "The type of source for the work. For example, you can filter for only works in journals, or in repositories.",
@@ -82,6 +83,7 @@ DOCUMENTATION_LINKS = {
     "has_references": "https://developers.openalex.org/api-reference/works",
     "is_paratext": "https://developers.openalex.org/api-reference/works",
     "is_retracted": "https://developers.openalex.org/api-reference/works",
+    "is_pulled": "https://developers.openalex.org/api-reference/works",
     "is_traditional": "https://help.openalex.org/data/work-types",
     "source.issn": "https://developers.openalex.org/api-reference/sources",
     "source.type": "https://developers.openalex.org/api-reference/sources",
@@ -269,6 +271,16 @@ fields = [
         docstring=DOCSTRINGS["is_retracted"],
         documentation_link=DOCUMENTATION_LINKS["is_retracted"],
         alternate_names=ALTERNATE_NAMES.get("is_retracted", None),
+    ),
+    # oxjob #2264 (Jason, 15 Nov 2026, oxjobs plans/retractions.md § 5): pulled = retracted, withdrawn or removed
+    # by the publisher, host or authors; true on every is_retracted work. Walden writes the index field only when a
+    # work re-stamps, so `false` is NOT true: a doc without the field is not pulled.
+    BooleanField(
+        param="is_pulled",
+        absent_means_false=True,
+        docstring=DOCSTRINGS["is_pulled"],
+        documentation_link=DOCUMENTATION_LINKS["is_pulled"],
+        alternate_names=ALTERNATE_NAMES.get("is_pulled", None),
     ),
     # oxjob #2064: true = the work's type is one of the traditional types (core/work_type_classes.py),
     # false = any other type. Read from `type` at query time (no index field, so not sortable).

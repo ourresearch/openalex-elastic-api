@@ -407,6 +407,8 @@ class WorksSchema(Schema):
     cited_by_percentile_year = fields.Nested(CitedByPercentileYearSchema)
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
+    # oxjob #2264: false on a doc walden hasn't re-stamped since the field shipped (only pulled works change hash)
+    is_pulled = fields.Bool(dump_default=False)
     is_paratext = fields.Bool()
     is_xpac = fields.Bool()
     primary_topic = fields.Nested(TopicSchema)

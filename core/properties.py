@@ -504,7 +504,11 @@ CAP_COLUMN = "column"
 # link in standard vocabularies (Dublin Core and schema.org isPartOf, DataCite IsPartOf, Crossref isPartOf, DCAT inSeries),
 # so RDF users get their predicate while relationship values stay nouns that name the link. One property added = MINOR per
 # classify_properties_diff.py. Jason approved the field in session '1490: work-to-work links'.
-PROPERTIES_VERSION = "24.1.0"
+# 24.2.0 (oxjob #2264, Jason 15 Nov 2026, oxjobs plans/retractions.md § 5 decisions 1-2): works gain the column and filter
+# `is_pulled` (group_by, sort; OQL "pulled"): the publisher, host or authors retracted, withdrew or removed the work; true on
+# every is_retracted work. A doc walden hasn't re-stamped since the field shipped reads false, and `false` is NOT true. One
+# property added = MINOR per classify_properties_diff.py. Jason named the field (decision 2) and kept the design on 16 Nov.
+PROPERTIES_VERSION = "24.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

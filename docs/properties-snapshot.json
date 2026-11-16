@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 27,
-    "fingerprint": "7db36fc1f1d53959b54829716b1d6e99f90b06dc51cf0ff88cf36d0451b4c49a",
-    "property_count": 994,
-    "version": "24.1.0"
+    "fingerprint": "fe8bada03f0f4a616fbd5ae97bb16fda80a79d2109ac751508c0ba5cb6d38761",
+    "property_count": 996,
+    "version": "24.2.0"
   },
   "properties": {
     "authors": {
@@ -15945,6 +15945,22 @@
         "supported_by": [],
         "type": null
       },
+      "alternate_titles": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "alternate titles",
+        "entity_type": null,
+        "name": "alternate_titles",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "apc_list": {
         "actions": [
           "column"
@@ -18878,6 +18894,30 @@
         "supported_by": [
           "gui",
           "oxurl"
+        ],
+        "type": "boolean"
+      },
+      "is_pulled": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "pulled",
+        "entity_type": null,
+        "name": "is_pulled",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },

@@ -241,6 +241,7 @@ _f("to_updated_date", "to_updated_date", "date", date_axis="updated date", date_
 _f("open access", "open_access.is_oa", "bool")
 _f("global south", "authorships.institutions.is_global_south", "bool")
 _f("retracted", "is_retracted", "bool")
+_f("pulled", "is_pulled", "bool")  # oxjob #2264: retracted, withdrawn or removed
 _f("has DOI", "has_doi", "bool")
 _f("has ORCID", "has_orcid", "bool")
 # Full text available in some open repository (engine open_access.any_repository_has_fulltext).

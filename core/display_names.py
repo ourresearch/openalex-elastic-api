@@ -409,6 +409,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'institutions.is_global_south': {"display_name": 'global south'},
         'institutions_distinct_count': {"display_name": 'institutions count'},
         'is_retracted': {"display_name": 'retracted'},
+        'is_pulled': {"display_name": 'pulled'},  # oxjob #2264: retracted, withdrawn or removed
         # oxjob #2064: the GUI facet's displayName must match (label-consistency gate)
         'is_traditional': {"display_name": 'traditional scholarly work', "aliases": ['traditional']},
         # DEPRECATED filter (#498): `is_xpac` is `unlisted` (dropped from public

@@ -1840,6 +1840,7 @@
 "institutions.type.lower": "keyword",
 "institutions_distinct_count": "integer",
 "is_paratext": "boolean",
+"is_pulled": "boolean",
 "is_retracted": "boolean",
 "is_xpac": "boolean",
 "keywords": "object",

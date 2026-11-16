@@ -47,7 +47,7 @@ TYPE_NOUNS = {"article": "articles", "review": "reviews", "preprint": "preprints
 NOUN_TYPES = {v: k for k, v in TYPE_NOUNS.items()}
 
 # yes/no works columns that read as adjectives before the noun
-ADJECTIVES = {"open_access.is_oa": "open access", "is_retracted": "retracted",
+ADJECTIVES = {"open_access.is_oa": "open access", "is_retracted": "retracted", "is_pulled": "pulled",
               "citation_normalized_percentile.is_in_top_1_percent": "top 1% cited",
               "citation_normalized_percentile.is_in_top_10_percent": "top 10% cited"}
 
@@ -94,7 +94,7 @@ DIMS = {"publication_year": "year", "sustainable_development_goals.id": "SDG",
         "primary_location.source.host_organization_lineage": "publisher",
         "language": "language", "corresponding_author_ids": "corresponding author",
         "corresponding_institution_ids": "corresponding institution",
-        "is_retracted": "retracted", "authorships.author.id": "author",
+        "is_retracted": "retracted", "is_pulled": "pulled", "authorships.author.id": "author",
         # the general form's words, now in the sentence too (oxjob #1555, 5 Nov)
         "authorships.institutions.continent": "continent",
         "authorships.institutions.type": "institution type",
@@ -129,6 +129,7 @@ MEASURE_NAMES = {("count", None): "count of works",
                  ("mean", "cited_by_count"): "mean citations",
                  ("median", "cited_by_count"): "median citations",
                  ("percent", "is_retracted"): "percent retracted",
+                 ("percent", "is_pulled"): "percent pulled",
                  ("percent", "open_access.is_oa"): "percent open access",
                  ("percent", "has_abstract"): "percent with an abstract",
                  ("percent", "has_fulltext"): "percent with full text",

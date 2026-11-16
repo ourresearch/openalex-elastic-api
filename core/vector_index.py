@@ -331,8 +331,9 @@ def _pop_corpus_clause(params):
     """Take the is_xpac filters (the corpus, incl. the /works default is_xpac:false) out of params["filters"] and
     return the works-index query /works builds for them, or None when there are none."""
     filters = params.get("filters") or []
-    # with the works default view's hidden pieces (oxjob #2065): the vector index has no parent fields either
-    corpus = [f for f in filters if "is_xpac" in f or HIDDEN_PIECES_KEY in f]
+    # with the works default view's hidden pieces (oxjob #2065): the vector index has no parent fields either;
+    # nor is_pulled (oxjob #2264), so a filter on it is checked on the works index too
+    corpus = [f for f in filters if "is_xpac" in f or HIDDEN_PIECES_KEY in f or "is_pulled" in f]
     if not corpus:
         return None
     params["filters"] = [f for f in filters if f not in corpus]

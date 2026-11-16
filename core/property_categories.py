@@ -433,6 +433,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "has_orcid": "ids",
         "has_pmid": "ids",
         "is_retracted": "other",
+        "is_pulled": "other",  # oxjob #2264, beside is_retracted
         "is_traditional": "other",  # oxjob #2064, beside type
         "language": "geo",
         "sustainable_development_goals.id": "aboutness",
