@@ -9,13 +9,27 @@ from core.schemas import (
 )
 
 
+class StandardTermSchema(Schema):
+    """The same link in a standard vocabulary (oxjob #1490): Dublin Core, schema.org, DataCite, Crossref, DCAT."""
+
+    vocabulary = fields.Str()
+    term = fields.Str()
+    url = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class RelationshipsSchema(Schema):
     """One kind of link between a work and its parent work (oxjob #2065): volume,
-    component, data-series, part. `works_count` = works that have a parent of this kind."""
+    component, data-series, part. `works_count` = works that have a parent of this kind.
+    Values are nouns that name the link, not one end of it; `standard_terms` gives the
+    matching verbs in standard vocabularies (Jason, 15 Nov 2026, oxjob #1490)."""
 
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
+    standard_terms = fields.List(fields.Nested(StandardTermSchema))
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     works_api_url = fields.Str()
