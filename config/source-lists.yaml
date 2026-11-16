@@ -132,3 +132,19 @@ values:
   display_name: Diamond Discovery Hub
 - id: source-lists/oarl
   display_name: International OA Journal Recommended List (OARL)
+- id: source-lists/sinta-s1
+  display_name: SINTA (Indonesia), S1
+- id: source-lists/sinta-s2
+  display_name: SINTA (Indonesia), S2
+- id: source-lists/sinta-s3
+  display_name: SINTA (Indonesia), S3
+- id: source-lists/sinta-s4
+  display_name: SINTA (Indonesia), S4
+- id: source-lists/sinta-s5
+  display_name: SINTA (Indonesia), S5
+- id: source-lists/sinta-s6
+  display_name: SINTA (Indonesia), S6
+- id: source-lists/tci-1
+  display_name: TCI (Thailand), Tier 1
+- id: source-lists/tci-2
+  display_name: TCI (Thailand), Tier 2
