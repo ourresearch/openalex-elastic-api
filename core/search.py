@@ -78,6 +78,20 @@ STAR_BETWEEN_WORDS_RE = re.compile(r"(?<=\w)\*(?=\w)")
 # A straight apostrophe inside a word (`hartmann's`): see
 # SearchOpenAlex.curly_apostrophe_spelling (oxjob #1882).
 IN_WORD_APOSTROPHE_RE = re.compile(r"(?<=\w)'(?=\w)")
+# A typed word that mixes letters and digits (`b12`, `co2`, `BaFe2S3`, `pm2.5`): see
+# SearchOpenAlex.formula_split_spelling (oxjob #365). Only a word standing alone: after a
+# space, `(` or the start, and before a space, `)`, `,;:!`, a sentence-final `.` or the end.
+# A word glued to other punctuation (`10.1038/nature12373`, `co2-capturing`, `b12*`) keeps
+# its form: a quoted phrase there could change how query_string reads the rest.
+MIXED_WORD_RE = re.compile(r"(?<![^\s(])[^\W_]+(?:\.[^\W_]+)*(?![^\s),;:!.])(?!\.[^\s])")
+# Its letter runs and digit runs (a decimal point stays inside its number: `pm2.5` -> pm, 2.5).
+FORMULA_PART_RE = re.compile(r"[^\W\d_]+|\d+(?:\.\d+)*")
+# shortcut: an id or hash pasted into a search (`a3f9c2e81b`) would become a long phrase of
+# one-letter parts; a formula or a product name has a few parts.
+MAX_FORMULA_PARTS = 8
+# Text fields the variant never reads: a phrase of two very common tokens ("co 2") over every
+# full text costs far more than over titles and abstracts, where the split spellings live.
+FULLTEXT_FIELDS = ("fulltext", "fulltext.no_stem")
 
 # oxjob #1883: the stemmed works fields drop stop words (STOP_EN), so inside quotes a stop
 # word matched any word ("vitamin A deficiency" found "vitamin D deficiency") and a phrase
@@ -812,6 +826,79 @@ class SearchOpenAlex:
         variant.search_terms = IN_WORD_APOSTROPHE_RE.sub("’", t)
         return variant
 
+    def formula_split_spelling(self):
+        """The terms with each word that mixes letters and digits also read as the phrase of
+        its parts (`b12` -> `"b 12"`, `BaFe2S3` -> `"BaFe 2 S 3"`), when the search has one;
+        else None (oxjob #365).
+
+        A formula's subscripts and superscripts reach the index as separate words: removing
+        `B<sub>12</sub>` from a pretty-printed Crossref deposit ("CO\\n  <sub>2</sub>\\n to"),
+        a landing page or the legacy abstracts snapshot left "B 12" and "CO 2", and Physical
+        Review's MathML titles read "BaFe 2 S 3" and "Mn 4 N". Live 15 Nov 2026: "co 2" in
+        369,848 abstracts and 62,044 titles, "b 12" in 5,452 titles; `b12` found none of
+        them (ZD 8030: W1536233415; ZD 3918: W7163200644, W4413341688). The parts are ORed
+        in as an adjacent phrase, so the typed word still finds what it did, and a work
+        holding the split spelling is found too. Inside a quoted phrase the parts just join
+        the phrase. Words with a wildcard, words that start with a digit (`3d`, `5g`) and,
+        where stop words are dropped, words with a stop-word part (`no2`) keep their form.
+        Not under NOT, where ORing two spellings would let the other one through; not on
+        semantic, author-name or raw-affiliation searches; never over full text (see
+        FULLTEXT_FIELDS), and not at all on a full-text-only search.
+        """
+        t = self.search_terms
+        if (
+            not t or self.is_semantic_query or self.is_author_name_query
+            or self.primary_field == "authorships.raw_affiliation_strings"
+            or self.primary_field in FULLTEXT_FIELDS
+            or t.count('"') % 2
+            or " NOT " in t or has_leading_not(t)
+            or not any(ch.isdigit() for ch in t)
+        ):
+            return None
+
+        # The variant reads titles and abstracts, never full text.
+        variant = self._copy(
+            secondary_field=None if self.secondary_field in FULLTEXT_FIELDS else self.secondary_field,
+            tertiary_field=None if self.tertiary_field in FULLTEXT_FIELDS else self.tertiary_field,
+        )
+        # A part that is an English stop word (`no2`, `As2S3`, `a1c`) needs fields that keep
+        # stop words: the stemmed ones drop it, so "no 2" reads as "2" (search="no 2" counts
+        # 77M works, 16 Nov 2026). A works title/abstract search runs such a phrase on the
+        # `.no_stem` fields (oxjob #1883); anywhere else that word keeps its typed form.
+        stop_words_kept = variant._on_stemmed_works_text() or variant._is_no_stem()
+
+        def split(word):
+            parts = FORMULA_PART_RE.findall(word)
+            # Letters and digits both, nothing else between them (a `.` only inside a number).
+            if not 2 <= len(parts) <= MAX_FORMULA_PARTS or "".join(parts) != word:
+                return None
+            # shortcut: only a word that starts with a letter (`b12`, `co2`, `Mn4N`). Split, a
+            # number-first word reads as a unit: "3 d" is 3 days in 288K abstracts, "5 g" is
+            # 5 grams, not the 3D or 5G typed. That also skips isotopes ("1 H NMR", "13 C");
+            # a rule that tells `1H` from `3d` would be the upgrade.
+            if parts[0][0].isdigit():
+                return None
+            if not stop_words_kept and any(p.lower() in STOP_EN for p in parts):
+                return None
+            return " ".join(parts)
+
+        changed = False
+        out = []
+        # Even segments are outside quotes, odd ones inside a quoted phrase.
+        for i, segment in enumerate(t.split('"')):
+            def repl(m, quoted=i % 2 == 1):
+                nonlocal changed
+                parts = split(m.group(0))
+                if parts is None:
+                    return m.group(0)
+                changed = True
+                return parts if quoted else f'"{parts}"'
+            out.append(MIXED_WORD_RE.sub(repl, segment))
+        if not changed:
+            return None
+        variant.search_terms = '"'.join(out)
+        return variant
+
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
@@ -822,14 +909,16 @@ class SearchOpenAlex:
 
         words = self.words_joined_by_star()
         curly = self.curly_apostrophe_spelling()
-        if words is None and curly is None:
+        formula = self.formula_split_spelling()
+        if words is None and curly is None and formula is None:
             return self._build_as_typed(skip_citation_boost)
         raw_query = self._build_as_typed(True)
         if words is not None:
             raw_query = raw_query | self._with_terms(words)._build_as_typed(True)
-        if curly is not None:
-            # dis_max: a work holding both glyphs scores as its best spelling, not twice.
-            raw_query = Q("dis_max", queries=[raw_query, curly._build_as_typed(True)])
+        spellings = [s for s in (curly, formula) if s is not None]
+        if spellings:
+            # dis_max: a work holding both spellings scores as its best one, not twice.
+            raw_query = Q("dis_max", queries=[raw_query] + [s._build_as_typed(True) for s in spellings])
         if skip_citation_boost:
             return raw_query
         return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
@@ -1582,6 +1671,9 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             tertiary_field="fulltext",
             combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
             citation_scaling=works_citation_scaling(),
+            # Changes nothing as typed (full text has no `.no_stem` phrase field, #1883);
+            # lets the title+abstract formula variant keep stop words (`no2`, oxjob #365).
+            works_text=True,
         )
     elif index_name.lower().startswith("locations"):
         # Locations (oxjob #850): docs carry `title` (keyword) + an analyzed
