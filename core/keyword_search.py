@@ -279,8 +279,11 @@ def keyword_search_query(search_terms, base_query, search_type="default", with_f
     """Wrap a works text query (built with skip_citation_boost=True) in the keyword
     rule + keyword bonus, then the works citation boost."""
     from core.search import SearchOpenAlex, normalize_search_input
+    from core.search_precedence import explicit_boolean_precedence
 
-    q = normalize_search_input(search_terms)
+    # The same parentheses clean_query_string_text writes in (oxjob #1050), so the
+    # keyword leaves are found on the text the query_string runs.
+    q = explicit_boolean_precedence(normalize_search_input(search_terms))
     base = base_query.to_dict() if hasattr(base_query, "to_dict") else base_query
     rec = json.loads(keyword_record(q)) if q else {"mode": "plain", "segments": [], "leftover": []}
     body = with_keywords(q, rec, base, text_fields_for(search_type, with_fulltext))

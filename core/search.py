@@ -6,6 +6,7 @@ from core.exceptions import APIQueryParamsError
 from core.keyword_search import STOP_EN
 from core.knn import KNNQuery
 from core.search_negation import has_leading_not, whole_query_negation_operand
+from core.search_precedence import explicit_boolean_precedence
 from core.search_punctuation import pasted_door, wildcard_chars_as_punctuation
 import requests
 
@@ -667,10 +668,14 @@ def clean_query_string_text(text):
 
     Every query_string built from user text runs this. What the parser would read as
     syntax the API doesn't offer becomes text, as the analyzer reads it on the plain
-    path; before, each of these reached ES raw and came back as HTTP 500.
+    path; before, each of these reached ES raw and came back as HTTP 500. An AND-group
+    beside an OR gets its parentheses written in (core/search_precedence.py).
     """
     text = NOT_OFFERED_SYNTAX_RE.sub(" ", text)
     text = _trim_dangling(tilde_as_text(pair_parens(pair_quotes(text))))
+    # NOT > AND > OR, as the docs and the echo read it: Lucene's own parser drops the
+    # terms beside an OR that sits next to an AND (oxjob #1050).
+    text = explicit_boolean_precedence(text)
     # Last, so it sees the final token boundaries (oxjob #633).
     return escape_undocumented_lucene(text)
 
