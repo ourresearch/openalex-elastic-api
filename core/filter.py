@@ -65,14 +65,20 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             if "|" in value or (value.startswith("!") and "search" in field.param):
                 s = handle_or_query(field, fields_dict, s, value, sample)
 
-            # multiple AND queries have + in the param values which is converted to a space
+            # multiple AND queries have + in the param values which is converted to a space.
+            # Number filters take it too (oxjob #1032, ZD 2601): `publication_year:>2021+!2023`
+            # is `publication_year:>2021,publication_year:!2023`, as the docs define `+`; it
+            # used to answer "must be a number". A stray leading or trailing space on one
+            # number stays the one number.
             elif (
                 " " in value
                 and not is_quoted
                 and "search" not in field.param
-                and not is_field_class(field, "RangeField")
                 and type(field).__name__ != "BooleanField"
+                and (not is_field_class(field, "RangeField") or len(value.split()) > 1)
             ):
+                if is_field_class(field, "RangeField"):
+                    value = " ".join(value.split())
                 s = handle_and_query(field, s, value)
 
             # everything else is a normal and query
@@ -106,7 +112,13 @@ def _is_multiword_source_type(field, value):
     2024 and the API's own 400 told users to type exactly that (ZD 5246, oxjob #1035, 15 Nov 2026).
     No source type is one word of another, so such a value is the one type, read as if quoted.
     """
-    if field.param not in _SOURCE_TYPE_PARAMS or "|" in value:
+    return is_multiword_source_type_value(field.param, value)
+
+
+def is_multiword_source_type_value(param, value):
+    """`_is_multiword_source_type` by the filter's name, for the URL parser's echo of the same
+    reading (query_translation/url_parser.py, oxjob #1032)."""
+    if param not in _SOURCE_TYPE_PARAMS or "|" in value:
         return False
     v = value[1:] if value.startswith("!") else value
     v = TermField._strip_openalex_prefix(v.strip(), "source-types/").replace("%20", " ")

@@ -443,7 +443,16 @@ def parse_single_filter(
     # Quoted non-search values, read as the filter door reads them (core/quoted_values.py).
     # Search fields keep their quotes (a phrase, handled in the .search path above).
     if "search" not in field:
-        value, _ = unquote_filter_value(value)
+        value, was_quoted = unquote_filter_value(value)
+        # An unquoted space is the `+` AND token (a URL reads `+` as a space): `fr+gb` is fr AND
+        # gb, two rows as `fr,…:gb` gives, the way core/filter.py runs it. It used to echo as the
+        # one quoted value `"fr gb"`, a different query (oxjob #1032).
+        if not was_quoted and _is_and_list(field, value, entity_type):
+            rows: List[FilterType] = []
+            for token in value.split():
+                parsed = parse_single_filter(field, token, entity_type)
+                rows.extend(parsed if isinstance(parsed, list) else [parsed])
+            return rows
 
     # Handle OR (pipe) in values
     if "|" in value:
@@ -526,6 +535,25 @@ def parse_single_filter(
                 for w in words
             ]
     return LeafFilter(column_id=field, value=value, operator=default_op)
+
+
+def _is_and_list(field: str, value: str, entity_type: Optional[str]) -> bool:
+    """Whether an unquoted non-search value is an AND of its space-separated tokens, as
+    core/filter.py reads it: not an OR list (`|` is read first there), not a yes/no filter, not
+    a source type whose name has a space (`book series`), and not a half-quoted value."""
+    if "|" in value or '"' in value or len(value.split()) < 2:
+        return False
+    from core.filter import is_multiword_source_type_value
+
+    if is_multiword_source_type_value(field, value):
+        return False
+    if entity_type is not None:
+        from core.properties import get_property
+
+        prop = get_property(entity_type, field)
+        if prop is not None and prop.type == "boolean":
+            return False
+    return True
 
 
 def _default_operator_for(field: str) -> str:
