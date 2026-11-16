@@ -82,6 +82,18 @@ def test_the_record_shape():
         assert out["description"] == description
 
 
+def test_standard_terms_shape():
+    # oxjob #1490: each value lists the same link in standard vocabularies, in the order walden writes them.
+    terms = [{"vocabulary": "Dublin Core", "term": "isPartOf", "url": "http://purl.org/dc/terms/isPartOf"},
+             {"vocabulary": "DCAT", "term": "inSeries", "url": "https://www.w3.org/ns/dcat#inSeries"}]
+    doc = {"id": "https://openalex.org/relationships/data-series", "display_name": "Data series",
+           "description": RECORDS[2][2], "standard_terms": terms, "works_count": 7}
+    out = RelationshipsSchema(context={"display_relevance": False}).dump(AttrDict({**doc, "meta": {"score": None}}))
+    assert list(out)[:4] == ["id", "display_name", "description", "standard_terms"]
+    assert out["standard_terms"] == terms
+    assert list(out["standard_terms"][0]) == ["vocabulary", "term", "url"]
+
+
 def test_properties_catalog(client):
     props = client.get("/properties").get_json()["properties"]
     assert "relationships" in props

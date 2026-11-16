@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 27,
-    "fingerprint": "46ca04446aa7a6fd54c6871e07ae3d34a02df50ba882ffa0b4e8a580198b000c",
-    "property_count": 993,
-    "version": "24.0.0"
+    "fingerprint": "7db36fc1f1d53959b54829716b1d6e99f90b06dc51cf0ff88cf36d0451b4c49a",
+    "property_count": 994,
+    "version": "24.1.0"
   },
   "properties": {
     "authors": {
@@ -11329,6 +11329,22 @@
         "display_name": "relevance score",
         "entity_type": null,
         "name": "relevance_score",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "standard_terms": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "standard terms",
+        "entity_type": null,
+        "name": "standard_terms",
         "operators": [],
         "supported_by": [],
         "type": null

@@ -500,7 +500,11 @@ CAP_COLUMN = "column"
 # `parent_works` (Field filter_refusal; core.utils.REMOVED_SELECT_FIELDS). Two properties removed = MAJOR per
 # classify_properties_diff.py. Jason approved retiring `volume` on 13 Nov 2026: "let's make our users bite the bullet
 # on this one so that we can move faster."
-PROPERTIES_VERSION = "24.0.0"
+# 24.1.0 (oxjob #1490, Jason 15 Nov 2026): relationships gain the column `standard_terms` [{vocabulary, term, url}]: the same
+# link in standard vocabularies (Dublin Core and schema.org isPartOf, DataCite IsPartOf, Crossref isPartOf, DCAT inSeries),
+# so RDF users get their predicate while relationship values stay nouns that name the link. One property added = MINOR per
+# classify_properties_diff.py. Jason approved the field in session '1490: work-to-work links'.
+PROPERTIES_VERSION = "24.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
