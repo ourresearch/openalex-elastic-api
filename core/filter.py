@@ -11,7 +11,7 @@ from core.collection_resolver import (
     resolve_collection,
 )
 from core.country_values import check_country_filter
-from core.default_view import HIDDEN_PIECES_KEY, visible_works_query
+from core.default_view import HIDDEN_PIECES_KEY, HIDDEN_PULLED_KEY, not_pulled_query, visible_works_query
 from core.quoted_values import unquote_filter_value
 from core.utils import get_field, is_field_class
 from core.validate import xpac_flag_value
@@ -32,6 +32,10 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 # The works default view: pieces of other works are left out (oxjob #2065). Set by
                 # the server only (works/views.py); a request can't name it (map_filter_params).
                 s = s.filter(visible_works_query())
+                continue
+            if key == HIDDEN_PULLED_KEY:
+                # The works default view: pulled works are left out (oxjob #2264), set by the server only.
+                s = s.filter(not_pulled_query())
                 continue
             if key == 'include_xpac' or key == 'include-xpac':
                 # The corpus choice, not a filter: works/views.py reads it (oxjob #2140).
@@ -461,7 +465,7 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
             remaining.append(f)
             continue
         key, value = next(iter(f.items()))
-        if key in ("include_xpac", "include-xpac", HIDDEN_PIECES_KEY):
+        if key in ("include_xpac", "include-xpac", HIDDEN_PIECES_KEY, HIDDEN_PULLED_KEY):
             remaining.append(f)
             continue
         if not _value_has_collection_ref(value):

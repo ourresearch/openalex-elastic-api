@@ -38,7 +38,8 @@ from core.shared_view import (
     set_source,
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
-from core.default_view import HIDE_PIECES_FILTER, include_parts_requested, lifts_hiding, visible_works_query
+from core.default_view import (HIDE_PIECES_FILTER, HIDE_PULLED_FILTER, include_parts_requested, lifts_hiding,
+                               not_pulled_query, pulled_hidden, visible_works_query)
 from core.validate import validate_sample_cursor, xpac_controls
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
@@ -1247,6 +1248,8 @@ def _execute_semantic_oqo(
         filters = filters + [{"is_xpac": "false" if corpus == "core" else "true"}]
     if _hides_pieces(oqo, connection):  # the works default view (oxjob #2065), also checked there
         filters = filters + [HIDE_PIECES_FILTER]
+    if _hides_pulled(oqo, connection):  # and its pulled works (oxjob #2264)
+        filters = filters + [HIDE_PULLED_FILTER]
     params["filters"] = filters or None
 
     # Two-phase vector index (the prod path: USE_VECTOR_INDEX=true). Builds and
@@ -1410,14 +1413,26 @@ def _hides_pieces(oqo, connection, works_filters=True):
     return not (works_filters and lifts_hiding(_oqo_columns(oqo.filter_rows)))
 
 
+def _hides_pulled(oqo, connection, works_filters=True):
+    """Whether this execution leaves out pulled works (core/default_view.py, oxjob #2264): every works execution on
+    walden does, whatever the corpus, unless the request says include_pulled=true or a works filter naming is_pulled
+    or is_retracted, at any depth, asks for them (the OQO has no URL to redirect, so the filter is the shortcut
+    itself). `works_filters=False` as in _hides_pieces. include_pulled is read from the request, like include_parts."""
+    if oqo.get_rows != "works" or connection != "walden":
+        return False
+    return pulled_hidden(request.args, list(_oqo_columns(oqo.filter_rows)) if works_filters else [])
+
+
 def _corpus_qs(oqo, connection, works_filters=True):
-    """The corpus as filter queries: is_xpac for core / expansion, and core's hidden pieces."""
+    """The corpus as filter queries: is_xpac for core / expansion, core's hidden pieces, and pulled works."""
     qs = []
     corpus = _effective_corpus(oqo, connection)
     if corpus is not None:
         qs.append(Q("term", is_xpac="false" if corpus == "core" else "true"))
     if _hides_pieces(oqo, connection, works_filters):
         qs.append(visible_works_query())
+    if _hides_pulled(oqo, connection, works_filters):
+        qs.append(not_pulled_query())
     return qs
 
 

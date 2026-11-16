@@ -12,7 +12,8 @@ from autocomplete.utils import (
     matching_alternative,
 )
 from autocomplete.validate import validate_entity_autocomplete_params
-from core.default_view import filter_keys, include_parts_requested, lifts_hiding, visible_works_query
+from core.default_view import (filter_keys, hides_pulled, include_parts_requested, lifts_hiding, not_pulled_query,
+                               visible_works_query)
 from core.filter import filter_records
 from core.validate import XPAC_PARAMS, xpac_flag_value
 from core.search import full_search_query
@@ -69,6 +70,9 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
         # (the branch above) still finds any work.
         if index_name.startswith("work") and hides_pieces_in_autocomplete(request, filter_params):
             s = s.filter(visible_works_query())
+        # and pulled works, unless include_pulled=true or an is_pulled / is_retracted filter (oxjob #2264)
+        if index_name.startswith("work") and hides_pulled(request.args, filter_params):
+            s = s.filter(not_pulled_query())
 
         # Popularity field used both to rank q-matches and as the sort tiebreaker.
         popularity_field = (

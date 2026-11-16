@@ -133,10 +133,15 @@ def test_the_rule_rides_with_the_core_corpus(corpus, include_xpac, filter_string
 
 
 # --- the OQO executor mirrors the REST view ------------------------------------------------------
+NOT_PULLED = {"bool": {"must_not": [{"term": {"is_pulled": "true"}}]}}
+
+
 def _oqo_qs(url_filter="", corpus=None, args=""):
+    """The corpus and pieces clauses; the pulled rule (oxjob #2264), on every works execution whatever the corpus,
+    is left out here and tested in test_include_pulled.py."""
     oqo = parse_url_to_oqo("works", filter_string=url_filter or None, corpus=corpus)
     with Flask(__name__).test_request_context("/" + args):
-        return [q.to_dict() for q in _corpus_qs(oqo, "walden")]
+        return [q.to_dict() for q in _corpus_qs(oqo, "walden") if q.to_dict() != NOT_PULLED]
 
 
 def test_oqo_default_is_core_and_visible():
