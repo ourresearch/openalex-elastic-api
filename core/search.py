@@ -92,6 +92,11 @@ MAX_FORMULA_PARTS = 8
 # Text fields the variant never reads: a phrase of two very common tokens ("co 2") over every
 # full text costs far more than over titles and abstracts, where the split spellings live.
 FULLTEXT_FIELDS = ("fulltext", "fulltext.no_stem")
+# Leading letters that read as prose before a number, not as a formula: stop words ("Vol. 18,
+# No. 2" made `no2` match ~200K citations; a stemmed field reads "no 2" as "2") and the
+# abbreviations "p. 53", "n = 2", "v. 1", "Fig. 3". shortcut: a fixed list from a 16 Nov 2026
+# sample of the split matches (oxjob #365); measuring each term's split matches is the upgrade.
+PROSE_BEFORE_NUMBER = STOP_EN | {"p", "pp", "n", "nr", "v", "vol", "fig", "eq", "ref"}
 
 # oxjob #1883: the stemmed works fields drop stop words (STOP_EN), so inside quotes a stop
 # word matched any word ("vitamin A deficiency" found "vitamin D deficiency") and a phrase
@@ -839,8 +844,9 @@ class SearchOpenAlex:
         them (ZD 8030: W1536233415; ZD 3918: W7163200644, W4413341688). The parts are ORed
         in as an adjacent phrase, so the typed word still finds what it did, and a work
         holding the split spelling is found too. Inside a quoted phrase the parts just join
-        the phrase. Words with a wildcard, words that start with a digit (`3d`, `5g`) and,
-        where stop words are dropped, words with a stop-word part (`no2`) keep their form.
+        the phrase. Words with a wildcard, words that start with a digit (`3d`, `5g`) and
+        words whose leading letters read as prose before a number (`no2`, `p53`, `n2`; see
+        PROSE_BEFORE_NUMBER) keep their form.
         Not under NOT, where ORing two spellings would let the other one through; not on
         semantic, author-name or raw-affiliation searches; never over full text (see
         FULLTEXT_FIELDS), and not at all on a full-text-only search.
@@ -856,17 +862,6 @@ class SearchOpenAlex:
         ):
             return None
 
-        # The variant reads titles and abstracts, never full text.
-        variant = self._copy(
-            secondary_field=None if self.secondary_field in FULLTEXT_FIELDS else self.secondary_field,
-            tertiary_field=None if self.tertiary_field in FULLTEXT_FIELDS else self.tertiary_field,
-        )
-        # A part that is an English stop word (`no2`, `As2S3`, `a1c`) needs fields that keep
-        # stop words: the stemmed ones drop it, so "no 2" reads as "2" (search="no 2" counts
-        # 77M works, 16 Nov 2026). A works title/abstract search runs such a phrase on the
-        # `.no_stem` fields (oxjob #1883); anywhere else that word keeps its typed form.
-        stop_words_kept = variant._on_stemmed_works_text() or variant._is_no_stem()
-
         def split(word):
             parts = FORMULA_PART_RE.findall(word)
             # Letters and digits both, nothing else between them (a `.` only inside a number).
@@ -876,9 +871,7 @@ class SearchOpenAlex:
             # number-first word reads as a unit: "3 d" is 3 days in 288K abstracts, "5 g" is
             # 5 grams, not the 3D or 5G typed. That also skips isotopes ("1 H NMR", "13 C");
             # a rule that tells `1H` from `3d` would be the upgrade.
-            if parts[0][0].isdigit():
-                return None
-            if not stop_words_kept and any(p.lower() in STOP_EN for p in parts):
+            if parts[0][0].isdigit() or parts[0].lower() in PROSE_BEFORE_NUMBER:
                 return None
             return " ".join(parts)
 
@@ -896,6 +889,11 @@ class SearchOpenAlex:
             out.append(MIXED_WORD_RE.sub(repl, segment))
         if not changed:
             return None
+        # The variant reads titles and abstracts, never full text.
+        variant = self._copy(
+            secondary_field=None if self.secondary_field in FULLTEXT_FIELDS else self.secondary_field,
+            tertiary_field=None if self.tertiary_field in FULLTEXT_FIELDS else self.tertiary_field,
+        )
         variant.search_terms = '"'.join(out)
         return variant
 
@@ -1671,9 +1669,6 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             tertiary_field="fulltext",
             combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
             citation_scaling=works_citation_scaling(),
-            # Changes nothing as typed (full text has no `.no_stem` phrase field, #1883);
-            # lets the title+abstract formula variant keep stop words (`no2`, oxjob #365).
-            works_text=True,
         )
     elif index_name.lower().startswith("locations"):
         # Locations (oxjob #850): docs carry `title` (keyword) + an analyzed

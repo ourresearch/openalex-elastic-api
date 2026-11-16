@@ -12,9 +12,7 @@ import json
 
 import pytest
 
-from core.search import (
-    SearchOpenAlex, full_search_query, full_search_query_exact, scoped_search_query, works_citation_scaling,
-)
+from core.search import SearchOpenAlex, full_search_query, full_search_query_exact, scoped_search_query
 
 
 @pytest.fixture(autouse=True)
@@ -40,6 +38,8 @@ def _dump(q):
         ("Mn4N thin films", '"Mn 4 N" thin films'),
         ("pm2.5 exposure", '"pm 2.5" exposure'),
         ("covid19", '"covid 19"'),
+        ("il6", '"il 6"'),
+        ("vitamin d3", 'vitamin "d 3"'),
         ("CO2.", '"CO 2".'),
         ("b12, folate", '"b 12", folate'),
         # boolean, as in ZD 8030 (the wildcard words keep their form)
@@ -76,8 +76,12 @@ def test_variant(typed, variant):
         "3d printing",  # number first: split it reads as a unit ("3 d" = 3 days)
         "5g networks",  # "5 g" = 5 grams
         "10mg",
-        "no2",  # a stop-word part on a field that drops stop words: "no 2" would read as "2"
+        # leading letters that read as prose before a number: "Vol. 18, No. 2", "p. 53", "n = 2"
+        "no2",
         "As2S3 films",
+        "p53 mutation",
+        "n2 adsorption",
+        "Fig3",
     ],
 )
 def test_no_variant(terms):
@@ -149,51 +153,3 @@ def test_curly_and_formula_variants_compose():
     q = s.build_query(skip_citation_boost=True).to_dict()
     assert len(q["dis_max"]["queries"]) == 3
 
-
-def _query_strings(d, needle):
-    """Every query_string clause in d whose query holds needle."""
-    found = []
-    def walk(node):
-        if isinstance(node, dict):
-            qs = node.get("query_string")
-            if qs and needle in qs.get("query", ""):
-                found.append(qs)
-            for v in node.values():
-                walk(v)
-        elif isinstance(node, list):
-            for v in node:
-                walk(v)
-    walk(d)
-    return found
-
-
-def test_stop_word_part_runs_on_no_stem_for_works_text():
-    # `no2` (NO2): the stemmed fields drop "no", so the phrase must run on `.no_stem` (#1883).
-    s = SearchOpenAlex(search_terms="no2", primary_field="display_name", secondary_field="abstract",
-                       combine_fields=True, works_text=True)
-    assert s.formula_split_spelling().search_terms == '"no 2"'
-    clauses = _query_strings(s.build_query(skip_citation_boost=True).to_dict(), '"no 2"')
-    assert clauses and all(c.get("quote_field_suffix") == ".no_stem" for c in clauses)
-
-
-def test_search_box_no2_split_reads_titles_and_abstracts_exactly():
-    clauses = _query_strings(full_search_query("works", "no2", skip_citation_boost=True).to_dict(), '"no 2"')
-    assert clauses
-    for c in clauses:
-        assert c.get("quote_field_suffix") == ".no_stem"
-        fields = c.get("fields") or [c.get("default_field")]
-        assert not any(f.split("^")[0].startswith("fulltext") for f in fields), fields
-
-
-@pytest.mark.parametrize(
-    "terms",
-    ['"vitamin a deficiency"', "to be or not to be", "It", "machine learning", "3d printing",
-     '"the role of" stress', "covid-19 vaccine"],
-)
-def test_works_text_on_the_search_box_changes_nothing_as_typed(terms):
-    # full_search_query("works") passes works_text=True for the variant; with full text among
-    # its fields the as-typed query must stay byte-identical.
-    before = SearchOpenAlex(search_terms=terms, secondary_field="abstract", tertiary_field="fulltext",
-                            combine_fields=True, citation_scaling=works_citation_scaling())
-    assert (full_search_query("works", terms, skip_citation_boost=True).to_dict()
-            == before.build_query(skip_citation_boost=True).to_dict())
