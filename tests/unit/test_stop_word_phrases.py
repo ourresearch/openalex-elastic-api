@@ -134,7 +134,8 @@ class TestQuotedPhrases:
 
     def test_other_fields_unchanged(self):
         # raw affiliation strings, entity alternates: no .no_stem sibling to fall back to
-        qs = _query_strings(_q('"University of Oxford"', primary="display_name", secondary="alternate_titles"))
+        # (works' own alternate_titles has one since oxjob #1610, so the stand-in is another name field)
+        qs = _query_strings(_q('"University of Oxford"', primary="display_name", secondary="display_name_alternatives"))
         assert qs and all("quote_field_suffix" not in q for q in qs)
 
     def test_exact_search_unchanged(self):

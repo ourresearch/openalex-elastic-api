@@ -105,7 +105,14 @@ PROSE_BEFORE_NUMBER = STOP_EN | {"p", "pp", "n", "nr", "v", "vol", "fig", "eq", 
 # subfields instead (no stemming, no stop words).
 # shortcut: title and abstract only; fulltext `.no_stem` phrases cost 5x the ES time.
 # Adding "fulltext" here is all it takes once a cheap stop-word phrase field exists.
-NO_STEM_TEXT_FIELDS = ("display_name", "abstract")
+NO_STEM_TEXT_FIELDS = ("display_name", "abstract", "alternate_titles")
+# oxjob #1610: a work's other titles (mostly the same title in a second language, from its
+# Crossref record) are searched wherever its title is. Each title field and its own no-stem
+# sibling; the index maps `alternate_titles` like `display_name`.
+ALTERNATE_TITLE_FIELDS = {
+    "display_name": "alternate_titles",
+    "display_name.no_stem": "alternate_titles.no_stem",
+}
 # shortcut: longer phrases (pasted titles) are pinned down by their other words: 51 of 52
 # real ones found the same works either way, at 5x the ES time.
 MAX_CONTENT_WORDS_FOR_EXACT = 4
@@ -698,8 +705,12 @@ class SearchOpenAlex:
         combine_fields=False,
         citation_scaling="sqrt",
         works_text=False,
+        alternate_titles=False,
     ):
         self.search_terms = normalize_search_input(search_terms)
+        # A works search whose title field also covers the work's alternate_titles
+        # (oxjob #1610); see _alternate_titles_search. Set only by the works builders.
+        self.alternate_titles = alternate_titles
         # A works search: its text fields have the `.no_stem` siblings stop-word phrases
         # use (oxjob #1883). Other indexes search display_name too, without them.
         self.works_text = works_text
@@ -738,6 +749,7 @@ class SearchOpenAlex:
             combine_fields=self.combine_fields,
             citation_scaling=self.citation_scaling,
             works_text=self.works_text,
+            alternate_titles=self.alternate_titles,
         )
         return SearchOpenAlex(**{**settings_now, **changes})
 
@@ -902,9 +914,57 @@ class SearchOpenAlex:
         variant.search_terms = '"'.join(out)
         return variant
 
+    def _alternate_titles_search(self):
+        """The same search over the work's alternate_titles alone, when this works search
+        reads its title (oxjob #1610), with the title field's weight; else None.
+
+        build_query ORs it with the search as typed in one dis_max, so a work is found by
+        any of its titles and a work matching by both scores as its best title, not twice.
+        Only the title side is repeated: abstract and full text run once, so a search's ES
+        cost barely moves (alternate_titles holds a few million works). A word in an
+        alternate title and the rest in the abstract is not a cross-field match.
+        A whole-query `NOT x` is left to _build_as_typed, which negates this whole
+        two-title search, so `NOT x` drops a work holding x in any title.
+        shortcut: a NOT inside a longer query (`a NOT b`) applies per title: a work whose
+        alternate title holds `a` but no `b` is found even if its main title holds `b`.
+        """
+        alt_field = ALTERNATE_TITLE_FIELDS.get(self.primary_field)
+        if (
+            not self.alternate_titles or alt_field is None
+            or self.is_semantic_query or self.is_author_name_query
+            or whole_query_negation_operand(self.search_terms) is not None
+        ):
+            return None
+        return self._copy(
+            alternate_titles=False, primary_field=alt_field,
+            secondary_field=None, tertiary_field=None, combine_fields=False,
+        )
+
+    def _title_weight(self):
+        """The boost the title field carries in this search's builder: 1.5 on the plain
+        (match) path of a three-field search, else 1 (see the match builders)."""
+        if self.tertiary_field and not (
+            self.is_boolean_search() or self.has_phrase() or self.has_wildcard()
+        ):
+            return 1.5
+        return 1
+
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
+
+        alt = self._alternate_titles_search()
+        if alt is not None:
+            alt_query = alt.build_query(skip_citation_boost=True)
+            weight = self._title_weight()
+            if weight != 1:
+                alt_query = Q("bool", must=[alt_query], boost=weight)
+            typed = self._copy(alternate_titles=False).build_query(skip_citation_boost=True)
+            # dis_max: a work matching by its title and an alternate title scores once.
+            raw_query = Q("dis_max", queries=[typed, alt_query])
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         stop_words_only = self._stop_words_only_search()
         if stop_words_only is not None:
@@ -1674,6 +1734,7 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             tertiary_field="fulltext",
             combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
             citation_scaling=works_citation_scaling(),
+            alternate_titles=True,  # oxjob #1610
         )
     elif index_name.lower().startswith("locations"):
         # Locations (oxjob #850): docs carry `title` (keyword) + an analyzed
@@ -1761,6 +1822,7 @@ def full_search_query_exact(search_terms, skip_citation_boost=False):
         tertiary_field="fulltext.no_stem",
         combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
         citation_scaling=works_citation_scaling(),
+        alternate_titles=True,  # oxjob #1610
     )
     return search_oa.build_query(skip_citation_boost=skip_citation_boost)
 
@@ -1812,6 +1874,7 @@ def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=Fa
             primary_field=field,
             citation_scaling=works_citation_scaling(),
             works_text=True,
+            alternate_titles=True,  # oxjob #1610
         )
     elif scope == "title_and_abstract":
         primary = "display_name.no_stem" if is_exact else "display_name"
@@ -1825,6 +1888,7 @@ def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=Fa
             combine_fields=True,
             citation_scaling=works_citation_scaling(),
             works_text=True,
+            alternate_titles=True,  # oxjob #1610
         )
     else:
         raise ValueError(f"Unknown search scope: {scope}")

@@ -362,6 +362,9 @@ class WorksSchema(Schema):
     doi = fields.Str()
     title = fields.Str()
     display_name = fields.Str()
+    # oxjob #1610: the work's other titles (mostly the same title in a second language); always a
+    # list: [] when the doc predates the field or holds null.
+    alternate_titles = fields.Method("get_alternate_titles")
     relevance_score = fields.Method("get_relevance_score")
     # rerank=true (oxjob #1521): Jev's probability that the work is a relevant
     # result, on the reranked top 100 only.
@@ -500,6 +503,10 @@ class WorksSchema(Schema):
     @staticmethod
     def get_parent_works(obj):
         return ParentWorkSchema(many=True).dump(getattr(obj, "parent_works", None) or [])
+
+    @staticmethod
+    def get_alternate_titles(obj):
+        return list(getattr(obj, "alternate_titles", None) or [])
 
     @staticmethod
     def get_lineage(obj):

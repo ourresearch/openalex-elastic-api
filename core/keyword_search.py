@@ -268,7 +268,11 @@ def keyword_bonus(query, rec, weight=KEYWORD_BONUS):
 
 def text_fields_for(search_type, with_fulltext):
     exact = search_type == "exact"
-    fields = ["display_name.no_stem", "abstract.no_stem^0.1"] if exact else ["display_name", "abstract^0.1"]
+    # alternate_titles (oxjob #1610): the work's other titles weigh as its title.
+    fields = (
+        ["display_name.no_stem", "alternate_titles.no_stem", "abstract.no_stem^0.1"] if exact
+        else ["display_name", "alternate_titles", "abstract^0.1"]
+    )
     if with_fulltext:
         fields.append("fulltext.no_stem^0.05" if exact else "fulltext^0.05")
     return fields

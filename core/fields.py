@@ -1088,7 +1088,8 @@ class SearchField(Field):
 
         def make_search(**kwargs):  # every branch below gets the index's citation scaling
             # works_text: stop-word phrases may fall back to the works .no_stem fields (#1883)
-            return SearchOpenAlex(citation_scaling=scaling, works_text=is_works, **kwargs)
+            # alternate_titles: a works title search also reads the work's other titles (#1610)
+            return SearchOpenAlex(citation_scaling=scaling, works_text=is_works, alternate_titles=is_works, **kwargs)
 
         if self.param in ("title_abstract_keywords.search", "title_abstract_keywords.search.exact"):
             # Title + abstract + keywords (oxjob #1521): title/abstract text OR the
