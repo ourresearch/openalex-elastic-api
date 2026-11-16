@@ -110,6 +110,22 @@ def test_is_not_group_adjacency_also_errors():
     assert exc.value.code == "OQL_GROUP_VALUES_NEED_CONNECTIVE"
 
 
+def test_is_group_bare_not_reads_as_and_not():
+    # oxjob #1108 (ZD 23733): `a not b` can only mean "a but not b", so the is
+    # side takes it as `a and not b`, the same reading the has side gives.
+    assert _canon("works where keyword is (algorithm not task)") == \
+        _canon("works where keyword is (algorithm and not task)")
+    assert _render("works where keyword is (algorithm not task)") == \
+        _render("works where keyword is (algorithm and not task)")
+    # precedence is unchanged: the bare-not run is one AND unit under `or`
+    assert _canon("works where type is (article or review not preprint)") == \
+        _canon("works where type is (article or (review and not preprint))")
+    # plain adjacency stays the loud error, even after a bare-not join
+    with pytest.raises(OQLError) as exc:
+        parse("works where type is (article not review dataset)")
+    assert exc.value.code == "OQL_GROUP_VALUES_NEED_CONNECTIVE"
+
+
 def test_explicit_connectives_in_value_groups_still_work():
     # D7: explicit `and` between values is deliberate and stays. The top-level
     # AND flattens into filter_rows (canonical NNF / implicit top-level AND).

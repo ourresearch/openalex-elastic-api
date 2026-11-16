@@ -3507,7 +3507,12 @@ class _Parser:
                 break  # explicit connective -> handled by _parse_bool_expr
             if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
                 break
-            if not implicit_and and not self._ctx_mode:
+            # `keyword is (algorithm not task)`: a bare `not` before the next
+            # value can only mean "but not", so it joins with AND, as it already
+            # does on the `has (...)` side (oxjob #1108, ZD 23733). Only plain
+            # adjacency (`(article review)`) stays the loud #554 error.
+            bare_not = t.kind == "WORD" and t.val.lower() == "not"
+            if not implicit_and and not self._ctx_mode and not bare_not:
                 err = oql_error("OQL_GROUP_VALUES_NEED_CONNECTIVE",
                                f'two values with no connective between them '
                                f'(before "{t.val}")',
