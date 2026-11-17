@@ -6,7 +6,7 @@ The compact OpenAlex form `term!"phrase"` means *term AND NOT (exact) phrase*
 as one opaque `has` value, dropping the `!` so the NOT silently became an
 AND. These tests pin the decomposition: leading run is positive, each `!run` is
 a negated clause on the same field; quoted run → exact (`.search.exact`), bare
-run → stemmed (`.search`). Source: zd#8101 (Claire Stansfield, UCL EPPI-Centre).
+run → stemmed (`.search`). Source: zd#8101 (a systematic reviewer).
 """
 import tests.oql._qt_loader  # noqa: F401  (installs the pure query_translation stub)
 

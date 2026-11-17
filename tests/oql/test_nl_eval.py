@@ -194,7 +194,7 @@ def test_coverage_gates():
     coverage shortfall reads differently from a malformed case."""
     # The `sr-transcription` tag marks literal transcriptions of real librarian /
     # systematic-review boolean search strategies — large quoted-phrase AND/OR
-    # trees (zd#8101 Claire, the #434 literature-mined SR rows, etc.), not
+    # trees (zd#8101, the #434 literature-mined SR rows, etc.), not
     # natural-language intents anyone would paraphrase. They are out of scope for
     # the NL->OQO eval, so they don't count toward the NL-coverage denominator.
     # (#432: was the single-valued category "librarian & SR queries"; that

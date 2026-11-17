@@ -177,7 +177,7 @@ def test_parser_structural_keywords_are_declared_by_the_ebnf():
 # --------------------------------------------------------------------------- #
 # Diagnostics that fire at the LEXER (a row whose oql can't even tokenize). Such
 # `error` rows are intentionally non-tokenizable, so they are out of scope for the
-# lexical-coverage check below. (zd#8101 row 162 is Claire's own unbalanced-quote
+# lexical-coverage check below. (zd#8101 row 162 is the original's unbalanced-quote
 # line — its whole point is that it does NOT tokenize.)
 _LEXICAL_ERROR_DIAGNOSTICS = {"OQL_UNTERMINATED_STRING"}
 

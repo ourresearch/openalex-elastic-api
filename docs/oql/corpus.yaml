@@ -36,7 +36,7 @@
 #       "librarian guide"    (library SLR/search guides — Cranfield, U.Manitoba,
 #                             UCL, Caltech, KCL, Tufts, …),
 #       "vendor docs"        (Scopus/Elsevier, Dimensions DSL, Clarivate WoS),
-#       "zendesk ticket"     (real OpenAlex user query — zd#8101, "Claire").
+#       "zendesk ticket"     (real OpenAlex user query — zd#8101).
 #     This replaced the old conflated `source` ("spec spine" / "#284 worked
 #     examples"); see archived/oqo-spec/work/EXAMPLES.md for the per-row sources
 #     (each #284 OXURL verified live 2026-05-30).
@@ -1377,13 +1377,13 @@ rows:
   tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: "OpenAlex zd#8101 — Claire's real systematic review"
+    label: "OpenAlex zd#8101 — a user's real systematic review"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    The real zd#8101 systematic-review tree (Claire): a 5-block AND of large
+    The real zd#8101 systematic-review tree: a 5-block AND of large
     OR-synonym groups, each block scoped to a different search field
     (title / title & abstract x2 / anywhere). 114 leaves. No explicit oqo oracle
     — the harness asserts OQO->OQL->OQO identity through the whole tree.
@@ -2098,7 +2098,7 @@ rows:
   tags: [negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): subject-heading/MeSH concept → OpenAlex keyword membership"
+    label: "OpenAlex zd#8101 — SR user (Vaping & Health SR): subject-heading/MeSH concept → OpenAlex keyword membership"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=keywords.id:!animal-model,keywords.id:electronic-cigarette,language:en,publication_year:2003-2025,type:article'
@@ -2114,12 +2114,12 @@ rows:
       and type is (article)
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: animal-model, is_negated: true}, {column_id: keywords.id, value: electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: article}]}
   note: |-
-    zd#8101 "Vaping & Health Living Map" (Claire Stansfield, UCL EPPI-Centre),
+    zd#8101 vaping & health review (a systematic reviewer),
     OpenAlex Custom-filter line 9, run May 2025, 3433 hits. Round-trip verified
     (URL→OQO→OQL→OQO identity, 2026-06-10). A clean ok row AND a worked example of
-    the subject-heading-explosion → OpenAlex-keyword mapping: her one keyword
+    the subject-heading-explosion → OpenAlex-keyword mapping: the one keyword
     membership is the abbreviation of full source-DB controlled-vocabulary blocks.
-    ORIGIN QUERIES (verbatim, the gold-standard intent she abbreviated from):
+    ORIGIN QUERIES (verbatim, the gold-standard intent the user abbreviated from):
       EMBASE (OVID):  1  exp electronic cigarette/   2  exp Vaping/
       PubMed:         Electronic Nicotine Delivery Systems[MeSH] OR Vaping[MESH]
       animal exclusion `keywords.id:!keywords/animal-model` abbreviates
@@ -2133,7 +2133,7 @@ rows:
   tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): title-field OR of term variants (display_name.search)"
+    label: "OpenAlex zd#8101 — SR user (Vaping & Health SR): title-field OR of term variants (display_name.search)"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=keywords.id:!animal-model,language:en,publication_year:2003-2025,type:article,display_name.search:vape|vaper|vapers|vapes|vaping'
@@ -2147,7 +2147,7 @@ rows:
       and title has (vape or vaper or vapers or vapes or vaping)
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: has}, {column_id: display_name.search, value: vaper, operator: has}, {column_id: display_name.search, value: vapers, operator: has}, {column_id: display_name.search, value: vapes, operator: has}, {column_id: display_name.search, value: vaping, operator: has}]}]}
   note: |-
-    zd#8101 "Vaping & Health Living Map" (Claire), OpenAlex Custom-filter line 7,
+    zd#8101 vaping & health review, OpenAlex Custom-filter line 7,
     run May 2025, 3342 hits. Round-trip verified (identity, 2026-06-10). The
     title-scoped (display_name.search) slice — OpenAlex `display_name.search` ==
     the source DBs' title field (`.ti` / `[ti]` / `TI(...)`).
@@ -2162,7 +2162,7 @@ rows:
   tags: [negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: "OpenAlex zd#8101 — Claire (UCL EPPI-Centre): within-field NOT (`!`) excludes an exact phrase"
+    label: "OpenAlex zd#8101 — SR user: within-field NOT (`!`) excludes an exact phrase"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:teacher,title_and_abstract.search.exact:!%22academic%20teacher%22'
@@ -2172,7 +2172,7 @@ rows:
         {column_id: title_and_abstract.search, value: teacher, operator: has},
         {column_id: title_and_abstract.search.exact, value: '"academic teacher"', operator: has, is_negated: true}]}
   note: |-
-    zd#8101 (Claire Stansfield): the compact OpenAlex within-`.search` NOT operator
+    zd#8101 (a systematic reviewer): the compact OpenAlex within-`.search` NOT operator
     `term!"phrase"` = term AND NOT the EXACT phrase. Classic URL
     `title_and_abstract.search:teacher!"academic teacher"` is live-verified: `teacher`
     2,315,754 − exact "academic teacher" 2,378 = 2,313,376. The OXURL→OQO parser used
@@ -2192,7 +2192,7 @@ rows:
   tags: [negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: "OpenAlex zd#8101 — Claire: geographic within-field NOT (`England!\"New England\"`)"
+    label: "OpenAlex zd#8101 — SR user: geographic within-field NOT (`England!\"New England\"`)"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:England,title_and_abstract.search.exact:!%22New%20England%22'
@@ -2938,13 +2938,13 @@ rows:
   tags: [boolean-nesting, negation, proximity, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Vaping & Health SR): main vape/nicotine concept block'
+    label: 'zd#8101 — SR user (Vaping & Health SR): main vape/nicotine concept block'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    Claire's real run query (line 10, 3,474 hits): the vape/nicotine concept
+    The user's real run query (line 10, 3,474 hits): the vape/nicotine concept
     block. Her `+` pairs were hand-rolled PROXIMITY attempts ported from
     PubMed `[Title/Abstract:~N]` / EMBASE `adjN` — now expressed faithfully as
     `within N words` (nicotine+snus -> "nicotine snus" within 8 words;
@@ -3092,11 +3092,11 @@ rows:
   tags: [phrase-exact, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Vaping & Health SR): her own mis-quoted line (footgun)'
+    label: 'zd#8101 — SR user (Vaping & Health SR): a mis-quoted line (footgun)'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   status: error
   note: >-
-    Claire's KNOWN-BAD line 8 (she flagged it and sent the corrected line 11 =
+    The original's KNOWN-BAD line 8 (the user flagged it and sent the corrected line 11 =
     row 163): an unbalanced quote `"Vype|VUSE|"e Voke"` swallows the rest of
     the OR-list into one unterminated string. A real librarian hit this; OQL
     surfaces it loudly as OQL_UNTERMINATED_STRING (vs the classic URL silently
@@ -3108,13 +3108,13 @@ rows:
   tags: [boolean-nesting, negation, proximity, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Vaping & Health SR): nicotine-delivery + brand block (corrected)'
+    label: 'zd#8101 — SR user (Vaping & Health SR): nicotine-delivery + brand block (corrected)'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    Claire's corrected line 11 (20 hits): nicotine-delivery + brand block.
+    The user's corrected line 11 (20 hits): nicotine-delivery + brand block.
     nicotine+"delivery system" etc were EMBASE `adj4` / PubMed `[~4]`
     proximity -> "nicotine" within 4 words of "delivery system";
     electronic+cigarette / electronic+nicotine etc were `adj4` -> within 4
@@ -3179,13 +3179,13 @@ rows:
   tags: [boolean-nesting, negation, sr-transcription, wildcard]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Educational accountability SR): 5-block AND strategy'
+    label: 'zd#8101 — SR user (Educational accountability SR): 5-block AND strategy'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    Claire's real run query (block 1, 152 hits): FIVE title-abstract search
+    The user's real run query (block 1, 152 hits): FIVE title-abstract search
     groups AND-ed (accountability x school-type x policy/reform x review x
     evidence), plus a grey-literature `type is (book-chapter or book or
     dissertation or report or ...)` OR and a per-year `year is (2014 or ... or
@@ -3354,13 +3354,13 @@ rows:
   tags: [boolean-nesting, sr-transcription, wildcard]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Educational accountability SR): inspection-agency names'
+    label: 'zd#8101 — SR user (Educational accountability SR): inspection-agency names'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    Claire's block 3 (622 hits): a large OR of national school-inspection
+    The user's block 3 (622 hits): a large OR of national school-inspection
     agency names, several as `+` co-occurrence (Ontario+"standard of
     instruction", "Education Review Office"+"New Zealand",
     Estyn+accountability) -> parenthesized AND pairs. Grey-lit type + year
@@ -3494,13 +3494,13 @@ rows:
   tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Educational accountability SR): country block with within-field NOT'
+    label: 'zd#8101 — SR user (Educational accountability SR): country block with within-field NOT'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    Claire's block 2 (429 hits) — the showcase idiom: country/region names
+    The user's block 2 (429 hits) — the showcase idiom: country/region names
     where a homonym is EXCLUDED inside the search value via WoS-style `!`
     (England!"New England", Wales!"New South Wales", British!"British
     Columbia"). OQL spells each as (term and not "phrase"). Origin: WoS
@@ -3688,13 +3688,13 @@ rows:
   tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
-    label: 'zd#8101 — Claire (Educational accountability SR): country via address filter'
+    label: 'zd#8101 — SR user (Educational accountability SR): country via address filter'
     url: 'https://openalex.zendesk.com/agent/tickets/8101'
   oxurl_status: oql-only
   oxurl: null
   status: ok
   note: >-
-    Claire's block 4 (129 hits): the SAME strategy as row 166 but expressing
+    The user's block 4 (129 hits): the SAME strategy as row 166 but expressing
     country via the AUTHOR-AFFILIATION address field — `country is
     (countries/gb or countries/fr or ...)` — instead of name-matching in the
     text. A clean example of one librarian intent realized two ways (text
