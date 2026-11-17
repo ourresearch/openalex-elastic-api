@@ -14,7 +14,7 @@ from flask import request as flask_request
 
 from autocomplete.validate import validate_entity_autocomplete_params, validate_full_autocomplete_params
 from core.default_view import (HIDDEN_PULLED_KEY, HIDE_PULLED_FILTER, PULLED_PARAMS, default_view_query,
-                               hides_pulled, include_pulled_requested, names_pulled, not_pulled_query,
+                               hides_pulled, include_pulled_param, names_pulled, not_pulled_query,
                                pulled_redirect_location)
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
@@ -67,7 +67,7 @@ def test_only_include_pulled_brings_them_back(query, hides):
 @pytest.mark.parametrize("value", ["banana", "yes", "1"])
 def test_include_pulled_takes_true_or_false(value):
     with pytest.raises(APIQueryParamsError, match="include_pulled=true brings back"):
-        include_pulled_requested(_args(f"?include_pulled={value}"))
+        include_pulled_param(_args(f"?include_pulled={value}"))
 
 
 @pytest.mark.parametrize("filter_params, hides", [
@@ -98,6 +98,10 @@ def test_names_pulled_matches_whole_keys():
     ("search=kelp", None),
     ("filter=is_retracted:true&include_pulled=true", None),
     ("filter=is_retracted:true&include_pulled=false", None),   # the parameter decides; no loop, no override
+    ("group_by=is_retracted", "/works?group_by=is_retracted&include_pulled=true"),   # a group_by asks about them too
+    ("group-by=is_pulled:include_unknown", "/works?group-by=is_pulled:include_unknown&include_pulled=true"),
+    ("group_by=type", None),
+    ("group_bys=type,is_retracted", None),   # the website's batched facets describe the results as they stand
 ])
 def test_redirect_location(query, location):
     assert pulled_redirect_location("/works", query, _args("?" + query)) == location
@@ -163,6 +167,21 @@ def test_oqo_include_pulled_and_the_filter_shortcut():
     assert _oqo_qs("is_retracted:true") == [CORE, VISIBLE]
     assert _oqo_qs("is_pulled:false") == [CORE, VISIBLE]
     assert _oqo_qs("is_retracted:true", args="?include_pulled=false") == [CORE, VISIBLE, NOT_PULLED]
+
+
+def test_oqo_a_split_or_measure_naming_the_field_brings_them_back():
+    """`percent retracted of works in Heliyon by year` (the OQL docs' example) needs the retracted works counted."""
+    percent = OQO.from_dict({"get_rows": "works", "group_by": [{"column_id": "publication_year"}],
+                             "calculate": [{"measure": "percent", "column_id": "is_retracted"}]})
+    by_pulled = OQO.from_dict({"get_rows": "works", "group_by": [{"column_id": "is_pulled"}]})
+    plain = OQO.from_dict({"get_rows": "works", "group_by": [{"column_id": "publication_year"}],
+                           "calculate": [{"measure": "count"}]})
+    with Flask(__name__).test_request_context("/"):
+        assert not _hides_pulled(percent, "walden")
+        assert not _hides_pulled(by_pulled, "walden")
+        assert _hides_pulled(plain, "walden")
+    with Flask(__name__).test_request_context("/?include_pulled=false"):
+        assert _hides_pulled(percent, "walden")
 
 
 def test_oqo_only_works_on_walden():

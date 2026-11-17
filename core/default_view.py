@@ -39,18 +39,20 @@ from core.exceptions import APIQueryParamsError
 PARTS_PARAMS = ("include_parts", "include-parts")
 
 
-def parts_flag_value(value, name="include_parts"):
-    """True or False for an include_parts value, in any case; a JSON 400 for anything else."""
+def _flag_value(value, name, what):
+    """True or False for an include_* value, in any case; a JSON 400 naming `what` it brings back otherwise."""
     v = (value or "").strip().strip('"').lower()
     if v == "true":
         return True
     if v in ("false", ""):
         return False
-    raise APIQueryParamsError(
-        f"{name} takes true or false, not '{value}'. include_parts=true brings back pieces of other "
-        f"works (figures, book front matter, single records of a data series) that the default view "
-        f"leaves out."
-    )
+    raise APIQueryParamsError(f"{name} takes true or false, not '{value}'. {what}")
+
+
+def parts_flag_value(value, name="include_parts"):
+    """True or False for an include_parts value, in any case; a JSON 400 for anything else."""
+    return _flag_value(value, name, "include_parts=true brings back pieces of other works (figures, book front "
+                                    "matter, single records of a data series) that the default view leaves out.")
 
 
 def include_parts_requested(args):
@@ -94,9 +96,14 @@ def hidden_by_public_filters_query():
     return Q("bool", filter=[has_parent, not_traditional])
 
 
+def _names_any(keys, key_set):
+    """True when any key is exactly one of key_set (hyphens read as underscores)."""
+    return any((key or "").replace("-", "_") in key_set for key in keys)
+
+
 def lifts_hiding(filter_keys):
-    """True when any filter key is exactly a parent-child column (hyphens read as underscores)."""
-    return any((key or "").replace("-", "_") in PIECE_FILTER_KEYS for key in filter_keys)
+    """True when any filter key is exactly a parent-child column."""
+    return _names_any(filter_keys, PIECE_FILTER_KEYS)
 
 
 def filter_keys(filter_params):
@@ -158,8 +165,9 @@ def hides_pieces(corpus, include_xpac, filter_params, include_parts=False):
 # The switch that brings pulled works back, in both spellings the other parameters take.
 PULLED_PARAMS = ("include_pulled", "include-pulled")
 
-# Filters whose name brings pulled works back (via the redirect). Matched as whole keys, hyphens read as underscores.
-PULLED_FILTER_KEYS = frozenset({"is_pulled", "is_retracted"})
+# Fields that ask about pulled works, so naming one brings them back: in a filter (via the redirect), a group_by (the
+# same), or an OQL split or measure (`percent retracted`, `by pulled`). Matched as whole keys.
+PULLED_FIELD_KEYS = frozenset({"is_pulled", "is_retracted"})
 
 # How the rule travels in a parsed filter list, beside HIDE_PIECES_FILTER. Internal, like HIDDEN_PIECES_KEY:
 # core.filter applies it, core.utils.map_filter_params refuses it in a request.
@@ -173,21 +181,14 @@ PULLED_FIELD = "is_pulled"
 
 def pulled_flag_value(value, name="include_pulled"):
     """True or False for an include_pulled value, in any case; a JSON 400 for anything else."""
-    v = (value or "").strip().strip('"').lower()
-    if v == "true":
-        return True
-    if v in ("false", ""):
-        return False
-    raise APIQueryParamsError(
-        f"{name} takes true or false, not '{value}'. include_pulled=true brings back works their publisher, host "
-        f"or authors retracted, withdrew or removed, which the default view leaves out."
-    )
+    return _flag_value(value, name, "include_pulled=true brings back works their publisher, host or authors "
+                                    "retracted, withdrew or removed, which the default view leaves out.")
 
 
-def include_pulled_requested(args):
-    """True when request args ask for pulled works. Every value given is checked."""
+def include_pulled_param(args):
+    """The request's include_pulled as True or False, or None when it gives none. Every spelling given is checked."""
     flags = [pulled_flag_value(args.get(name), name) for name in PULLED_PARAMS if args.get(name) is not None]
-    return any(flags)
+    return any(flags) if flags else None
 
 
 def not_pulled_query():
@@ -195,33 +196,42 @@ def not_pulled_query():
     return Q("bool", must_not=[Q("term", **{PULLED_FIELD: "true"})])
 
 
-def names_pulled(filter_keys):
-    """True when any filter key is is_pulled or is_retracted."""
-    return any((key or "").replace("-", "_") in PULLED_FILTER_KEYS for key in filter_keys)
+def names_pulled(keys):
+    """True when any key is is_pulled or is_retracted."""
+    return _names_any(keys, PULLED_FIELD_KEYS)
 
 
-def hides_pulled(args, filter_params):
-    """Whether a works request leaves pulled works out. include_pulled, when given, decides (true brings them back;
-    false keeps them out even beside an is_retracted filter: filters only subtract). Without it, a filter naming
-    is_pulled / is_retracted brings them back; the redirect doors never get here with one. The corpus has no say."""
-    return pulled_hidden(args, filter_keys(filter_params))
+def request_group_by_keys(args):
+    """The field a request's group_by names (a `:include_unknown` suffix dropped). Not group_bys: the website's
+    batched facet counts describe the result set as it stands."""
+    value = args.get("group_by") or args.get("group-by") or ""
+    return [value.split(":", 1)[0].strip()] if value.strip() else []
 
 
 def pulled_hidden(args, keys):
-    """hides_pulled, from the filter keys (the OQO executor's columns)."""
-    if any(args.get(name) is not None for name in PULLED_PARAMS):
-        return not include_pulled_requested(args)
-    return not names_pulled(keys)
+    """Whether a works request leaves pulled works out. include_pulled, when given, decides (false keeps them out even
+    beside an is_retracted filter: filters only subtract). Without it, any key naming is_pulled / is_retracted brings
+    them back; the redirect doors never get here with one. The corpus has no say."""
+    asked = include_pulled_param(args)
+    return not asked if asked is not None else not names_pulled(keys)
+
+
+def hides_pulled(args, filter_params):
+    """pulled_hidden for a request's parsed filter list and its group_by."""
+    return pulled_hidden(args, filter_keys(filter_params) + request_group_by_keys(args))
 
 
 def pulled_redirect_location(path, query_string, args):
-    """Where a works request whose filter names is_pulled / is_retracted is sent: the same path and query string
-    plus include_pulled=true. None when the request already gives include_pulled (true or false) or names neither
-    filter. Relative, so it survives the proxies in front of the API."""
-    if any(args.get(name) is not None for name in PULLED_PARAMS):
-        include_pulled_requested(args)  # include_pulled=banana answers a 400, not a redirect
+    """Where a works request whose filter or group_by names is_pulled / is_retracted is sent: the same path and query
+    string plus include_pulled=true. None when the request already gives include_pulled (true or false; a bad value
+    answers a 400 here) or names neither. Relative, so it survives the proxies in front of the API."""
+    if include_pulled_param(args) is not None:
         return None
-    if not names_pulled(request_filter_keys(args.get("filter"))):
+    keys = request_group_by_keys(args)
+    filter_string = args.get("filter") or ""
+    if "pulled" in filter_string or "retracted" in filter_string:  # parse only when it can matter (every request)
+        keys += request_filter_keys(filter_string)
+    if not names_pulled(keys):
         return None
     joiner = "&" if query_string else ""
     return f"{path}?{query_string}{joiner}include_pulled=true"

@@ -1419,14 +1419,22 @@ def _hides_pieces(oqo, connection, works_filters=True):
     return not (works_filters and lifts_hiding(_oqo_columns(oqo.filter_rows)))
 
 
+def _oqo_works_columns(oqo):
+    """Every works column an OQO names: its filters at any depth, its splits and its measures."""
+    yield from _oqo_columns(oqo.filter_rows)
+    yield from (g.column_id for g in oqo.group_by)
+    yield from (m.column_id for m in oqo.calculate)
+
+
 def _hides_pulled(oqo, connection, works_filters=True):
     """Whether this execution leaves out pulled works (core/default_view.py, oxjob #2264): every works execution on
-    walden does, whatever the corpus, unless the request says include_pulled=true or a works filter naming is_pulled
-    or is_retracted, at any depth, asks for them (the OQO has no URL to redirect, so the filter is the shortcut
-    itself). `works_filters=False` as in _hides_pieces. include_pulled is read from the request, like include_parts."""
+    walden does, whatever the corpus, unless the request says include_pulled=true or the query names is_pulled or
+    is_retracted in a filter, a split or a measure (`percent retracted`): the OQO has no URL to redirect, so naming
+    the field is the shortcut itself. `works_filters=False` as in _hides_pieces. include_pulled is read from the
+    request, like include_parts."""
     if oqo.get_rows != "works" or connection != "walden":
         return False
-    return pulled_hidden(request.args, list(_oqo_columns(oqo.filter_rows)) if works_filters else [])
+    return pulled_hidden(request.args, _oqo_works_columns(oqo) if works_filters else [])
 
 
 def _corpus_qs(oqo, connection, works_filters=True):

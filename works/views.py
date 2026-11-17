@@ -199,12 +199,10 @@ def works():
 
     default_filters = None
     if connection == 'walden':
-        # oxjob #2264: a filter naming is_pulled / is_retracted is a shortcut for include_pulled=true; the redirect
-        # puts it in the URL (core/default_view.py)
-        location = pulled_redirect_location(request.path, request.query_string.decode(), request.args)
-        if location:
-            return redirect(location, code=302)
+        if redirect_response := _pulled_redirect():
+            return redirect_response
         current_filter = request.args.get('filter', '')
+        filter_params = request_filter_params(current_filter)
         # the include_xpac parameter or an include_xpac:true filter clause (oxjob #2140)
         include_xpac, xpac_named = xpac_controls(request)
         default_filters = resolve_corpus_default_filters(
@@ -215,11 +213,10 @@ def works():
         )
         # oxjob #2065: the core corpus also leaves out pieces of other works, unless include_parts=true
         # (core/default_view.py)
-        if hides_pieces(request.args.get('corpus'), include_xpac, request_filter_params(current_filter),
-                        include_parts):
+        if hides_pieces(request.args.get('corpus'), include_xpac, filter_params, include_parts):
             default_filters = (default_filters or []) + [HIDE_PIECES_FILTER]
         # oxjob #2264: pulled works are left out whatever the corpus, unless include_pulled=true
-        if hides_pulled(request.args, request_filter_params(current_filter)):
+        if hides_pulled(request.args, filter_params):
             default_filters = (default_filters or []) + [HIDE_PULLED_FILTER]
 
     result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters,
@@ -244,7 +241,8 @@ def _default_view_query(filter_string):
 
 
 def _pulled_redirect():
-    """The redirect a filter naming is_pulled / is_retracted gets on /v2/works and /works/stats, or None."""
+    """oxjob #2264: the redirect a filter or group_by naming is_pulled / is_retracted gets on /works, /v2/works and
+    /works/stats (to the same URL plus include_pulled=true, so the URL says what added the works), or None."""
     location = pulled_redirect_location(request.path, request.query_string.decode(), request.args)
     return redirect(location, code=302) if location else None
 
@@ -254,8 +252,7 @@ def v2_works():
     index_name = WORKS_INDEX
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
-    redirect_response = _pulled_redirect()
-    if redirect_response:
+    if redirect_response := _pulled_redirect():
         return redirect_response
     # No corpus default here (expansion works are listed); pieces of other works are left out as
     # on /works, unless include_parts=true or a parent-child filter asks for them (oxjob #2065).
@@ -264,7 +261,7 @@ def v2_works():
     if hides_pulled(request.args, request_filter_params(request.args.get('filter'))):
         default_filters.append(HIDE_PULLED_FILTER)
     result = shared_view(request, fields_dict, index_name, default_sort, connection='walden',
-                         default_filters=default_filters or None,
+                         default_filters=default_filters,
                          extra_valid_params=PARTS_PARAMS + PULLED_PARAMS)
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
@@ -291,8 +288,7 @@ def works_stats():
     ]
     index_name = WORKS_INDEX
     entity_name = "works"
-    redirect_response = _pulled_redirect()
-    if redirect_response:
+    if redirect_response := _pulled_redirect():
         return redirect_response
     base_query = _default_view_query(request.args.get("filter"))
     result = shared_stats_view(
