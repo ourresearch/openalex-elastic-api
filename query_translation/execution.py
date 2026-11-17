@@ -103,8 +103,12 @@ _ENTITY_DISPATCH = {
     "awards": ("awards", "AWARDS_INDEX"),
 }
 
+# get_rows -> the view module whose DEFAULT_SORT is the entity's default order, for the
+# entities that don't default to most works first. Awards: newest start year first
+# (oxjob #2168), one list shared with the classic /awards view, imported when the query
+# runs (as the locations view is). oql_core._THINGS_DEFAULT_SORT names its first key.
 _DEFAULT_SORT_OVERRIDES = {
-    "awards": ["-funded_outputs_count", "id"],
+    "awards": "awards.views",
 }
 
 
@@ -154,7 +158,9 @@ def _resolve_entity(entity_type: str, connection: str):
     module_name, index_attr = entry
     fields_mod = importlib.import_module(f"{module_name}.fields")
     schemas_mod = importlib.import_module(f"{module_name}.schemas")
-    default_sort = _DEFAULT_SORT_OVERRIDES.get(et, ["-works_count", "id"])
+    override = _DEFAULT_SORT_OVERRIDES.get(et)
+    default_sort = (importlib.import_module(override).DEFAULT_SORT if override
+                    else ["-works_count", "id"])
     return (
         fields_mod.fields_dict,
         getattr(settings, index_attr),

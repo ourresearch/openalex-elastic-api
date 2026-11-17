@@ -665,27 +665,33 @@ def _is_age_adjusted(sort_by) -> bool:
         k in ensemble or k == ("id", "asc") for k in keys)
 
 
+# things whose default order isn't most works: awards, newest start year first (oxjob #2168;
+# the engine's list with its tie-breaks is awards.views.DEFAULT_SORT, which
+# execution._resolve_entity reads); locations go by work, which has no words
+_THINGS_DEFAULT_SORT = {"awards": SortBy("start_year", "desc"), "locations": None}
+
+
 def _is_default_order(sort_by, entity: str, has_search: bool) -> bool:
     """The entity's default order (best matches with a search; else works: most cited
-    (age-adjusted), things: most works), which the text never writes (Jason 2026-10-13)."""
+    (age-adjusted), awards: newest start year, other things: most works), which the text
+    never writes (Jason 2026-10-13). A thing's is its one first key: the API breaks its
+    ties with the default's other keys (core.sort.with_tie_break), so it runs the same."""
     first = (sort_by[0].column_id, sort_by[0].direction)
     if has_search:
         return first == ("relevance_score", "desc")
     if entity == "works":
         return _is_age_adjusted(sort_by)
+    own = _THINGS_DEFAULT_SORT.get(entity)
+    if own is not None:      # awards (oxjob #2168): their own first key, never most works
+        return first == (own.column_id, own.direction) and len(sort_by) == 1
     return first == ("works_count", "desc") and len(sort_by) == 1
-
-
-# things whose default order isn't most works (execution._DEFAULT_SORT_OVERRIDES and
-# _resolve_entity; locations go by work, which has no words)
-_THINGS_DEFAULT_SORT = {"awards": SortBy("funded_outputs_count", "desc"), "locations": None}
 
 
 def default_order_words(oqo) -> Optional[str]:
     """The name of a query's default order, never written in the text (Jason 2026-10-13),
     for the website's sort menu (oxjob #1658): best matches with a search; works: most cited
-    (age-adjusted); things and tables: most works; years: oldest first (#1555 D4). None for
-    one number (no order) or a default with no words."""
+    (age-adjusted); awards: highest start year (#2168); other things and tables: most works;
+    years: oldest first (#1555 D4). None for one number (no order) or a default with no words."""
     if oqo.group_by:
         return "oldest first" if oqo.group_by[0].column_id == "publication_year" \
             else "most works first"

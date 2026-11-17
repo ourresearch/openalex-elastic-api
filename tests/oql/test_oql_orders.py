@@ -28,6 +28,7 @@ SHAPES = [
     "get works where author is (A5042607675 or A5140306645), newest first",
     "get works where title has (coral) or abstract has (kelp)",
     "get authors where last known institution is (I169381384)",
+    "get awards",
 ]
 
 
@@ -90,6 +91,25 @@ def test_things_default_to_most_works_and_offer_their_own_fields():
     assert _words(r)[0] == "most works first"
     assert "highest works count first" not in _words(r)        # the default, under another name
     assert "highest h-index first" in _words(r)
+
+
+def test_awards_default_to_newest_start_year():
+    """Not most funded outputs: blank awards minted from funding notes have no start year
+    and sort last (oxjob #2168)."""
+    r = orders_for("get awards")
+    assert (r["order"], r["order_default"]) == ("highest start year first", True)
+    assert r["options"][0] == {"words": "highest start year first", "sort_by": [], "default": True}
+    base = parse_either("get awards")
+    assert base.sort_by == [] and C.render_core(base) == "get awards"     # the default writes nothing
+    assert parse_either(C.render_core(base)).sort_by == []                # and reads back as it
+    newest = replace(base, sort_by=[SortBy("start_year", "desc")])
+    assert describe_order(newest) == ("highest start year first", True)  # the API's tie-break is the default's
+    assert C.render_core(newest) == "get awards"
+    most = replace(base, sort_by=[SortBy("funded_outputs_count", "desc")])
+    assert describe_order(most) == ("highest funded outputs count first", False)
+    assert C.render_core(most) == "get awards, highest funded outputs count first"
+    assert not C._is_default_order([SortBy("works_count", "desc")], "awards", False)
+    assert C._is_default_order([SortBy("works_count", "desc")], "institutions", False)
 
 
 def test_a_table_offers_names_but_never_adds_a_column():
