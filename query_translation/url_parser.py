@@ -444,6 +444,11 @@ def parse_single_filter(
     # Search fields keep their quotes (a phrase, handled in the .search path above).
     if "search" not in field:
         value, was_quoted = unquote_filter_value(value)
+        # `2015 - 2025` is the one range, as the filter door reads it (oxjob #1091).
+        if not was_quoted and _takes_number_range(entity_type, field):
+            from core.filter import join_spaced_range
+
+            value = join_spaced_range(value)
         # An unquoted space is the `+` AND token (a URL reads `+` as a space): `fr+gb` is fr AND
         # gb, two rows as `fr,…:gb` gives, the way core/filter.py runs it. It used to echo as the
         # one quoted value `"fr gb"`, a different query (oxjob #1032).
@@ -708,6 +713,17 @@ def _should_range_parse(entity_type: Optional[str], field: str) -> bool:
         return True
     operators = prop.operators or []
     return "range" in operators or "date_range" in operators
+
+
+def _takes_number_range(entity_type: Optional[str], field: str) -> bool:
+    """A number filter (its operators include `range`; dates have `date_range`), as
+    `_should_range_parse` decides it: no entity context or an unknown field counts as one."""
+    if entity_type is None:
+        return True
+    from core.properties import get_property
+
+    prop = get_property(entity_type, field)
+    return prop is None or "range" in (prop.operators or [])
 
 
 def parse_range_value(

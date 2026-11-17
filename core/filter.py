@@ -47,6 +47,8 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 value, is_quoted = unquote_filter_value(value)
                 if not is_quoted and _is_multiword_source_type(field, value):
                     is_quoted = True
+            if not is_quoted and is_field_class(field, "RangeField"):
+                value = join_spaced_range(value)
 
             # A `type` value that isn't a work type answers a 400, not a silent 0 (oxjob #1836).
             check_work_type_filter(field, value, is_quoted)
@@ -92,6 +94,22 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 else:
                     s = s.filter(q)
     return s
+
+
+# One number range written with spaces around its hyphen: `2015 - 2025`, `2015 -`, `- 2025`,
+# `!2015 - 2020`, `1.5 - 2`.
+_SPACED_RANGE_RE = re.compile(r"!?\s*(?:\d+(?:\.\d+)?\s*-\s*(?:\d+(?:\.\d+)?)?|-\s*\d+(?:\.\d+)?)")
+
+
+def join_spaced_range(value):
+    """`2015 - 2025` -> `2015-2025`: a number filter's range with spaces around its hyphen is the
+    one range. A space is the `+` AND on number filters since 16 Nov 2026 (oxjob #1032), which
+    split such a value into `2015`, `-` and `2025` and answered 400 "must be a number" for a
+    value that had always run: 236 saved searches carry one (21 with a daily alert, which then
+    failed every day; oxjob #1091). Values with a space that aren't one range are unchanged."""
+    if " " in value and _SPACED_RANGE_RE.fullmatch(value.strip()):
+        return "".join(value.split())
+    return value
 
 
 # Source types whose name has a space (config/source-types.yaml): `ebook platform`, `book series`.
