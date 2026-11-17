@@ -62,7 +62,7 @@ def orders_for(oql: str) -> Dict[str, Any]:
     nothing). Not offered: ID orders, and orders that would add a column (a thing's own
     field the table doesn't show): a sort never changes what the table shows (#1555,
     2026-10-22). Raises the parser's error for OQL that doesn't parse."""
-    from query_translation.oql_context import parse_context
+    from query_translation.oql_core_context import core_context
     from query_translation.oql_parser import parse_either
     from query_translation.oqo_canonicalizer import canonicalize_oqo
 
@@ -80,15 +80,27 @@ def orders_for(oql: str) -> Dict[str, Any]:
     head, tail = _order_slot(base)
     q = head + ", "
     seen = {default}
-    for s in (parse_context(q + tail, len(q)).get("context") or {}).get("suggestions") or []:
-        if s.get("kind") != "order" or s["value"] in seen:
+    # `base` is core text (render_core), so the core resolver reads its order slot.
+    # `parse_context` would send a `get <things> where ...` sentence to the key-value
+    # resolver, which has no order slot: every query that keeps a `where` clause got
+    # the default alone (`get works where author is (A1 or A2)`; oxjob #1995, ZD 26844).
+    try:
+        ctx = core_context(q + tail, len(q))
+    except Exception:  # noqa: BLE001 (no order hints: the default alone)
+        ctx = {}
+    words = [s["value"] for s in (ctx.get("context") or {}).get("suggestions") or []
+             if s.get("kind") == "order"]
+    if not oqo.group_by and not oqo.calculate and C._has_search(oqo.filter_rows):
+        words.append(C.AGE_ADJUSTED_WORDS)   # a search in a `where` tail: the resolver can't tell
+    for w in words:
+        if w in seen:
             continue
-        seen.add(s["value"])
+        seen.add(w)
         try:
-            got = canonicalize_oqo(parse_either(q + s["value"] + tail), sort_operands=False)
+            got = canonicalize_oqo(parse_either(q + w + tail), sort_operands=False)
         except Exception:  # noqa: BLE001 (a suggestion that doesn't parse isn't offered)
             continue
         if got.calculate != base_oqo.calculate or describe_order(got)[1] or _is_id_order(got):
             continue      # adds a column; the default under another name; an ID order
-        out["options"].append({"words": s["value"], "sort_by": [x.to_dict() for x in got.sort_by]})
+        out["options"].append({"words": w, "sort_by": [x.to_dict() for x in got.sort_by]})
     return out

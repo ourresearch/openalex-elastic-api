@@ -23,6 +23,11 @@ SHAPES = [
     "get the count of works about kelp by year",
     "get the count of works about kelp by year and country",
     "get the mean FWCI of works about kelp by institution",
+    # a `where` clause the core form keeps (oxjob #1995, ZD 26844)
+    "get works where author is (A5042607675 or A5140306645)",
+    "get works where author is (A5042607675 or A5140306645), newest first",
+    "get works where title has (coral) or abstract has (kelp)",
+    "get authors where last known institution is (I169381384)",
 ]
 
 
@@ -129,3 +134,16 @@ def test_split_meta_says_how_a_key_order_reads():
                          ("language", "alphabetical")]:
         g = parse_either(f"get the count of works about kelp by {split}").group_by[0]
         assert analytics_csv.split_meta(g, "works")["key_order"] == order, split
+
+
+@pytest.mark.parametrize("oql,core_twin", [
+    # ZD 26844: OR'd authors kept the menu to its default alone (the `where` clause went to
+    # the key-value resolver, which has no order slot); with xpac the same query had them all
+    ("get works where author is (A5042607675 or A5140306645)",
+     "get works (all corpora) where author is (A5042607675 or A5140306645)"),
+    ("get authors where last known institution is (I169381384)", f"get authors at {UBC}"),
+    ("get works where title has (coral) or abstract has (kelp)", "get works about kelp"),
+])
+def test_a_where_clause_gets_every_order(oql, core_twin):
+    assert C.render_core(parse_either(oql)).startswith(oql.split(" where ")[0] + " where ")
+    assert sorted(_words(orders_for(oql))) == sorted(_words(orders_for(core_twin)))
