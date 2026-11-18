@@ -9,10 +9,11 @@ from elasticsearch_dsl import Search
 
 import core.merged_ids as merged_ids
 from core.filter import filter_records
+from awards.fields import fields_dict as awards_fields_dict
 from works.fields import fields_dict as works_fields_dict
 
 MERGES = {"A5107411446": "A5107863564", "S4306502279": "S4306502280", "F4320307874": "F4320311904",
-          "W4251036366": "W1623399274", "I4210133110": "I166825849"}
+          "W4251036366": "W1623399274", "I4210133110": "I166825849", "G5706016782": "G8222464832"}
 
 
 class FakeES:
@@ -100,6 +101,28 @@ def test_institution_filter_on_loser_also_matches_winner(es):
     body = _body([{"authorships.institutions.id": "I4210133110"}])
     assert "https://openalex.org/I166825849" in body and "https://openalex.org/I4210133110" in body
     assert es.calls == [("merge-institutions", ["https://openalex.org/I4210133110"])]
+
+
+def test_award_filters_on_loser_also_match_winner(es):
+    # an NIH year record folded into its project (G5706016782 -> G8222464832, R01CA148791): GET /awards/<loser> already
+    # 301s from merge-awards; works' awards.id and the awards `id` filter answered 0 for the old ID
+    body = _body([{"awards.id": "G5706016782"}])
+    assert "https://openalex.org/G8222464832" in body and "https://openalex.org/G5706016782" in body
+    assert es.calls == [("merge-awards", ["https://openalex.org/G5706016782"])]
+    for value in ("G5706016782", "https://openalex.org/G5706016782", "G5706016782|G1000"):
+        body = json.dumps(filter_records(awards_fields_dict, [{"id": value}], Search()).to_dict())
+        assert "https://openalex.org/G8222464832" in body and "https://openalex.org/G5706016782" in body, value
+    body = json.dumps(filter_records(awards_fields_dict, [{"id": "!G5706016782"}], Search()).to_dict())
+    assert "must_not" in body and "https://openalex.org/G8222464832" in body
+    body = json.dumps(filter_records(awards_fields_dict, [{"id": "G1000"}], Search()).to_dict())
+    assert body.count("https://openalex.org/G") == 1  # never merged: the one term, as before
+    # a negated OR resolves its IDs one by one: the request's one prefetch covers them (one lookup, not one per ID)
+    merged_ids._cache.clear()
+    es.calls.clear()
+    filter_records(awards_fields_dict, [{"id": "!G5706016782|G1000|G1001"}], Search())
+    assert len(es.calls) == 1
+    # the same field class on works: a merged institution, as authorships.institutions.id already does (#1037)
+    assert "https://openalex.org/I166825849" in _body([{"authorships.affiliations.institution_ids": "I4210133110"}])
 
 
 def test_work_id_filters_also_match_the_winner(es):

@@ -4,7 +4,8 @@ from elasticsearch_dsl import Q
 
 from core import merged_ids
 from core.exceptions import APIQueryParamsError
-from core.fields import CollectionField, OpenAlexIDField, TermField, any_of_terms, collection_ids_query
+from core.fields import (CollectionField, OpenAlexIDField, OpenAlexURLTermField, TermField, any_of_terms,
+                         collection_ids_query)
 from core.collection_resolver import (
     MAX_RESOLVED_IDS_PER_REQUEST,
     check_collection_reference_count,
@@ -23,7 +24,7 @@ def filter_records(fields_dict, filter_params, s, sample=None):
     if filter_params:
         # one merge-index lookup for every author / source / funder ID in the request (oxjob #1124)
         merged_ids.prefetch([v for f in filter_params for k, v in f.items()
-                             if type(fields_dict.get(k)) is OpenAlexIDField])
+                             if type(fields_dict.get(k)) in (OpenAlexIDField, OpenAlexURLTermField)])
         s, filter_params = _apply_collection_filters(fields_dict, filter_params, s)
         s, filter_params = _apply_cross_type_collection_filters(fields_dict, filter_params, s)
     for filter in filter_params:

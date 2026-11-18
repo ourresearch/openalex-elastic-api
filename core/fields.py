@@ -662,7 +662,7 @@ class OpenAlexIDField(Field):
 
     @staticmethod
     def _id_query(field, value):
-        """`term` on `field` for one OpenAlex ID. A merged-away work, author, source, institution or funder ID
+        """`term` on `field` for one OpenAlex ID. A merged-away work, author, source, institution, funder or award ID
         also matches its winner, so a filter on a stored pre-merge ID finds the surviving record's works
         (oxjob #1124)."""
         ids = with_winners([get_full_openalex_id(value)])
@@ -811,7 +811,7 @@ class OpenAlexIDField(Field):
                     f"'{val}' is not a valid OpenAlex ID."
                 )
             formatted_values.append(formatted)
-        # merged-away work / author / source / institution / funder IDs also match their winners (oxjob #1124, #1037)
+        # merged-away work / author / source / institution / funder / award IDs also match their winners (oxjob #1124, #1037)
         formatted_values = with_winners(formatted_values)
         if self.param in (
             "authorships.institutions.id",
@@ -2065,13 +2065,25 @@ class TextTermField(TermField):
 class OpenAlexURLTermField(TermField):
     """A string filter on a keyword that stores full OpenAlex URLs: a bare short id (`G123`) reads as
     its URL, as on an OpenAlexIDField (oxjob #2140; it matched nothing). Keeps TermField's type and
-    operators, so /properties is unchanged."""
+    operators, so /properties is unchanged. A merged-away ID also matches its winner, as on an
+    OpenAlexIDField (core.merged_ids): `/awards?filter=id:<redirected award>` finds the surviving award."""
 
     def _normalize_term_value(self, value):
         neg, bare = ("!", value[1:]) if value.startswith("!") else ("", value)
         if _CANONICAL_SHORT_ID_RE.fullmatch(bare.upper()):
             bare = ID_URL_PREFIX + bare.upper()
         return super()._normalize_term_value(neg + bare)
+
+    def build_query(self):
+        neg, bare = ("!", self.value[1:]) if self.value.startswith("!") else ("", self.value)
+        ids = with_winners([self._normalize_term_value(bare)])
+        if len(ids) == 1:  # not merged (or not an ID): TermField's query, unchanged
+            return super().build_query()
+        q = Q("terms", **{self.es_field(): ids})
+        return ~q if neg else q
+
+    def build_terms_query(self, values):  # the OR path
+        return super().build_terms_query(with_winners([self._normalize_term_value(v) for v in values]))
 
     def _get_formatted_value(self):  # the OR path; build_query normalizes on its own
         self.value = self._normalize_term_value(self.value)
