@@ -180,16 +180,18 @@ def test_target_query_names_the_citation_clause_and_sorts_newest_first(client):
     get(client, "/links?filter=target:W1002")
     q = FakeSearch.last["query"]["bool"]
     assert q["minimum_should_match"] == 1
-    assert {"terms": {"referenced_works": [U + "W1002"], "_name": "citation"}} in q["should"]
-    assert {"terms": {"parent_works.id": [U + "W1002"]}} in q["should"]
-    assert FakeSearch.last["sort"][0] == {"publication_date": {"order": "desc", "missing": "_last"}}
+    assert {"constant_score": {"filter": {"terms": {"referenced_works": [U + "W1002"], "_name": "citation"}},
+                               "boost": 1}} in q["should"]
+    assert {"constant_score": {"filter": {"terms": {"parent_works.id": [U + "W1002"]}}, "boost": 2}} in q["should"]
+    # parts first (higher score), then newest linking work first
+    assert FakeSearch.last["sort"] == lv.INCOMING_SORT
 
 
 def test_target_one_part_of_kind_narrows_the_parent_clause(client):
     get(client, "/links?filter=target:W1009,relationship:volume")
     (clause,) = FakeSearch.last["query"]["bool"]["should"]
-    assert clause == {"bool": {"must": [{"terms": {"parent_works.id": [BOOK]}},
-                                        {"terms": {"parent_works.relationship": ["volume"]}}]}}
+    assert clause == {"constant_score": {"filter": {"bool": {"must": [
+        {"terms": {"parent_works.id": [BOOK]}}, {"terms": {"parent_works.relationship": ["volume"]}}]}}, "boost": 2}}
 
 
 def test_target_builds_links_from_each_hit(client):

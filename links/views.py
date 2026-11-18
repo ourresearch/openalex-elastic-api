@@ -6,7 +6,7 @@ display names: Casey + Jason, 17 Nov.
 Links are read from the works index at request time, so every request names a work:
 
     /links?filter=origin:W1            the work's links out: its parent works, then the works it cites (reference order)
-    /links?filter=target:W2            the works that link to it, newest first
+    /links?filter=target:W2            the works that link to it: its parts first, then the works citing it, newest first
     /links?filter=origin:W1,target:W2  the links between the two
     relationship:citation              (any of the three) keeps one kind; values join with |
 
@@ -97,17 +97,22 @@ def outgoing_links(doc, kinds):
 
 def incoming_query(targets, kinds):
     """Works that link to any of `targets` (full ids) by one of `kinds`. The citation clause is named, so each hit
-    says whether it cites; its part-of links are read from its parent_works."""
+    says whether it cites; its part-of links are read from its parent_works. A part-of match scores higher, so with
+    INCOMING_SORT a work's parts (figures, chapters) come before the works that cite it."""
     clauses = []
     if CITATION in kinds:
-        clauses.append(Q("terms", referenced_works=targets, _name=CITATION))
+        clauses.append(Q("constant_score", filter=Q("terms", referenced_works=targets, _name=CITATION), boost=1))
     parts = [k for k in kinds if k != CITATION]
     if parts:
         part_of = Q("terms", **{"parent_works.id": targets})
         if parts != PART_OF:
             part_of &= Q("terms", **{"parent_works.relationship": parts})
-        clauses.append(part_of)
+        clauses.append(Q("constant_score", filter=part_of, boost=2))
     return Q("bool", should=clauses, minimum_should_match=1)
+
+
+INCOMING_SORT = ({"_score": {"order": "desc"}}, {"publication_date": {"order": "desc", "missing": "_last"}},
+                 {"id": {"order": "desc"}})
 
 
 def incoming_links(source, matched_queries, targets, kinds):
@@ -168,7 +173,7 @@ def links_from(parsed, page, per_page, cursor):
 
 
 def links_to(parsed, page, per_page, cursor):
-    """Links into one work: a works search, newest linking work first."""
+    """Links into one work: a works search, its parts first, then newest linking work first."""
     asked = parsed["target"]
     target = URL + resolve(asked)
     targets = list(dict.fromkeys([URL + asked, target]))
@@ -176,7 +181,7 @@ def links_to(parsed, page, per_page, cursor):
     s = (Search(index=WORKS_INDEX)
          .query(incoming_query(targets, kinds))
          .source(["id", "parent_works"])
-         .sort({"publication_date": {"order": "desc", "missing": "_last"}}, {"id": {"order": "desc"}})
+         .sort(*INCOMING_SORT)
          .extra(track_total_hits=True))
     if cursor:
         if cursor != "*":
