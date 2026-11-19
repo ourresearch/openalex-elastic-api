@@ -40,7 +40,7 @@ from core.shared_view import (
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
 from core.default_view import (HIDE_PIECES_FILTER, HIDE_PULLED_FILTER, include_parts_requested, lifts_hiding,
                                not_pulled_query, pulled_hidden, visible_works_query)
-from core.validate import validate_sample_cursor, xpac_controls
+from core.validate import validate_sample_view, xpac_controls
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
 from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
@@ -456,6 +456,10 @@ def _merge_view_params(oqo: OQO, request, body_params=None) -> OQO:
     return canonicalize_oqo_column_ids(replace(oqo, **updates))
 
 
+def _calculation_refusal(what):
+    return f"Calculations and the new splits don't combine with {what} yet. Drop it, or run the calculation on the whole set."
+
+
 def _execute_oqo(oqo_or_dict, view_params=None):
     """Shared body for the POST and GET-path-form handlers. Accepts a parsed
     OQO (the OQL path — already canonicalized at the parse boundary) or a raw
@@ -494,6 +498,16 @@ def _execute_oqo(oqo_or_dict, view_params=None):
             }
         ), 400
 
+    # What a sample combines with, checked on the query as written before anything runs (oxjob #2033): a walk
+    # answers on its own and used to drop a sample without a word (`then, sample 100 of those works; then, get
+    # authors of those works; finally, summarize ...` counted the authors of every match).
+    if oqo.sample and oqo.calculates:
+        return _error_response(_calculation_refusal("sample"), "invalid_params", status=400)
+    try:
+        validate_sample_view(_build_params_from_oqo(oqo, request), door="oql")
+    except APIQueryParamsError as e:
+        return _error_response(str(e), "invalid_params", status=400)
+
     # Dispatch to per-entity fields_dict + index_name + serialization schema.
     connection = get_data_version_connection(request)
 
@@ -517,7 +531,8 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     # Build the synthetic params dict that downstream shared_view stages expect.
     try:
         params = _build_params_from_oqo(oqo, request)
-        validate_sample_cursor(params)  # the URL door runs it in parse_params (oxjob #2003)
+        # again on the query a set in parentheses resolved to: its plain group by is only a group by now (#2033)
+        validate_sample_view(params, door="oql")  # the URL door runs it in parse_params (oxjob #2003)
     except APIQueryParamsError as e:
         return _error_response(str(e), "invalid_params", status=400)
 
@@ -538,9 +553,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         return _error_response(str(e), "translation_error", status=400)
     if oqo.runs_as_analytics and (semantic_value is not None or oqo.sample):
         return _error_response(
-            "Calculations and the new splits don't combine with "
-            + ("semantic search" if semantic_value is not None else "sample")
-            + " yet. Drop it, or run the calculation on the whole set.",
+            _calculation_refusal("semantic search" if semantic_value is not None else "sample"),
             "invalid_params", status=400)
     if analytics_mod.PRICE_ALL_OQL and not oqo.runs_as_analytics:
         # priced like the same query as a URL (Jason, 2026-10-03); refuse up front

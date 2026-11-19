@@ -1,6 +1,6 @@
 from core.paginate import get_per_page
 from core.utils import map_filter_params, map_sort_params, set_number_param
-from core.validate import validate_export_format, validate_params, validate_sample_cursor
+from core.validate import validate_export_format, validate_params, validate_sample_view
 
 
 # Sums the website sends inside group_bys (see parse_params).
@@ -44,7 +44,7 @@ def parse_params(request, extra_valid_params=()):
             if key in params["group_bys"]:
                 params["group_bys"] = [g for g in params["group_bys"] if g != key]
                 params[key] = "true"
-    validate_sample_cursor(params)
+    validate_sample_view(params)
     return params
 
 

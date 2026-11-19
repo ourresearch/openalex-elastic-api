@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import quote_plus
 
 import settings
@@ -185,10 +186,16 @@ def validate_sample_param(request):
         raise APIQueryParamsError(
             "You must include the sample parameter when using a seed value."
         )
-    elif "sample" in request.args and (
-        "group-by" in request.args or "group_by" in request.args
-    ):
-        raise APIQueryParamsError("sample does not work with group_by.")
+    if "sample" in request.args:
+        # before the seed check below, so a grouped sample isn't first told to add a seed (oxjob #2033)
+        args = request.args
+        validate_sample_group_by({
+            "sample": int(args.get("sample")),
+            "group_by": args.get("group_by") or args.get("group-by"),
+            "group_bys": args.get("group_bys") or args.get("group-bys"),
+            "apc_sum": args.get("apc_sum"),
+            "cited_by_count_sum": args.get("cited_by_count_sum"),
+        }, door="url")
 
     if (
         "sample" in request.args
@@ -214,6 +221,27 @@ def validate_sample_cursor(params):
             f"sampled results. Page through the sample with a seed and page numbers instead: "
             f"sample={sample}&seed=42&per_page={min(sample, 200)}&page=1, then page=2 and so on."
         )
+
+
+def validate_sample_group_by(params, door):
+    """A sample with a group by, or with the citation and APC sums (oxjob #2033). A sample is a random order with the
+    count cut to N; groups and sums always count every match. Together they answered count N beside groups adding up
+    to the whole set: the URL door refused group_by, the OQL door refused nothing."""
+    sample = params.get("sample")
+    if sample and any(params.get(k) for k in ("group_by", "group_bys", "apc_sum", "cited_by_count_sum")):
+        # one line per refusal, so the count after shipping can be read in the logs (OQL bodies aren't logged)
+        logging.getLogger(__name__).warning("sample with group_by refused (oxjob #2033) door=%s", door)
+        raise APIQueryParamsError(
+            f"sample doesn't work with group_by: the groups would count every match, not the {sample} sampled "
+            f"results. Drop sample to group every match, or drop group_by to get the {sample} sampled results "
+            f"themselves."
+        )
+
+
+def validate_sample_view(params, door="url"):
+    """What a sample can be combined with, for both doors (parse_params for URLs, the OQL executor for OQL)."""
+    validate_sample_group_by(params, door)
+    validate_sample_cursor(params)
 
 
 def validate_semantic_view(params):
