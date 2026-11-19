@@ -7,6 +7,8 @@ playground's CodeMirror editor:
                                          here, for autocomplete. Always 200.
   GET /validate?q=<oql>                  full OQL -> diagnostics + canonical formats,
                                          for inline linting. Always 200.
+  (these two and /oql-phrases also take POST {"q": ..., "pos": ...} for a query too
+  long for a URL; oxjob #941)
   GET /oql-vocabulary                    every core v3 phrase with its hover help
                                          (oxjob #1597). Always 200.
   GET /query/orders?q=<oql>              the orders a query can take, for the website's
@@ -31,6 +33,26 @@ from query_translation.oql_renderer import config_vocab_items
 from query_translation.validator import validate_oqo, CLOSED_VOCAB_NAMESPACE
 
 blueprint = Blueprint("oql_editor", __name__)
+
+
+def _editor_arg(name, default=None):
+    """One editor argument (`q`, `pos`, `plain_words`) from the JSON body of a POST, else
+    from the query string. A long query can't ride in a URL (the API refuses a request
+    line over 8,190 bytes), so the website's OQL editor POSTs {"q": ...} past that, and
+    `/validate`, `/oql-phrases` and `/parse-context` read it the same either way. Before,
+    a long query in the website's OQL tab failed validation and Search silently did
+    nothing (oxjob #941)."""
+    if request.method == "POST":
+        body = request.get_json(silent=True)
+        if isinstance(body, dict) and name in body:
+            return body[name]
+    return request.args.get(name, default)
+
+
+def _editor_q():
+    """The editor's OQL text (`q`), always a string."""
+    q = _editor_arg("q", "")
+    return q if isinstance(q, str) else ""
 
 # Closed-vocab value autocomplete (#357): a column's dropdown namespace derives
 # from the registry — `entity_type_for_column` composed with the validator's
@@ -81,7 +103,7 @@ def _enrich_enum_suggestions(result):
     return result
 
 
-@blueprint.route("/parse-context", methods=["GET"])
+@blueprint.route("/parse-context", methods=["GET", "POST"])
 def parse_context_route():
     """Resolve the grammar context at a cursor offset for editor autocomplete.
 
@@ -95,8 +117,8 @@ def parse_context_route():
     coverage + wiring `/properties` here is a follow-up gated on the engine's
     `_FIELDS` growing to match (#363).
     """
-    q = request.args.get("q", "")
-    pos_arg = request.args.get("pos")
+    q = _editor_q()
+    pos_arg = _editor_arg("pos")
     pos = None
     if pos_arg not in (None, ""):
         try:
@@ -118,7 +140,7 @@ def oql_vocabulary_route():
     return jsonify({"phrases": VOCABULARY}), 200
 
 
-@blueprint.route("/oql-phrases", methods=["GET"])
+@blueprint.route("/oql-phrases", methods=["GET", "POST"])
 def oql_phrases_route():
     """Every phrase of one OQL statement with its help where it stands (oxjob #1597).
 
@@ -129,7 +151,7 @@ def oql_phrases_route():
     200; a statement that isn't core OQL (or doesn't read) gets what was read before it."""
     from query_translation.oql_core_context import core_phrases
     try:
-        phrases = core_phrases(request.args.get("q", ""))
+        phrases = core_phrases(_editor_q())
     except Exception:  # noqa: BLE001 (an editor hint never raises)
         phrases = []
     return jsonify({"phrases": phrases}), 200
@@ -156,7 +178,7 @@ def query_orders_route():
                         "error": getattr(e, "message", None) or str(e)}), 200
 
 
-@blueprint.route("/validate", methods=["GET"])
+@blueprint.route("/validate", methods=["GET", "POST"])
 def validate_oql_route():
     """Validate an OQL string for editor linting.
 
@@ -176,7 +198,7 @@ def validate_oql_route():
     re-parses in recover mode and reports every clause-level error in the doc (not
     just the first), so the editor can squiggle the whole document at once.
     """
-    oql = request.args.get("q", "")
+    oql = _editor_q()
     # Parse as production does (oql_parser.parse_either), keeping the engine's OQLError
     # (code + fixit + position) that parse_oql_to_oqo flattens away.
     diags = None
@@ -200,7 +222,7 @@ def validate_oql_route():
         diags = [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e)))]
     if diags is not None:
         body = _parse_error_body(diags)
-        if request.args.get("plain_words") in ("1", "true"):
+        if _editor_arg("plain_words") in ("1", "true", True, 1):
             _add_plain_words(oql, body)
         return jsonify(body), 200
 
