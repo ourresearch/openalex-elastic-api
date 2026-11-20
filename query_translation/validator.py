@@ -108,6 +108,9 @@ CLOSED_VOCAB_NAMESPACE = {
     # study-designs (oxjob #1312): the seven PubMed-backed values in
     # config/study-designs.yaml; a slug outside them is invalid_value
     "study-designs": "study-designs",
+    # contributor-roles (oxjob #2075): the 14 CRediT roles in
+    # config/contributor-roles.yaml; a slug outside them is invalid_value
+    "contributor-roles": "contributor-roles",
     # relationships (oxjob #2065, #1490): the kinds of link between works in
     # config/relationships.yaml (citation, volume, component, data-series, part)
     "relationships": "relationships",

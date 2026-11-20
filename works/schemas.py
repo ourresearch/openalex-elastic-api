@@ -84,16 +84,35 @@ class AffiliationsSchema(Schema):
         ordered = True
 
 
+class ContributorRoleSchema(Schema):
+    """A CRediT role the author played on the work (oxjob #2075)."""
+
+    id = fields.Str()
+    display_name = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class AuthorshipsSchema(Schema):
     author_position = fields.Str()
     author = fields.Nested(AuthorSchema)
     institutions = fields.Nested(InstitutionsSchema, many=True)
     countries = fields.List(fields.Str())
     is_corresponding = fields.Bool()
+    # oxjob #2075: [] when the publisher tagged no role for this author, and until the works
+    # re-sync brings the field to the doc (it is absent there, or null)
+    contributor_roles = fields.Nested(ContributorRoleSchema, many=True, dump_default=[])
     raw_author_name = fields.Str()
     raw_affiliation_strings = fields.List(fields.Str())
     raw_orcid = fields.Str()
     affiliations = fields.Nested(AffiliationsSchema, many=True)
+
+    @post_dump
+    def contributor_roles_never_null(self, data, **kwargs):
+        if "contributor_roles" in data and data["contributor_roles"] is None:
+            data["contributor_roles"] = []
+        return data
 
     class Meta:
         ordered = True

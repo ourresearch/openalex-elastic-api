@@ -17,6 +17,7 @@ from authors.schemas import AuthorsSchema
 from awards.schemas import AwardsSchema
 from concepts.schemas import ConceptsSchema
 from continents.schemas import ContinentsSchema
+from contributor_roles.schemas import ContributorRolesSchema
 from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
 from indexes.schemas import IndexesSchema
@@ -892,6 +893,9 @@ def get_by_openalex_external_id(index, schema, id):
     elif index.startswith("study-designs"):
         # split("-")[0] would give "study" (oxjob #1312)
         entity_name = endpoint_name = "study-designs"
+    elif index.startswith("contributor-roles"):
+        # split("-")[0] would give "contributor" (oxjob #2075)
+        entity_name = endpoint_name = "contributor-roles"
     elif index.startswith("work-relationships"):
         # split("-")[0] would give "work"; the ids are https://openalex.org/relationships/<key> (oxjob #2065)
         entity_name = endpoint_name = "relationships"
@@ -963,6 +967,12 @@ def source_lists_id_get(id):
 @blueprint.route("/entities/study-designs/<path:id>")
 def study_designs_id_get(id):
     return get_by_openalex_external_id(settings.STUDY_DESIGNS_INDEX, StudyDesignsSchema, id)
+
+
+@blueprint.route("/contributor-roles/<path:id>")
+@blueprint.route("/entities/contributor-roles/<path:id>")
+def contributor_roles_id_get(id):
+    return get_by_openalex_external_id(settings.CONTRIBUTOR_ROLES_INDEX, ContributorRolesSchema, id)
 
 
 @blueprint.route("/relationships/<path:id>")

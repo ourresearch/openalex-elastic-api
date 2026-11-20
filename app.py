@@ -14,6 +14,7 @@ import authors
 import autocomplete
 import concepts
 import continents
+import contributor_roles
 import countries
 import counts
 import domains
@@ -117,6 +118,7 @@ def register_blueprints(app):
     app.register_blueprint(autocomplete.views.blueprint)
     app.register_blueprint(concepts.views.blueprint)
     app.register_blueprint(continents.views.blueprint)
+    app.register_blueprint(contributor_roles.views.blueprint)
     app.register_blueprint(countries.views.blueprint)
     app.register_blueprint(counts.views.blueprint)
     app.register_blueprint(domains.views.blueprint)
@@ -260,6 +262,7 @@ NOT_FOUND_NAMES = {
     "institution-types": "Institution type", "source-types": "Source type", "work-types": "Work type",
     "types": "Work type", "locations": "Location", "oa-statuses": "OA status",
     "study-designs": "Study design", "source-lists": "Source list", "indexes": "Index",
+    "contributor-roles": "Contributor role",
 }
 
 

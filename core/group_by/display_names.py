@@ -135,19 +135,29 @@ def get_display_names_sdgs(ids, connection='default'):
     return results
 
 
-def get_display_names_study_designs(ids, connection='default'):
-    """Display names for study-design ids from the closed vocabulary in
-    config/study-designs.yaml (oxjob #1312). No index query: the vocabulary is
-    fixed and `get_id_display_names` can't route a slug id (it would raise
-    "not a valid OpenAlex ID")."""
+def _closed_vocab_display_names(entity_type, ids):
+    """Display names for full-URL ids of a closed vocabulary, read from its
+    config/<entity_type>.yaml `values`. No index query: the vocabulary is fixed and
+    `get_id_display_names` can't route a slug id (it would raise "not a valid
+    OpenAlex ID")."""
     from core.entities import get_entity_type
 
-    ent = get_entity_type("study-designs")
+    ent = get_entity_type(entity_type)
     names = {
         f"https://openalex.org/{row['id']}": row["display_name"]
         for row in (ent.values if ent and ent.values else [])
     }
     return {i: names[i] for i in ids if i in names}
+
+
+def get_display_names_study_designs(ids, connection='default'):
+    """Study-design ids, named from config/study-designs.yaml (oxjob #1312)."""
+    return _closed_vocab_display_names("study-designs", ids)
+
+
+def get_display_names_contributor_roles(ids, connection='default'):
+    """Contributor-role ids, named from config/contributor-roles.yaml (oxjob #2075)."""
+    return _closed_vocab_display_names("contributor-roles", ids)
 
 
 def get_display_names_keywords_licenses_topics(ids, connection='default'):

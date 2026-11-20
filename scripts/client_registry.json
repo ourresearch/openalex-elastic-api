@@ -410,7 +410,7 @@
       ],
       "actionsPopular": null,
       "isId": false,
-      "hasExport": true
+      "hasExport": false
     },
     "referenced_works": {
       "key": "referenced_works",
@@ -1290,6 +1290,20 @@
       "isId": false,
       "hasExport": true
     },
+    "open_access.oa_url": {
+      "key": "open_access.oa_url",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "Open access URL",
+      "displayNameVerbatim": false,
+      "type": "url",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": true
+    },
     "ids.openalex": {
       "key": "ids.openalex",
       "entityToFilter": "works",
@@ -1333,6 +1347,20 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": false
+    },
+    "best_oa_location.pdf_url": {
+      "key": "best_oa_location.pdf_url",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "PDF URL",
+      "displayNameVerbatim": false,
+      "type": "url",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": true
     },
     "has_content.pdf": {
       "key": "has_content.pdf",
@@ -2532,36 +2560,6 @@
       ],
       "isId": false,
       "hasExport": false
-    },
-    "keywords.id": {
-      "key": "keywords.id",
-      "entityToFilter": "awards",
-      "entityToSelect": "keywords",
-      "displayName": "keyword",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "sustainable_development_goals.id": {
-      "key": "sustainable_development_goals.id",
-      "entityToFilter": "awards",
-      "entityToSelect": "sdgs",
-      "displayName": "SDG",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
     }
   },
   "authors": {
@@ -2573,7 +2571,8 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
-        "filter"
+        "filter",
+        "sort"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -2652,7 +2651,8 @@
       "type": "selectEntity",
       "actions": [
         "filter",
-        "group_by"
+        "group_by",
+        "column"
       ],
       "actionsPopular": [
         "group_by"
@@ -2683,7 +2683,8 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
-        "filter"
+        "filter",
+        "sort"
       ],
       "actionsPopular": [
         "filter"
@@ -2717,7 +2718,8 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
-        "filter"
+        "filter",
+        "sort"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -4448,23 +4450,41 @@
       ],
       "isId": false,
       "hasExport": false
-    }
-  },
-  "concepts": {
-    "summary_stats.2yr_mean_citedness": {
-      "key": "summary_stats.2yr_mean_citedness",
-      "entityToFilter": "concepts",
+    },
+    "works_count_with_children_and_predecessors": {
+      "key": "works_count_with_children_and_predecessors",
+      "entityToFilter": "institutions",
       "entityToSelect": null,
-      "displayName": "2-year mean citedness",
+      "displayName": "works count with child and predecessor institutions",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
-        "filter"
+        "filter",
+        "sort",
+        "column"
       ],
       "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
+    "works_count_with_children": {
+      "key": "works_count_with_children",
+      "entityToFilter": "institutions",
+      "entityToSelect": null,
+      "displayName": "works count with child institutions",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "concepts": {
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "concepts",
@@ -4509,34 +4529,6 @@
         "column"
       ],
       "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "summary_stats.h_index": {
-      "key": "summary_stats.h_index",
-      "entityToFilter": "concepts",
-      "entityToSelect": null,
-      "displayName": "h-index",
-      "displayNameVerbatim": false,
-      "type": "range",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "summary_stats.i10_index": {
-      "key": "summary_stats.i10_index",
-      "entityToFilter": "concepts",
-      "entityToSelect": null,
-      "displayName": "i10 index",
-      "displayNameVerbatim": false,
-      "type": "range",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -4597,6 +4589,48 @@
       "actionsPopular": null,
       "isId": true,
       "hasExport": true
+    },
+    "summary_stats.2yr_mean_citedness": {
+      "key": "summary_stats.2yr_mean_citedness",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "summary_stats.2yr_mean_citedness",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "summary_stats.h_index": {
+      "key": "summary_stats.h_index",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "summary_stats.h_index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "summary_stats.i10_index": {
+      "key": "summary_stats.i10_index",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "summary_stats.i10_index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "works_count": {
       "key": "works_count",
@@ -6240,6 +6274,72 @@
     "works_count": {
       "key": "works_count",
       "entityToFilter": "relationships",
+      "entityToSelect": null,
+      "displayName": "works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "contributor-roles": {
+    "cited_by_count": {
+      "key": "cited_by_count",
+      "entityToFilter": "contributor-roles",
+      "entityToSelect": null,
+      "displayName": "citation count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "column",
+        "sort"
+      ],
+      "actionsPopular": [
+        "column",
+        "sort"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
+    "description": {
+      "key": "description",
+      "entityToFilter": "contributor-roles",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "display_name": {
+      "key": "display_name",
+      "entityToFilter": "contributor-roles",
+      "entityToSelect": null,
+      "displayName": "name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "works_count": {
+      "key": "works_count",
+      "entityToFilter": "contributor-roles",
       "entityToSelect": null,
       "displayName": "works count",
       "displayNameVerbatim": false,

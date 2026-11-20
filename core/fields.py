@@ -1337,20 +1337,28 @@ class TermField(Field):
             return f"https://metadata.un.org/sdg/{number}"
         return value
 
-    @staticmethod
-    def _normalize_study_design_value(value):
-        """Normalize any accepted study-design filter form to the ES-indexed full URL.
+    # Works params whose ES value is a closed vocabulary's full id,
+    # https://openalex.org/<segment>/<slug>: study designs (oxjob #1312).
+    FULL_URL_VOCAB_SEGMENTS = {
+        "study_designs.id": "study-designs",
+    }
 
-        Works index ``study_designs.id`` as ``https://openalex.org/study-designs/<slug>``
-        (oxjob #1312), so the bare slug the GUI sends (``meta-analysis``) and the short
-        id (``study-designs/meta-analysis``) must be *expanded*, the reverse of the
+    @staticmethod
+    def _expand_vocab_id(value, segment):
+        """Normalize any accepted form of a closed-vocabulary id to the ES-indexed full URL.
+
+        The bare slug the GUI sends (``meta-analysis``) and the short id
+        (``study-designs/meta-analysis``) are *expanded*, in any case, the reverse of the
         strip the bare-code vocabularies need. ``null`` passes through for the
         missing-value filter.
         """
         if value == "null":
             return value
-        slug = TermField._strip_openalex_prefix(value.strip(), "study-designs/")
-        return f"https://openalex.org/study-designs/{slug.lower()}"
+        slug = value.strip().lower()
+        for prefix in ("https://openalex.org/", f"{segment}/"):
+            if slug.startswith(prefix):
+                slug = slug[len(prefix):]
+        return f"https://openalex.org/{segment}/{slug}"
 
     def _normalize_term_value(self, value):
         """Normalize a filter value to its ES-indexed form for `build_query`.
@@ -1379,8 +1387,8 @@ class TermField(Field):
             value = self._topic_id_url(value)
         elif self.param == "sustainable_development_goals.id":
             value = self._normalize_sdg_value(value)
-        elif self.param == "study_designs.id":
-            value = self._normalize_study_design_value(value)
+        elif self.param in self.FULL_URL_VOCAB_SEGMENTS:
+            value = self._expand_vocab_id(value, self.FULL_URL_VOCAB_SEGMENTS[self.param])
         elif self.param == "language":
             value = self._strip_openalex_prefix(value, "languages/")
         elif self.param == "parent_works.relationship":
@@ -1453,8 +1461,8 @@ class TermField(Field):
         # canonical id copied off an entity page round-trips as a filter value (#275).
         if self.param == "sustainable_development_goals.id":
             return self._normalize_sdg_value(self.value)
-        elif self.param == "study_designs.id":
-            return self._normalize_study_design_value(self.value)
+        elif self.param in self.FULL_URL_VOCAB_SEGMENTS:
+            return self._expand_vocab_id(self.value, self.FULL_URL_VOCAB_SEGMENTS[self.param])
         elif self.param == "language":
             return self._strip_openalex_prefix(self.value, "languages/").lower()
         elif self.param == "parent_works.relationship":
@@ -2396,6 +2404,7 @@ class JoinField(Field):
 # name/path mismatch: its canonical segment is `types` (`types/article`).
 ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
     "continents": "continents",
+    "contributor-roles": "contributor-roles",
     "countries": "countries",
     "domains": "domains",
     "fields": "fields",

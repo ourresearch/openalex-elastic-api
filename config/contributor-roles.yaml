@@ -1,0 +1,36 @@
+id: contributor-roles
+displayName: contributor roles
+displayNameSingular: contributor role
+descr: the part an author played on a work
+descrFull: The CRediT roles (Contributor Roles Taxonomy, credit.niso.org) an author played on a work, such as Conceptualization or Software, as stated for that author in Crossref deposits, PubMed Central article XML, or an author contributions statement in the article's text that uses CRediT's own terms. Never guessed from the byline.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/contributor-roles\/|contributor-roles\/)([a-z0-9-]+)
+values:
+- id: contributor-roles/conceptualization
+  display_name: Conceptualization
+- id: contributor-roles/data-curation
+  display_name: Data curation
+- id: contributor-roles/formal-analysis
+  display_name: Formal analysis
+- id: contributor-roles/funding-acquisition
+  display_name: Funding acquisition
+- id: contributor-roles/investigation
+  display_name: Investigation
+- id: contributor-roles/methodology
+  display_name: Methodology
+- id: contributor-roles/project-administration
+  display_name: Project administration
+- id: contributor-roles/resources
+  display_name: Resources
+- id: contributor-roles/software
+  display_name: Software
+- id: contributor-roles/supervision
+  display_name: Supervision
+- id: contributor-roles/validation
+  display_name: Validation
+- id: contributor-roles/visualization
+  display_name: Visualization
+- id: contributor-roles/writing-original-draft
+  display_name: Writing – original draft
+- id: contributor-roles/writing-review-editing
+  display_name: Writing – review & editing

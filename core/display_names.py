@@ -287,6 +287,10 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
     },
+    'contributor-roles': {  # oxjob #2075
+        'description': {"display_name": 'description'},
+        'display_name': {"display_name": 'name'},
+    },
     'relationships': {  # oxjob #2065
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},

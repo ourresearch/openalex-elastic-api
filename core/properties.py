@@ -508,7 +508,12 @@ CAP_COLUMN = "column"
 # `is_pulled` (group_by, sort; OQL "pulled"): the publisher, host or authors retracted, withdrew or removed the work; true on
 # every is_retracted work. A doc walden hasn't re-stamped since the field shipped reads false, and `false` is NOT true. One
 # property added = MINOR per classify_properties_diff.py. Jason named the field (decision 2) and kept the design on 16 Nov.
-PROPERTIES_VERSION = "24.2.0"
+# 24.3.0 (oxjob #2075, shape approved 2026-11-18): new `contributor-roles` registry entity (the 14 CRediT roles,
+# conceptualization ... writing-review-editing; ES contributor-roles-v1, built by walden) and, on works, each authorship
+# gains `contributor_roles` [{id, display_name}] ([] when none). No works filter, group_by or OQL phrase for roles on
+# their own: the filter that will ship pairs an author with a role on the same authorship (oxjob #2075, D11). Purely
+# additive: classify_properties_diff.py says MINOR (entity added).
+PROPERTIES_VERSION = "24.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -541,6 +546,7 @@ ENTITY_FIELDS_MODULES = {
     "source-lists": "source_lists.fields",
     "source-types": "source_types.fields",
     "study-designs": "study_designs.fields",
+    "contributor-roles": "contributor_roles.fields",
     "relationships": "relationships.fields",
     "institution-types": "institution_types.fields",
     "work-types": "work_types.fields",

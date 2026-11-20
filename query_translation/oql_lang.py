@@ -633,6 +633,7 @@ _ID_SHAPES = {
     "work-types": r"[a-z][a-z-]*", "oa-statuses": r"[a-z]+", "licenses": r"[a-z0-9][a-z0-9-]*",
     "source-types": r"[a-z][a-z -]*", "institution-types": r"[a-z][a-z-]*",
     "indexes": r"[a-z]+", "study-designs": r"[a-z0-9][a-z0-9-]*",
+    "contributor-roles": r"[a-z][a-z-]*",
     "relationships": r"[a-z][a-z-]*",
     "source-lists": r"[a-z0-9][a-z0-9-]*",
 }
