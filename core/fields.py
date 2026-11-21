@@ -1230,6 +1230,10 @@ class TermField(Field):
         Build an Elasticsearch terms query (plural) for multiple values.
         More efficient than multiple bool/should queries.
         """
+        if self.param == "ids.arxiv":
+            # oxjob #2177: an OR list of arXiv ids, each matched as the single value is. The terms path below read
+            # them as DOIs, so ids.arxiv:0704.0028|hep-th/9901001 matched nothing (the batch join arXiv users make).
+            return Q("bool", should=[self._arxiv_query(v) for v in values], minimum_should_match=1)
         # `null` is a sentinel meaning "this field is missing", not a literal
         # term value. Peel it out of the OR-list and turn it into an exists
         # query, mirroring the single-value handling in build_query(). Without
@@ -1816,14 +1820,19 @@ class TermField(Field):
 
     def _arxiv_query(self, value):
         """filter=ids.arxiv:<id>: the work holding arXiv's DOI record 10.48550/arxiv.<id>, served or on a location, as
-        /works/arxiv:<id> answers (oxjob #2157; ~4.4K requests a day answered 400). Takes any form /works/ takes."""
-        from ids.utils import arxiv_doi, arxiv_form, normalize_arxiv
+        /works/arxiv:<id> answers (oxjob #2157; ~4.4K requests a day answered 400). Takes any form /works/ takes, and
+        arXiv's DOI. Also a work holding only an arXiv abs/pdf page for the id, as the lookup does: 38,596 arXiv works
+        carry no arXiv DOI anywhere (oxjob #2177, 21 Nov 2026)."""
+        from ids.utils import arxiv_copy_urls, arxiv_doi, arxiv_form, normalize_arxiv
 
-        arxiv_id = normalize_arxiv(arxiv_form(value) or value)
+        text = value.strip()
+        doi_form = re.match(r"(?:doi:\s*|(?:https?:/{1,2})?(?:dx\.)?doi\.org/)?10\.48550/arxiv\.(.+)$", text, re.I)
+        arxiv_id = normalize_arxiv(doi_form.group(1) if doi_form else (arxiv_form(text) or text))
         if not arxiv_id:
             raise APIQueryParamsError(
                 f"{value} is not an arXiv id for {self.param}; use e.g. 2305.18290 or hep-th/9901001")
-        return self._doi_query(arxiv_doi(arxiv_id))
+        return self._doi_query(arxiv_doi(arxiv_id)) | Q(
+            "terms", locations_full__landing_page_url=arxiv_copy_urls(arxiv_id))
 
     def _doi_query(self, value):
         # Special handling for DOI to support both data versions:

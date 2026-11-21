@@ -194,15 +194,33 @@ def test_pmid_filter_drops_the_prefix(key, value):
     assert _filter_body(key, value) == _filter_body(key, "35202565")
 
 
-@pytest.mark.parametrize("value", ["2305.18290", "arXiv:2305.18290v2", "https://arxiv.org/abs/2305.18290",
-                                   "arxiv.org/pdf/2305.18290.pdf"])
-def test_arxiv_filter_is_the_arxiv_doi_filter(value):
-    assert _filter_body("ids.arxiv", value) == _filter_body("doi", "10.48550/arxiv.2305.18290")
+@pytest.mark.parametrize("value", ["arXiv:2305.18290v2", "https://arxiv.org/abs/2305.18290", "arxiv.org/pdf/2305.18290.pdf",
+                                   "10.48550/arXiv.2305.18290", "https://doi.org/10.48550/arxiv.2305.18290",
+                                   "doi:10.48550/arxiv.2305.18290v3"])
+def test_arxiv_filter_any_form_is_the_bare_id(value):
+    # oxjob #2177: arXiv's own DOI is one more form of the id
+    assert _filter_body("ids.arxiv", value) == _filter_body("ids.arxiv", "2305.18290")
+
+
+def test_arxiv_filter_matches_the_arxiv_doi_or_an_arxiv_page():
+    # oxjob #2177: the arXiv DOI (served or on a location), or only an arXiv abs/pdf page, as /works/arxiv: answers
+    body = _filter_body("ids.arxiv", "2305.18290")
+    assert "https://doi.org/10.48550/arxiv.2305.18290" in body
+    assert "http://arxiv.org/abs/2305.18290" in body and "https://arxiv.org/pdf/2305.18290v2.pdf" in body
+
+
+def test_arxiv_filter_or_list_matches_each_id():
+    # oxjob #2177: the OR path read arXiv ids as DOIs, so 0704.0028|hep-th/9901001 matched nothing
+    body = _filter_body("ids.arxiv", "0704.0028|hep-th/9901001")
+    assert "https://doi.org/10.48550/arxiv.0704.0028" in body and "https://doi.org/10.48550/arxiv.hep-th/9901001" in body
+    assert "https://doi.org/0704.0028" not in body
 
 
 def test_arxiv_filter_old_style_and_negation():
-    assert _filter_body("ids.arxiv", "hep-th/9711200") == _filter_body("doi", "10.48550/arxiv.hep-th/9711200")
-    assert _filter_body("ids.arxiv", "!2305.18290") == _filter_body("doi", "!10.48550/arxiv.2305.18290")
+    assert "https://doi.org/10.48550/arxiv.hep-th/9711200" in _filter_body("ids.arxiv", "hep-th/9711200")
+    assert _filter_body("ids.arxiv", "math.GT/0309136") == _filter_body("ids.arxiv", "math/0309136")
+    neg = _filter_body("ids.arxiv", "!2305.18290")
+    assert "must_not" in neg and "https://doi.org/10.48550/arxiv.2305.18290" in neg
 
 
 @pytest.mark.parametrize("value", ["notanid", "null", "10.1038/nature12373"])
