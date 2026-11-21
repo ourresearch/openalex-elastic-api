@@ -894,6 +894,18 @@ fields = [
         documentation_link="https://developers.openalex.org/api-reference/institutions",
     ),
     TermField(
+        # oxjob #2437: entity_type author-types (core.fields.ENTITY_ID_PARAM_TYPES). Every authorship, like the
+        # other authorships filters; `!software-agent` is a must_not on that array, so it keeps the works where NO
+        # authorship is a software agent (untyped authors and works with no authors included).
+        param="authorships.author.type",
+        alias="authorships_full.author.type",
+        docstring="What kind of agent each of the work's authors is: human, organization or software-agent (an AI "
+                  "agent or other bot). Null means not stated, which is most authors. "
+                  "authorships.author.type:!software-agent keeps the works with no software-agent author",
+        documentation_link="https://help.openalex.org/data/author-types/",
+        alternate_names=ALTERNATE_NAMES.get("author_type", None),
+    ),
+    TermField(
         param="authorships.institutions.type",
         alias="authorships_full.institutions.type",
         docstring='The type of institutions affiliated with the work. For example, universities are type "Education," and hospitals are type "Healthcare".',

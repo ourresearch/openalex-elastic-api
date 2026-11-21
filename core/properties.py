@@ -513,7 +513,13 @@ CAP_COLUMN = "column"
 # gains `contributor_roles` [{id, display_name}] ([] when none). No works filter, group_by or OQL phrase for roles on
 # their own: the filter that will ship pairs an author with a role on the same authorship (oxjob #2075, D11). Purely
 # additive: classify_properties_diff.py says MINOR (entity added).
-PROPERTIES_VERSION = "24.3.0"
+# 24.4.0 (oxjob #2437, prepared 2026-11-21 CT; NEEDS JASON'S APPROVAL OF THE SCHEMA BEFORE IT SHIPS, and a rebase onto
+# whatever version master carries by then): what kind of agent an author is. New `author-types` registry entity (human,
+# organization, software-agent; ES author-types-v1, built by walden; shaped like relationships: standard_terms,
+# works_count, works_api_url). Authors gain the column and filter `type` (group_by, sort; entity author-types); works
+# gain `authorships.author.type` (filter, group_by; entity author-types; OQL "author type"), and each authorship's
+# `author` object gains `type` (null when not stated). Purely additive: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "24.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -547,6 +553,7 @@ ENTITY_FIELDS_MODULES = {
     "source-types": "source_types.fields",
     "study-designs": "study_designs.fields",
     "contributor-roles": "contributor_roles.fields",
+    "author-types": "author_types.fields",
     "relationships": "relationships.fields",
     "institution-types": "institution_types.fields",
     "work-types": "work_types.fields",

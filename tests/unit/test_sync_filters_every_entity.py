@@ -11,7 +11,7 @@ import importlib
 import pytest
 
 ENTITY_MODULES = [
-    "authors", "awards", "concepts", "continents", "contributor_roles", "countries", "domains", "fields", "funders",
+    "author_types", "authors", "awards", "concepts", "continents", "contributor_roles", "countries", "domains", "fields", "funders",
     "indexes",
     "institution_types", "institutions", "keywords", "languages", "licenses", "oa_statuses", "publishers",
     "relationships", "sdgs",

@@ -57,6 +57,9 @@ def _parse_abstract_inverted_index(abstract_inverted_index_str):
 class AuthorSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
+    # oxjob #2437: human, organization or software-agent; null when not stated (most authors), and until the works
+    # re-sync brings the field to the doc
+    type = fields.Str(dump_default=None)
     orcid = fields.Str()
     observed_orcids = fields.List(fields.Str())  # every ORCID observed on the resolved profile; element 0 == orcid (oxjob #1340)
 

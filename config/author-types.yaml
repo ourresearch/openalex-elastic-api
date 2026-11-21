@@ -1,0 +1,14 @@
+id: author-types
+displayName: author types
+displayNameSingular: author type
+descr: what kind of agent an author is
+descrFull: What kind of agent an author is (a human, an organization, or a software agent such as an AI), as stated by a source or inferred by a rule that passed its bar. Null means not stated; most authors are null.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/author-types\/|author-types\/)([a-z-]+)
+values:
+- id: author-types/human
+  display_name: Human
+- id: author-types/organization
+  display_name: Organization
+- id: author-types/software-agent
+  display_name: Software agent

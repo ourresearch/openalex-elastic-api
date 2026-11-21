@@ -35,6 +35,7 @@ if USERS_API_URL and not COLLECTION_RESOLVER_KEY:
 AUTHORS_INDEX_WALDEN = "authors-v22"  # oxjob #1565: rebuilt beside v21 for the topic re-parenting (v21: #1617)
 AUTHORS_INDEX_LEGACY = "authors-v22"
 AUTHORS_INDEX_OLD = "authors-v10"
+AUTHOR_TYPES_INDEX = "author-types-v1"  # oxjob #2437: human, organization, software-agent; walden builds it
 AWARDS_INDEX = "awards-v4"
 CONCEPTS_INDEX = "concepts-v9"
 CONTINENTS_INDEX = "continents-v1"

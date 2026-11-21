@@ -1,5 +1,21 @@
 {
 "fields": {
+"author-types": {
+"created_date": "date",
+"description": "text",
+"display_name": "text",
+"display_name.autocomplete": "search_as_you_type",
+"display_name.keyword": "keyword",
+"id": "keyword",
+"id.lower": "keyword",
+"standard_terms": "object",
+"standard_terms.term": "keyword",
+"standard_terms.url": "keyword",
+"standard_terms.vocabulary": "keyword",
+"updated_date": "date",
+"works_api_url": "keyword",
+"works_count": "long"
+},
 "authors": {
 "affiliations": "object",
 "affiliations.institution": "object",
@@ -132,6 +148,8 @@
 "topics.subfield": "object",
 "topics.subfield.display_name": "keyword",
 "topics.subfield.id": "keyword",
+"type": "keyword",
+"type.lower": "keyword",
 "updated_date": "date",
 "works_api_url": "keyword",
 "works_count": "integer",
@@ -1597,6 +1615,8 @@
 "authorships.author.observed_orcids.lower": "keyword",
 "authorships.author.orcid": "keyword",
 "authorships.author.orcid.lower": "keyword",
+"authorships.author.type": "keyword",
+"authorships.author.type.lower": "keyword",
 "authorships.author_position": "keyword",
 "authorships.contributor_roles": "object",
 "authorships.contributor_roles.display_name": "text",
@@ -1644,6 +1664,8 @@
 "authorships_full.author.observed_orcids.lower": "keyword",
 "authorships_full.author.orcid": "keyword",
 "authorships_full.author.orcid.lower": "keyword",
+"authorships_full.author.type": "keyword",
+"authorships_full.author.type.lower": "keyword",
 "authorships_full.author_position": "keyword",
 "authorships_full.contributor_roles": "object",
 "authorships_full.contributor_roles.display_name": "text",
@@ -2153,6 +2175,7 @@
 }
 },
 "indexes": {
+"author-types": "author-types-v1",
 "authors": "authors-v22",
 "awards": "awards-v4",
 "concepts": "concepts-v9",

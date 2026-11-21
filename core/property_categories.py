@@ -135,6 +135,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "last_known_institutions.id": "institution",
         "last_known_institutions.country_code": "geo",
         "last_known_institutions.type": "institution",
+        "type": "other",  # oxjob #2437: human, organization, software-agent
         "has_orcid": "ids",
         "display_name_alternatives": "other",
         "summary_stats.h_index": "citation",
@@ -372,6 +373,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "authorships.institutions.lineage": "institution",
         "authorships.institutions.ror": "ids",
         "authorships.author.id": "author",
+        "authorships.author.type": "author",  # oxjob #2437
         "authorships.author.orcid": "ids",
         "fulltext.search": "other",
         "title_and_abstract.search": "other",

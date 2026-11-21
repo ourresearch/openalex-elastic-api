@@ -111,6 +111,9 @@ CLOSED_VOCAB_NAMESPACE = {
     # contributor-roles (oxjob #2075): the 14 CRediT roles in
     # config/contributor-roles.yaml; a slug outside them is invalid_value
     "contributor-roles": "contributor-roles",
+    # author-types (oxjob #2437): human, organization, software-agent in
+    # config/author-types.yaml; a slug outside them is invalid_value
+    "author-types": "author-types",
     # relationships (oxjob #2065, #1490): the kinds of link between works in
     # config/relationships.yaml (citation, volume, component, data-series, part)
     "relationships": "relationships",

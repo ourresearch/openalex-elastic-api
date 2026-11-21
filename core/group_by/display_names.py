@@ -182,24 +182,38 @@ def get_display_names_keywords_licenses_topics(ids, connection='default'):
     return results
 
 
+def _closed_vocab_key_display_name(entity_type, key):
+    """The name of a bare key of a closed vocabulary, from config/<entity_type>.yaml `values`;
+    the key itself if unknown."""
+    from core.entities import get_entity_type
+
+    ent = get_entity_type(entity_type)
+    for row in (ent.values if ent and ent.values else []):
+        if row["id"] == f"{entity_type}/{key}":
+            return row["display_name"]
+    return key
+
+
 def get_relationship_display_name(key):
     """The name of a parent-child relationship key (`data-series` -> "Data series"), from the
     closed vocabulary in config/relationships.yaml (oxjob #2065); the key itself if unknown."""
-    from core.entities import get_entity_type
+    return _closed_vocab_key_display_name("relationships", key)
 
-    ent = get_entity_type("relationships")
-    for row in (ent.values if ent and ent.values else []):
-        if row["id"] == f"relationships/{key}":
-            return row["display_name"]
-    return key
+
+# Group-by columns whose bucket keys are bare keys of a closed vocabulary, named from its config
+# (`software-agent` -> "Software agent"). Authors' bare `type` is only author-types on /authors.
+_CLOSED_VOCAB_KEY_COLUMNS = {
+    "parent_works.relationship": "relationships",  # oxjob #2065
+    "authorships.author.type": "author-types",  # oxjob #2437
+}
 
 
 def get_key_display_name(b, group_by):
     if b.key == "unknown":
         return "unknown"
 
-    if group_by == "parent_works.relationship":
-        return get_relationship_display_name(b.key)
+    if group_by in _CLOSED_VOCAB_KEY_COLUMNS:
+        return _closed_vocab_key_display_name(_CLOSED_VOCAB_KEY_COLUMNS[group_by], b.key)
 
     if group_by.endswith("country_code") or group_by.endswith("countries"):
         from core.country_names import get_country_name
