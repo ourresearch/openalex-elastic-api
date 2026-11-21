@@ -62,6 +62,7 @@ TOPICS_INDEX = "topics-v5"  # v5: keywords are keyword objects + legacy_keywords
 WORK_TYPES_INDEX = "work-types-v1"
 # oxjob #2065: the kinds of parent-child link between works (/relationships); walden builds it
 WORK_RELATIONSHIPS_INDEX = "work-relationships-v1"
+LINKS_INDEX = "links"  # alias of links-v1; walden notebooks/elastic/sync_links (oxjob #1490)
 WORKS_INDEX = "works"  # alias; rebuilds swap the concrete index in Elasticsearch, never here (oxjob #1456)
 # Alias, not an index (oxjob #1433 Fix 4): it points at works-vectors-v2 (int8_hnsw) on the old vector deployment and
 # at works-vectors-v3 (bbq_disk) on the new one, so moving ES_VECTOR_SEARCH_URL is the whole switch.
