@@ -110,3 +110,25 @@ def test_authors_record_dumps_type_after_display_name(doc, expected):
     assert out["type"] == expected
     keys = list(out)
     assert keys[keys.index("display_name") + 1] == "type"
+
+
+# --- acted_on_behalf_of (oxjob #2437): plumbed, always [] until a source states a delegation ---------
+@pytest.mark.parametrize("authorship", [{"author": {"id": "x"}}, {"acted_on_behalf_of": None}])
+def test_acted_on_behalf_of_dumps_an_empty_list(authorship):
+    from works.schemas import WorksSchema
+
+    out = WorksSchema(only=("authorships",)).dump({"authorships": [authorship]})
+    assert out["authorships"][0]["acted_on_behalf_of"] == []
+
+
+def test_acted_on_behalf_of_follows_author():
+    from works.schemas import WorksSchema
+
+    rows = [{"id": "https://openalex.org/I27837315", "display_name": "A university"}]
+    out = WorksSchema(only=("authorships",)).dump(
+        {"authorships": [{"author": {"id": "x"}, "acted_on_behalf_of": rows, "is_corresponding": True}]})
+    authorship = out["authorships"][0]
+    keys = list(authorship)
+    assert keys[keys.index("author") + 1] == "acted_on_behalf_of"
+    assert authorship["acted_on_behalf_of"] == rows
+    assert list(authorship["acted_on_behalf_of"][0]) == ["id", "display_name"]
