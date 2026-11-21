@@ -513,7 +513,11 @@ CAP_COLUMN = "column"
 # gains `contributor_roles` [{id, display_name}] ([] when none). No works filter, group_by or OQL phrase for roles on
 # their own: the filter that will ship pairs an author with a role on the same authorship (oxjob #2075, D11). Purely
 # additive: classify_properties_diff.py says MINOR (entity added).
-PROPERTIES_VERSION = "24.3.0"
+# 24.4.0 (oxjob #2238, 2026-11-21): client_registry.json refreshed after the website gained filter facets for
+# institutions and sources `is_global_south` and awards `keywords.id` and `sustainable_development_goals.id`
+# (openalex-gui dec21120), so their supported_by goes [] -> ["gui"]. supported_by only = MINOR per
+# classify_properties_diff.py. Clears the curated-core parity step, red since 6 Nov (e45990e).
+PROPERTIES_VERSION = "24.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

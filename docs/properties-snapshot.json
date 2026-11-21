@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 28,
-    "fingerprint": "9c2ca338a570d52db7cd50f228c6759a6d4d64657cf3c251fb3e6e36c611400b",
+    "fingerprint": "a1046b51726c7a1d08116c5ebc330195661d23703a4db0b52ffeb6a43915a023",
     "property_count": 1012,
-    "version": "24.3.0"
+    "version": "24.4.0"
   },
   "properties": {
     "authors": {
@@ -2221,7 +2221,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "landing_page_url": {
@@ -3095,7 +3097,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "text.search": {
@@ -7943,7 +7947,9 @@
           "eq",
           "null"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "is_super_system": {
@@ -13616,7 +13622,9 @@
           "eq",
           "null"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "is_high_oa_rate": {

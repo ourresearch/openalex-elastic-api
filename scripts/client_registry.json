@@ -2405,6 +2405,21 @@
       "isId": false,
       "hasExport": false
     },
+    "keywords.id": {
+      "key": "keywords.id",
+      "entityToFilter": "awards",
+      "entityToSelect": "keywords",
+      "displayName": "keyword",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "landing_page_url": {
       "key": "landing_page_url",
       "entityToFilter": "awards",
@@ -2453,6 +2468,21 @@
       "entityToFilter": "awards",
       "entityToSelect": null,
       "displayName": "provenance",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "sustainable_development_goals.id": {
+      "key": "sustainable_development_goals.id",
+      "entityToFilter": "awards",
+      "entityToSelect": "sdgs",
+      "displayName": "SDG",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
@@ -3221,6 +3251,21 @@
       "type": "range",
       "actions": [
         "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "is_global_south": {
+      "key": "is_global_south",
+      "entityToFilter": "sources",
+      "entityToSelect": null,
+      "displayName": "is global south",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -4278,6 +4323,21 @@
       "isId": false,
       "hasExport": false
     },
+    "is_global_south": {
+      "key": "is_global_south",
+      "entityToFilter": "institutions",
+      "entityToSelect": null,
+      "displayName": "is global south",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "lineage": {
       "key": "lineage",
       "entityToFilter": "institutions",
@@ -4485,6 +4545,20 @@
     }
   },
   "concepts": {
+    "summary_stats.2yr_mean_citedness": {
+      "key": "summary_stats.2yr_mean_citedness",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "2-year mean citedness",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "concepts",
@@ -4529,6 +4603,34 @@
         "column"
       ],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "summary_stats.h_index": {
+      "key": "summary_stats.h_index",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "h-index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "summary_stats.i10_index": {
+      "key": "summary_stats.i10_index",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "i10 index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -4589,48 +4691,6 @@
       "actionsPopular": null,
       "isId": true,
       "hasExport": true
-    },
-    "summary_stats.2yr_mean_citedness": {
-      "key": "summary_stats.2yr_mean_citedness",
-      "entityToFilter": "concepts",
-      "entityToSelect": null,
-      "displayName": "summary_stats.2yr_mean_citedness",
-      "displayNameVerbatim": false,
-      "type": "range",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "summary_stats.h_index": {
-      "key": "summary_stats.h_index",
-      "entityToFilter": "concepts",
-      "entityToSelect": null,
-      "displayName": "summary_stats.h_index",
-      "displayNameVerbatim": false,
-      "type": "range",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "summary_stats.i10_index": {
-      "key": "summary_stats.i10_index",
-      "entityToFilter": "concepts",
-      "entityToSelect": null,
-      "displayName": "summary_stats.i10_index",
-      "displayNameVerbatim": false,
-      "type": "range",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
     },
     "works_count": {
       "key": "works_count",
