@@ -13,7 +13,8 @@ import pytest
 ENTITY_MODULES = [
     "authors", "awards", "concepts", "continents", "contributor_roles", "countries", "domains", "fields", "funders",
     "indexes",
-    "institution_types", "institutions", "keywords", "languages", "licenses", "oa_statuses", "publishers",
+    "institution_types", "institutions", "keywords", "languages", "licenses", "link_types", "oa_statuses",
+    "publishers",
     "relationships", "sdgs",
     "source_lists", "source_types", "sources", "study_designs", "subfields", "topics", "work_types", "works",
 ]

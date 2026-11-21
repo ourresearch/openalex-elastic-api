@@ -89,6 +89,7 @@ def test_the_server_side_default_filters_as_the_rule_beside_the_corpus():
     "has_parent_work:true", "has_parent_work:false", "has-parent-work:true",
     "parent_works.id:W1", "parent_works.id:!W1|W2", "parent-works.id:W1",
     "parent_works.relationship:component", "parent_works.relationship:!volume",
+    "parent_works.link_type:component", "parent_works.link_type:!volume",  # its new name (oxjob #2481)
 ])
 def test_a_parent_child_filter_lifts_the_rule(filter_string):
     assert lifts_hiding(request_filter_keys(filter_string))
@@ -111,8 +112,9 @@ def test_no_other_filter_lifts_it(filter_string):
     assert hides_pieces(None, False, request_filter_params(filter_string))
 
 
-def test_the_opt_in_keys_are_the_four_parent_child_filters():
-    assert PIECE_FILTER_KEYS == {"has_parent_work", "parent_works.id", "parent_works.relationship", "lineage"}
+def test_the_opt_in_keys_are_the_parent_child_filters():
+    assert PIECE_FILTER_KEYS == {"has_parent_work", "parent_works.id", "parent_works.relationship",
+                                 "parent_works.link_type", "lineage"}
     assert PIECE_FILTER_KEYS <= set(fields_dict)
 
 

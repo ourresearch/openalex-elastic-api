@@ -2,6 +2,7 @@ import json
 import logging
 
 from marshmallow import fields, INCLUDE, missing, Schema, post_dump, pre_dump
+from marshmallow.utils import get_value
 
 from core.schemas import (
     CountsByYearSchema,
@@ -348,12 +349,20 @@ class StudyDesignSchema(Schema):
     display_name = fields.String()
 
 
+def zero_when_missing(obj, name):
+    """A count the index stores only where it isn't 0 (works child_works_count, oxjob #2065;
+    reviewed_by_count, oxjob #2481): no stored value is 0."""
+    return getattr(obj, name, None) or 0
+
+
 class ParentWorkSchema(Schema):
-    """A parent work, dehydrated, and how this work relates to it (oxjob #2065)."""
+    """A parent work, dehydrated, and how this work relates to it (oxjob #2065). `link_type` is the new
+    name of `relationship` (oxjob #2481): the same short key (`volume`); both are served until the cutover."""
 
     id = fields.String()
     display_name = fields.String()
     relationship = fields.String()
+    link_type = fields.Function(lambda parent: get_value(parent, "relationship"))
 
     class Meta:
         ordered = True
@@ -422,6 +431,9 @@ class WorksSchema(Schema):
     has_fulltext = fields.Bool()
     fulltext_origin = fields.Str()
     cited_by_count = fields.Int()
+    # oxjob #2481: the works that review this one. Stored only on works that have a review link, like
+    # child_works_count, so every other work serves 0.
+    reviewed_by_count = fields.Method("get_reviewed_by_count")
     citation_normalized_percentile = fields.Nested(CitationNormalizedPercentileSchema)
     cited_by_percentile_year = fields.Nested(CitedByPercentileYearSchema)
     biblio = fields.Nested(BiblioSchema)
@@ -542,7 +554,11 @@ class WorksSchema(Schema):
 
     @staticmethod
     def get_child_works_count(obj):
-        return getattr(obj, "child_works_count", None) or 0
+        return zero_when_missing(obj, "child_works_count")
+
+    @staticmethod
+    def get_reviewed_by_count(obj):
+        return zero_when_missing(obj, "reviewed_by_count")
 
     @staticmethod
     def get_is_traditional(obj):

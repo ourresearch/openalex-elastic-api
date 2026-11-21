@@ -11,6 +11,7 @@ from core.cursor import decode_cursor, encode_cursor
 
 U = "https://openalex.org/"
 R = U + "relationships/"
+LT = U + "link-types/"
 CITING = U + "W1001"
 BOOK = U + "W1009"
 
@@ -103,7 +104,7 @@ def test_a_request_must_name_a_work(client, url):
 @pytest.mark.parametrize("url", ["/links?filter=from:W1001", "/links?filter=to:W1001"])
 def test_the_old_from_and_to_names_answer_400_naming_the_new_ones(client, url):
     status, body = get(client, url)
-    assert status == 400 and "origin, target and relationship" in body["message"]
+    assert status == 400 and "origin, target and link_type" in body["message"]
 
 
 @pytest.mark.parametrize("url", [
@@ -161,9 +162,10 @@ def test_a_cursor_that_is_not_ours_answers_400(client):
 def test_origin_lists_its_links(client):
     status, body = get(client, "/links?filter=origin:w1001")
     assert status == 200 and body["meta"]["count"] == 4
-    assert body["results"][0] == {"origin": CITING, "target": BOOK, "relationship": R + "volume"}
+    assert body["results"][0] == {"origin": CITING, "target": BOOK, "relationship": R + "volume",
+                                  "link_type": LT + "volume"}
     assert [r["target"] for r in body["results"][1:]] == [U + "W1002", U + "W1003", U + "W1004"]  # stored order
-    assert list(body["results"][0]) == ["origin", "target", "relationship"]
+    assert list(body["results"][0]) == ["origin", "target", "relationship", "link_type"]
 
 
 def test_relationship_and_paging(client):
@@ -204,3 +206,47 @@ def test_page_mode_has_no_cursor(client):
 
 def test_cursor_round_trip():
     assert decode_cursor(encode_cursor(["pit-1", [241307]])) == ["pit-1", [241307]]
+
+
+# --- link_type, the new name of relationship (oxjob #2481) ------------------------------------------
+
+def test_every_link_carries_its_link_type_after_its_relationship(client):
+    _, body = get(client, "/links?filter=origin:W1001")
+    for r in body["results"]:
+        assert r["link_type"] == r["relationship"].replace("/relationships/", "/link-types/")
+    assert [r["link_type"] for r in body["results"]] == [LT + "volume"] + [LT + "citation"] * 3
+
+
+@pytest.mark.parametrize("value", ["citation", "Citation", "link-types/citation", "relationships/citation",
+                                   "https://openalex.org/link-types/citation",
+                                   "https://openalex.org/relationships/citation"])
+@pytest.mark.parametrize("key", ["link_type", "relationship"])
+def test_link_type_and_relationship_filter_alike_and_take_every_id_form(client, key, value):
+    _, body = get(client, f"/links?filter=origin:W1001,{key}:{value}")
+    assert body["meta"]["count"] == 3
+    assert FakeSearch.last["query"]["bool"]["must"] == [{"terms": {"relationship": [R + "citation"]}}]
+
+
+def test_review_is_a_link_type(client):
+    FakeSearch.links = [doc("W2001", "W1002", "review"), doc("W2002", "W1002", "citation")]
+    _, body = get(client, "/links?filter=target:W1002,link_type:review")
+    assert body["results"] == [{"origin": U + "W2001", "target": U + "W1002", "relationship": R + "review",
+                                "link_type": LT + "review"}]
+    assert "review" in lv.RELATIONSHIPS and lv.relationships("review|volume") == ["volume", "review"]
+
+
+def test_link_type_and_relationship_together_answer_400_naming_link_type(client):
+    status, body = get(client, "/links?filter=origin:W1001,link_type:citation,relationship:citation")
+    assert status == 400
+    assert "not both" in body["message"] and "Use link_type" in body["message"]
+
+
+def test_a_bad_link_type_answers_400_under_its_own_name(client):
+    status, body = get(client, "/links?filter=origin:W1001,link_type:cites")
+    assert status == 400 and body["message"].startswith("link_type takes citation, ")
+    status, body = get(client, "/links?filter=origin:W1001,relationship:cites")
+    assert status == 400 and body["message"].startswith("relationship takes citation, ")
+
+
+def test_the_examples_name_link_type():
+    assert "link_type:citation" in lv.EXAMPLES and "review" in lv.EXAMPLES

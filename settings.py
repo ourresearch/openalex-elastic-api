@@ -48,6 +48,7 @@ INSTITUTION_TYPES_INDEX = "institution-types-v1"
 INSTITUTIONS_INDEX = "institutions"  # alias -> institutions-v9: names folded, "Universite de Montreal" finds it (oxjob #1882)
 KEYWORDS_INDEX = "keywords-v1"
 LANGUAGES_INDEX = "languages-v3"
+LINK_TYPES_INDEX = "link-types-v1"  # oxjob #2481: /link-types, the new name of /relationships; walden builds it
 LICENSES_INDEX = "licenses-v1"
 LOCATIONS_INDEX = "locations"  # alias -> locations-v4 (oxjob #2040)
 OA_STATUSES_INDEX = "oa-statuses-v1"

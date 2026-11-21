@@ -427,11 +427,15 @@ _f("traditional scholarly work", "is_traditional", "bool")
 # like "study design". Input aliases live in the registry (core/display_names.py).
 _f("parent work", "parent_works.id", "id")
 _f("relationship to parent work", "parent_works.relationship", "enum")
+# oxjob #2481: the new name of the relationship (the link-types vocabulary); both words parse until the cutover
+_f("link type to parent work", "parent_works.link_type", "enum")
 _f("has parent work", "has_parent_work", "bool")
 # No curated row for works `lineage` ("work lineage" in the registry): a curated row names its
 # column on EVERY entity at render, and institutions and publishers have their own `lineage`.
 # The registry word and the raw id both parse on works; it renders as `lineage`.
 _f("child works count", "child_works_count", "num")
+# oxjob #2481: the works that review this one (peer, preprint and book reviews); no stored value counts as 0
+_f("reviewed by count", "reviewed_by_count", "num")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
 _f("best open version", "best_open_version", "string")
@@ -635,6 +639,7 @@ _ID_SHAPES = {
     "indexes": r"[a-z]+", "study-designs": r"[a-z0-9][a-z0-9-]*",
     "contributor-roles": r"[a-z][a-z-]*",
     "relationships": r"[a-z][a-z-]*",
+    "link-types": r"[a-z][a-z-]*",
     "source-lists": r"[a-z0-9][a-z0-9-]*",
 }
 _UPPER_ID_TYPES = {"authors", "institutions", "sources", "publishers", "funders", "topics",

@@ -121,6 +121,8 @@ ENTITY_ID_PARAM_TYPES = {
     "study_designs.id": "study-designs",
     # relationships (oxjob #2065): how a work relates to its parent work
     "parent_works.relationship": "relationships",
+    # link-types (oxjob #2481): the same vocabulary under its new name
+    "parent_works.link_type": "link-types",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",
@@ -1341,6 +1343,10 @@ class TermField(Field):
             return f"https://metadata.un.org/sdg/{number}"
         return value
 
+    # Works params holding a parent link's short key (`volume`): parent_works.relationship and its new
+    # name parent_works.link_type (oxjob #2481).
+    PARENT_LINK_TYPE_PARAMS = ("parent_works.relationship", "parent_works.link_type")
+
     # Works params whose ES value is a closed vocabulary's full id,
     # https://openalex.org/<segment>/<slug>: study designs (oxjob #1312).
     FULL_URL_VOCAB_SEGMENTS = {
@@ -1395,9 +1401,10 @@ class TermField(Field):
             value = self._expand_vocab_id(value, self.FULL_URL_VOCAB_SEGMENTS[self.param])
         elif self.param == "language":
             value = self._strip_openalex_prefix(value, "languages/")
-        elif self.param == "parent_works.relationship":
-            # oxjob #2065: the work holds the short key (`volume`), as `type` does
-            value = self._strip_openalex_prefix(value, "relationships/")
+        elif self.param in self.PARENT_LINK_TYPE_PARAMS:
+            # oxjob #2065: the work holds the short key (`volume`), as `type` does; either id form
+            # (relationships/ or its new name link-types/, oxjob #2481) gives the key
+            value = self._strip_openalex_prefix(value, "relationships/", "link-types/")
         elif (
             self.param == "type"
             or self.param == "last_known_institution.type"
@@ -1469,8 +1476,8 @@ class TermField(Field):
             return self._expand_vocab_id(self.value, self.FULL_URL_VOCAB_SEGMENTS[self.param])
         elif self.param == "language":
             return self._strip_openalex_prefix(self.value, "languages/").lower()
-        elif self.param == "parent_works.relationship":
-            return self._strip_openalex_prefix(self.value, "relationships/")
+        elif self.param in self.PARENT_LINK_TYPE_PARAMS:
+            return self._strip_openalex_prefix(self.value, "relationships/", "link-types/")
         elif self.param == "type" or self.param == "last_known_institution.type":
             return self._strip_openalex_prefix(
                 self.value,
@@ -2427,6 +2434,7 @@ ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
     "source-lists": "source-lists",
     "source-types": "source-types",
     "relationships": "relationships",
+    "link-types": "link-types",
     "study-designs": "study-designs",
     "subfields": "subfields",
     "work-types": "types",

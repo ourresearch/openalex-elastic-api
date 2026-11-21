@@ -28,6 +28,7 @@ import institutions
 import keywords
 import languages
 import licenses
+import link_types
 import links
 import locations
 import meta
@@ -132,6 +133,7 @@ def register_blueprints(app):
     app.register_blueprint(keywords.views.blueprint)
     app.register_blueprint(languages.views.blueprint)
     app.register_blueprint(licenses.views.blueprint)
+    app.register_blueprint(link_types.views.blueprint)
     app.register_blueprint(links.views.blueprint)
     app.register_blueprint(locations.views.blueprint)
     app.register_blueprint(meta.views.blueprint)
@@ -262,7 +264,7 @@ NOT_FOUND_NAMES = {
     "institution-types": "Institution type", "source-types": "Source type", "work-types": "Work type",
     "types": "Work type", "locations": "Location", "oa-statuses": "OA status",
     "study-designs": "Study design", "source-lists": "Source list", "indexes": "Index",
-    "contributor-roles": "Contributor role",
+    "contributor-roles": "Contributor role", "link-types": "Link type",
 }
 
 

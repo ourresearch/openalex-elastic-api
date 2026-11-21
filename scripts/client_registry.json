@@ -1162,6 +1162,21 @@
       "isId": false,
       "hasExport": false
     },
+    "parent_works.link_type": {
+      "key": "parent_works.link_type",
+      "entityToFilter": "works",
+      "entityToSelect": "relationships",
+      "displayName": "link type to parent work",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "locations_count": {
       "key": "locations_count",
       "entityToFilter": "works",
@@ -1599,6 +1614,22 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": false
+    },
+    "reviewed_by_count": {
+      "key": "reviewed_by_count",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "reviewed by count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": true
     },
     "authorships.institutions.ror": {
       "key": "authorships.institutions.ror",

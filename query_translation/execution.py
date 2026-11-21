@@ -99,6 +99,7 @@ _ENTITY_DISPATCH = {
     "study-designs": ("study_designs", "STUDY_DESIGNS_INDEX"),
     "contributor-roles": ("contributor_roles", "CONTRIBUTOR_ROLES_INDEX"),
     "relationships": ("relationships", "WORK_RELATIONSHIPS_INDEX"),  # oxjob #2065
+    "link-types": ("link_types", "LINK_TYPES_INDEX"),  # oxjob #2481
     "institution-types": ("institution_types", "INSTITUTION_TYPES_INDEX"),
     "work-types": ("work_types", "WORK_TYPES_INDEX"),
     "types": ("work_types", "WORK_TYPES_INDEX"),

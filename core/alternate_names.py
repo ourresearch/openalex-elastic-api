@@ -19,6 +19,8 @@ ALTERNATE_NAMES = {
     "parent_works": ["parent", "part", "book", "volume", "chapters", "container"],
     "lineage": ["parent", "ancestor", "descendant", "children", "parts"],
     "child_works_count": ["children", "parts", "chapters", "components"],
+    # oxjob #2481: works that review this work
+    "reviewed_by_count": ["reviews", "reviewed", "peer", "review", "referee"],
     "is_traditional": ["traditional", "scholarly", "literature", "publications", "papers"],
     "source.issn": ["issn", "journal"],
     "source.type": ["source", "type", "journal", "repository"],

@@ -291,6 +291,10 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
     },
+    'link-types': {  # oxjob #2481: the new name of relationships
+        'description': {"display_name": 'description'},
+        'display_name': {"display_name": 'name'},
+    },
     'relationships': {  # oxjob #2065
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
@@ -468,9 +472,13 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # "work lineage", not "lineage": the institution and publisher lineage columns keep theirs.
         'parent_works.id': {"display_name": 'parent work', "aliases": ['parent works', 'parent_works', 'part of']},
         'parent_works.relationship': {"display_name": 'relationship to parent work', "aliases": ['parent work relationship', 'relationship']},
+        # oxjob #2481: the new name of parent_works.relationship (both parse until the cutover)
+        'parent_works.link_type': {"display_name": 'link type to parent work', "aliases": ['parent work link type', 'link type']},
         'has_parent_work': {"display_name": 'has parent work'},
         'lineage': {"display_name": 'work lineage'},
         'child_works_count': {"display_name": 'child works count', "aliases": ['child works', 'parts count']},
+        # oxjob #2481: the works that review this one (parallel to cited_by_count)
+        'reviewed_by_count': {"display_name": 'reviewed by count', "aliases": ['reviews count', 'review count', 'number of reviews']},
         'title_and_abstract.search': {"display_name": 'title-abstract', "aliases": ['title/abstract', 'title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         # oxjob #1521: title + abstract text OR the keywords a query phrase names.
         # Hyphenated labels since 2026-10-03 (#1512): slashes belong to ids; the slash forms stay aliases.

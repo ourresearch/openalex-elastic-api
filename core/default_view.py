@@ -65,7 +65,9 @@ def include_parts_requested(args):
 # A substring test (as `'is_xpac:' in filter` is) would also fire on
 # authorships.institutions.lineage and the other *lineage filters, and show hidden pieces in
 # every institution query.
-PIECE_FILTER_KEYS = frozenset({"has_parent_work", "parent_works.id", "parent_works.relationship", "lineage"})
+# parent_works.link_type is the new name of parent_works.relationship (oxjob #2481).
+PIECE_FILTER_KEYS = frozenset({"has_parent_work", "parent_works.id", "parent_works.relationship",
+                               "parent_works.link_type", "lineage"})
 
 # How the rule travels in a parsed filter list (the `default_filters` of core.shared_view), beside
 # `{"is_xpac": "false"}`. Internal: core.filter applies it, core.utils.map_filter_params refuses it

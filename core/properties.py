@@ -517,7 +517,13 @@ CAP_COLUMN = "column"
 # institutions and sources `is_global_south` and awards `keywords.id` and `sustainable_development_goals.id`
 # (openalex-gui dec21120), so their supported_by goes [] -> ["gui"]. supported_by only = MINOR per
 # classify_properties_diff.py. Clears the curated-core parity step, red since 6 Nov (e45990e).
-PROPERTIES_VERSION = "24.4.0"
+# 24.5.0 (oxjob #2481, 2026-11-21): reviewed_by_count, link_type, /link-types (additive). Works gain
+# `reviewed_by_count` (range filter, sort; a work with no stored value counts as 0; OQL "reviewed by count") and
+# `parent_works.link_type` (filter, group_by; entity link-types; the new name of parent_works.relationship, read from
+# the same index field; OQL "link type to parent work"). New registry entity `link-types` (citation, review, volume,
+# component, data-series, part; ES link-types-v1, built by walden) beside `relationships`, which gains `review`.
+# Nothing removed or renamed: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "24.5.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -552,6 +558,7 @@ ENTITY_FIELDS_MODULES = {
     "study-designs": "study_designs.fields",
     "contributor-roles": "contributor_roles.fields",
     "relationships": "relationships.fields",
+    "link-types": "link_types.fields",
     "institution-types": "institution_types.fields",
     "work-types": "work_types.fields",
     "awards": "awards.fields",

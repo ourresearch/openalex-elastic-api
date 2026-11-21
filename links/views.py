@@ -1,6 +1,7 @@
 """/links (oxjob #1490): work-to-work links. A link is three ids: `origin` (the work that holds the link: the citing
-paper, the chapter), `target` (the work it points to) and `relationship` (a /relationships id). Field names: Jason,
-17 Nov; three ids with no display names: Casey + Jason, 17 Nov.
+paper, the chapter, the review), `target` (the work it points to) and `relationship` (a /relationships id). Field
+names: Jason, 17 Nov; three ids with no display names: Casey + Jason, 17 Nov. `link_type` (oxjob #2481) is the new name
+of `relationship`: the same kind as a /link-types id; both are served, and filter on either, until the cutover.
 
 Links are read from the `links` index: one doc per link, built nightly from openalex.works.work_links by walden's
 Work Links job (20 Nov 2026). Every request names a work:
@@ -8,7 +9,8 @@ Work Links job (20 Nov 2026). Every request names a work:
     /links?filter=origin:W1            the work's links out
     /links?filter=target:W2            the works that link to it
     /links?filter=origin:W1,target:W2  the links between the two
-    relationship:citation              (any of the three) keeps one kind; values join with |
+    link_type:citation                 (any of the three) keeps one kind; values join with |
+                                       (relationship:citation, its old name, still works)
 
 No order is promised yet (Casey, 21 Nov: "leave it unsorted"): results come in the index's own order, which is the cheap
 way to page (a sort on the ids took 5-7 s for a work with 334K links). Cursor walks use a point-in-time view.
@@ -33,12 +35,14 @@ blueprint = Blueprint("links", __name__)
 URL = "https://openalex.org/"
 RELATIONSHIPS = [v["id"].split("/")[-1] for v in all_entities_config["relationships"]["values"]]
 PART_OF = ["volume", "component", "data-series", "part"]
-FILTER_KEYS = ("origin", "target", "relationship")
+# The kind of link: `link_type` (oxjob #2481) or its old name `relationship`, never both.
+KIND_KEYS = ("link_type", "relationship")
+FILTER_KEYS = ("origin", "target") + KIND_KEYS
 UNSUPPORTED_PARAMS = ("group_by", "group-by", "sort", "search", "select", "sample")
 EXAMPLES = (
-    "Name a work: /links?filter=origin:W2741809807 lists the works it is part of and the works it cites; "
-    "/links?filter=target:W2741809807 lists the works that cite it or are part of it. "
-    f"Add relationship:citation (or {', '.join(PART_OF)}) to keep one kind."
+    "Name a work: /links?filter=origin:W2741809807 lists the works it is part of, cites or reviews; "
+    "/links?filter=target:W2741809807 lists the works that cite it, review it or are part of it. "
+    f"Add link_type:citation (or review, {', '.join(PART_OF)}) to keep one kind."
 )
 
 
@@ -49,14 +53,20 @@ def parse_filter(filter_string):
         key, sep, value = clause.partition(":")
         key = key.strip().lower()
         if not sep or key not in FILTER_KEYS:
-            raise APIQueryParamsError(f"/links filters are origin, target and relationship, not '{clause}'. {EXAMPLES}")
+            raise APIQueryParamsError(
+                f"/links filters are origin, target and link_type (relationship is its old name), not '{clause}'. "
+                f"{EXAMPLES}")
         if key in named:
             raise APIQueryParamsError(f"{key} is given twice. {EXAMPLES}")
         named[key] = value.strip()
+    if all(key in named for key in KIND_KEYS):
+        raise APIQueryParamsError(
+            "Give link_type or relationship, not both: relationship is the old name of link_type. Use link_type.")
     if not named.get("origin") and not named.get("target"):
         raise APIQueryParamsError(EXAMPLES)
     parsed = {key: work_id(named[key], key) for key in ("origin", "target") if named.get(key)}
-    parsed["relationship"] = relationships(named.get("relationship"))
+    kind_key = "relationship" if "relationship" in named else "link_type"
+    parsed["relationship"] = relationships(named.get(kind_key), kind_key)
     return parsed
 
 
@@ -67,15 +77,16 @@ def work_id(value, key):
     return short
 
 
-def relationships(value):
-    """The relationships asked for, in vocabulary order; all of them when none is named."""
+def relationships(value, key="relationship"):
+    """The kinds of link asked for, in vocabulary order; all of them when none is named. A value is the key
+    (`citation`) or either id: https://openalex.org/link-types/citation or its old form .../relationships/citation."""
     if not value:
         return list(RELATIONSHIPS)
     asked = {v.strip().rstrip("/").split("/")[-1].lower() for v in value.split("|")}
     unknown = sorted(asked - set(RELATIONSHIPS))
     if unknown or value.startswith("!"):
         raise APIQueryParamsError(
-            f"relationship takes {', '.join(RELATIONSHIPS)} (join several with |), not '{value}'.")
+            f"{key} takes {', '.join(RELATIONSHIPS)} (join several with |), not '{value}'.")
     return [r for r in RELATIONSHIPS if r in asked]
 
 
@@ -167,8 +178,17 @@ def find_links(parsed, page, per_page, cursor):
     return response.hits.total.value, [as_link(h) for h in hits], next_cursor
 
 
+def link_type_id(relationship_id):
+    """The /link-types id of a stored relationship id (oxjob #2481): .../relationships/citation ->
+    .../link-types/citation."""
+    if not relationship_id:
+        return relationship_id
+    return URL + "link-types/" + relationship_id.rstrip("/").split("/")[-1]
+
+
 def as_link(hit):
-    return {"origin": hit.origin, "target": hit.target, "relationship": hit.relationship}
+    return {"origin": hit.origin, "target": hit.target, "relationship": hit.relationship,
+            "link_type": link_type_id(hit.relationship)}
 
 
 @blueprint.route("/links")

@@ -16,3 +16,5 @@ values:
   display_name: Data series
 - id: relationships/part
   display_name: Part
+- id: relationships/review
+  display_name: Review

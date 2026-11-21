@@ -19,6 +19,7 @@ from core.alternate_names import ALTERNATE_NAMES
 from core.work_type_classes import TRADITIONAL_TYPES
 
 PARENT_WORKS_DOCS = "https://help.openalex.org/data/relationships/"
+LINK_TYPES_DOCS = "https://help.openalex.org/data/link-types/"  # oxjob #2481
 # oxjob #2065: said by every `volume.id` filter, group_by and sort
 VOLUME_RETIRED = ("volume was retired on 14 November 2026: a work's book is now one of its parent_works. "
                   "Use parent_works.id (the same work id), e.g. filter=parent_works.id:W123")
@@ -688,6 +689,15 @@ fields = [
         documentation_link="https://developers.openalex.org/api-reference/works",
         alternate_names=ALTERNATE_NAMES.get("cites", None),
     ),
+    ZeroWhenMissingRangeField(
+        # oxjob #2481: stored only on works that have a review link (the rest count as 0 in the
+        # filter, its negations, an ascending sort, group metric sorts and OQL calculations)
+        param="reviewed_by_count",
+        docstring="The number of works that review this work: peer reviews, preprint reviews and book reviews "
+                  "linked to it; list them at /links?filter=target:<id>,relationship:review",
+        documentation_link="https://help.openalex.org/data/works/attributes/#reviewed_by_count",
+        alternate_names=ALTERNATE_NAMES.get("reviewed_by_count"),
+    ),
     RangeField(
         param="cited_by_percentile_year.min",
         docstring="The minimum percentile rank for this work's citation count, compared to other works published in the same year",
@@ -1123,6 +1133,18 @@ fields = [
                   "(a figure, table, file or supplement), data-series (one record of a data series) or part "
                   "(any other declared part)",
         documentation_link="https://help.openalex.org/data/relationships/",
+    ),
+    TermField(
+        # oxjob #2481: the new name of parent_works.relationship (entity link-types). Reads the same
+        # index field (alias) until walden fills parent_works.link_type; group_by rows are named from
+        # config/link-types.yaml.
+        param="parent_works.link_type",
+        alias="parent_works.relationship",
+        sort_field="parent_works.relationship",
+        docstring="How the work relates to a parent work (its link type): volume (in a book or proceedings "
+                  "volume), component (a figure, table, file or supplement), data-series (one record of a "
+                  "data series) or part (any other declared part)",
+        documentation_link=LINK_TYPES_DOCS,
     ),
     BooleanField(
         param="has_parent_work",

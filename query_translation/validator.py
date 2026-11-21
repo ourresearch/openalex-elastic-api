@@ -112,8 +112,10 @@ CLOSED_VOCAB_NAMESPACE = {
     # config/contributor-roles.yaml; a slug outside them is invalid_value
     "contributor-roles": "contributor-roles",
     # relationships (oxjob #2065, #1490): the kinds of link between works in
-    # config/relationships.yaml (citation, volume, component, data-series, part)
+    # config/relationships.yaml (citation, volume, component, data-series, part, review)
     "relationships": "relationships",
+    # link-types (oxjob #2481): the same vocabulary under its new name, config/link-types.yaml
+    "link-types": "link-types",
     # Tier-1.5: the topic-hierarchy code vocabs — small, fully-enumerable closed
     # sets (domains 4, fields 26, subfields 252; complete in `config/*.yaml` and
     # matching the live API). Identity-mapped (namespace == entity_type ==

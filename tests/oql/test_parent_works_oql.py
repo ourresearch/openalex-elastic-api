@@ -132,3 +132,59 @@ def test_the_volume_word_is_retired(oql):
     assert err.value.code == "OQL_UNKNOWN_FIELD"
     assert "retired" in err.value.message
     assert "parent work" in err.value.fixit
+
+
+# --- oxjob #2481: link type (the new name of relationship) and reviewed by count -----------------
+@pytest.mark.parametrize("oql", [
+    "works where link type to parent work is data-series",
+    "works where parent work link type is data-series",
+    "works where link type is data-series",
+    "works where parent_works.link_type is data-series",
+])
+def test_link_type_word_and_aliases(oql):
+    oqo, leaf = _leaf(oql)
+    assert leaf == {"column_id": "parent_works.link_type", "value": "data-series"}
+    assert validate_oqo(oqo).valid
+    assert L.render(oqo) == "works where link type to parent work is (data-series)"
+
+
+@pytest.mark.parametrize("value", ["volume", "review", "link-types/part", "https://openalex.org/link-types/part",
+                                   "relationships/part"])
+def test_link_type_values_validate(value):
+    oqo = parse_url_to_oqo("works", filter_string=f"parent_works.link_type:{value}")
+    assert validate_oqo(oqo).valid, validate_oqo(oqo).to_dict()
+
+
+def test_review_is_a_relationship_too():
+    oqo = parse_url_to_oqo("works", filter_string="parent_works.relationship:review")
+    assert validate_oqo(oqo).valid
+
+
+@pytest.mark.parametrize("oql,leaf", [
+    ("works where reviewed by count > 0", {"column_id": "reviewed_by_count", "value": 0, "operator": ">"}),
+    ("works where reviewed by count is 0", {"column_id": "reviewed_by_count", "value": 0}),
+    ("works where reviews count >= 2", {"column_id": "reviewed_by_count", "value": 2, "operator": ">="}),
+    ("works where review count >= 2", {"column_id": "reviewed_by_count", "value": 2, "operator": ">="}),
+    ("works where number of reviews >= 2", {"column_id": "reviewed_by_count", "value": 2, "operator": ">="}),
+    ("works where reviewed_by_count >= 2", {"column_id": "reviewed_by_count", "value": 2, "operator": ">="}),
+])
+def test_reviewed_by_count(oql, leaf):
+    oqo, got = _leaf(oql)
+    assert got == leaf
+    assert validate_oqo(oqo).valid
+    assert L.is_integer_column("reviewed_by_count")
+    assert L.parse(L.render(oqo)).to_dict() == oqo.to_dict()
+
+
+def test_group_by_link_type():
+    oqo = L.parse("works where type is book group by link type to parent work")
+    assert validate_oqo(oqo).valid
+    assert L.render(oqo) == "works where type is (book) group by link type to parent work"
+
+
+def test_link_types_entity():
+    # Field words on link-types come with the website's link-types facets (OQL's fallback vocabulary is the GUI's
+    # filter set); until then the entity itself parses.
+    oqo = L.parse("link-types")
+    assert oqo.get_rows == "link-types"
+    assert validate_oqo(oqo).valid

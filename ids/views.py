@@ -23,6 +23,7 @@ from domains.schemas import DomainsSchema
 from indexes.schemas import IndexesSchema
 from oa_statuses.schemas import OaStatusesSchema
 from source_lists.schemas import SourceListsSchema
+from link_types.schemas import LinkTypesSchema
 from relationships.schemas import RelationshipsSchema
 from study_designs.schemas import StudyDesignsSchema
 from fields.schemas import FieldsSchema
@@ -896,6 +897,9 @@ def get_by_openalex_external_id(index, schema, id):
     elif index.startswith("contributor-roles"):
         # split("-")[0] would give "contributor" (oxjob #2075)
         entity_name = endpoint_name = "contributor-roles"
+    elif index.startswith("link-types"):
+        # split("-")[0] would give "link"; the ids are https://openalex.org/link-types/<key> (oxjob #2481)
+        entity_name = endpoint_name = "link-types"
     elif index.startswith("work-relationships"):
         # split("-")[0] would give "work"; the ids are https://openalex.org/relationships/<key> (oxjob #2065)
         entity_name = endpoint_name = "relationships"
@@ -973,6 +977,12 @@ def study_designs_id_get(id):
 @blueprint.route("/entities/contributor-roles/<path:id>")
 def contributor_roles_id_get(id):
     return get_by_openalex_external_id(settings.CONTRIBUTOR_ROLES_INDEX, ContributorRolesSchema, id)
+
+
+@blueprint.route("/link-types/<path:id>")
+@blueprint.route("/entities/link-types/<path:id>")
+def link_types_id_get(id):
+    return get_by_openalex_external_id(settings.LINK_TYPES_INDEX, LinkTypesSchema, id)
 
 
 @blueprint.route("/relationships/<path:id>")

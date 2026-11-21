@@ -397,9 +397,11 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         # oxjob #2065: parent and child works (parent_works.id sits where volume.id did)
         "parent_works.id": "source",
         "parent_works.relationship": "other",
+        "parent_works.link_type": "other",  # oxjob #2481
         "has_parent_work": "other",
         "lineage": "other",
         "child_works_count": "other",
+        "reviewed_by_count": "citation",  # oxjob #2481, beside cited_by_count
         "locations.source.id": "source",
         "primary_location.source.issn": "ids",
         "primary_location.source.type": "source",

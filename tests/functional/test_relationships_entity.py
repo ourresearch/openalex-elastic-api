@@ -10,7 +10,7 @@ from elasticsearch_dsl import AttrDict
 import ids.views
 from relationships.schemas import RelationshipsSchema
 
-# The five records walden syncs (id, display_name, description).
+# The six records walden syncs (id, display_name, description); review joined 2026-11-21 (oxjob #2481).
 RECORDS = [
     ("citation", "Citation", "The work cites another work: that work is in its reference list."),
     ("volume", "Volume",
@@ -22,6 +22,9 @@ RECORDS = [
     ("part", "Part",
      "The work is declared part of another work in some other way: an article in an issue, a dataset in a "
      "collection, a component of a project."),
+    ("review", "Review",
+     "The work reviews another work: an evaluation of that specific work, such as a peer review, preprint review or "
+     "book review (a literature review article is the work type review, not this link)."),
 ]
 
 
@@ -56,7 +59,7 @@ def test_single_record_lookup_uses_the_relationships_path_segment(client, monkey
 
 
 @pytest.mark.parametrize("path", ["/relationships/config", "/work-relationships/config"])
-def test_config_route_serves_the_five_values(client, path):
+def test_config_route_serves_the_six_values(client, path):
     r = client.get(path)
     assert r.status_code == 200
     assert [(v["id"], v["display_name"]) for v in r.get_json()["values"]] == [

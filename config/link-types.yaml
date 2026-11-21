@@ -1,0 +1,20 @@
+id: link-types
+displayName: link types
+displayNameSingular: link type
+descr: the kind of link between two works
+descrFull: The kind of link between two works, such as a citation, a review of another work, a chapter in a book volume, or a figure that is a component of an article. The new name of relationships (the same vocabulary).
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/link-types\/|link-types\/)([a-z-]+)
+values:
+- id: link-types/citation
+  display_name: Citation
+- id: link-types/volume
+  display_name: Volume
+- id: link-types/component
+  display_name: Component
+- id: link-types/data-series
+  display_name: Data series
+- id: link-types/part
+  display_name: Part
+- id: link-types/review
+  display_name: Review

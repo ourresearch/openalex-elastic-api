@@ -182,24 +182,29 @@ def get_display_names_keywords_licenses_topics(ids, connection='default'):
     return results
 
 
-def get_relationship_display_name(key):
+def get_relationship_display_name(key, entity_type="relationships"):
     """The name of a parent-child relationship key (`data-series` -> "Data series"), from the
-    closed vocabulary in config/relationships.yaml (oxjob #2065); the key itself if unknown."""
+    closed vocabulary in config/relationships.yaml (oxjob #2065), or config/link-types.yaml, its
+    new name (oxjob #2481); the key itself if unknown."""
     from core.entities import get_entity_type
 
-    ent = get_entity_type("relationships")
+    ent = get_entity_type(entity_type)
     for row in (ent.values if ent and ent.values else []):
-        if row["id"] == f"relationships/{key}":
+        if row["id"] == f"{entity_type}/{key}":
             return row["display_name"]
     return key
+
+
+# group_by key -> the vocabulary its rows are named from
+PARENT_LINK_GROUP_BYS = {"parent_works.relationship": "relationships", "parent_works.link_type": "link-types"}
 
 
 def get_key_display_name(b, group_by):
     if b.key == "unknown":
         return "unknown"
 
-    if group_by == "parent_works.relationship":
-        return get_relationship_display_name(b.key)
+    if group_by in PARENT_LINK_GROUP_BYS:
+        return get_relationship_display_name(b.key, PARENT_LINK_GROUP_BYS[group_by])
 
     if group_by.endswith("country_code") or group_by.endswith("countries"):
         from core.country_names import get_country_name

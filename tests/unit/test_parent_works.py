@@ -259,8 +259,9 @@ def test_a_chapter_names_its_book_and_nothing_else_about_it():
         "volume": {"id": W2, "display_name": "A book"},  # still in the index until walden drops it
     }
     out = WorksSchema(context={"display_relevance": False}).dump(_doc(**doc, biblio={"volume": "12"}))
-    assert out["parent_works"] == [{"id": W2, "display_name": "A book", "relationship": "volume"}]
-    assert list(out["parent_works"][0]) == ["id", "display_name", "relationship"]
+    assert out["parent_works"] == [{"id": W2, "display_name": "A book", "relationship": "volume",
+                                    "link_type": "volume"}]  # link_type: the new name (oxjob #2481)
+    assert list(out["parent_works"][0]) == ["id", "display_name", "relationship", "link_type"]
     assert out["lineage"] == [W, W2]
     assert out["child_works_count"] == 0
     assert "volume" not in out

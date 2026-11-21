@@ -22,8 +22,8 @@ from core.entities import (  # noqa: E402
     _registry,
 )
 
-# The 28 entity types (relationships joined 2026-11-13, oxjob #2065; contributor-roles 2026-11-18,
-# oxjob #2075) shipped in config/*.yaml (one file each).
+# The 29 entity types (relationships joined 2026-11-13, oxjob #2065; contributor-roles 2026-11-18,
+# oxjob #2075; link-types 2026-11-21, oxjob #2481) shipped in config/*.yaml (one file each).
 # (locations joined 2026-08-30 — oxjob #850, locations-entity program.)
 ALL_ENTITIES = sorted(_registry().keys())
 
@@ -32,13 +32,13 @@ ALL_ENTITIES = sorted(_registry().keys())
 # null/empty `values` and must project to None.
 CLOSED_VOCAB = {
     "continents", "contributor-roles", "countries", "domains", "fields", "indexes",
-    "institution-types", "languages", "licenses", "oa-statuses", "sdgs",
+    "institution-types", "languages", "licenses", "link-types", "oa-statuses", "sdgs",
     "relationships", "source-lists", "source-types", "study-designs", "subfields", "work-types",
 }
 
 
-def test_all_28_entities_present():
-    assert len(ALL_ENTITIES) == 28, ALL_ENTITIES
+def test_all_29_entities_present():
+    assert len(ALL_ENTITIES) == 29, ALL_ENTITIES
 
 
 @pytest.mark.parametrize("name", ALL_ENTITIES)
