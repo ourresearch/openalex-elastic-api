@@ -81,6 +81,7 @@
       "type": "string",
       "description": "Valid OpenAlex entity types (the OQO `get_rows`). Sourced from oqo.VALID_ENTITY_TYPES.",
       "enum": [
+        "author-types",
         "authors",
         "awards",
         "concepts",

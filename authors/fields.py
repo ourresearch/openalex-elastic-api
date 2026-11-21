@@ -177,6 +177,16 @@ fields = [
         documentation_link="https://developers.openalex.org/api-reference/institutions",
         alternate_names=ALTERNATE_NAMES.get("institution.type", None),
     ),
+    TermField(
+        # oxjob #2437: bare `type` is polysemous across endpoints, so entity_type is set here (as on
+        # institutions and sources), not via core.fields.ENTITY_ID_PARAM_TYPES
+        param="type",
+        entity_type="author-types",
+        docstring="What kind of agent the author is: human, organization or software-agent (an AI agent or "
+                  "other bot). Null means not stated, which is most authors",
+        documentation_link="https://help.openalex.org/data/author-types/",
+        alternate_names=ALTERNATE_NAMES.get("author_type", None),
+    ),
     TermField(param="parsed_longest_name.first"),
     TermField(param="parsed_longest_name.middle"),
     TermField(param="parsed_longest_name.last"),

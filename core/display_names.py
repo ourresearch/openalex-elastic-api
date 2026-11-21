@@ -94,7 +94,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # organizations), as on works; the id alone is "exact institution".
         'last_known_institutions.id': {"display_name": 'exact institution'},
         'last_known_institutions.type': {"display_name": 'institution type'},
-        'observed_orcids': {"display_name": 'Observed ORCIDs'},  # column-only since #1340; the ORCID filter covers the list
+        'observed_orcids': {"display_name": 'Observed ORCIDs'},
+        'type': {"display_name": 'author type'},  # oxjob #2437, as institutions' `type` is 'institution type'  # column-only since #1340; the ORCID filter covers the list
         'orcid': {"display_name": 'ORCID'},
         'summary_stats.2yr_mean_citedness': {"display_name": '2-year mean citedness'},
         'summary_stats.h_index': {"display_name": 'h-index'},
@@ -291,6 +292,10 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
     },
+    'author-types': {  # oxjob #2437
+        'description': {"display_name": 'description'},
+        'display_name': {"display_name": 'name'},
+    },
     'relationships': {  # oxjob #2065
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
@@ -363,6 +368,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'apc_sum': {"display_name": 'APC sum'},
         'authors_count': {"display_name": 'authors count'},
         'authorships.author.id': {"display_name": 'author'},
+        # oxjob #2437: human, organization or software-agent (an AI agent or other bot). GUI facet displayName matches.
+        'authorships.author.type': {"display_name": 'author type', "aliases": ['author types', 'kind of author']},
         'authorships.author.orcid': {"display_name": 'ORCID', "aliases": ['author orcid']},
         'authorships.countries': {"display_name": 'country'},
         'authorships.institutions.continent': {"display_name": 'continent', "aliases": ['institution continent']},

@@ -14,6 +14,7 @@ from works import lakebase
 logger = logging.getLogger(__name__)
 from core.utils import get_data_version_connection
 from authors.schemas import AuthorsSchema
+from author_types.schemas import AuthorTypesSchema
 from awards.schemas import AwardsSchema
 from concepts.schemas import ConceptsSchema
 from continents.schemas import ContinentsSchema
@@ -896,6 +897,9 @@ def get_by_openalex_external_id(index, schema, id):
     elif index.startswith("contributor-roles"):
         # split("-")[0] would give "contributor" (oxjob #2075)
         entity_name = endpoint_name = "contributor-roles"
+    elif index.startswith("author-types"):
+        # split("-")[0] would give "author" (oxjob #2437)
+        entity_name = endpoint_name = "author-types"
     elif index.startswith("work-relationships"):
         # split("-")[0] would give "work"; the ids are https://openalex.org/relationships/<key> (oxjob #2065)
         entity_name = endpoint_name = "relationships"
@@ -973,6 +977,12 @@ def study_designs_id_get(id):
 @blueprint.route("/entities/contributor-roles/<path:id>")
 def contributor_roles_id_get(id):
     return get_by_openalex_external_id(settings.CONTRIBUTOR_ROLES_INDEX, ContributorRolesSchema, id)
+
+
+@blueprint.route("/author-types/<path:id>")
+@blueprint.route("/entities/author-types/<path:id>")
+def author_types_id_get(id):
+    return get_by_openalex_external_id(settings.AUTHOR_TYPES_INDEX, AuthorTypesSchema, id)
 
 
 @blueprint.route("/relationships/<path:id>")

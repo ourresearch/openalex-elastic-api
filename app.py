@@ -11,6 +11,7 @@ from werkzeug.exceptions import HTTPException, NotFound
 
 import awards
 import authors
+import author_types
 import autocomplete
 import concepts
 import continents
@@ -115,6 +116,7 @@ def register_blueprints(app):
     """Register Flask blueprints."""
     app.register_blueprint(awards.views.blueprint)
     app.register_blueprint(authors.views.blueprint)
+    app.register_blueprint(author_types.views.blueprint)
     app.register_blueprint(autocomplete.views.blueprint)
     app.register_blueprint(concepts.views.blueprint)
     app.register_blueprint(continents.views.blueprint)
@@ -262,7 +264,7 @@ NOT_FOUND_NAMES = {
     "institution-types": "Institution type", "source-types": "Source type", "work-types": "Work type",
     "types": "Work type", "locations": "Location", "oa-statuses": "OA status",
     "study-designs": "Study design", "source-lists": "Source list", "indexes": "Index",
-    "contributor-roles": "Contributor role",
+    "contributor-roles": "Contributor role", "author-types": "Author type",
 }
 
 

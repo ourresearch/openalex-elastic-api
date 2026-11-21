@@ -121,6 +121,8 @@ ENTITY_ID_PARAM_TYPES = {
     "study_designs.id": "study-designs",
     # relationships (oxjob #2065): how a work relates to its parent work
     "parent_works.relationship": "relationships",
+    # author-types (oxjob #2437): what kind of agent each of the work's authors is
+    "authorships.author.type": "author-types",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",
@@ -1398,6 +1400,9 @@ class TermField(Field):
         elif self.param == "parent_works.relationship":
             # oxjob #2065: the work holds the short key (`volume`), as `type` does
             value = self._strip_openalex_prefix(value, "relationships/")
+        elif self.param == "authorships.author.type":
+            # oxjob #2437: each authorship's author holds the bare slug (`software-agent`)
+            value = self._strip_openalex_prefix(value, "author-types/")
         elif (
             self.param == "type"
             or self.param == "last_known_institution.type"
@@ -1408,6 +1413,7 @@ class TermField(Field):
                 "work-types/",
                 "institution-types/",
                 "source-types/",
+                "author-types/",  # authors `type` (oxjob #2437)
                 "types/",
             )
         elif (
@@ -1471,12 +1477,15 @@ class TermField(Field):
             return self._strip_openalex_prefix(self.value, "languages/").lower()
         elif self.param == "parent_works.relationship":
             return self._strip_openalex_prefix(self.value, "relationships/")
+        elif self.param == "authorships.author.type":
+            return self._strip_openalex_prefix(self.value, "author-types/")
         elif self.param == "type" or self.param == "last_known_institution.type":
             return self._strip_openalex_prefix(
                 self.value,
                 "work-types/",
                 "institution-types/",
                 "source-types/",
+                "author-types/",  # authors `type` (oxjob #2437)
                 "types/",
             )
         elif (
@@ -2412,6 +2421,7 @@ class JoinField(Field):
 # clause on `id` matches nothing (oxjob #396). work-types is the one
 # name/path mismatch: its canonical segment is `types` (`types/article`).
 ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
+    "author-types": "author-types",
     "continents": "continents",
     "contributor-roles": "contributor-roles",
     "countries": "countries",

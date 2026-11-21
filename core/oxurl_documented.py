@@ -54,4 +54,6 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'type_crossref', 'updated_date',
     # oxjob #2065: parent and child works (volume.id is retired)
     'parent_works.id', 'parent_works.relationship', 'has_parent_work', 'lineage', 'child_works_count',
+    # oxjob #2437: what kind of agent each author is
+    'authorships.author.type',
 })
