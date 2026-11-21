@@ -10,11 +10,14 @@ Work Links job (20 Nov 2026). Every request names a work:
     /links?filter=origin:W1,target:W2  the links between the two
     relationship:citation              (any of the three) keeps one kind; values join with |
 
-Order: part-of links first (a work's parents, or its figures and chapters), then the rest, each by the other work's id.
+No order is promised yet (Casey, 21 Nov: "leave it unsorted"): results come in the index's own order, which is the cheap
+way to page (a sort on the ids took 5-7 s for a work with 334K links). Cursor walks use a point-in-time view.
 """
 import time
 
+from elasticsearch import NotFoundError
 from elasticsearch_dsl import Q, Search
+from elasticsearch_dsl.connections import get_connection
 from flask import Blueprint, jsonify, request
 
 from combined_config import all_entities_config
@@ -29,7 +32,7 @@ blueprint = Blueprint("links", __name__)
 
 URL = "https://openalex.org/"
 RELATIONSHIPS = [v["id"].split("/")[-1] for v in all_entities_config["relationships"]["values"]]
-PART_OF = ["volume", "component", "data-series", "part"]  # listed first (Casey, 17 Nov)
+PART_OF = ["volume", "component", "data-series", "part"]
 FILTER_KEYS = ("origin", "target", "relationship")
 UNSUPPORTED_PARAMS = ("group_by", "group-by", "sort", "search", "select", "sample")
 EXAMPLES = (
@@ -85,20 +88,18 @@ def resolve(short):
 
 
 def links_query(parsed):
-    """The links of the named work(s) by the asked relationships. Part-of links score higher, so they come first."""
-    rel_ids = [URL + "relationships/" + r for r in parsed["relationship"]]
-    must = [Q("terms", relationship=rel_ids)]
+    """The links of the named work(s), by the asked relationships. The work ids filter; a relationship asked for is a
+    `must`, never a filter: a relationship matches most of the index, and the filter cache would build a bitset over
+    billions of links for it (5 s cold, 21 Nov 2026). Asking for every relationship adds no clause."""
+    filters = []
     for key in ("origin", "target"):
         if key in parsed:
             asked = parsed[key]
-            must.append(Q("terms", **{key: list(dict.fromkeys([URL + asked, URL + resolve(asked)]))}))
-    parts = [URL + "relationships/" + r for r in PART_OF]
-    return Q("bool", filter=must, should=[Q("constant_score", filter=Q("terms", relationship=parts), boost=1)])
-
-
-def sort_for(parsed):
-    other = "target" if "origin" in parsed else "origin"
-    return ({"_score": {"order": "desc"}}, {other: {"order": "asc"}}, {"relationship": {"order": "asc"}})
+            filters.append(Q("terms", **{key: list(dict.fromkeys([URL + asked, URL + resolve(asked)]))}))
+    must = []
+    if parsed["relationship"] != RELATIONSHIPS:
+        must.append(Q("terms", relationship=[URL + "relationships/" + r for r in parsed["relationship"]]))
+    return Q("bool", filter=filters, must=must)
 
 
 def paging():
@@ -116,24 +117,58 @@ def paging():
     return page, per_page, cursor
 
 
+PIT_KEEP_ALIVE = "5m"
+
+
+def open_pit():
+    return get_connection().open_point_in_time(index=LINKS_INDEX, keep_alive=PIT_KEEP_ALIVE)["id"]
+
+
+def close_pit(pit_id):
+    try:
+        get_connection().close_point_in_time(id=pit_id)
+    except Exception:
+        pass  # it expires on its own
+
+
 def find_links(parsed, page, per_page, cursor):
-    s = (Search(index=LINKS_INDEX)
-         .query(links_query(parsed))
-         .sort(*sort_for(parsed))
-         .extra(track_total_hits=True))
-    if cursor:
-        if cursor != "*":
-            s = s.extra(search_after=decode_cursor(cursor))
-        s = s.extra(size=per_page + 1)  # one past the page: is there a next one?
+    """No order is promised. Pages read the index in its stored order. A cursor walk reads a point-in-time view of the
+    index in shard order, so the nightly writes and the merges after them can't shift it."""
+    query = links_query(parsed)
+    if not cursor:
+        s = Search(index=LINKS_INDEX).query(query).sort("_doc").extra(track_total_hits=True)
+        response = s[(page - 1) * per_page:page * per_page].execute()
+        return response.hits.total.value, [as_link(h) for h in response.hits], None
+    if cursor == "*":
+        pit_id, after = open_pit(), None
     else:
-        s = s[(page - 1) * per_page:page * per_page]
-    response = s.execute()
+        values = decode_cursor(cursor)
+        if len(values) != 2 or not isinstance(values[0], str):
+            raise APIPaginationError("Invalid cursor value")
+        pit_id, after = values
+    s = (Search().query(query).sort("_shard_doc")
+         .extra(pit={"id": pit_id, "keep_alive": PIT_KEEP_ALIVE}, size=per_page + 1, track_total_hits=True))
+    if after is not None:
+        s = s.extra(search_after=after)
+    try:
+        response = s.execute()
+    except NotFoundError:
+        raise APIPaginationError("This cursor has expired (a walk must ask for its next page within 5 minutes). "
+                                 "Start again with cursor=*.")
+    pit_id = response._d_.get("pit_id", pit_id)
     hits = list(response.hits)
-    more = cursor and len(hits) > per_page
+    more = len(hits) > per_page
     hits = hits[:per_page]
-    results = [{"origin": h.origin, "target": h.target, "relationship": h.relationship} for h in hits]
-    next_cursor = encode_cursor(list(hits[-1].meta.sort)) if more else None
-    return response.hits.total.value, results, next_cursor
+    if more:
+        next_cursor = encode_cursor([pit_id, list(hits[-1].meta.sort)])
+    else:
+        next_cursor = None
+        close_pit(pit_id)
+    return response.hits.total.value, [as_link(h) for h in hits], next_cursor
+
+
+def as_link(hit):
+    return {"origin": hit.origin, "target": hit.target, "relationship": hit.relationship}
 
 
 @blueprint.route("/links")

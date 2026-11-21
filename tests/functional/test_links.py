@@ -35,10 +35,10 @@ class _Response:
 
 
 class FakeSearch:
-    """Serves `links` (docs) matching the query's filters, in the order the API asks for: parts first, then the other
-    end's id."""
+    """Serves `links` (docs) matching the query's filters in stored order (the list order stands in for _doc)."""
     links = []
     last = None
+    closed = []
 
     def __init__(self, index=None):
         self.index = index
@@ -63,24 +63,25 @@ class FakeSearch:
 
     def execute(self):
         FakeSearch.last = {**self.body, "index": self.index}
-        f = self.body["query"]["bool"]["filter"]
-        want = {k: set(v) for clause in f for k, v in clause["terms"].items()}
+        b = self.body["query"]["bool"]
+        want = {k: set(v) for clause in b.get("filter", []) + b.get("must", []) for k, v in clause["terms"].items()}
         rows = [d for d in FakeSearch.links if all(d[k] in v for k, v in want.items())]
-        other = list(self.body["sort"][1])[0]
-        parts = {R + p for p in lv.PART_OF}
-        keyed = sorted(((0 if d["relationship"] in parts else 1, d[other], d["relationship"]), d) for d in rows)
-        hits = [_Hit({**d, "meta": {"sort": [2.0 - key[0], key[1], key[2]]}}) for key, d in keyed]
+        hits = [_Hit({**d, "meta": {"sort": [i]}}) for i, d in enumerate(rows)]
         if "search_after" in self.body:
-            a = self.body["search_after"]
-            hits = [h for h in hits if (-h.meta.sort[0], h.meta.sort[1], h.meta.sort[2]) > (-a[0], a[1], a[2])]
+            hits = [h for h in hits if h.meta.sort[0] > self.body["search_after"][0]]
         hits = hits[self.slice] if self.slice is not None else hits[:self.body.get("size", 10)]
-        return _Response(hits, len(rows))
+        r = _Response(hits, len(rows))
+        r._d_ = {"pit_id": self.body["pit"]["id"]} if "pit" in self.body else {}
+        return r
 
 
 @pytest.fixture(autouse=True)
 def fake_es(monkeypatch):
     monkeypatch.setattr(lv, "Search", FakeSearch)
     monkeypatch.setattr(lv, "merged_winner", lambda short: None)
+    monkeypatch.setattr(lv, "open_pit", lambda: "pit-1")
+    monkeypatch.setattr(lv, "close_pit", lambda pit_id: FakeSearch.closed.append(pit_id))
+    FakeSearch.closed = []
     FakeSearch.links = [doc("W1001", "W1009", "volume"), doc("W1001", "W1002", "citation"),
                         doc("W1001", "W1003", "citation"), doc("W1001", "W1004", "citation")]
 
@@ -125,30 +126,43 @@ def test_relationship_values_take_every_spelling():
 
 # --- the query -------------------------------------------------------------------------------------
 
-def test_query_reads_the_links_index_and_ranks_parts_first(client):
+def test_query_reads_the_links_index_in_stored_order(client):
     get(client, "/links?filter=target:W1002")
     q = FakeSearch.last["query"]["bool"]
     assert FakeSearch.last["index"] == "links"
-    assert {"terms": {"target": [U + "W1002"]}} in q["filter"]
-    assert {"terms": {"relationship": [R + r for r in lv.RELATIONSHIPS]}} in q["filter"]
-    assert q["should"] == [{"constant_score": {"filter": {"terms": {"relationship": [R + r for r in lv.PART_OF]}},
-                                               "boost": 1}}]
-    assert FakeSearch.last["sort"] == ({"_score": {"order": "desc"}}, {"origin": {"order": "asc"}},
-                                       {"relationship": {"order": "asc"}})
+    assert q["filter"] == [{"terms": {"target": [U + "W1002"]}}]
+    assert "must" not in q  # every relationship: no clause
+    assert FakeSearch.last["sort"] == ("_doc",)
 
 
-def test_origin_sorts_by_target(client):
-    get(client, "/links?filter=origin:W1001")
-    assert FakeSearch.last["sort"][1] == {"target": {"order": "asc"}}
+def test_a_named_relationship_is_a_must_not_a_filter(client):
+    get(client, "/links?filter=target:W1002,relationship:component|part")
+    q = FakeSearch.last["query"]["bool"]
+    assert q["must"] == [{"terms": {"relationship": [R + "component", R + "part"]}}]
+    assert q["filter"] == [{"terms": {"target": [U + "W1002"]}}]
+
+
+def test_a_cursor_walk_reads_a_point_in_time_view_and_closes_it(client):
+    _, body = get(client, "/links?filter=origin:W1001&per_page=3&cursor=*")
+    assert FakeSearch.last["index"] is None and FakeSearch.last["pit"]["id"] == "pit-1"
+    assert FakeSearch.last["sort"] == ("_shard_doc",)
+    assert decode_cursor(body["meta"]["next_cursor"])[0] == "pit-1" and FakeSearch.closed == []
+    _, body = get(client, f"/links?filter=origin:W1001&per_page=3&cursor={body['meta']['next_cursor']}")
+    assert len(body["results"]) == 1 and body["meta"]["next_cursor"] is None and FakeSearch.closed == ["pit-1"]
+
+
+def test_a_cursor_that_is_not_ours_answers_400(client):
+    status, _ = get(client, f"/links?filter=origin:W1001&cursor={encode_cursor([5])}")
+    assert status == 400
 
 
 # --- results ----------------------------------------------------------------------------------------
 
-def test_origin_lists_parts_first_then_the_rest(client):
+def test_origin_lists_its_links(client):
     status, body = get(client, "/links?filter=origin:w1001")
     assert status == 200 and body["meta"]["count"] == 4
     assert body["results"][0] == {"origin": CITING, "target": BOOK, "relationship": R + "volume"}
-    assert [r["target"] for r in body["results"][1:]] == [U + "W1002", U + "W1003", U + "W1004"]
+    assert [r["target"] for r in body["results"][1:]] == [U + "W1002", U + "W1003", U + "W1004"]  # stored order
     assert list(body["results"][0]) == ["origin", "target", "relationship"]
 
 
@@ -174,7 +188,7 @@ def test_cursor_walks_every_link_and_ends(client):
         seen += [r["origin"] for r in body["results"]]
         cursor = body["meta"]["next_cursor"]
         pages += 1
-    assert seen == [U + "W999"] + [U + f"W{100 + i}" for i in range(5)] and pages == 3
+    assert seen == [U + f"W{100 + i}" for i in range(5)] + [U + "W999"] and pages == 3
 
 
 def test_cursor_on_an_exactly_full_last_page_ends_there(client):
@@ -189,4 +203,4 @@ def test_page_mode_has_no_cursor(client):
 
 
 def test_cursor_round_trip():
-    assert decode_cursor(encode_cursor([2.0, U + "W1", R + "citation"])) == [2.0, U + "W1", R + "citation"]
+    assert decode_cursor(encode_cursor(["pit-1", [241307]])) == ["pit-1", [241307]]
