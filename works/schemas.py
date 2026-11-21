@@ -99,8 +99,8 @@ class ContributorRoleSchema(Schema):
 
 
 class ActedOnBehalfOfSchema(Schema):
-    """Who the author acted for on this work (oxjob #2437, W3C PROV actedOnBehalfOf): an author id (a human or an
-    organization author) or an institution id; the id's own prefix says which."""
+    """Who the author acted for on this work (oxjob #2437, W3C PROV actedOnBehalfOf): a human is an author id, an
+    organization an institution id (one with a ROR id), and an organization without a ROR id its name alone (id null)."""
 
     id = fields.Str()
     display_name = fields.Str()
