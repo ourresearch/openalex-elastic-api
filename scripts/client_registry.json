@@ -6404,7 +6404,7 @@
       "key": "display_name",
       "entityToFilter": "author-types",
       "entityToSelect": null,
-      "displayName": "display_name",
+      "displayName": "name",
       "displayNameVerbatim": false,
       "type": "search",
       "actions": [
@@ -6418,7 +6418,7 @@
       "key": "works_count",
       "entityToFilter": "author-types",
       "entityToSelect": null,
-      "displayName": "works_count",
+      "displayName": "works count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
