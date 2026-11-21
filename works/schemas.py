@@ -97,9 +97,23 @@ class ContributorRoleSchema(Schema):
         ordered = True
 
 
+class ActedOnBehalfOfSchema(Schema):
+    """Who the author acted for on this work (oxjob #2437, W3C PROV actedOnBehalfOf): an author id (a human or an
+    organization author) or an institution id; the id's own prefix says which."""
+
+    id = fields.Str()
+    display_name = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class AuthorshipsSchema(Schema):
     author_position = fields.Str()
     author = fields.Nested(AuthorSchema)
+    # oxjob #2437: [] unless a source states the delegation explicitly. No source does yet, so it is [] everywhere;
+    # absent or null in the doc also dumps []
+    acted_on_behalf_of = fields.Nested(ActedOnBehalfOfSchema, many=True, dump_default=[])
     institutions = fields.Nested(InstitutionsSchema, many=True)
     countries = fields.List(fields.Str())
     is_corresponding = fields.Bool()
@@ -113,8 +127,9 @@ class AuthorshipsSchema(Schema):
 
     @post_dump
     def contributor_roles_never_null(self, data, **kwargs):
-        if "contributor_roles" in data and data["contributor_roles"] is None:
-            data["contributor_roles"] = []
+        for key in ("contributor_roles", "acted_on_behalf_of"):
+            if key in data and data[key] is None:
+                data[key] = []
         return data
 
     class Meta:
