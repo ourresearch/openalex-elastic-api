@@ -23,7 +23,7 @@ from core.entities import (  # noqa: E402
 )
 
 # The 29 entity types (relationships joined 2026-11-13, oxjob #2065; contributor-roles 2026-11-18,
-# oxjob #2075; link-types 2026-11-21, oxjob #2481) shipped in config/*.yaml (one file each).
+# oxjob #2075; link-types 2026-11-21, oxjob #2481; author-types 2026-11-23, oxjob #2437) shipped in config/*.yaml (one file each).
 # (locations joined 2026-08-30 — oxjob #850, locations-entity program.)
 ALL_ENTITIES = sorted(_registry().keys())
 
@@ -31,7 +31,7 @@ ALL_ENTITIES = sorted(_registry().keys())
 # Tier-1 set + the three currently-unread lists). Native-ID entities carry a
 # null/empty `values` and must project to None.
 CLOSED_VOCAB = {
-    "continents", "contributor-roles", "countries", "domains", "fields", "indexes",
+    "author-types", "continents", "contributor-roles", "countries", "domains", "fields", "indexes",
     "institution-types", "languages", "licenses", "link-types", "oa-statuses", "sdgs",
     "relationships", "source-lists", "source-types", "study-designs", "subfields", "work-types",
 }

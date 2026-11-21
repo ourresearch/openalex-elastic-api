@@ -65,6 +65,9 @@ class AuthorsSchema(Schema):
     orcid = fields.Str()
     observed_orcids = fields.List(fields.Str())
     display_name = fields.Str()
+    # oxjob #2437: human, organization or software-agent; null when not stated (most authors), and until the
+    # authors re-sync brings the field to the doc
+    type = fields.Str(dump_default=None)
     raw_author_names = fields.List(fields.Str())
     full_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")

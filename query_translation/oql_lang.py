@@ -525,6 +525,10 @@ _f("any location source", "locations.source.id", "id")
 # institution type: the affiliated institution's type (education / healthcare / company / …);
 # slug enum, mirrors source type. GUI displayName "institution type".
 _f("institution type", "authorships.institutions.type", "enum")
+# oxjob #2437: what kind of agent each author is (human / organization / software-agent); slug
+# enum like institution type. GUI displayName "author type". `author type is not software-agent`
+# keeps the works with no software-agent author (a must_not on the authorships array).
+_f("author type", "authorships.author.type", "enum")
 # awards: grant/award entity-id, name-resolved via the awards namespace. GUI displayName
 # "awards" (entityToSelect awards). Name resolution derives from entity_type (#565).
 _f("awards", "awards.id", "id")
@@ -645,6 +649,7 @@ _ID_SHAPES = {
     "source-types": r"[a-z][a-z -]*", "institution-types": r"[a-z][a-z-]*",
     "indexes": r"[a-z]+", "study-designs": r"[a-z0-9][a-z0-9-]*",
     "contributor-roles": r"[a-z][a-z-]*",
+    "author-types": r"[a-z][a-z-]*",
     "relationships": r"[a-z][a-z-]*",
     "link-types": r"[a-z][a-z-]*",
     "source-lists": r"[a-z0-9][a-z0-9-]*",

@@ -145,6 +145,8 @@ def test_closed_vocab_namespace_set():
         "contributor-roles",
         # link-types registry entity, the new name of relationships (oxjob #2481):
         "link-types",
+        # author-types registry entity (oxjob #2437):
+        "author-types",
     }
     # work-types' config namespace is the legacy "types"
     assert CLOSED_VOCAB_NAMESPACE["work-types"] == "types"

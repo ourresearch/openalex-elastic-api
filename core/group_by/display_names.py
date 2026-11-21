@@ -206,6 +206,8 @@ def get_key_display_name(b, group_by):
 
     if group_by in LINK_TYPE_GROUP_BYS:
         return get_relationship_display_name(b.key, LINK_TYPE_GROUP_BYS[group_by])
+    if group_by == "authorships.author.type":  # oxjob #2437: bare author-types keys (`software-agent`)
+        return get_relationship_display_name(b.key, "author-types")
 
     if group_by.endswith("country_code") or group_by.endswith("countries"):
         from core.country_names import get_country_name

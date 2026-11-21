@@ -219,6 +219,21 @@
       "isId": false,
       "hasExport": false
     },
+    "authorships.author.type": {
+      "key": "authorships.author.type",
+      "entityToFilter": "works",
+      "entityToSelect": "author-types",
+      "displayName": "author type",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "authors_count": {
       "key": "authors_count",
       "entityToFilter": "works",
@@ -2693,6 +2708,21 @@
       "actions": [
         "filter",
         "sort"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "type": {
+      "key": "type",
+      "entityToFilter": "authors",
+      "entityToSelect": "author-types",
+      "displayName": "author type",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -6492,6 +6522,53 @@
       "entityToFilter": "contributor-roles",
       "entityToSelect": null,
       "displayName": "works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "author-types": {
+    "description": {
+      "key": "description",
+      "entityToFilter": "author-types",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "display_name": {
+      "key": "display_name",
+      "entityToFilter": "author-types",
+      "entityToSelect": null,
+      "displayName": "display_name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "works_count": {
+      "key": "works_count",
+      "entityToFilter": "author-types",
+      "entityToSelect": null,
+      "displayName": "works_count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [

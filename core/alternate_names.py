@@ -15,6 +15,8 @@ ALTERNATE_NAMES = {
     "has_arxiv": ["arxiv", "preprint"],
     "has_references": ["outgoing", "citations"],
     "is_paratext": ["paratext", "cover", "table", "contents", "issue", "volume"],
+    # oxjob #2437: what kind of agent an author is
+    "author_type": ["ai", "agent", "bot", "software", "human", "organization", "kind"],
     # oxjob #2065: parent and child works
     "has_parent_work": ["parent", "part", "chapter", "component", "book", "volume"],
     "parent_works": ["parent", "part", "book", "volume", "chapters", "container"],

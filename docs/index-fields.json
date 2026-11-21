@@ -1,5 +1,21 @@
 {
 "fields": {
+"author-types": {
+"created_date": "date",
+"description": "text",
+"display_name": "text",
+"display_name.autocomplete": "search_as_you_type",
+"display_name.keyword": "keyword",
+"id": "keyword",
+"id.lower": "keyword",
+"standard_terms": "object",
+"standard_terms.term": "keyword",
+"standard_terms.url": "keyword",
+"standard_terms.vocabulary": "keyword",
+"updated_date": "date",
+"works_api_url": "keyword",
+"works_count": "long"
+},
 "authors": {
 "affiliations": "object",
 "affiliations.institution": "object",
@@ -2185,6 +2201,7 @@
 }
 },
 "indexes": {
+"author-types": "author-types-v1",
 "authors": "authors-v22",
 "awards": "awards-v4",
 "concepts": "concepts-v9",

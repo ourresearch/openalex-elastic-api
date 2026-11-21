@@ -30,7 +30,7 @@ const ENTITY_NAMES = [
   "works","awards","authors","sources","publishers","funders","institutions",
   "concepts","keywords","topics","subfields","fields","domains","sdgs",
   "countries","continents","languages","types","source-types",
-  "institution-types","licenses","oa-statuses","indexes","source-lists","study-designs","relationships","contributor-roles","locations",
+  "institution-types","licenses","oa-statuses","indexes","source-lists","study-designs","relationships","contributor-roles","author-types","locations",
 ];
 
 // Strip the ES imports and the export block; inject stubs.
