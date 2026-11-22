@@ -41,8 +41,8 @@ FILTER_KEYS = ("origin", "target") + KIND_KEYS
 UNSUPPORTED_PARAMS = ("group_by", "group-by", "sort", "search", "select", "sample")
 EXAMPLES = (
     "Name a work: /links?filter=origin:W2741809807 lists the works it is part of, cites or reviews; "
-    "/links?filter=target:W2741809807 lists the works that cite it, review it or are part of it. "
-    f"Add link_type:citation (or review, {', '.join(PART_OF)}) to keep one kind."
+    "/links?filter=target:W2741809807 lists the works that cite it, review it, translate it or are part of it. "
+    f"Add link_type:citation (or review, translation, {', '.join(PART_OF)}) to keep one kind."
 )
 
 

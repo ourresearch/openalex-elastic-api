@@ -18,3 +18,5 @@ values:
   display_name: Part
 - id: link-types/review
   display_name: Review
+- id: link-types/translation
+  display_name: Translation

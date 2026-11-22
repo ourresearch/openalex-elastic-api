@@ -18,3 +18,5 @@ values:
   display_name: Part
 - id: relationships/review
   display_name: Review
+- id: relationships/translation
+  display_name: Translation

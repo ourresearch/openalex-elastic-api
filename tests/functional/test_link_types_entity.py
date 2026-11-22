@@ -1,5 +1,5 @@
 """link-types entity wiring (oxjob #2481): the new name of /relationships, the same vocabulary (citation, review and
-the four part-of kinds), ids https://openalex.org/link-types/<slug>. Both entities answer until the cutover.
+the four part-of kinds, translation from oxjob #2536), ids https://openalex.org/link-types/<slug>. Both entities answer until the cutover.
 Uses the tests/conftest `client` fixture; ES is never reached (walden builds link-types-v1).
 
     PYTHONPATH=. venv/bin/python -m pytest tests/functional/test_link_types_entity.py -q
@@ -12,7 +12,8 @@ from link_types.schemas import LinkTypesSchema
 from relationships.schemas import RelationshipsSchema
 
 VALUES = [("citation", "Citation"), ("volume", "Volume"), ("component", "Component"),
-          ("data-series", "Data series"), ("part", "Part"), ("review", "Review")]
+          ("data-series", "Data series"), ("part", "Part"), ("review", "Review"),
+          ("translation", "Translation")]
 
 
 class _FakeSearch:
