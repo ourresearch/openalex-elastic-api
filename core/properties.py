@@ -523,7 +523,13 @@ CAP_COLUMN = "column"
 # the same index field; OQL "link type to parent work"). New registry entity `link-types` (citation, review, volume,
 # component, data-series, part; ES link-types-v1, built by walden) beside `relationships`, which gains `review`.
 # Nothing removed or renamed: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "24.5.0"
+# 24.6.0 (oxjob #2264, 2026-11-22; the shape was approved 22 Nov 2026, oxjob #2264): pull notices (additive). Works
+# gain the column `pull_notice_works` [{id, display_name, link_type}] (the notices that retracted, withdrew or removed
+# the work, oldest first; [] when none) and the filters `pull_notice_works.id` (group_by too; OQL "pull notice") and
+# `pull_notice_works.link_type` (group_by too; entity link-types; OQL "pull notice link type"). Both bring pulled works
+# back, as is_pulled does. link-types and relationships gain retraction, withdrawal and removal; their records'
+# standard_terms gain `match` (SKOS level). Nothing removed or renamed: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "24.6.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

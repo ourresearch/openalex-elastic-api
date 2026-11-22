@@ -402,6 +402,8 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "lineage": "other",
         "child_works_count": "other",
         "reviewed_by_count": "citation",  # oxjob #2481, beside cited_by_count
+        "pull_notice_works.id": "other",  # oxjob #2264, beside is_pulled
+        "pull_notice_works.link_type": "other",
         "locations.source.id": "source",
         "primary_location.source.issn": "ids",
         "primary_location.source.type": "source",

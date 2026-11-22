@@ -1,7 +1,8 @@
 """/links (oxjob #1490): work-to-work links. A link is three ids: `origin` (the work that holds the link: the citing
-paper, the chapter, the review), `target` (the work it points to) and `relationship` (a /relationships id). Field
-names: Jason, 17 Nov; three ids with no display names: Casey + Jason, 17 Nov. `link_type` (oxjob #2481) is the new name
-of `relationship`: the same kind as a /link-types id; both are served, and filter on either, until the cutover.
+paper, the chapter, the review, the retraction notice), `target` (the work it points to) and `relationship` (a
+/relationships id). Field names: Jason, 17 Nov; three ids with no display names: Casey + Jason, 17 Nov. `link_type`
+(oxjob #2481) is the new name of `relationship`: the same kind as a /link-types id; both are served, and filter on
+either, until the cutover.
 
 Links are read from the `links` index: one doc per link, built nightly from openalex.works.work_links by walden's
 Work Links job (20 Nov 2026). Every request names a work:
@@ -35,14 +36,17 @@ blueprint = Blueprint("links", __name__)
 URL = "https://openalex.org/"
 RELATIONSHIPS = [v["id"].split("/")[-1] for v in all_entities_config["relationships"]["values"]]
 PART_OF = ["volume", "component", "data-series", "part"]
+# oxjob #2264: pull notices. The notice is the origin, the work it pulled the target.
+PULL_NOTICES = ["retraction", "withdrawal", "removal"]
 # The kind of link: `link_type` (oxjob #2481) or its old name `relationship`, never both.
 KIND_KEYS = ("link_type", "relationship")
 FILTER_KEYS = ("origin", "target") + KIND_KEYS
 UNSUPPORTED_PARAMS = ("group_by", "group-by", "sort", "search", "select", "sample")
 EXAMPLES = (
-    "Name a work: /links?filter=origin:W2741809807 lists the works it is part of, cites or reviews; "
-    "/links?filter=target:W2741809807 lists the works that cite it, review it or are part of it. "
-    f"Add link_type:citation (or review, {', '.join(PART_OF)}) to keep one kind."
+    "Name a work: /links?filter=origin:W2741809807 lists the works it is part of, cites, reviews or pulls (as a "
+    "retraction, withdrawal or removal notice); /links?filter=target:W2741809807 lists the works that cite it, "
+    "review it, pull it or are part of it. "
+    f"Add link_type:citation (or review, {', '.join(PULL_NOTICES + PART_OF)}) to keep one kind."
 )
 
 

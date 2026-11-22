@@ -18,3 +18,9 @@ values:
   display_name: Part
 - id: relationships/review
   display_name: Review
+- id: relationships/retraction
+  display_name: Retraction
+- id: relationships/withdrawal
+  display_name: Withdrawal
+- id: relationships/removal
+  display_name: Removal

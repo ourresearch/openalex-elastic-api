@@ -1522,6 +1522,36 @@
       "isId": false,
       "hasExport": false
     },
+    "pull_notice_works.id": {
+      "key": "pull_notice_works.id",
+      "entityToFilter": "works",
+      "entityToSelect": "works",
+      "displayName": "pull notice",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "pull_notice_works.link_type": {
+      "key": "pull_notice_works.link_type",
+      "entityToFilter": "works",
+      "entityToSelect": "relationships",
+      "displayName": "pull notice link type",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "is_pulled": {
       "key": "is_pulled",
       "entityToFilter": "works",

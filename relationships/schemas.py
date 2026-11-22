@@ -10,11 +10,14 @@ from core.schemas import (
 
 
 class StandardTermSchema(Schema):
-    """The same link in a standard vocabulary (oxjob #1490): Dublin Core, schema.org, DataCite, Crossref, DCAT."""
+    """The same link in a standard vocabulary (oxjob #1490): Dublin Core, schema.org, DataCite, Crossref, DCAT.
+    `match` (oxjob #2264) is how close their term is to ours, as a SKOS mapping level: exact, close, broad, narrow or
+    related. Served as the index holds it; null on a record written before walden filled it."""
 
     vocabulary = fields.Str()
     term = fields.Str()
     url = fields.Str()
+    match = fields.Str(dump_default=None)
 
     class Meta:
         ordered = True

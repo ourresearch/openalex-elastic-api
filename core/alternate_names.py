@@ -21,6 +21,9 @@ ALTERNATE_NAMES = {
     "child_works_count": ["children", "parts", "chapters", "components"],
     # oxjob #2481: works that review this work
     "reviewed_by_count": ["reviews", "reviewed", "peer", "review", "referee"],
+    # oxjob #2264: the notices that retracted, withdrew or removed a work
+    "pull_notice_works": ["notice", "retraction", "retracted", "withdrawal", "withdrawn", "removal", "removed",
+                          "pulled"],
     "is_traditional": ["traditional", "scholarly", "literature", "publications", "papers"],
     "source.issn": ["issn", "journal"],
     "source.type": ["source", "type", "journal", "repository"],

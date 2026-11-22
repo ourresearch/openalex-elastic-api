@@ -479,6 +479,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'child_works_count': {"display_name": 'child works count', "aliases": ['child works', 'parts count']},
         # oxjob #2481: the works that review this one (parallel to cited_by_count)
         'reviewed_by_count': {"display_name": 'reviewed by count', "aliases": ['reviews count', 'review count', 'number of reviews']},
+        # oxjob #2264: the notices that retracted, withdrew or removed the work, and their kind
+        'pull_notice_works.id': {"display_name": 'pull notice', "aliases": ['pull notices', 'pull_notice_works']},
+        'pull_notice_works.link_type': {"display_name": 'pull notice link type', "aliases": ['pull notice type', 'link type of pull notice']},
         'title_and_abstract.search': {"display_name": 'title-abstract', "aliases": ['title/abstract', 'title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         # oxjob #1521: title + abstract text OR the keywords a query phrase names.
         # Hyphenated labels since 2026-10-03 (#1512): slashes belong to ids; the slash forms stay aliases.

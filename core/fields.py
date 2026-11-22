@@ -123,6 +123,8 @@ ENTITY_ID_PARAM_TYPES = {
     "parent_works.relationship": "relationships",
     # link-types (oxjob #2481): the same vocabulary under its new name
     "parent_works.link_type": "link-types",
+    # oxjob #2264: the kind of notice that pulled a work (retraction, withdrawal, removal)
+    "pull_notice_works.link_type": "link-types",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",
@@ -1343,9 +1345,9 @@ class TermField(Field):
             return f"https://metadata.un.org/sdg/{number}"
         return value
 
-    # Works params holding a parent link's short key (`volume`): parent_works.relationship and its new
-    # name parent_works.link_type (oxjob #2481).
-    PARENT_LINK_TYPE_PARAMS = ("parent_works.relationship", "parent_works.link_type")
+    # Works params holding a link type's short key (`volume`, `retraction`): parent_works.relationship, its new
+    # name parent_works.link_type (oxjob #2481) and pull_notice_works.link_type (oxjob #2264).
+    LINK_TYPE_KEY_PARAMS = ("parent_works.relationship", "parent_works.link_type", "pull_notice_works.link_type")
 
     # Works params whose ES value is a closed vocabulary's full id,
     # https://openalex.org/<segment>/<slug>: study designs (oxjob #1312).
@@ -1401,7 +1403,7 @@ class TermField(Field):
             value = self._expand_vocab_id(value, self.FULL_URL_VOCAB_SEGMENTS[self.param])
         elif self.param == "language":
             value = self._strip_openalex_prefix(value, "languages/")
-        elif self.param in self.PARENT_LINK_TYPE_PARAMS:
+        elif self.param in self.LINK_TYPE_KEY_PARAMS:
             # oxjob #2065: the work holds the short key (`volume`), as `type` does; either id form
             # (relationships/ or its new name link-types/, oxjob #2481) gives the key
             value = self._strip_openalex_prefix(value, "relationships/", "link-types/")
@@ -1476,7 +1478,7 @@ class TermField(Field):
             return self._expand_vocab_id(self.value, self.FULL_URL_VOCAB_SEGMENTS[self.param])
         elif self.param == "language":
             return self._strip_openalex_prefix(self.value, "languages/").lower()
-        elif self.param in self.PARENT_LINK_TYPE_PARAMS:
+        elif self.param in self.LINK_TYPE_KEY_PARAMS:
             return self._strip_openalex_prefix(self.value, "relationships/", "link-types/")
         elif self.param == "type" or self.param == "last_known_institution.type":
             return self._strip_openalex_prefix(

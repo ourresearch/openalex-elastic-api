@@ -2,7 +2,7 @@ id: link-types
 displayName: link types
 displayNameSingular: link type
 descr: the kind of link between two works
-descrFull: The kind of link between two works, such as a citation, a review of another work, a chapter in a book volume, or a figure that is a component of an article. The new name of relationships (the same vocabulary).
+descrFull: The kind of link between two works, such as a citation, a review of another work, a notice that retracts another work, a chapter in a book volume, or a figure that is a component of an article. The new name of relationships (the same vocabulary).
 isNative: false
 idRegex: (?:https:\/\/openalex\.org\/link-types\/|link-types\/)([a-z-]+)
 values:
@@ -18,3 +18,9 @@ values:
   display_name: Part
 - id: link-types/review
   display_name: Review
+- id: link-types/retraction
+  display_name: Retraction
+- id: link-types/withdrawal
+  display_name: Withdrawal
+- id: link-types/removal
+  display_name: Removal
