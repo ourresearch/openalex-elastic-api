@@ -20,3 +20,5 @@ values:
   display_name: Review
 - id: link-types/translation
   display_name: Translation
+- id: link-types/summary
+  display_name: Summary

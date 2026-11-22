@@ -20,3 +20,5 @@ values:
   display_name: Review
 - id: relationships/translation
   display_name: Translation
+- id: relationships/summary
+  display_name: Summary
