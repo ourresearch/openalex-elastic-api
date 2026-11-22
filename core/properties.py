@@ -523,7 +523,10 @@ CAP_COLUMN = "column"
 # the same index field; OQL "link type to parent work"). New registry entity `link-types` (citation, review, volume,
 # component, data-series, part; ES link-types-v1, built by walden) beside `relationships`, which gains `review`.
 # Nothing removed or renamed: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "24.5.0"
+# 24.6.0 (oxjob #2075 D11 round one, shape approved 2026-11-22): /contributor-roles records gain `standard_terms`
+# [{vocabulary, term, url}] (the role in other vocabularies; the /link-types shape), and the vocabulary gains `editor`
+# (ids.credit null). One property added = MINOR per classify_properties_diff.py.
+PROPERTIES_VERSION = "24.6.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

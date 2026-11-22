@@ -1,4 +1,4 @@
-"""contributor-roles entity wiring (oxjob #2075): the 14 CRediT roles. Uses the tests/conftest `client`
+"""contributor-roles entity wiring (oxjob #2075): the 14 CRediT roles plus editor. Uses the tests/conftest `client`
 fixture; ES is never reached (walden builds contributor-roles-v1).
 
     PYTHONPATH=. venv/bin/python -m pytest tests/functional/test_contributor_roles_entity.py -q
@@ -11,7 +11,7 @@ from contributor_roles.schemas import ContributorRolesSchema
 SLUGS = [
     "conceptualization", "data-curation", "formal-analysis", "funding-acquisition", "investigation",
     "methodology", "project-administration", "resources", "software", "supervision", "validation",
-    "visualization", "writing-original-draft", "writing-review-editing",
+    "visualization", "writing-original-draft", "writing-review-editing", "editor",
 ]
 
 
@@ -43,12 +43,13 @@ def test_single_record_lookup_uses_the_contributor_roles_path_segment(client, mo
     assert queries == [{"term": {"id.lower": "https://openalex.org/contributor-roles/software"}}]
 
 
-def test_config_route_serves_the_fourteen_values(client):
+def test_config_route_serves_the_fifteen_values(client):
     r = client.get("/contributor-roles/config")
     assert r.status_code == 200
     values = r.get_json()["values"]
     assert [v["id"] for v in values] == [f"contributor-roles/{s}" for s in SLUGS]
-    assert values[-1]["display_name"] == "Writing – review & editing"
+    assert values[-2]["display_name"] == "Writing – review & editing"
+    assert values[-1]["display_name"] == "Editor"
 
 
 def test_helper_routes(client):
@@ -61,6 +62,8 @@ def test_the_record_shape():
     doc = {
         "id": "https://openalex.org/contributor-roles/software", "display_name": "Software",
         "description": "Programming, software development; designing computer programs.",
+        "standard_terms": [{"vocabulary": "crossref", "term": "software",
+                            "url": "http://credit.niso.org/contributor-roles/software/"}],
         "ids": {"openalex": "https://openalex.org/contributor-roles/software",
                 "credit": "https://credit.niso.org/contributor-roles/software/"},
         "works_count": 7, "cited_by_count": 9,
@@ -68,9 +71,27 @@ def test_the_record_shape():
         "updated_date": "2026-11-18T00:00:00", "created_date": "2026-11-18",
     }
     out = ContributorRolesSchema(context={"display_relevance": False}).dump(AttrDict({**doc, "meta": {"score": None}}))
-    assert list(out) == ["id", "display_name", "description", "ids", "works_count", "cited_by_count",
-                         "updated_date", "created_date"]
+    assert list(out) == ["id", "display_name", "description", "standard_terms", "ids", "works_count",
+                         "cited_by_count", "updated_date", "created_date"]
     assert out["ids"] == doc["ids"]
+    assert out["standard_terms"] == doc["standard_terms"]
+    assert list(out["standard_terms"][0]) == ["vocabulary", "term", "url"]
+
+
+def test_editor_has_no_credit_id():
+    # editor is not a CRediT role: ids.credit is null and dumps as null (oxjob #2075)
+    doc = {"id": "https://openalex.org/contributor-roles/editor", "display_name": "Editor",
+           "ids": {"openalex": "https://openalex.org/contributor-roles/editor", "credit": None},
+           "standard_terms": [{"vocabulary": "datacite", "term": "Editor", "url": None}]}
+    out = ContributorRolesSchema(context={"display_relevance": False}).dump(AttrDict({**doc, "meta": {"score": None}}))
+    assert out["ids"] == {"openalex": "https://openalex.org/contributor-roles/editor", "credit": None}
+    assert out["standard_terms"] == doc["standard_terms"]
+
+
+def test_a_record_before_the_sync_has_no_standard_terms():
+    doc = {"id": "https://openalex.org/contributor-roles/software", "display_name": "Software"}
+    out = ContributorRolesSchema(context={"display_relevance": False}).dump(AttrDict({**doc, "meta": {"score": None}}))
+    assert "standard_terms" not in out
 
 
 def test_properties_catalog(client):

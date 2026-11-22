@@ -1,8 +1,8 @@
 id: contributor-roles
 displayName: contributor roles
 displayNameSingular: contributor role
-descr: the part an author played on a work
-descrFull: The CRediT roles (Contributor Roles Taxonomy, credit.niso.org) an author played on a work, such as Conceptualization or Software, as stated for that author in Crossref deposits, PubMed Central article XML, or an author contributions statement in the article's text that uses CRediT's own terms. Never guessed from the byline.
+descr: the part a person played on a work
+descrFull: The part a person played on a work. One of CRediT's fourteen roles (Contributor Roles Taxonomy, credit.niso.org), such as Conceptualization or Software, as stated for that person in Crossref deposits, PubMed Central article XML, or an author contributions statement in the article's text that uses CRediT's own terms; or Editor, a person who edited the work, as Crossref and other sources list them. Editor is not CRediT's Writing – review & editing, which is commenting on a draft. Never guessed from the byline.
 isNative: false
 idRegex: (?:https:\/\/openalex\.org\/contributor-roles\/|contributor-roles\/)([a-z0-9-]+)
 values:
@@ -34,3 +34,5 @@ values:
   display_name: Writing – original draft
 - id: contributor-roles/writing-review-editing
   display_name: Writing – review & editing
+- id: contributor-roles/editor
+  display_name: Editor

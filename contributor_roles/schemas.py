@@ -7,6 +7,7 @@ from core.schemas import (
     hide_relevance,
     relevance_score,
 )
+from relationships.schemas import StandardTermSchema
 
 
 class IdsSchema(Schema):
@@ -18,13 +19,16 @@ class IdsSchema(Schema):
 
 
 class ContributorRolesSchema(Schema):
-    """One of the 14 CRediT roles (oxjob #2075). `works_count` = works where at least one
-    author carries the role. No works_api_url: there is no works filter on a role alone (the
-    filter that ships pairs an author with a role)."""
+    """One of the 15 contributor roles (oxjob #2075): CRediT's 14, plus `editor` (Crossref's: the person
+    edited the work; not CRediT's writing-review-editing, which is commenting on a draft). `ids.credit` is
+    the CRediT identity, null for editor. `standard_terms` gives the same role in other vocabularies
+    (Crossref, DataCite, JATS, MARC, CSL, schema.org...), shaped as on /link-types. `works_count` = works
+    where at least one person carries the role. No works_api_url: there is no works filter on a role alone."""
 
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
+    standard_terms = fields.List(fields.Nested(StandardTermSchema))
     ids = fields.Nested(IdsSchema)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
