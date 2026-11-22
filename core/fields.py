@@ -24,7 +24,7 @@ from core.search import (
     validate_wildcards,
 )
 from core.merged_ids import merged_winner, note_resolved, with_winners
-from core.utils import get_full_openalex_id, normalize_openalex_id
+from core.utils import SHORT_OPENALEX_ID_PATTERN, get_full_openalex_id, normalize_openalex_id, strict_openalex_id
 import settings
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
 
@@ -654,7 +654,7 @@ class DateTimeField(DateField):
 
 # A native OpenAlex ID already in canonical short form, as core.utils.normalize_openalex_id
 # would return it (no lowercase, no URL, nothing around it).
-_CANONICAL_SHORT_ID_RE = re.compile(r"[WAICFVPSTG]\d{2,}")
+_CANONICAL_SHORT_ID_RE = re.compile(SHORT_OPENALEX_ID_PATTERN)
 ID_URL_PREFIX = "https://openalex.org/"
 
 
@@ -667,7 +667,7 @@ class OpenAlexIDField(Field):
         """`term` on `field` for one OpenAlex ID. A merged-away work, author, source, institution, funder or award ID
         also matches its winner, so a filter on a stored pre-merge ID finds the surviving record's works
         (oxjob #1124)."""
-        ids = with_winners([get_full_openalex_id(value)])
+        ids = with_winners([get_full_openalex_id(value, strict=True)])
         return Q("term", **{field: ids[0]}) if len(ids) == 1 else Q("terms", **{field: ids})
 
     def build_query(self):
@@ -756,20 +756,21 @@ class OpenAlexIDField(Field):
         return field
 
     def validate(self, query):
-        if not normalize_openalex_id(query):
+        short_id = strict_openalex_id(query[1:] if query.startswith("!") else query)  # `!` negates; not part of the ID
+        if not short_id:
             error_id = f"'{self.value.replace('https://openalex.org/', '')}'"
             raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
 
         if (
             self.param == "locations.source.host_institution_lineage"
-            and not normalize_openalex_id(query).startswith("I")
+            and not short_id.startswith("I")
         ):
             raise APIQueryParamsError(
                 "Use an institution ID with this convenience filter (OpenAlex ID that starts with I)."
             )
         elif (
             self.param == "locations.source.publisher_lineage"
-            and not normalize_openalex_id(query).startswith("P")
+            and not short_id.startswith("P")
         ):
             raise APIQueryParamsError(
                 "Use a publisher ID with this convenience filter (OpenAlex ID that starts with P)."
@@ -778,19 +779,19 @@ class OpenAlexIDField(Field):
         # institution) answered count 0 instead of an error (oxjob #1513).
         accepted = accepted_id_entities(self.param, self.entity_type)
         if accepted:
-            short_id = normalize_openalex_id(query)
             given = entity_for_id_prefix(short_id[0])
             if given and given not in accepted:
                 raise APIQueryParamsError(
                     f"'{short_id}' is an OpenAlex {given} ID; "
                     f"{self.param} takes {' or '.join(accepted)} IDs."
                 )
+        return short_id
 
     def _get_formatted_value(self):
         """Return the indexed value for self.value, or None if invalid.
         Mirrors TermField._get_formatted_value. For OpenAlexIDField this is
         the canonical full-URL form."""
-        return get_full_openalex_id(self.value)
+        return get_full_openalex_id(self.value, strict=True)
 
     def build_terms_query(self, values):
         """Build an ES terms query for multiple OpenAlex IDs.
@@ -826,7 +827,7 @@ class OpenAlexIDField(Field):
 
     @staticmethod
     def get_ids(openalex_id, category):
-        full_openalex_id = get_full_openalex_id(openalex_id)
+        full_openalex_id = get_full_openalex_id(openalex_id, strict=True)
         if not full_openalex_id:
             raise APIQueryParamsError(
                 "Invalid OpenAlex ID in cited_by or related_to filter."
@@ -863,28 +864,26 @@ class WorkLineageField(OpenAlexIDField):
             return Q("match_all")
         negated = self.value.startswith("!")
         value = self.value[1:] if negated else self.value
-        self.validate(value)
-        full_id = get_full_openalex_id(value)
+        full_id = ID_URL_PREFIX + self.validate(value)
         q = Q("bool", should=[Q("term", id=full_id), Q("term", **{self.es_field(): full_id})],
               minimum_should_match=1)
         return ~q if negated else q
 
     def validate(self, query):
-        super().validate(query)
-        short_id = normalize_openalex_id(query)
+        short_id = super().validate(query)
         if not short_id.startswith("W"):  # the bare name `lineage` can't go in the shared id-type map
             given = entity_for_id_prefix(short_id[0])
             raise APIQueryParamsError(
                 f"'{short_id}' is an OpenAlex {given or 'non-work'} ID; {self.param} takes works IDs."
             )
+        return short_id
 
     def build_terms_query(self, values):
         """An OR of works (a collection of works, or an OQL list)."""
         full_ids = []
         for val in values:
             self.value = val
-            self.validate(val)
-            full_ids.append(get_full_openalex_id(val))
+            full_ids.append(ID_URL_PREFIX + self.validate(val))
         return Q("bool", should=[Q("terms", id=full_ids), Q("terms", **{self.es_field(): full_ids})],
                  minimum_should_match=1)
 
@@ -1804,8 +1803,10 @@ class TermField(Field):
     def _topic_id_url(value):
         """https://openalex.org/T<n> for T<n>, t<n> or the full URL: the form every index stores
         (authors / institutions topic_share.id are case-sensitive keywords). A full URL used to leave
-        the query unset (an HTML 500) and !T<n> excluded nothing (oxjob #1901)."""
-        return get_full_openalex_id(value) or value
+        the query unset (an HTML 500) and !T<n> excluded nothing (oxjob #1901). T<n> with text after it is a
+        400, not T<n> (oxjob #2075)."""
+        short_id = strict_openalex_id(value)
+        return ID_URL_PREFIX + short_id if short_id else value
 
     def _is_doi(self):
         return self.param == "doi"
@@ -1902,7 +1903,7 @@ class TermField(Field):
         ):
             formatted = f"https://orcid.org/{self.value}"
         elif self.param == "openalex_id":
-            formatted = get_full_openalex_id(self.value)
+            formatted = get_full_openalex_id(self.value, strict=True)
         elif (
             self.param
             in [
@@ -2094,8 +2095,9 @@ class OpenAlexURLTermField(TermField):
 
     def _normalize_term_value(self, value):
         neg, bare = ("!", value[1:]) if value.startswith("!") else ("", value)
-        if _CANONICAL_SHORT_ID_RE.fullmatch(bare.upper()):
-            bare = ID_URL_PREFIX + bare.upper()
+        short_id = strict_openalex_id(bare)  # an ID with text after it is a 400, not the ID (oxjob #2075)
+        if short_id:
+            bare = ID_URL_PREFIX + short_id
         return super()._normalize_term_value(neg + bare)
 
     def build_query(self):

@@ -21,7 +21,7 @@ from core.default_view import HIDDEN_PIECES_KEY, HIDDEN_PULLED_KEY
 from core.filter import filter_records
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.merged_ids import with_winners
-from core.utils import get_full_openalex_id
+from core.utils import strict_openalex_id
 from core.validate import validate_semantic_view
 
 logger = logging.getLogger(__name__)
@@ -173,6 +173,13 @@ def build_vector_filter(params):
     return {"bool": bool_query}
 
 
+def _full_id(value):
+    """The URL form of an OpenAlex ID filter value; a value that isn't an ID passes as typed. An ID with text after it
+    is a 400, as on the other filter paths (oxjob #2075)."""
+    short_id = strict_openalex_id(value)
+    return f"https://openalex.org/{short_id}" if short_id else value
+
+
 def _build_single_filter(key, field_name, value):
     """Build a single ES filter clause for one key-value pair."""
     if key in _BOOLEAN_FIELDS:
@@ -189,7 +196,7 @@ def _build_single_filter(key, field_name, value):
     if "|" in str(value):
         values = [v.strip() for v in str(value).split("|") if v.strip()]
         if key in _ID_FIELDS:
-            values = with_winners([get_full_openalex_id(v) or v for v in values])  # oxjob #1124
+            values = with_winners([_full_id(v) for v in values])  # oxjob #1124
         elif key in _LICENSE_FIELDS:
             values = [_normalize_license(v) for v in values]
         elif key in _LOWERCASE_FIELDS:
@@ -198,7 +205,7 @@ def _build_single_filter(key, field_name, value):
 
     str_value = str(value)
     if key in _ID_FIELDS:
-        ids = with_winners([get_full_openalex_id(str_value) or str_value])  # oxjob #1124
+        ids = with_winners([_full_id(str_value)])  # oxjob #1124
         if len(ids) > 1:
             return {"terms": {field_name: ids}}
         str_value = ids[0]

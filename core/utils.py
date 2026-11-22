@@ -3,6 +3,7 @@ import re
 from elasticsearch_dsl import Search
 
 import settings
+from core.entities import entity_for_id_prefix, get_entity_type
 from core.exceptions import APIQueryParamsError
 from core.filter_split import split_filter_string
 
@@ -153,21 +154,55 @@ def get_index_name_by_id(openalex_id, connection=None):
     return index_name
 
 
-def normalize_openalex_id(openalex_id):
+SHORT_OPENALEX_ID_PATTERN = r"[WAICFVPSTG]\d{2,}"  # W2741809807, A5031124015, ...
+_OPENALEX_ID_RE = re.compile(f"({SHORT_OPENALEX_ID_PATTERN})")
+# One OpenAlex ID and nothing else (oxjob #2075): the short form in any case (A5031124015, a5031124015), or its URL
+# with or without the scheme (https://, http://, openalex.org/...), optionally with the entity's path
+# (https://openalex.org/authors/A5031124015, authors/A5031124015) and a trailing slash.
+_STRICT_OPENALEX_ID_RE = re.compile(
+    r"(?:(?:https?://)?(?:www\.|api\.)?openalex\.org/|openalex:)?"
+    r"(?:(?:entities/)?(?:works|authors|people|institutions|sources|journals|venues|concepts|publishers|funders"
+    r"|topics|awards)/)?"
+    f"({SHORT_OPENALEX_ID_PATTERN})/?",
+    re.IGNORECASE,
+)
+
+
+def normalize_openalex_id(openalex_id, strict=False):
+    """The short OpenAlex ID (`A5031124015`) in `openalex_id`, or None.
+
+    strict=False (entity paths, internal ids) takes the first ID found anywhere in the text, so
+    `/works/W123/anything` still finds W123. strict=True (filter values) takes the value only when
+    it is one ID and nothing else: `A5031124015~editor` or `A5031124015/editor` used to answer as
+    if it were `A5031124015` (every work of that author), so a filter now says it is not an ID
+    (oxjob #2075)."""
     if not openalex_id:
         return None
-    openalex_id = openalex_id.strip().upper()
-    p = re.compile("([WAICFVPSTG]\d{2,})")
-    matches = re.findall(p, openalex_id)
-    if len(matches) == 0:
-        return None
-    clean_openalex_id = matches[0]
-    clean_openalex_id = clean_openalex_id.replace("\0", "")
-    return clean_openalex_id
+    openalex_id = openalex_id.replace("\0", "").strip().upper()
+    m = _STRICT_OPENALEX_ID_RE.fullmatch(openalex_id) if strict else _OPENALEX_ID_RE.search(openalex_id)
+    return m.group(1) if m else None
 
 
-def get_full_openalex_id(openalex_id):
-    short_openalex_id = normalize_openalex_id(openalex_id)
+def strict_openalex_id(value):
+    """The short ID when a filter value is one OpenAlex ID and nothing else (short form in any case, or its
+    URL), else None. An ID with text after it (`A5031124015~editor`, `A5031124015/editor`) used to filter as the
+    ID alone, every work of that author; it is now a 400 that names the value (oxjob #2075)."""
+    short_id = normalize_openalex_id(value, strict=True)
+    if short_id or not value:
+        return short_id
+    found = normalize_openalex_id(value)
+    if found:
+        entity = get_entity_type(entity_for_id_prefix(found[0]))
+        kind = f"{entity.display_name_singular} " if entity and entity.display_name_singular else ""
+        raise APIQueryParamsError(
+            f"'{value}' is not a valid OpenAlex {kind}ID. Give the ID alone, like {found} or "
+            f"https://openalex.org/{found}; join several IDs with | (any of them) or + (all of them)."
+        )
+    return None
+
+
+def get_full_openalex_id(openalex_id, strict=False):
+    short_openalex_id = normalize_openalex_id(openalex_id, strict=strict)
     if short_openalex_id:
         full_openalex_id = f"https://openalex.org/{short_openalex_id}"
     else:

@@ -71,7 +71,7 @@ def parse_filter(filter_string):
 
 
 def work_id(value, key):
-    short = normalize_openalex_id(value)
+    short = normalize_openalex_id(value, strict=True)  # W123~x or W123/x is not W123 (oxjob #2075)
     if not short or not short.startswith("W") or "|" in value or value.startswith("!"):
         raise APIQueryParamsError(f"{key} takes one work id, such as W2741809807, not '{value}'. {EXAMPLES}")
     return short
