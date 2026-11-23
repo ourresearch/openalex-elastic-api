@@ -19,11 +19,11 @@ class IdsSchema(Schema):
 
 
 class ContributorRolesSchema(Schema):
-    """One of the 15 contributor roles (oxjob #2075): CRediT's 14, plus `editor` (Crossref's: the person
-    edited the work; not CRediT's writing-review-editing, which is commenting on a draft). `ids.credit` is
-    the CRediT identity, null for editor. `standard_terms` gives the same role in other vocabularies
-    (Crossref, DataCite, JATS, MARC, CSL, schema.org...), shaped as on /link-types. `works_count` = works
-    where at least one person carries the role. No works_api_url: there is no works filter on a role alone."""
+    """One of the 16 contributor roles (oxjob #2075, #2512): CRediT's 14, plus `editor` (Crossref's: the person
+    edited the work; not CRediT's writing-review-editing, which is commenting on a draft) and `translator` (the
+    person translated the work). `ids.credit` is the CRediT identity, null for editor and translator.
+    `standard_terms` gives the same role in other vocabularies (Crossref, DataCite, JATS, MARC, CSL,
+    schema.org...), shaped as on /link-types. `works_count` = works where at least one person carries the role. No works_api_url: there is no works filter on a role alone."""
 
     id = fields.Str()
     display_name = fields.Str()

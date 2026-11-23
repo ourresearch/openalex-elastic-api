@@ -1,4 +1,4 @@
-"""contributor-roles entity wiring (oxjob #2075): the 14 CRediT roles plus editor. Uses the tests/conftest `client`
+"""contributor-roles entity wiring (oxjob #2075, #2512): the 14 CRediT roles plus editor and translator. Uses the tests/conftest `client`
 fixture; ES is never reached (walden builds contributor-roles-v1).
 
     PYTHONPATH=. venv/bin/python -m pytest tests/functional/test_contributor_roles_entity.py -q
@@ -11,7 +11,7 @@ from contributor_roles.schemas import ContributorRolesSchema
 SLUGS = [
     "conceptualization", "data-curation", "formal-analysis", "funding-acquisition", "investigation",
     "methodology", "project-administration", "resources", "software", "supervision", "validation",
-    "visualization", "writing-original-draft", "writing-review-editing", "editor",
+    "visualization", "writing-original-draft", "writing-review-editing", "editor", "translator",
 ]
 
 
@@ -43,13 +43,14 @@ def test_single_record_lookup_uses_the_contributor_roles_path_segment(client, mo
     assert queries == [{"term": {"id.lower": "https://openalex.org/contributor-roles/software"}}]
 
 
-def test_config_route_serves_the_fifteen_values(client):
+def test_config_route_serves_the_sixteen_values(client):
     r = client.get("/contributor-roles/config")
     assert r.status_code == 200
     values = r.get_json()["values"]
     assert [v["id"] for v in values] == [f"contributor-roles/{s}" for s in SLUGS]
-    assert values[-2]["display_name"] == "Writing – review & editing"
-    assert values[-1]["display_name"] == "Editor"
+    assert values[-3]["display_name"] == "Writing – review & editing"
+    assert values[-2]["display_name"] == "Editor"
+    assert values[-1]["display_name"] == "Translator"
 
 
 def test_helper_routes(client):
