@@ -133,6 +133,21 @@ def get_work_doc(work_id):
     return json.loads(row[0]) if row else None
 
 
+N_REFERENCE_SHARDS = 2  # lakebase.lakebase_work_references_{work_id % 2} (oxjob #2347)
+
+
+def get_work_references(work_id):
+    """work_id (int) -> (whether the work exists, its stored `{"references": [...]}` JSON text or None for no list).
+    The list table holds only works with references (walden notebooks/lakebase/BuildLakebaseWorkReferences)."""
+    row = _query_one(
+        f"SELECT d.work_id IS NOT NULL, r.doc FROM (SELECT %s::bigint AS id) q "
+        f"LEFT JOIN lakebase.lakebase_works_docs_{work_id % N_DOC_SHARDS} d ON d.work_id = q.id "
+        f"LEFT JOIN lakebase.lakebase_work_references_{work_id % N_REFERENCE_SHARDS} r ON r.work_id = q.id",
+        (work_id,),
+    )
+    return bool(row[0]), row[1]
+
+
 def get_work_doc_by_ext_id(ext_id):
     """ext_id (DOI/PMID in the URL form the API queries) -> doc dict or None."""
     row = _query_one(

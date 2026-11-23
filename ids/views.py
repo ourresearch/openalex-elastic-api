@@ -4,7 +4,7 @@ import re
 import time
 
 from elasticsearch_dsl import Q, Search
-from flask import Blueprint, abort, redirect, request, url_for, jsonify
+from flask import Blueprint, Response, abort, redirect, request, url_for, jsonify
 from urllib.parse import quote
 
 import settings
@@ -145,6 +145,33 @@ def _held_id_search(s, served_q, copy_urls=(), held_q=None):
                           Q("constant_score", filter=held_q, boost=1.0)],
           minimum_should_match=1)
     return s.query(q).sort({"_score": "desc"}, {"id": "asc"})
+
+
+EMPTY_REFERENCES = '{"references":[]}'
+
+
+@blueprint.route("/entities/works/<id>/references")
+@blueprint.route("/works/<id>/references/")
+@blueprint.route("/works/<id>/references")  # registered first (decorators apply bottom-up), so url_for builds this one
+def works_references_get(id):
+    """oxjob #2347: the work's reference list, `{"references": [{"raw_reference_string", "raw_doi", "work_id"}]}`, as
+    stored in Lakebase (served verbatim). OpenAlex work ids only; [] for a work with no references; a merged-away id
+    redirects to the winner's list; 404 for an unknown work."""
+    if not is_work_openalex_id(id):
+        abort(404, description=f"Work {id[:300]} not found (use the work's OpenAlex ID, e.g. W2741809807)")
+    clean_id = normalize_openalex_id(id)
+    if clean_id != id:
+        return redirect(url_for("ids.works_references_get", id=clean_id, **request.args))
+    if not lakebase.lakebase_enabled():
+        abort(503, description="References are unavailable right now")
+    work_id = int(clean_id[1:])
+    exists, doc = lakebase.get_work_references(work_id)
+    if not exists:
+        merged = redirect_if_merged("ids.works_references_get", clean_id, get_data_version_connection(request))
+        if merged:
+            return merged
+        abort(404, description=f"Work {clean_id} not found")
+    return Response(doc or EMPTY_REFERENCES, mimetype="application/json")
 
 
 @blueprint.route("/works/<path:id>")
