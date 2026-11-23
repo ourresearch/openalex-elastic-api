@@ -27,7 +27,7 @@ from query_translation import oql_lang as L
 from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_text, english_list, link_text
 from query_translation.oqo import (CORPUS_ALIASES, CORPUS_CANONICAL_PHRASE, OQO, AffiliationFilter,
                                    AuthorshipFilter, PERSON_COLUMN, PLACE_COLUMN, ROLE_COLUMN,
-                                   authorship_value,
+                                   any_role, authorship_value, is_any_role, is_role_choice,
                                    BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, SortBy,
                                    is_collection_id, normalize_corpus)
 from query_translation.oqo_canonicalizer import _sort_key
@@ -616,8 +616,14 @@ def _own_threshold_text(f: LeafFilter) -> str:
 def seat_words(leaves, resolver: Resolver = None, person: bool = True) -> Tuple[Optional[str], str]:
     """(the person's link or None, the rest: `listing [UBC] on the work in the role
     [Software]`) for one authorship's conditions; NotCore for anything else."""
-    who, insts, roles = None, [], []
+    who, insts, roles, choices, any_role = None, [], [], [], False
     for f in leaves:
+        if is_any_role(f):
+            any_role = True
+            continue
+        if is_role_choice(f):
+            choices.append(_or_list([_link(c.value, c.column_id, resolver) for c in f.filters]))
+            continue
         if not isinstance(f, LeafFilter) or f.is_negated or f.operator != "is" or not isinstance(f.value, str):
             raise NotCore("an authorship condition with no words")
         if f.column_id == PERSON_COLUMN and person and who is None:
@@ -634,7 +640,15 @@ def seat_words(leaves, resolver: Resolver = None, person: bool = True) -> Tuple[
     if roles:
         words.append(f"in the role {roles[0]}" if len(roles) == 1
                      else f"in the roles {english_list(roles)}")
+    words += [f"in the role {c}" for c in choices]        # `in the role [A] or [B]`
+    if any_role:
+        words.append("in any role")
     return who, " ".join(words)
+
+
+def _or_list(items: List[str]) -> str:
+    """`a or b`, `a, b, or c`."""
+    return " or ".join(items) if len(items) <= 2 else ", ".join(items[:-1]) + ", or " + items[-1]
 
 
 def authorship_phrase(f: AuthorshipFilter, resolver: Resolver = None) -> str:
@@ -1263,16 +1277,17 @@ _ADJECTIVE_WORDS = ([(c, a.split(), False) for c, a in NEG_ADJECTIVES.items()]
                     + [(c, a.split(), True) for c, a in ADJECTIVES.items()])
 
 
-def _link_series(ws: _Words) -> List[str]:
-    """⟦L0⟧ | ⟦L0⟧ and ⟦L1⟧ | ⟦L0⟧, ⟦L1⟧, and ⟦L2⟧ (english_list's forms) -> IDs."""
+def _link_series(ws: _Words, conj: str = "and") -> List[str]:
+    """⟦L0⟧ | ⟦L0⟧ and ⟦L1⟧ | ⟦L0⟧, ⟦L1⟧, and ⟦L2⟧ (english_list's forms; `or` for
+    _or_list's) -> IDs."""
     ids = []
     while ws.t.link_id(ws.peek() or ""):
         ids.append(ws.t.link_id(ws.take()[0]))
-        if ws.at(",") and ws.at(",", "and") and ws.t.link_id(ws.peek(2) or ""):
+        if ws.at(",") and ws.at(",", conj) and ws.t.link_id(ws.peek(2) or ""):
             ws.take(2)
         elif ws.at(",") and ws.t.link_id(ws.peek(1) or ""):
             ws.take()
-        elif ws.at("and") and ws.t.link_id(ws.peek(1) or ""):
+        elif ws.at(conj) and ws.t.link_id(ws.peek(1) or ""):
             ws.take()
         else:
             break
@@ -1281,8 +1296,9 @@ def _link_series(ws: _Words) -> List[str]:
 
 def _seat_conditions(ws: _Words) -> List[LeafFilter]:
     """One authorship's conditions after its person (oxjob #2537): `listing ⟦I⟧ on the
-    work`, then `in the role ⟦R⟧` / `in the roles ⟦R1⟧ and ⟦R2⟧`, either or both. [] (the
-    cursor where it was) when the words aren't there."""
+    work`, then `in the role ⟦R⟧` / `in the roles ⟦R1⟧ and ⟦R2⟧` (every one) / `in the role
+    ⟦R1⟧ or ⟦R2⟧` (at least one; `in any of the roles ...` reads the same) / `in any role`.
+    [] (the cursor where it was) when the words aren't there."""
     save, out = ws.i, []
     if ws.at("listing") and ws.t.link_id(ws.peek(1) or ""):
         ws.take()
@@ -1292,9 +1308,24 @@ def _seat_conditions(ws: _Words) -> List[LeafFilter]:
             return []
         ws.take(3)
         out += [LeafFilter(PLACE_COLUMN, _authorship_id(PLACE_COLUMN, i)) for i in ids]
-    if (ws.at("in", "the", "role") or ws.at("in", "the", "roles")) and ws.t.link_id(ws.peek(3) or ""):
+    n = 3 if (ws.at("in", "the", "role") or ws.at("in", "the", "roles")) else \
+        5 if ws.at("in", "any", "of", "the", "roles") else 0
+    if n and ws.t.link_id(ws.peek(n) or ""):
+        ws.take(n)
+        # the list's own conjunction says which: `[A], [B], and [C]` every one, `[A] or [B]` at least one
+        start = ws.i
+        ids_or = _link_series(ws, "or")
+        after_or, ws.i = ws.i, start
+        ids = _link_series(ws, "and")
+        roles = [LeafFilter(ROLE_COLUMN, _authorship_id(ROLE_COLUMN, i)) for i in (ids_or if after_or > ws.i else ids)]
+        if after_or > ws.i:
+            ws.i = after_or
+            out.append(BranchFilter(join="or", filters=roles))
+        else:
+            out += roles
+    if ws.at("in", "any", "role"):
         ws.take(3)
-        out += [LeafFilter(ROLE_COLUMN, _authorship_id(ROLE_COLUMN, i)) for i in _link_series(ws)]
+        out.append(any_role())          # some recorded contributor role
     return out
 
 
@@ -1927,7 +1958,7 @@ def _parse_split(t, part, rows) -> GroupBy:
         return _parse_dim(t, word, rest, rows)
     if word not in SINGULAR_THING:
         raise NotCore(f"unexpected {rest!r} after `by {word}`")
-    if word == "author" and (rest.startswith("listing ") or rest.startswith("in the role")):
+    if word == "author" and rest.startswith(("listing ", "in the role", "in any role", "in any of the roles")):
         # `by author listing [UBC](I1) on the work`, `by author in the role [Data curation]`:
         # the person's own place on each work (oxjob #2537), never the profile (`at [UBC]`)
         ws = _Words(t, rest)

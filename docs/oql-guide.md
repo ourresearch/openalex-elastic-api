@@ -76,6 +76,8 @@ get [University of British Columbia](I141945490)'s open access articles since 20
 | `get works with [Jason R Priem](A5023888391) in the role [Software](software)` | he did the software himself, not a co-author |
 | `get works with [Jason R Priem](A5023888391) listing [University of North Carolina at Chapel Hill](I114027177) on the work` | he put UNC on that work |
 | `get works about kelp with an author listing [University of British Columbia](I141945490) on the work in the role [Data curation](data-curation)` | someone who listed UBC on the work did its data curation |
+| `get works with [Jason R Priem](A5023888391) in the role [Software](software) or [Data curation](data-curation)` | he did one of them (or both) |
+| `get works with [Jason R Priem](A5023888391) in any role` | he's credited with at least one recorded contributor role on the work (most works record none; `by [Jason R Priem](A5023888391)` is all his works) |
 
 **One person's place on a work.** `by [A]` and a role elsewhere on the work pair nothing: someone did the software, maybe a co-author. `with [A] in the role [R]` and `listing [X] on the work` say facts about that one person's own place on each work: the roles they're credited with, the institutions they put on it (sub-units count, as in `from`). OQL checks each work's author list, so it reads up to 5,000 works that could match and up to 250,000 authors on them; past that it refuses and says how to narrow. A role alone (`with an author in the role [Software](software)`) needs no check and has no such limit.
 

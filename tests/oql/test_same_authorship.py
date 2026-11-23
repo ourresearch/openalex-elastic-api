@@ -325,3 +325,67 @@ def test_full_url_values_validate_before_canonicalizing():
         {"column_id": PERSON, "value": "https://openalex.org/A5023888391"},
         {"column_id": ROLE, "value": "https://openalex.org/contributor-roles/software"}]}]})
     assert validate_oqo(oqo).errors == []
+
+
+# --- `in any role` and `in any of the roles` (23 Nov) -------------------------------
+ANY_ROLE_TEXTS = [
+    "get works with [Jane Smith](A5023888391) in any role",
+    "get works with [Jane Smith](A5023888391) in the role [Data curation](data-curation) or "
+    "[Software](software)",
+    "get works with [Jane Smith](A5023888391) in the role [Data curation](data-curation), "
+    "[Methodology](methodology), or [Software](software)",
+    "get the count of works about kelp by author in any role",
+    "get the count of works about kelp by author listing [UBC](I141945490) on the work in the role "
+    "[Editor](editor) or [Software](software)",
+    "get works with an author in any role",
+]
+
+
+@pytest.mark.parametrize("text", ANY_ROLE_TEXTS)
+def test_any_role_reads_back(text):
+    assert render_core(_parse(text), _resolver) == text
+    assert validate_oqo(_parse(text)).errors == []
+
+
+def test_any_role_is_the_has_a_value_form():
+    from query_translation.oqo import any_role
+    oqo = _parse(ANY_ROLE_TEXTS[0])
+    assert oqo.filter_rows == [AuthorshipFilter(filters=[LeafFilter(PERSON, "A5023888391"), any_role()])]
+    assert oqo.to_dict()["filter_rows"][0]["same_authorship"][1] == {
+        "column_id": ROLE, "value": None, "is_negated": True}
+
+
+def test_any_role_needs_a_role_on_that_persons_own_place():
+    node = _parse(ANY_ROLE_TEXTS[0]).filter_rows[0]
+    match = SA.matcher(node)
+    assert match(_seat(JANE, [SOFTWARE]))
+    assert not match(_seat(JANE)) and not match(_seat("https://openalex.org/A9", [SOFTWARE]))
+    assert SA.superset_query(node)["bool"]["filter"][1] == {"exists": {"field": "authorships_full.contributor_roles.id"}}
+
+
+def test_any_of_the_roles_takes_either():
+    node = _parse(ANY_ROLE_TEXTS[1]).filter_rows[0]
+    match = SA.matcher(node)
+    curation = "https://openalex.org/contributor-roles/data-curation"
+    assert match(_seat(JANE, [SOFTWARE])) and match(_seat(JANE, [curation]))
+    assert not match(_seat(JANE, ["https://openalex.org/contributor-roles/methodology"]))
+    assert SA.superset_query(node)["bool"]["filter"][1] == {
+        "terms": {"authorships_full.contributor_roles.id": [curation, SOFTWARE]}}
+
+
+def test_a_role_alone_in_any_form_needs_no_check():
+    assert not _parse(ANY_ROLE_TEXTS[5]).filter_rows[0].pairs
+
+
+def test_in_any_of_the_roles_reads_as_the_role_or():
+    a = _parse("get works with [Jane Smith](A5023888391) in any of the roles [Software](software) or "
+               "[Data curation](data-curation)")
+    assert a.to_dict() == _parse(ANY_ROLE_TEXTS[1]).to_dict()
+
+
+def test_the_lists_conjunction_decides_every_or_one():
+    every = _parse("get works with [Jane Smith](A5023888391) in the roles [Software](software), "
+                   "[Data curation](data-curation), and [Methodology](methodology)").filter_rows[0]
+    one = _parse("get works with [Jane Smith](A5023888391) in the role [Software](software), "
+                 "[Data curation](data-curation), or [Methodology](methodology)").filter_rows[0]
+    assert len(every.filters) == 4 and len(one.filters) == 2

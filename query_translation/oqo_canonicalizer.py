@@ -206,6 +206,11 @@ def canonicalize_same_authorship(leaves: List) -> List:
         if isinstance(f, LeafFilter) and f.column_id in SAME_AUTHORSHIP_COLUMNS \
                 and isinstance(f.value, str):
             f = replace(f, value=authorship_value(f.column_id, f.value))
+        elif isinstance(f, BranchFilter) and f.join == "or":
+            # `in any of the roles [A] or [B]`
+            inner = sorted({json.dumps(c.to_dict(), sort_keys=True): c for c in
+                            canonicalize_same_authorship(f.filters)}.values(), key=_sort_key)
+            f = inner[0] if len(inner) == 1 else replace(f, filters=inner)
         if f not in out:
             out.append(f)
     order = {c: i for i, c in enumerate(SAME_AUTHORSHIP_COLUMNS)}

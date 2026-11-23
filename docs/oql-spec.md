@@ -889,6 +889,8 @@ role          ::= 'with' link 'as corresponding author'
                 | 'with' ( link | 'an author' ) seat      /* one authorship: every fact on the same person's place */
 seat          ::= 'listing' linkSeries 'on the work' [ roles ] | roles
 roles         ::= 'in the role' link | 'in the roles' linkSeries
+                | 'in the role' link ( ( ',' | 'or' | ', or' ) link )+   /* at least one; input also 'in any of the roles' */
+                | 'in any role'                     /* credited with some recorded contributor role */
 linkSeries    ::= link ( ( ',' | 'and' | ', and' ) link )*
 sits          ::= 'in' link ( 'or' link )*              /* a source */
                 | 'in' kindKey link ( 'or' link )*

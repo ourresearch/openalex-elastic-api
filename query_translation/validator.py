@@ -49,6 +49,8 @@ from query_translation.oqo import (
     PERSON_COLUMN,
     SAME_AUTHORSHIP_FACTS,
     authorship_value,
+    is_any_role,
+    is_role_choice,
 )
 
 
@@ -76,6 +78,11 @@ def _validate_same_authorship(leaves, location: str, person: bool = True) -> Lis
                     "A split by author names no person in its conditions: each row is a person"))
     for j, f in enumerate(leaves):
         loc = f"{location}[{j}]"
+        if is_any_role(f):
+            continue                                    # `in any role`
+        if is_role_choice(f):
+            errors += _validate_same_authorship(f.filters, f"{loc}.filters")
+            continue                                    # `in any of the roles [A] or [B]`
         if not isinstance(f, LeafFilter) or f.column_id not in SAME_AUTHORSHIP_FACTS:
             errors.append(ValidationError(
                 type="invalid_same_authorship", location=loc,

@@ -150,6 +150,11 @@ _kw("in the roles", "every one of these roles, on this person's place", _ROLE_DO
 _kw("listing", "an institution this person put on the work",
     "`get works with [Jane Smith](A5023888391) listing [University of British Columbia](I141945490) on the "
     "work`: the work's own byline, not the person's profile (that's `at`).")
+_kw("in any role", "credited with some role on the work",
+    "`get works with [Jane Smith](A5023888391) in any role`: works where that person is credited with at "
+    "least one recorded contributor role (most works record none; `by [Jane Smith]` is every work).")
+_kw("in any of the roles", "one of these roles, on this person's place",
+    "Reads as `in the role [Software](software) or [Data curation](data-curation)`: at least one.")
 _kw("on the work", "on the work's own byline",
     "`listing [University of British Columbia](I141945490) on the work`: what the person put on that work.")
 _kw("author", "someone on the work, then their place on it",
@@ -496,7 +501,8 @@ S_ABOUT = _Slot("search-text", group="search")
 S_NUMBER = _Slot("number")
 S_YEAR = {w: _Slot("year", years=w) for w in C.YEAR_OPS}
 S_LICENSE_WORD = _Slot("works-slot", [K["license"]])
-_SEAT_WORDS = ("listing", "in the role", "in the roles")   # one person's place on the work (#2537)
+_SEAT_WORDS = ("listing", "in the role", "in the roles", "in any role",
+               "in any of the roles")                  # one person's place on the work (#2537)
 _SEAT_KW = [K[w] for w in _SEAT_WORDS]
 S_CORRESPONDING_WORD = _Slot("works-slot", [K["as corresponding author"]] + _SEAT_KW)
 S_SEAT_WORD = _Slot("works-slot", _SEAT_KW)
@@ -1303,10 +1309,10 @@ class _Walk:
             t = self.tok()
             if t is None:
                 self.stop(after, extra=_SEAT_KW[1:])
-            if t.kind == "W" and t.low == "in" and self.low(1) == "the" and self.low(2) in ("role", "roles"):
+            if t.kind == "W" and t.low == "in" and self.low(1) in ("the", "any"):
                 w = self.match(_ptable(_SEAT_KW[1:]), after)
-        if w in ("in the role", "in the roles"):
-            self.links(S_ROLE, after, sep=("and", ","))
+        if w in ("in the role", "in the roles", "in any of the roles"):
+            self.links(S_ROLE, after, sep=("and", "or", ","))
 
     def record_years(self, after):
         """An author's record years: `since 2022`, `in 2+ years`, in either order."""

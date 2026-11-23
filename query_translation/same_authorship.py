@@ -28,7 +28,8 @@ from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
 from query_translation import analytics as A
-from query_translation.oqo import (OQO, PERSON_COLUMN, SAME_AUTHORSHIP_FACTS, AuthorshipFilter, LeafFilter,
+from query_translation.oqo import (OQO, PERSON_COLUMN, ROLE_COLUMN, SAME_AUTHORSHIP_FACTS, AuthorshipFilter,
+                                   LeafFilter, is_any_role, is_role_choice,
                                    Measure, authorship_full_value, authorship_nodes, has_query_value,
                                    has_relation_leaf)
 
@@ -56,28 +57,49 @@ def needs_check(tree) -> bool:
 # ---------------------------------------------------------------------------
 # One authorship
 # ---------------------------------------------------------------------------
-def _holds(x, path: Tuple[str, ...], want: str) -> bool:
-    """Does `x` (an authorship, or part of one) hold `want` at `path`, through lists?"""
+def _holds(x, path: Tuple[str, ...], want: Optional[str]) -> bool:
+    """Does `x` (an authorship, or part of one) hold `want` at `path`, through lists?
+    `want` None: any value at all (`in any role`)."""
     if isinstance(x, list):
         return any(_holds(y, path, want) for y in x)
     if not path:
-        return x == want
+        return bool(x) if want is None else x == want
     return isinstance(x, dict) and _holds(x.get(path[0]), path[1:], want)
+
+
+def _fact_test(f) -> Callable[[dict], bool]:
+    if is_role_choice(f):
+        tests = [_fact_test(c) for c in f.filters]
+        return lambda seat: any(t(seat) for t in tests)
+    path = SAME_AUTHORSHIP_FACTS[f.column_id][2]
+    want = None if is_any_role(f) else authorship_full_value(f.column_id, f.value)
+    return lambda seat: _holds(seat, path, want)
 
 
 def matcher(node: AuthorshipFilter) -> Callable[[dict], bool]:
     """A test of one authorship against every fact of `node`, prepared once."""
-    facts = [(SAME_AUTHORSHIP_FACTS[f.column_id][2], authorship_full_value(f.column_id, f.value))
-             for f in node.filters]
-    return lambda seat: all(_holds(seat, path, want) for path, want in facts)
+    tests = [_fact_test(f) for f in node.filters]
+    return lambda seat: all(t(seat) for t in tests)
+
+
+def _fact_query(f) -> dict:
+    if is_role_choice(f):
+        return {"terms": {SAME_AUTHORSHIP_FACTS[ROLE_COLUMN][1]:
+                          [authorship_full_value(c.column_id, c.value) for c in f.filters]}}
+    field = SAME_AUTHORSHIP_FACTS[f.column_id][1]
+    if is_any_role(f):
+        return {"exists": {"field": field}}
+    return {"term": {field: authorship_full_value(f.column_id, f.value)}}
+
+
+def _fact_columns(node: AuthorshipFilter) -> set:
+    return {ROLE_COLUMN if is_role_choice(f) else f.column_id for f in node.filters}
 
 
 def superset_query(node: AuthorshipFilter) -> dict:
     """The works where some authorship meets each fact (not necessarily the same one):
     a superset of the answer, never the answer; for a single fact, the answer."""
-    return {"bool": {"filter": [
-        {"term": {SAME_AUTHORSHIP_FACTS[f.column_id][1]: authorship_full_value(f.column_id, f.value)}}
-        for f in node.filters]}}
+    return {"bool": {"filter": [_fact_query(f) for f in node.filters]}}
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +143,7 @@ def scan(ctx, base: Optional[dict], node: AuthorshipFilter, what: str,
         raise e
     ctx.same_authorship_read = (used_n + n, used_seats + seats)
     size = max(1, min(PAGE_WORKS, PAGE_SEATS * max(n, 1) // max(seats, 1)))
-    fields = ["id"] + sorted({SAME_AUTHORSHIP_FACTS[c][1] for c in
-                              {f.column_id for f in node.filters} | {PERSON_COLUMN}})
+    fields = ["id"] + sorted({SAME_AUTHORSHIP_FACTS[c][1] for c in _fact_columns(node) | {PERSON_COLUMN}})
     out, after = [], None
     while True:
         body = {"size": size, "query": query, "_source": fields, "sort": [{"id": "asc"}],

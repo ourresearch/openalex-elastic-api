@@ -174,7 +174,8 @@ class AuthorshipFilter:
     keeps authorships as flat arrays, so two leaves on authorship columns pair nothing
     (Jane is on it, someone did the software); this node keeps only works where a single
     authorship meets every one. `filters` are plain leaves on SAME_AUTHORSHIP_FACTS,
-    ANDed. Runs as a check over the candidate works (query_translation.same_authorship);
+    ANDed; a role fact may also be `in any role` (any_role) or an `or` of roles
+    (is_role_choice). Runs as a check over the candidate works (query_translation.same_authorship);
     valid in a works query's filter rows."""
     filters: List["LeafFilter"]
     is_negated: bool = False
@@ -225,6 +226,24 @@ def authorship_value(column_id: str, value) -> str:
     accepted spelling (a full URL, `contributor-roles/software`)."""
     from query_translation.oql_lang import _short_id
     return _short_id(SAME_AUTHORSHIP_FACTS[column_id][0], str(value))
+
+
+def any_role() -> "LeafFilter":
+    """`in any role`: the authorship carries some contributor role (`role is not unknown`,
+    OQO's existing has-a-value form)."""
+    return LeafFilter(ROLE_COLUMN, None, is_negated=True)
+
+
+def is_any_role(f) -> bool:
+    return (isinstance(f, LeafFilter) and f.column_id == ROLE_COLUMN and f.value is None
+            and f.is_negated and f.operator == "is")
+
+
+def is_role_choice(f) -> bool:
+    """`in any of the roles [A] or [B]`: an `or` of plain role leaves."""
+    return (isinstance(f, BranchFilter) and f.join == "or" and not f.is_negated and len(f.filters) > 1
+            and all(isinstance(c, LeafFilter) and c.column_id == ROLE_COLUMN and isinstance(c.value, str)
+                    and not c.is_negated and c.operator == "is" for c in f.filters))
 
 
 def authorship_full_value(column_id: str, value) -> str:
