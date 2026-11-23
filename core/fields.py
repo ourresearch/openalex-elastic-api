@@ -28,6 +28,9 @@ from core.utils import SHORT_OPENALEX_ID_PATTERN, get_full_openalex_id, normaliz
 import settings
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
 
+# works filters that take an arXiv id in any form (TermField._arxiv_query, oxjob #2177)
+ARXIV_PARAMS = ("ids.arxiv", "arxiv")
+
 
 # Cross-type collection filter (#266): maps filter params with unambiguous
 # entity-ID semantics to the users-api entity_type their values resolve to.
@@ -534,18 +537,22 @@ class BooleanField(Field):
                 q = ~q  # `false` ran the same query as `true` (oxjob #1859)
         elif self.param == "mag_only":
             self.validate_true_false()
+            # an arXiv id counts as another index, as the GUI and CSV mag_only columns read it (8,561 works held
+            # only a MAG id and an arXiv id when works began serving ids.arxiv, oxjob #2177)
             if self.value.lower().strip() == "true":
                 q = (
                     Q("exists", field="ids.mag")
                     & ~Q("exists", field="ids.pmid")
                     & ~Q("exists", field="ids.pmcid")
                     & ~Q("exists", field="ids.doi")
+                    & ~Q("exists", field="ids.arxiv")
                 )
             else:
                 q = (
                     Q("exists", field="ids.pmid")
                     | Q("exists", field="ids.pmcid")
                     | Q("exists", field="ids.doi")
+                    | Q("exists", field="ids.arxiv")
                 )
         elif self.param == "locations.is_published" and self.value.lower().strip() == "false":
             # A copy whose version is unknown is stored with is_published null (and
@@ -1231,7 +1238,7 @@ class TermField(Field):
         Build an Elasticsearch terms query (plural) for multiple values.
         More efficient than multiple bool/should queries.
         """
-        if self.param == "ids.arxiv":
+        if self.param in ARXIV_PARAMS:
             # oxjob #2177: an OR list of arXiv ids, each matched as the single value is. The terms path below read
             # them as DOIs, so ids.arxiv:0704.0028|hep-th/9901001 matched nothing (the batch join arXiv users make).
             return Q("bool", should=[self._arxiv_query(v) for v in values], minimum_should_match=1)
@@ -1626,7 +1633,10 @@ class TermField(Field):
                 "https://openalex.org/"
             ):
                 self.value = f"https://openalex.org/{self.value}"
-        if self.param == "ids.arxiv":
+        if self.param in ARXIV_PARAMS:
+            if self.value in ("null", "!null"):  # no arXiv id / any arXiv id, as has_arxiv reads it
+                q = Q("exists", field="ids.arxiv")
+                return ~q if self.value == "null" else q
             neg = self.value.startswith("!")
             q = self._arxiv_query(self.value[1:] if neg else self.value)
             return ~q if neg else q
@@ -1830,7 +1840,8 @@ class TermField(Field):
         """filter=ids.arxiv:<id>: the work holding arXiv's DOI record 10.48550/arxiv.<id>, served or on a location, as
         /works/arxiv:<id> answers (oxjob #2157; ~4.4K requests a day answered 400). Takes any form /works/ takes, and
         arXiv's DOI. Also a work holding only an arXiv abs/pdf page for the id, as the lookup does: 38,596 arXiv works
-        carry no arXiv DOI anywhere (oxjob #2177, 21 Nov 2026)."""
+        carry no arXiv DOI anywhere (oxjob #2177, 21 Nov 2026). And the work's own ids.arxiv, served since 22 Nov
+        (oxjob #2177)."""
         from ids.utils import arxiv_copy_urls, arxiv_doi, arxiv_form, normalize_arxiv
 
         text = value.strip()
@@ -1839,8 +1850,9 @@ class TermField(Field):
         if not arxiv_id:
             raise APIQueryParamsError(
                 f"{value} is not an arXiv id for {self.param}; use e.g. 2305.18290 or hep-th/9901001")
-        return self._doi_query(arxiv_doi(arxiv_id)) | Q(
-            "terms", locations_full__landing_page_url=arxiv_copy_urls(arxiv_id))
+        return (Q("term", ids__arxiv__lower=f"https://arxiv.org/abs/{arxiv_id}")
+                | self._doi_query(arxiv_doi(arxiv_id))
+                | Q("terms", locations_full__landing_page_url=arxiv_copy_urls(arxiv_id)))
 
     def _doi_query(self, value):
         # Special handling for DOI to support both data versions:

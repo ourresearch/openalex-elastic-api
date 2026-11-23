@@ -223,11 +223,40 @@ def test_arxiv_filter_old_style_and_negation():
     assert "must_not" in neg and "https://doi.org/10.48550/arxiv.2305.18290" in neg
 
 
-@pytest.mark.parametrize("value", ["notanid", "null", "10.1038/nature12373"])
+@pytest.mark.parametrize("value", ["notanid", "10.1038/nature12373"])
 def test_arxiv_filter_bad_value_is_a_400(value):
     from core.exceptions import APIQueryParamsError
     with pytest.raises(APIQueryParamsError):
         _filter_body("ids.arxiv", value)
+
+
+def test_arxiv_filter_matches_the_served_ids_arxiv():
+    # oxjob #2177: works serve ids.arxiv (https://arxiv.org/abs/<id>, keyword + lower) since 22 Nov
+    body = _filter_body("ids.arxiv", "arXiv:2305.18290v2")
+    assert '"ids.arxiv.lower": "https://arxiv.org/abs/2305.18290"' in body
+    assert '"ids.arxiv.lower": "https://arxiv.org/abs/hep-th/9711200"' in _filter_body("ids.arxiv", "hep-th/9711200v3")
+
+
+def test_arxiv_filter_is_the_ids_arxiv_filter():
+    # oxjob #2177: filter=arxiv: is the short name of ids.arxiv, as pmid is of ids.pmid
+    for value in ("2305.18290", "0704.0028|hep-th/9901001", "!2305.18290", "null", "!null"):
+        assert _filter_body("arxiv", value) == _filter_body("ids.arxiv", value)
+
+
+def test_arxiv_filter_null_and_has_arxiv():
+    # oxjob #2177: ids.arxiv:null = no arXiv id; has_arxiv reads the same field
+    assert _filter_body("ids.arxiv", "!null") == _filter_body("has_arxiv", "true")
+    assert _filter_body("ids.arxiv", "null") == _filter_body("has_arxiv", "false")
+    assert '"exists": {"field": "ids.arxiv"}' in _filter_body("has_arxiv", "true")
+
+
+def test_works_ids_schema_serves_arxiv():
+    # oxjob #2177: the API's ids object dropped ids.arxiv though the index held it
+    from works.schemas import IDsSchema
+    ids = {"openalex": "https://openalex.org/W2045831058", "doi": "https://doi.org/10.4310/mrl.2008.v15.n2.a12",
+           "mag": "2045831058", "arxiv": "https://arxiv.org/abs/0704.0028"}
+    assert IDsSchema().dump(ids)["arxiv"] == "https://arxiv.org/abs/0704.0028"
+    assert list(IDsSchema().dump(dict(ids, pmid="p", pmcid="c"))) == ["openalex", "doi", "mag", "pmid", "pmcid", "arxiv"]
 
 
 def test_doi_lookup_es_fallback_also_matches_a_location_doi(app_client):

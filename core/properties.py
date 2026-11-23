@@ -526,7 +526,11 @@ CAP_COLUMN = "column"
 # 24.6.0 (oxjob #2075 D11 round one, shape approved 2026-11-22): /contributor-roles records gain `standard_terms`
 # [{vocabulary, term, url}] (the role in other vocabularies; the /link-types shape), and the vocabulary gains `editor`
 # (ids.credit null). One property added = MINOR per classify_properties_diff.py.
-PROPERTIES_VERSION = "24.6.0"
+# 24.7.0 (oxjob #2177, ruling D35, shape approved 2026-11-21): arXiv ids, first class like PMIDs. Works list
+# `ids.arxiv` (was unlisted; https://arxiv.org/abs/<id>, OQL "arXiv ID", a GUI filter and column) and gain `has_arxiv`
+# (OQL "has arXiv ID"); `arxiv` is the short name of `ids.arxiv`, as pmid is of ids.pmid. Additive: MINOR per
+# classify_properties_diff.py.
+PROPERTIES_VERSION = "24.7.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

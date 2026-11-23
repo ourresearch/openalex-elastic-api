@@ -185,6 +185,21 @@
       "isId": false,
       "hasExport": false
     },
+    "ids.arxiv": {
+      "key": "ids.arxiv",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "arXiv ID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter",
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "authorships.author.id": {
       "key": "authorships.author.id",
       "entityToFilter": "works",
@@ -817,6 +832,20 @@
         "filter"
       ],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "has_arxiv": {
+      "key": "has_arxiv",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has arXiv ID",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },

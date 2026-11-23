@@ -94,6 +94,13 @@ def get_filter_results(q):
             ],
         },
         {
+            "name": "has_arxiv",
+            "matches": [
+                {"query": "has arxiv", "min_len": 5, "value": True},
+                {"query": "no arxiv", "min_len": 4, "value": False},
+            ],
+        },
+        {
             "name": "has_pdf_url",
             "matches": [
                 {"query": "has pdf url", "min_len": 5, "value": True},

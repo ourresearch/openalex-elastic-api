@@ -367,6 +367,7 @@ _f("last page", "biblio.last_page", "string")
 _f("MAG ID", "ids.mag", "string")
 _f("PMID", "ids.pmid", "string")
 _f("PMCID", "ids.pmcid", "string")
+_f("arXiv ID", "ids.arxiv", "string")  # oxjob #2177
 
 # APC (article processing charge). Only the USD estimated-paid column is curated —
 # its registry display_name is already clean ("estimated APC paid", and it's the one
@@ -417,6 +418,7 @@ _f("has abstract", "has_abstract", "bool")
 _f("has references", "has_references", "bool")
 _f("PubMed", "has_pmid", "bool")
 _f("has PMCID", "has_pmcid", "bool")
+_f("has arXiv ID", "has_arxiv", "bool")  # oxjob #2177
 _f("MAG-only", "mag_only", "bool")
 _f("extended index", "is_xpac", "bool")
 _f("paratext", "is_paratext", "bool")

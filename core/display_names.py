@@ -411,6 +411,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'ids.mag': {"display_name": 'MAG ID'},
         'ids.openalex': {"display_name": 'OpenAlex ID', "aliases": ['id']},
         'ids.pmcid': {"display_name": 'PMCID'},
+        'ids.arxiv': {"display_name": 'arXiv ID'},
         'ids.pmid': {"display_name": 'PMID'},
         'indexed_in': {"display_name": 'indexed in'},
         'institutions.display_name.search': {"display_name": 'institution name'},
@@ -577,6 +578,7 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'topics.subfield.id': {"display_name": 'subfield'},
         'type_crossref': {"display_name": 'Crossref type'},
         'has_pmcid': {"display_name": 'has PMCID'},
+        'has_arxiv': {"display_name": 'has arXiv ID'},
     },
     'authors': {
         'affiliations.institution.country_code': {"display_name": 'affiliation institution country'},

@@ -12,6 +12,7 @@ ALTERNATE_NAMES = {
     "has_fulltext": ["full", "text", "search", "ngrams", "pdf"],
     "has_pmid": ["pubmed"],
     "has_pmcid": ["pubmed", "central"],
+    "has_arxiv": ["arxiv", "preprint"],
     "has_references": ["outgoing", "citations"],
     "is_paratext": ["paratext", "cover", "table", "contents", "issue", "volume"],
     # oxjob #2065: parent and child works

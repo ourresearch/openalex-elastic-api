@@ -111,9 +111,11 @@ DO_NOT_GROUP_BY = [
     "ids.mag",
     "ids.pmid",
     "ids.pmcid",
+    "ids.arxiv",
     "mag",
     "pmid",
     "pmcid",
+    "arxiv",
     "related_to",
 ]
 
@@ -123,6 +125,7 @@ EXTERNAL_ID_FIELDS = [
     "has_orcid",
     "has_pmid",
     "has_pmcid",
+    "has_arxiv",
     "has_orcid",
     "has_ror",
     "has_wikidata",

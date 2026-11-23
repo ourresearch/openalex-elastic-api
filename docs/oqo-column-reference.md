@@ -72,6 +72,7 @@ All entity IDs in OQO use a normalized format: `entityName/id`
 | `has_orcid` | At least one author has ORCID | `{"column_id": "has_orcid", "value": true}` |
 | `has_pmid` | Work is in PubMed | `{"column_id": "has_pmid", "value": true}` |
 | `has_pmcid` | Work is in PubMed Central | `{"column_id": "has_pmcid", "value": true}` |
+| `has_arxiv` | Work is on arXiv | `{"column_id": "has_arxiv", "value": true}` |
 | `has_references` | Work has outgoing citations | `{"column_id": "has_references", "value": true}` |
 | `institutions.is_global_south` | Authors from Global South | `{"column_id": "institutions.is_global_south", "value": true}` |
 | `primary_location.source.is_oa` | Published in OA source | `{"column_id": "primary_location.source.is_oa", "value": true}` |

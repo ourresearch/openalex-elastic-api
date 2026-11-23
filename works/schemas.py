@@ -311,6 +311,7 @@ class IDsSchema(Schema):
     mag = fields.Str()
     pmid = fields.Str()
     pmcid = fields.Str()
+    arxiv = fields.Str()  # https://arxiv.org/abs/<id>, one per work (oxjob #2177)
 
     class Meta:
         ordered = True

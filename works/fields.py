@@ -40,6 +40,7 @@ DOCSTRINGS = {
     "has_orcid": "The work has at least one author with an ORCID",
     "has_pmid": "The work is in PubMed",
     "has_pmcid": "The work is in PubMed Central",
+    "has_arxiv": "The work is on arXiv (it has an arXiv ID, ids.arxiv)",
     "has_references": "The work has references, also known as outgoing citations",
     "is_paratext": 'We have marked the work as "paratext". Paratext means things like front/back cover, table of contents, and issue information.',
     "is_retracted": "The work has been retracted",
@@ -81,6 +82,7 @@ DOCUMENTATION_LINKS = {
     "has_orcid": "https://developers.openalex.org/api-reference/authors",
     "has_pmid": "https://developers.openalex.org/api-reference/works",
     "has_pmcid": "https://developers.openalex.org/api-reference/works",
+    "has_arxiv": "https://developers.openalex.org/api-reference/works",
     "has_references": "https://developers.openalex.org/api-reference/works",
     "is_paratext": "https://developers.openalex.org/api-reference/works",
     "is_retracted": "https://developers.openalex.org/api-reference/works",
@@ -215,6 +217,13 @@ fields = [
         docstring=DOCSTRINGS["has_pmcid"],
         documentation_link=DOCUMENTATION_LINKS["has_pmcid"],
         alternate_names=ALTERNATE_NAMES.get("has_pmcid", None),
+    ),
+    BooleanField(
+        param="has_arxiv",
+        custom_es_field="ids.arxiv",
+        docstring=DOCSTRINGS["has_arxiv"],
+        documentation_link=DOCUMENTATION_LINKS["has_arxiv"],
+        alternate_names=ALTERNATE_NAMES.get("has_arxiv", None),
     ),
     BooleanField(
         param="has_references",
@@ -959,9 +968,16 @@ fields = [
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
     TermField(param="doi_starts_with", custom_es_field="ids.doi"),
-    # arXiv id -> arXiv's DOI record (core.fields TermField._arxiv_query). Unlisted: kept out of /properties for now,
-    # but live for the ~4.4K requests a day that already send it (oxjob #2157).
-    TermField(param="ids.arxiv", alias="ids.doi", unlisted=True),
+    # The work's arXiv id, https://arxiv.org/abs/<id>, one per work (oxjob #2177). Takes any form /works/arxiv: takes;
+    # core.fields TermField._arxiv_query also matches arXiv's DOI record and arXiv pages on a location. The alias is the
+    # DOI field that query reads.
+    TermField(
+        param="ids.arxiv",
+        alias="ids.doi",
+        sort_field="ids.arxiv",
+        docstring="The work's arXiv ID, as https://arxiv.org/abs/<id> or the bare id (2305.18290, hep-th/9901001)",
+        documentation_link="https://developers.openalex.org/api-reference/works",
+    ),
     TermField(param="fulltext_origin"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
@@ -1060,6 +1076,7 @@ fields = [
     ),
     TermField(param="pmid", custom_es_field="ids.pmid", alternate_of="ids.pmid"),
     TermField(param="pmcid", custom_es_field="ids.pmcid", alternate_of="ids.pmcid"),
+    TermField(param="arxiv", alias="ids.doi", sort_field="ids.arxiv", alternate_of="ids.arxiv"),
     TermField(
         param="primary_location.landing_page_url",
         custom_es_field="primary_location.landing_page_url",

@@ -23,6 +23,7 @@ BOOL_PHRASES = {
     'has_references': ('it has references', "it doesn't have references"),
     'has_pmid': ("it's indexed by PubMed", "it's not indexed by PubMed"),
     'has_pmcid': ('it has a PMCID', "it doesn't have a PMCID"),
+    'has_arxiv': ('it has an arXiv ID', "it doesn't have an arXiv ID"),  # oxjob #2177
     'mag_only': ("it's indexed by MAG only", "it's not indexed by MAG only"),
     'is_xpac': ("it's in the extended index", "it's not in the extended index"),
     'is_paratext': ("it's paratext", "it's not paratext"),

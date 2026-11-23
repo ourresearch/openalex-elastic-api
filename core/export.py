@@ -187,6 +187,7 @@ def friendly_header_name(header):
         "source.is_in_doaj": "Source Is In DOAJ",
         "has_pmid": "Has PubMed ID",
         "has_pmcid": "Has PubMed Central ID",
+        "has_arxiv": "Has arXiv ID",
         "source.issn": "Source ISSN",
     }
     if header in manual_conversions:
