@@ -168,8 +168,9 @@ def hides_pieces(corpus, include_xpac, filter_params, include_parts=False):
 PULLED_PARAMS = ("include_pulled", "include-pulled")
 
 # Fields that ask about pulled works, so naming one brings them back: in a filter (via the redirect), a group_by (the
-# same), or an OQL split or measure (`percent retracted`, `by pulled`). Matched as whole keys.
-PULLED_FIELD_KEYS = frozenset({"is_pulled", "is_retracted"})
+# same), or an OQL split or measure (`percent retracted`, `by pulled`). Matched as whole keys. The pull notice filters
+# (oxjob #2264) find pulled works by the notice that pulled them, so they ask about pulled works too.
+PULLED_FIELD_KEYS = frozenset({"is_pulled", "is_retracted", "pull_notice_works.id", "pull_notice_works.link_type"})
 
 # How the rule travels in a parsed filter list, beside HIDE_PIECES_FILTER. Internal, like HIDDEN_PIECES_KEY:
 # core.filter applies it, core.utils.map_filter_params refuses it in a request.
@@ -199,7 +200,7 @@ def not_pulled_query():
 
 
 def names_pulled(keys):
-    """True when any key is is_pulled or is_retracted."""
+    """True when any key is is_pulled, is_retracted or a pull notice filter."""
     return _names_any(keys, PULLED_FIELD_KEYS)
 
 
@@ -224,14 +225,15 @@ def hides_pulled(args, filter_params):
 
 
 def pulled_redirect_location(path, query_string, args):
-    """Where a works request whose filter or group_by names is_pulled / is_retracted is sent: the same path and query
-    string plus include_pulled=true. None when the request already gives include_pulled (true or false; a bad value
-    answers a 400 here) or names neither. Relative, so it survives the proxies in front of the API."""
+    """Where a works request whose filter or group_by names is_pulled / is_retracted / a pull notice filter is sent: the
+    same path and query string plus include_pulled=true. None when the request already gives include_pulled (true or
+    false; a bad value answers a 400 here) or names none. Relative, so it survives the proxies in front of the API."""
     if include_pulled_param(args) is not None:
         return None
     keys = request_group_by_keys(args)
     filter_string = args.get("filter") or ""
-    if "pulled" in filter_string or "retracted" in filter_string:  # parse only when it can matter (every request)
+    # parse only when it can matter (every request): "pull" catches is_pulled and pull_notice_works (either spelling)
+    if "pull" in filter_string or "retracted" in filter_string:
         keys += request_filter_keys(filter_string)
     if not names_pulled(keys):
         return None

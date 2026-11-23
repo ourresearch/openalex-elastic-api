@@ -10,7 +10,8 @@ from elasticsearch_dsl import AttrDict
 import ids.views
 from relationships.schemas import RelationshipsSchema
 
-# The six records walden syncs (id, display_name, description); review joined 2026-11-21 (oxjob #2481).
+# The eleven records walden syncs (id, display_name, description); review joined 2026-11-21 (oxjob #2481), translation
+# (oxjob #2536) and summary (oxjob #2535) 2026-11-22, the three pull notices 2026-11-23 (oxjob #2264).
 RECORDS = [
     ("citation", "Citation", "The work cites another work: that work is in its reference list."),
     ("volume", "Volume",
@@ -25,6 +26,23 @@ RECORDS = [
     ("review", "Review",
      "The work reviews another work: an evaluation of that specific work, such as a peer review, preprint review or "
      "book review (a literature review article is the work type review, not this link)."),
+    ("translation", "Translation",
+     "The work is a translation of another work: that work's text rendered in another language, published as its own "
+     "work (such as an article in an English edition of a Russian journal). A condensed account of its content, in any "
+     "language, is a summary; a translated title or abstract inside one record, or a free adaptation, is neither."),
+    ("summary", "Summary",
+     "The work summarizes another work: it gives a condensed account of that work's content, separate from the work's "
+     "own abstract, by its authors or anyone else (an abstracting service's abstract, a digest entry, a research "
+     "highlight, a plain-language summary, an agent's summary)."),
+    ("retraction", "Retraction",
+     "The work is a notice that another work should no longer be relied on. The work it retracts usually stays online, "
+     "marked as retracted."),
+    ("withdrawal", "Withdrawal",
+     "The work is a notice that another work was withdrawn, usually soon after it appeared and for a publishing reason "
+     "such as a duplicate or an editorial error. Its content may be gone."),
+    ("removal", "Removal",
+     "The work is a notice that another work's content was taken down, usually for legal or safety reasons, while its "
+     "record stays."),
 ]
 
 
@@ -59,7 +77,7 @@ def test_single_record_lookup_uses_the_relationships_path_segment(client, monkey
 
 
 @pytest.mark.parametrize("path", ["/relationships/config", "/work-relationships/config"])
-def test_config_route_serves_the_six_values(client, path):
+def test_config_route_serves_every_value(client, path):
     r = client.get(path)
     assert r.status_code == 200
     assert [(v["id"], v["display_name"]) for v in r.get_json()["values"]] == [
@@ -88,15 +106,17 @@ def test_the_record_shape():
 
 
 def test_standard_terms_shape():
-    # oxjob #1490: each value lists the same link in standard vocabularies, in the order walden writes them.
-    terms = [{"vocabulary": "Dublin Core", "term": "isPartOf", "url": "http://purl.org/dc/terms/isPartOf"},
-             {"vocabulary": "DCAT", "term": "inSeries", "url": "https://www.w3.org/ns/dcat#inSeries"}]
+    # oxjob #1490: each value lists the same link in standard vocabularies, in the order walden writes them; since
+    # oxjob #2264 each says how close it is (`match`, a SKOS mapping level).
+    terms = [{"vocabulary": "Dublin Core", "term": "isPartOf", "url": "http://purl.org/dc/terms/isPartOf",
+              "match": "broad"},
+             {"vocabulary": "DCAT", "term": "inSeries", "url": "https://www.w3.org/ns/dcat#inSeries", "match": "exact"}]
     doc = {"id": "https://openalex.org/relationships/data-series", "display_name": "Data series",
            "description": RECORDS[2][2], "standard_terms": terms, "works_count": 7}
     out = RelationshipsSchema(context={"display_relevance": False}).dump(AttrDict({**doc, "meta": {"score": None}}))
     assert list(out)[:4] == ["id", "display_name", "description", "standard_terms"]
     assert out["standard_terms"] == terms
-    assert list(out["standard_terms"][0]) == ["vocabulary", "term", "url"]
+    assert list(out["standard_terms"][0]) == ["vocabulary", "term", "url", "match"]
 
 
 def test_properties_catalog(client):

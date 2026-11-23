@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 29,
-    "fingerprint": "ec696ea527b9bf1d2793725e0806008fa596658ad23c0f83999b8bba0c3da2ce",
-    "property_count": 1033,
-    "version": "24.7.0"
+    "fingerprint": "f9bfe7514d3b076dc178ae8f8be1a860fd2359092e0ad557d5e3d1f1ba3171b4",
+    "property_count": 1036,
+    "version": "24.8.0"
   },
   "properties": {
     "authors": {
@@ -21280,6 +21280,80 @@
           "gui"
         ],
         "type": "number"
+      },
+      "pull_notice_works": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "pull notice works",
+        "entity_type": null,
+        "name": "pull_notice_works",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "pull_notice_works.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "pull notices",
+          "pull_notice_works"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "pull notice",
+        "entity_type": null,
+        "name": "pull_notice_works.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "openalex_id"
+      },
+      "pull_notice_works.link_type": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "link type of pull notice",
+          "pull notice type"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "pull notice link type",
+        "entity_type": "link-types",
+        "name": "pull_notice_works.link_type",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "string"
       },
       "raw_affiliation_strings": {
         "actions": [

@@ -438,6 +438,11 @@ _f("has parent work", "has_parent_work", "bool")
 _f("child works count", "child_works_count", "num")
 # oxjob #2481: the works that review this one (peer, preprint and book reviews); no stored value counts as 0
 _f("reviewed by count", "reviewed_by_count", "num")
+# oxjob #2264: the notices that retracted, withdrew or removed a work. "pull notice" is a work id (lists the works one
+# notice pulled); its link type is a closed vocabulary of bare keys (retraction, withdrawal, removal). Either brings
+# pulled works back (core.default_view.PULLED_FIELD_KEYS).
+_f("pull notice", "pull_notice_works.id", "id")
+_f("pull notice link type", "pull_notice_works.link_type", "enum")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
 _f("best open version", "best_open_version", "string")
@@ -1589,6 +1594,7 @@ _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     "collaborator": "institutions",
     # oxjob #2065: a work's parent works and lineage are work ids, typed like the edges.
     "parent_works.id": "works",
+    "pull_notice_works.id": "works",  # oxjob #2264: the notice is a work
 }
 
 # A row's OWN id never name-annotates: a resolver miss there means "no name

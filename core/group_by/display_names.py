@@ -196,15 +196,16 @@ def get_relationship_display_name(key, entity_type="relationships"):
 
 
 # group_by key -> the vocabulary its rows are named from
-PARENT_LINK_GROUP_BYS = {"parent_works.relationship": "relationships", "parent_works.link_type": "link-types"}
+LINK_TYPE_GROUP_BYS = {"parent_works.relationship": "relationships", "parent_works.link_type": "link-types",
+                       "pull_notice_works.link_type": "link-types"}  # oxjob #2264
 
 
 def get_key_display_name(b, group_by):
     if b.key == "unknown":
         return "unknown"
 
-    if group_by in PARENT_LINK_GROUP_BYS:
-        return get_relationship_display_name(b.key, PARENT_LINK_GROUP_BYS[group_by])
+    if group_by in LINK_TYPE_GROUP_BYS:
+        return get_relationship_display_name(b.key, LINK_TYPE_GROUP_BYS[group_by])
 
     if group_by.endswith("country_code") or group_by.endswith("countries"):
         from core.country_names import get_country_name

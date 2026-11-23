@@ -10,7 +10,8 @@ from core.schemas import (
 
 
 class StandardTermSchema(Schema):
-    """The same link in a standard vocabulary (oxjob #1490): Dublin Core, schema.org, DataCite, Crossref, DCAT."""
+    """The same thing in a standard vocabulary (oxjob #1490): Dublin Core, schema.org, DataCite, Crossref, DCAT.
+    Contributor roles use this shape as is (oxjob #2075)."""
 
     vocabulary = fields.Str()
     term = fields.Str()
@@ -20,16 +21,24 @@ class StandardTermSchema(Schema):
         ordered = True
 
 
+class LinkStandardTermSchema(StandardTermSchema):
+    """A link type's standard term. `match` (oxjob #2264) is how close their term is to ours, as a SKOS mapping
+    level: exact, close, broad, narrow or related. Served as the index holds it; null on a record written before
+    walden filled it. Link types only: contributor roles' terms keep the plain shape."""
+
+    match = fields.Str(dump_default=None)
+
+
 class RelationshipsSchema(Schema):
     """One kind of link between two works: citation (oxjob #1490), or a part-of kind (oxjob #2065): volume,
     component, data-series, part. `works_count` = works that carry a link of this kind.
     Values are nouns that name the link, not one end of it; `standard_terms` gives the
-    matching verbs in standard vocabularies (Jason, 15 Nov 2026, oxjob #1490)."""
+    matching verbs in standard vocabularies (oxjob #1490)."""
 
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
-    standard_terms = fields.List(fields.Nested(StandardTermSchema))
+    standard_terms = fields.List(fields.Nested(LinkStandardTermSchema))
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     works_api_url = fields.Str()

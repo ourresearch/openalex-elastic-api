@@ -22,3 +22,9 @@ values:
   display_name: Translation
 - id: relationships/summary
   display_name: Summary
+- id: relationships/retraction
+  display_name: Retraction
+- id: relationships/withdrawal
+  display_name: Withdrawal
+- id: relationships/removal
+  display_name: Removal

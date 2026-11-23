@@ -369,6 +369,19 @@ class ParentWorkSchema(Schema):
         ordered = True
 
 
+class PullNoticeWorkSchema(Schema):
+    """A notice that retracted, withdrew or removed this work (oxjob #2264), dehydrated: the notice work's id and
+    title, and the kind of notice as a /link-types key (retraction, withdrawal or removal). Shaped like a parent work
+    without the old `relationship` key."""
+
+    id = fields.String()
+    display_name = fields.String()
+    link_type = fields.String()
+
+    class Meta:
+        ordered = True
+
+
 class CitedByPercentileYearSchema(Schema):
     min = fields.Integer()
     max = fields.Integer()
@@ -409,6 +422,9 @@ class WorksSchema(Schema):
     parent_works = fields.Method("get_parent_works")
     lineage = fields.Method("get_lineage")
     child_works_count = fields.Method("get_child_works_count")
+    # oxjob #2264: the notices that retracted, withdrew or removed this work, oldest first; [] when it has none (and on
+    # a doc walden hasn't re-stamped since the field shipped)
+    pull_notice_works = fields.Method("get_pull_notice_works")
     sources = fields.Nested(SourcesSchema, many=True)
     type = fields.Str()
     # oxjob #2064: from the type (core/work_type_classes.py), so every work has it with no reindex
@@ -540,6 +556,10 @@ class WorksSchema(Schema):
     @staticmethod
     def get_parent_works(obj):
         return ParentWorkSchema(many=True).dump(getattr(obj, "parent_works", None) or [])
+
+    @staticmethod
+    def get_pull_notice_works(obj):
+        return PullNoticeWorkSchema(many=True).dump(getattr(obj, "pull_notice_works", None) or [])
 
     @staticmethod
     def get_alternate_titles(obj):

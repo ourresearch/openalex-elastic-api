@@ -7,7 +7,7 @@ from core.schemas import (
     hide_relevance,
     relevance_score,
 )
-from relationships.schemas import StandardTermSchema
+from relationships.schemas import LinkStandardTermSchema
 
 
 class LinkTypesSchema(Schema):
@@ -18,7 +18,7 @@ class LinkTypesSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
-    standard_terms = fields.List(fields.Nested(StandardTermSchema))
+    standard_terms = fields.List(fields.Nested(LinkStandardTermSchema))
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     works_api_url = fields.Str()

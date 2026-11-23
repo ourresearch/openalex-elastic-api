@@ -241,8 +241,9 @@ def _default_view_query(filter_string):
 
 
 def _pulled_redirect():
-    """oxjob #2264: the redirect a filter or group_by naming is_pulled / is_retracted gets on /works, /v2/works and
-    /works/stats (to the same URL plus include_pulled=true, so the URL says what added the works), or None."""
+    """oxjob #2264: the redirect a filter or group_by naming is_pulled / is_retracted / a pull notice gets on /works,
+    /v2/works and /works/stats (to the same URL plus include_pulled=true, so the URL says what added the works), or
+    None."""
     location = pulled_redirect_location(request.path, request.query_string.decode(), request.args)
     return redirect(location, code=302) if location else None
 

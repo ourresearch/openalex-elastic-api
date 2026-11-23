@@ -208,6 +208,7 @@ ID_COLUMN_ENTITY_OVERRIDES: Dict[str, Tuple[str, ...]] = {
     "related_to": ("works",),
     "referenced_works": ("works",),
     "parent_works.id": ("works",),  # oxjob #2065
+    "pull_notice_works.id": ("works",),  # oxjob #2264
     **{
         f"{prefix}{col}": _HOST_ORGANIZATION
         for prefix in ("", "locations.source.", "primary_location.source.",

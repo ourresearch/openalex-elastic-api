@@ -530,7 +530,13 @@ CAP_COLUMN = "column"
 # `ids.arxiv` (was unlisted; https://arxiv.org/abs/<id>, OQL "arXiv ID", a GUI filter and column) and gain `has_arxiv`
 # (OQL "has arXiv ID"); `arxiv` is the short name of `ids.arxiv`, as pmid is of ids.pmid. Additive: MINOR per
 # classify_properties_diff.py.
-PROPERTIES_VERSION = "24.7.0"
+# 24.8.0 (oxjob #2264, shipped 2026-11-23; the shape was approved 22 Nov 2026, oxjob #2264): pull notices (additive). Works
+# gain the column `pull_notice_works` [{id, display_name, link_type}] (the notices that retracted, withdrew or removed
+# the work, oldest first; [] when none) and the filters `pull_notice_works.id` (group_by too; OQL "pull notice") and
+# `pull_notice_works.link_type` (group_by too; entity link-types; OQL "pull notice link type"). Both bring pulled works
+# back, as is_pulled does. link-types and relationships gain retraction, withdrawal and removal; their records'
+# standard_terms gain `match` (SKOS level). Nothing removed or renamed: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "24.8.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

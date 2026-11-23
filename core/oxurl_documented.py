@@ -56,4 +56,6 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'parent_works.id', 'parent_works.relationship', 'has_parent_work', 'lineage', 'child_works_count',
     # oxjob #2481: review links and the link-types rename
     'reviewed_by_count', 'parent_works.link_type',
+    # oxjob #2264: the notices that pulled a work
+    'pull_notice_works.id', 'pull_notice_works.link_type',
 })

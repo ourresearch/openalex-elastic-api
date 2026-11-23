@@ -13,7 +13,8 @@ from relationships.schemas import RelationshipsSchema
 
 VALUES = [("citation", "Citation"), ("volume", "Volume"), ("component", "Component"),
           ("data-series", "Data series"), ("part", "Part"), ("review", "Review"),
-          ("translation", "Translation"), ("summary", "Summary")]
+          ("translation", "Translation"), ("summary", "Summary"),
+          ("retraction", "Retraction"), ("withdrawal", "Withdrawal"), ("removal", "Removal")]
 
 
 class _FakeSearch:
@@ -53,7 +54,7 @@ def test_relationships_single_lookup_is_unchanged(client, monkeypatch):
                                      [{"term": {"id.lower": "https://openalex.org/relationships/review"}}])
 
 
-def test_config_routes_serve_the_same_six_values_under_each_name(client):
+def test_config_routes_serve_the_same_nine_values_under_each_name(client):
     lt = client.get("/link-types/config")
     rel = client.get("/relationships/config")
     assert lt.status_code == rel.status_code == 200

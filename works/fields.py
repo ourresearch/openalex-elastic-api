@@ -20,6 +20,7 @@ from core.work_type_classes import TRADITIONAL_TYPES
 
 PARENT_WORKS_DOCS = "https://help.openalex.org/data/relationships/"
 LINK_TYPES_DOCS = "https://help.openalex.org/data/link-types/"  # oxjob #2481
+PULL_NOTICE_WORKS_DOCS = "https://help.openalex.org/data/works/attributes/#pull_notice_works"  # oxjob #2264
 # oxjob #2065: said by every `volume.id` filter, group_by and sort
 VOLUME_RETIRED = ("volume was retired on 14 November 2026: a work's book is now one of its parent_works. "
                   "Use parent_works.id (the same work id), e.g. filter=parent_works.id:W123")
@@ -1186,6 +1187,27 @@ fields = [
                   "figures and supplements)",
         documentation_link=PARENT_WORKS_DOCS,
         alternate_names=ALTERNATE_NAMES.get("child_works_count"),
+    ),
+    # oxjob #2264: the notices that retracted, withdrew or removed a work, in `pull_notice_works` [{id, display_name,
+    # link_type}]. ES holds the notice's full work id and the link-types key (retraction, withdrawal, removal), each on
+    # keyword + `.lower`. Both filters ask about pulled works, so they bring them back (core.default_view
+    # PULLED_FIELD_KEYS: a redirect to the same URL plus include_pulled=true).
+    OpenAlexIDField(
+        param="pull_notice_works.id",
+        docstring="A notice that retracted, withdrew or removed this work; the filter lists the works that notice "
+                  "pulled (one notice can retract many works)",
+        documentation_link=PULL_NOTICE_WORKS_DOCS,
+        alternate_names=ALTERNATE_NAMES.get("pull_notice_works"),
+    ),
+    TermField(
+        # entity_type link-types (core.fields.ENTITY_ID_PARAM_TYPES): values check against config/link-types.yaml
+        # and group_by rows are named from it
+        param="pull_notice_works.link_type",
+        docstring="The kind of notice that pulled the work: retraction (it should no longer be relied on), "
+                  "withdrawal (withdrawn, usually soon after it appeared, for a publishing reason) or removal "
+                  "(its content taken down, usually for legal or safety reasons)",
+        documentation_link=PULL_NOTICE_WORKS_DOCS,
+        alternate_names=ALTERNATE_NAMES.get("pull_notice_works"),
     ),
     # oxjob #2065 (Jason, 13 Nov 2026): `volume` is retired; a work's book is one of its parent works.
     # The filter, group_by and sort answer a JSON 400 that says so (filter_refusal, oxjob #1901).
