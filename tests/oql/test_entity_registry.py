@@ -22,7 +22,7 @@ from core.entities import (  # noqa: E402
     _registry,
 )
 
-# The 29 entity types (relationships joined 2026-11-13, oxjob #2065; contributor-roles 2026-11-18,
+# The 30 entity types (relationships joined 2026-11-13, oxjob #2065; contributor-roles 2026-11-18,
 # oxjob #2075; link-types 2026-11-21, oxjob #2481; author-types 2026-11-23, oxjob #2437) shipped in config/*.yaml (one file each).
 # (locations joined 2026-08-30 — oxjob #850, locations-entity program.)
 ALL_ENTITIES = sorted(_registry().keys())
@@ -37,8 +37,8 @@ CLOSED_VOCAB = {
 }
 
 
-def test_all_29_entities_present():
-    assert len(ALL_ENTITIES) == 29, ALL_ENTITIES
+def test_all_30_entities_present():
+    assert len(ALL_ENTITIES) == 30, ALL_ENTITIES
 
 
 @pytest.mark.parametrize("name", ALL_ENTITIES)

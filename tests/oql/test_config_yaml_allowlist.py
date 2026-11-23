@@ -50,7 +50,7 @@ def test_all_config_files_present():
     # 2026-08-30 — oxjob #850; source-lists 2026-09-18 — oxjob #1205;
     # study-designs 2026-09-25 — oxjob #1312; contributor-roles 2026-11-18 — oxjob #2075;
     # link-types 2026-11-21 — oxjob #2481; author-types 2026-11-23 — oxjob #2437).
-    assert len(_config_files()) == 29
+    assert len(_config_files()) == 30
 
 
 def test_every_config_yaml_only_has_allowlisted_keys():
