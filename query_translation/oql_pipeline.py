@@ -1028,6 +1028,12 @@ def _summary_prefix(oqo: OQO) -> str:
 
 
 def build_pipeline_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
+    from query_translation.oqo import authorship_nodes
+    if any(g.same_authorship for g in oqo.group_by) or any(authorship_nodes(f) for f in oqo.filter_rows):
+        # one person's place on a work (oxjob #2537) says itself only in the core phrase;
+        # the pipeline text would drop the conditions
+        from query_translation.diagnostics import oql_error
+        raise oql_error("OQL_NO_KEY_VALUE_FORM")
     tok = L._RENDER_ENTITY.set(oqo.get_rows)
     try:
         return _build(oqo, resolver)

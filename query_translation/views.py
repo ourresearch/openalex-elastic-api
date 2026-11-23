@@ -423,8 +423,14 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
             # The pipeline language (oxjob #1530): its own renderer; the builder tree
             # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
             # the text. Plus the free check: limits, time estimate, price.
-            oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
-            oneline, oxurl = stringify_pipeline(tree), None
+            try:
+                oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
+                oneline, oxurl = stringify_pipeline(tree), None
+            except OQLError as e:
+                # no pipeline form (one authorship's conditions say themselves only in the
+                # core phrase, oxjob #2537): the core text stands in `x_new_oql`
+                oql_output = oneline = oxurl = None
+                warnings.append(ValidationError(type="oql_not_representable", message=e.message))
         out = {
             "oxurl": oxurl, "oql": oql_output, "oql_oneline": oneline, "x_new_oql": x_new_oql,
             "oql_render_v2": None, "oqo": canonical_oqo.to_dict(),

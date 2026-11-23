@@ -120,7 +120,7 @@ Lists and tables describe their works with the same words. The parts go in this 
 | 5 | Searches | `about kelp`; `with kelp in the title`, `in the abstract`, `in the title, abstract, or full text`, `in the title or abstract` |
 | 6 | Citations | `citing [W](W2741809807)`, `cited by [W](W2741809807)`, `citing works in the collection [C](col_8yWKmRNyEr)` |
 | 7 | Places | `from [Kenya](KE)`, `from [Africa](Q15)`, `from A or B`, `from both A and B`, `from all of A, B, and C`; `co-authored with [institution]` |
-| 8 | People | `by [Jason R Priem](A5023888391)`, `co-authored by A and B`, `with [A](A5023888391) as corresponding author` |
+| 8 | People | `by [Jason R Priem](A5023888391)`, `co-authored by A and B`, `with [A](A5023888391) as corresponding author`; one person's own place on each work: `with [A](A5023888391) in the role [Software](software)`, `with [A](A5023888391) listing [UBC](I141945490) on the work`, `with an author listing [UBC](I141945490) on the work in the role [Data curation](data-curation)` |
 | 9 | Where the work sits | `in [Nature](S137773608)`, `in SDG [Climate action](13)`, `in the topic [..](T10878)`, `in the subfield`, `in the field`, `in the domain`, `in the collection [C](col_8yWKmRNyEr)` |
 | 10 | Publisher, funder, license | `published by [Elsevier BV](P4310320990)`, `funded by A or B`, `under the [CC-BY](cc-by) license` |
 | 11 | Anything else | `where <conditions>` ([Conditions](#conditions)) |
@@ -886,6 +886,10 @@ place         ::= 'from' link ( 'or' link )*
                 | 'co-authored with' link
 people        ::= 'by' link | 'co-authored by' ( link 'and' link | linkList3 )
 role          ::= 'with' link 'as corresponding author'
+                | 'with' ( link | 'an author' ) seat      /* one authorship: every fact on the same person's place */
+seat          ::= 'listing' linkSeries 'on the work' [ roles ] | roles
+roles         ::= 'in the role' link | 'in the roles' linkSeries
+linkSeries    ::= link ( ( ',' | 'and' | ', and' ) link )*
 sits          ::= 'in' link ( 'or' link )*              /* a source */
                 | 'in' kindKey link ( 'or' link )*
                 | 'in the collection' link
@@ -925,6 +929,7 @@ splits        ::= split ( 'and' split )?            /* two different splits at m
 split         ::= 'year' time?
                 | fieldSplit valueSet?
                 | thingSplit ( valueSet | groupPart* )
+                | 'author' seat              /* each person's own place on each work */
 fieldSplit    ::= 'type' | 'language' | 'open access' | 'open access status' | 'license' | 'retracted'
                 | 'topic' | 'subfield' | 'field' | 'domain' | 'keyword' | 'SDG' | 'continent'
                 | 'global south' | 'institution type' | 'source type'

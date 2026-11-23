@@ -26,6 +26,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 from query_translation import oql_lang as L
 from query_translation.oql_pipeline import _COUNT_WORDS, _entity_type, _expr_text, english_list, link_text
 from query_translation.oqo import (CORPUS_ALIASES, CORPUS_CANONICAL_PHRASE, OQO, AffiliationFilter,
+                                   AuthorshipFilter, PERSON_COLUMN, PLACE_COLUMN, ROLE_COLUMN,
+                                   authorship_value,
                                    BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter, SortBy,
                                    is_collection_id, normalize_corpus)
 from query_translation.oqo_canonicalizer import _sort_key
@@ -347,6 +349,10 @@ class _Works:
 
     def _read_one(self, f, thing):
         r = self.resolver
+        if isinstance(f, AuthorshipFilter):
+            # `with [Jane Smith](A1) in the role [Software](software)` (oxjob #2537)
+            self._add("role", authorship_phrase(f, r))
+            return
         if isinstance(f, LeafFilter) and f.operator == "is" and is_collection_id(f.value):
             raise _Leftover()     # `institution is (col_x)`: no phrase says it (`get (col_x)'s works`)
         base = L._search_base(f)
@@ -596,6 +602,49 @@ def _is_own_threshold(f) -> bool:
 def _own_threshold_text(f: LeafFilter) -> str:
     """`with an h-index above 50`"""
     return f"with {OWN_FIELDS[f.column_id][0]} {ABOVE_WORDS[f.operator]} {_number(f.value)}"
+
+
+# ---------------------------------------------------------------------------
+# One authorship (oxjob #2537): `with [Jane Smith](A1) in the role [Software](software)`,
+# `with an author listing [UBC](I1) on the work`, and on a split `by author in the role
+# [Data curation](data-curation)`. "Listing ... on the work" is the institution the person
+# put on that work, apart from `from [UBC]` (anyone on the work) and `at [UBC]` (the
+# person's profile); "in the role" reads right for every role, editor and translator too.
+# ---------------------------------------------------------------------------
+
+
+def seat_words(leaves, resolver: Resolver = None, person: bool = True) -> Tuple[Optional[str], str]:
+    """(the person's link or None, the rest: `listing [UBC] on the work in the role
+    [Software]`) for one authorship's conditions; NotCore for anything else."""
+    who, insts, roles = None, [], []
+    for f in leaves:
+        if not isinstance(f, LeafFilter) or f.is_negated or f.operator != "is" or not isinstance(f.value, str):
+            raise NotCore("an authorship condition with no words")
+        if f.column_id == PERSON_COLUMN and person and who is None:
+            who = _link(f.value, f.column_id, resolver)
+        elif f.column_id == PLACE_COLUMN:
+            insts.append(_link(f.value, f.column_id, resolver))
+        elif f.column_id == ROLE_COLUMN:
+            roles.append(_link(f.value, f.column_id, resolver))
+        else:
+            raise NotCore(f"no words for {f.column_id} on one authorship")
+    words = []
+    if insts:
+        words.append(f"listing {english_list(insts)} on the work")
+    if roles:
+        words.append(f"in the role {roles[0]}" if len(roles) == 1
+                     else f"in the roles {english_list(roles)}")
+    return who, " ".join(words)
+
+
+def authorship_phrase(f: AuthorshipFilter, resolver: Resolver = None) -> str:
+    """A works condition on one authorship, as words."""
+    if f.is_negated:
+        raise NotCore("a negated authorship condition")
+    who, rest = seat_words(f.filters, resolver)
+    if not rest and who is None:
+        raise NotCore("an empty authorship condition")
+    return f"with {who or 'an author'}" + (f" {rest}" if rest else "")
 
 
 def _record_text(f, resolver=None) -> Optional[str]:
@@ -894,6 +943,14 @@ def _table(oqo, resolver):
             word = _dim_words(g, DIMS[g.column_id], w, resolver)     # `year since 2015`
             only.append(f"Only {ONLY_PLURALS[g.column_id]} with {COMPARATOR_WORDS[count.operator]} "
                         f"{_number(count.value)} {w.text(keep_time=True)}.")
+        elif g.same_authorship is not None:
+            # `by author listing [UBC](I1) on the work` (oxjob #2537)
+            if g.column_id != PERSON_COLUMN or any(x is not None for x in (g.where, g.values, g.bins, g.conditions)):
+                raise NotCore("one authorship's conditions on a split other than a plain author split")
+            _who, rest = seat_words(g.same_authorship, resolver, person=False)
+            if not rest:
+                raise NotCore("an empty authorship condition on a split")
+            word = f"author {rest}"
         elif g.where is not None:
             if g.column_id not in THING_NOUNS:
                 raise NotCore("which groups, on a split with no things")
@@ -1206,6 +1263,48 @@ _ADJECTIVE_WORDS = ([(c, a.split(), False) for c, a in NEG_ADJECTIVES.items()]
                     + [(c, a.split(), True) for c, a in ADJECTIVES.items()])
 
 
+def _link_series(ws: _Words) -> List[str]:
+    """⟦L0⟧ | ⟦L0⟧ and ⟦L1⟧ | ⟦L0⟧, ⟦L1⟧, and ⟦L2⟧ (english_list's forms) -> IDs."""
+    ids = []
+    while ws.t.link_id(ws.peek() or ""):
+        ids.append(ws.t.link_id(ws.take()[0]))
+        if ws.at(",") and ws.at(",", "and") and ws.t.link_id(ws.peek(2) or ""):
+            ws.take(2)
+        elif ws.at(",") and ws.t.link_id(ws.peek(1) or ""):
+            ws.take()
+        elif ws.at("and") and ws.t.link_id(ws.peek(1) or ""):
+            ws.take()
+        else:
+            break
+    return ids
+
+
+def _seat_conditions(ws: _Words) -> List[LeafFilter]:
+    """One authorship's conditions after its person (oxjob #2537): `listing ⟦I⟧ on the
+    work`, then `in the role ⟦R⟧` / `in the roles ⟦R1⟧ and ⟦R2⟧`, either or both. [] (the
+    cursor where it was) when the words aren't there."""
+    save, out = ws.i, []
+    if ws.at("listing") and ws.t.link_id(ws.peek(1) or ""):
+        ws.take()
+        ids = _link_series(ws)
+        if not ws.at("on", "the", "work"):
+            ws.i = save
+            return []
+        ws.take(3)
+        out += [LeafFilter(PLACE_COLUMN, _authorship_id(PLACE_COLUMN, i)) for i in ids]
+    if (ws.at("in", "the", "role") or ws.at("in", "the", "roles")) and ws.t.link_id(ws.peek(3) or ""):
+        ws.take(3)
+        out += [LeafFilter(ROLE_COLUMN, _authorship_id(ROLE_COLUMN, i)) for i in _link_series(ws)]
+    return out
+
+
+def _authorship_id(col: str, id_: str) -> str:
+    """A link's ID in a same_authorship leaf, short (the validator checks a role is one)."""
+    if col == PLACE_COLUMN and _kind_of(id_) != "institutions":
+        raise NotCore(f"listing {id_!r} on the work: name an institution")
+    return authorship_value(col, id_)
+
+
 def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
                  thing: Optional[str] = None) -> List:
     """A works phrase -> its filters (an AND list)."""
@@ -1271,6 +1370,21 @@ def _parse_works(t: _Text, s: str, collection_type: Optional[Callable] = None,
             field = SEARCH_FIELD_FOR.get(place) or _OLD_PLACES[place]
             rows += _old_filters("works", f"{field} has {t.restore(s_tok)}")
             continue
+        if ws.at("with") and (t.link_id(ws.peek(1) or "") or ws.at("with", "an", "author")):
+            # one authorship (oxjob #2537): `with [Jane Smith](A1) in the role [Software](software)`,
+            # `with an author listing [UBC](I1) on the work in the role [Software](software)`
+            save = ws.i
+            person = None if ws.at("with", "an", "author") else t.link_id(ws.peek(1))
+            ws.take(3 if person is None else 2)
+            seat = _seat_conditions(ws)
+            if seat:
+                if person is not None:
+                    if _kind_of(person) != "authors":
+                        raise NotCore(f"with {person!r} in a role or listing a place: name an author")
+                    seat = [LeafFilter(PERSON_COLUMN, person)] + seat
+                rows.append(AuthorshipFilter(filters=seat))
+                continue
+            ws.i = save
         if ws.at("with") and t.link_id(ws.peek(1) or "") and ws.at("with", ws.peek(1), "as",
                                                                    "corresponding", "author"):
             rows.append(LeafFilter("corresponding_author_ids", t.link_id(ws.peek(1))))
@@ -1813,6 +1927,16 @@ def _parse_split(t, part, rows) -> GroupBy:
         return _parse_dim(t, word, rest, rows)
     if word not in SINGULAR_THING:
         raise NotCore(f"unexpected {rest!r} after `by {word}`")
+    if word == "author" and (rest.startswith("listing ") or rest.startswith("in the role")):
+        # `by author listing [UBC](I1) on the work`, `by author in the role [Data curation]`:
+        # the person's own place on each work (oxjob #2537), never the profile (`at [UBC]`)
+        ws = _Words(t, rest)
+        seat = _seat_conditions(ws)
+        if not seat or not ws.done():
+            raise NotCore(f"unexpected {ws.rest()!r} after `by author`",
+                          "`by author listing [UBC](I141945490) on the work in the role "
+                          "[Software](software)`")
+        return GroupBy(column_id=NOUN_THINGS["authors"], same_authorship=seat)
     noun, typ, items = _parse_things(t, SINGULAR_THING[word] + (" " + rest if rest else ""))
     if any(isinstance(it, tuple) for it in items):
         raise NotCore("a count floor on a split goes in an `Only` sentence")

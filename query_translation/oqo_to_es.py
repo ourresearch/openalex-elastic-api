@@ -168,7 +168,17 @@ def _translate(node: FilterType, fields_dict) -> Optional[Q]:
         return _translate_leaf(node, fields_dict)
     if isinstance(node, BranchFilter):
         return _translate_branch(node, fields_dict)
-    from query_translation.oqo import AffiliationFilter
+    from query_translation.oqo import AffiliationFilter, AuthorshipFilter
+    if isinstance(node, AuthorshipFilter):
+        # one authorship's conditions (oxjob #2537): a single fact is exact as a flat
+        # term (`with an author in the role [Software](software)`); two or more pair
+        # facts on one authorship and are resolved to work ids first (walk_exec)
+        from query_translation.same_authorship import superset_query
+        if node.pairs:
+            raise OQOTranslationError(
+                "conditions on one author's place on a work must be resolved before they're translated")
+        q = Q(superset_query(node))
+        return ~q if node.is_negated else q
     if isinstance(node, AffiliationFilter):
         q = Q(affiliation_query(node))
         return ~q if node.is_negated else q

@@ -233,6 +233,11 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "(\"phrase\"~N) are search-engine syntax that OQL does not expose",
               'for words near each other use within N (…), e.g. within 3 ("smart", '
               '"phone"); fuzzy matching is not available in OQL yet — remove the ~'),
+        # -- one authorship's conditions (oxjob #2537) say themselves only as a phrase --
+        _spec("OQL_NO_KEY_VALUE_FORM", ERROR, PARSE,
+              "conditions on one author's place on a work have no key-value form",
+              "write them as a phrase: get works with [Jane Smith](A5023888391) in the role "
+              "[Software](software)"),
         _spec("OQL_CHAR_NOT_OPERATOR", ERROR, PARSE,
               "this character is not an OQL operator (`|` is classic-URL OR syntax; "
               "`\\` is a search-engine escape character)",
@@ -338,6 +343,10 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("invalid_bins", ERROR, VALIDATE,
               "bins need a number column and increasing edges (or a width above 0)",
               'e.g. {"column_id": "cited_by_count", "bins": {"at": [1, 10, 100]}}'),
+        _spec("invalid_same_authorship", ERROR, VALIDATE,
+              "conditions on one author's place on a work name the person, an institution "
+              "listed on it, or contributor roles, on works",
+              "get works with [Jane Smith](A5023888391) in the role [Software](software)"),
         _spec("invalid_group_filter", ERROR, VALIDATE,
               "a group filter tests something these groups don't have",
               "filter by a calculation (count of those works > (10)), or by the "

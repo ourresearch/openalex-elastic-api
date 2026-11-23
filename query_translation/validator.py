@@ -45,6 +45,10 @@ from query_translation.oqo import (
     Measure,
     MeasureFilter,
     AffiliationFilter,
+    AuthorshipFilter,
+    PERSON_COLUMN,
+    SAME_AUTHORSHIP_FACTS,
+    authorship_value,
 )
 
 
@@ -54,6 +58,118 @@ class ValidationError:
     type: str
     message: str
     location: Optional[str] = None
+
+
+def _validate_same_authorship(leaves, location: str, person: bool = True) -> List[ValidationError]:
+    """One authorship's conditions (oxjob #2537): the person (once; never on a split by
+    author, whose key is the person), an institution listed on that work, contributor
+    roles; each a plain id, none negated (not yet)."""
+    errors: List[ValidationError] = []
+    if not leaves:
+        return [ValidationError(type="invalid_same_authorship", location=location,
+                                message="Conditions on one author's place on a work name at least one fact.")]
+    people = sum(isinstance(f, LeafFilter) and f.column_id == PERSON_COLUMN for f in leaves)
+    if people > (1 if person else 0):
+        errors.append(ValidationError(
+            type="invalid_same_authorship", location=location,
+            message="One author's place on a work names one person" if person else
+                    "A split by author names no person in its conditions: each row is a person"))
+    for j, f in enumerate(leaves):
+        loc = f"{location}[{j}]"
+        if not isinstance(f, LeafFilter) or f.column_id not in SAME_AUTHORSHIP_FACTS:
+            errors.append(ValidationError(
+                type="invalid_same_authorship", location=loc,
+                message="One author's place on a work takes the person (authorships.author.id), an "
+                        "institution listed on it (authorships.institutions.lineage) or a contributor "
+                        "role (authorships.contributor_roles.id)."))
+            continue
+        if f.is_negated or f.operator != "is" or not isinstance(f.value, str) or not f.value.strip():
+            errors.append(ValidationError(
+                type="invalid_same_authorship", location=loc,
+                message="Each fact about one author's place on a work is a plain value (`is`, not negated)."))
+            continue
+        kind = SAME_AUTHORSHIP_FACTS[f.column_id][0]
+        ent = get_entity_type(kind)
+        value = authorship_value(f.column_id, f.value)     # any accepted spelling, as it will run
+        if ent is not None and ent.is_native_id and not ent.id_shape_ok(value):
+            errors.append(ValidationError(
+                type="invalid_value", location=f"{loc}.value",
+                message=f"'{f.value}' is not an {ent.display_name_singular or ent.name} ID; those "
+                        f"start with '{ent.id_prefix}'."))
+        elif ent is not None and not ent.is_native_id and not is_vocab_member(kind, value):
+            guess = vocab_name_to_code(kind, f.value)
+            errors.append(ValidationError(
+                type="invalid_value", location=f"{loc}.value",
+                message=f"'{f.value}' is not a contributor role."
+                        + (f" Did you mean '{guess}'?" if guess else "")))
+    return errors
+
+
+def _validate_authorship_filter(f: AuthorshipFilter, columns, location: str) -> List[ValidationError]:
+    """A same_authorship condition in a works query's filter rows (oxjob #2537)."""
+    errors: List[ValidationError] = []
+    if columns is not get_entity_properties("works"):
+        errors.append(ValidationError(
+            type="invalid_same_authorship", location=location,
+            message="Conditions on one author's place on a work filter works."))
+    return errors + _validate_same_authorship(f.filters, f"{location}.same_authorship")
+
+
+def _authorship_placement_errors(oqo) -> List[ValidationError]:
+    """Conditions on one authorship sit in a works query's own conditions, under no `not`
+    (not yet): never inside a walk, a split, a group filter or a query in parentheses,
+    which resolve without them (#2537)."""
+    errors: List[ValidationError] = []
+
+    def under(tree, negated: bool, loc: str, allowed: bool):
+        if isinstance(tree, AuthorshipFilter):
+            if not allowed:
+                errors.append(ValidationError(
+                    type="invalid_same_authorship", location=loc,
+                    message="Conditions on one author's place on a work go in the works query's own "
+                            "conditions, not inside a walk, a split or a query in parentheses."))
+            elif negated or tree.is_negated:
+                errors.append(ValidationError(
+                    type="invalid_same_authorship", location=loc,
+                    message="Conditions on one author's place on a work can't be negated yet."))
+        elif isinstance(tree, BranchFilter):
+            for j, c in enumerate(tree.filters):
+                under(c, negated != bool(tree.is_negated), f"{loc}.filters[{j}]", allowed)
+        elif isinstance(tree, LeafFilter) and isinstance(tree.value, OQO):
+            for j, c in enumerate(tree.value.filter_rows):
+                under(c, False, f"{loc}.value.filter_rows[{j}]", False)
+
+    for i, f in enumerate(oqo.filter_rows):
+        under(f, False, f"filter_rows[{i}]", True)
+    for i, w in enumerate(oqo.walks):
+        if w.where is not None:
+            under(w.where, False, f"walks[{i}].where", False)
+    for i, g in enumerate(oqo.group_by):
+        trees = list(g.conditions or []) + [v for v in (g.values or []) if not isinstance(v, (str, int))]
+        for t in trees + ([g.where] if g.where is not None else []):
+            under(t, False, f"group_by[{i}]", False)
+    return errors
+
+
+def _validate_split_by_authorship(g, oqo, location: str) -> List[ValidationError]:
+    """A split by author whose keys come from each work's matching authorships."""
+    errors: List[ValidationError] = []
+    if oqo.get_rows != "works" or g.column_id != "authorships.author.id" or not (
+            g.values is None and g.bins is None and g.conditions is None and g.where is None):
+        errors.append(ValidationError(
+            type="invalid_group_by", location=location,
+            message="Conditions on one author's place on a work split works by author "
+                    "(authorships.author.id), with no listed values, bins or group filter."))
+    if len(oqo.group_by) > 1 or oqo.walks or oqo.each:
+        errors.append(ValidationError(
+            type="invalid_group_by", location=location,
+            message="A split by author with conditions on the work runs alone for now: one split, no walk."))
+    if len(oqo.calculate) > 1 or any(m != Measure("count") for m in oqo.calculate):
+        errors.append(ValidationError(
+            type="invalid_measure", location="calculate",
+            message="A split by author with conditions on the work counts works for now; "
+                    "ask for the count."))
+    return errors + _validate_same_authorship(g.same_authorship, f"{location}.same_authorship", person=False)
 
 
 @dataclass
@@ -293,6 +409,9 @@ class OQOValidator:
     """Validates OQO objects against the live entity-property catalog."""
 
     def validate(self, oqo: OQO) -> ValidationResult:
+        placement = _authorship_placement_errors(oqo)
+        if placement:
+            return ValidationResult(valid=False, errors=placement, warnings=[])
         if oqo.walks or oqo.each:
             return self._validate_walked(oqo)
         errors: List[ValidationError] = []
@@ -375,6 +494,10 @@ class OQOValidator:
             ))
         for i, g in enumerate(oqo.group_by):
             column_id = getattr(g, "column_id", None)
+            if g.same_authorship is not None:
+                # `by author listing [UBC](I141945490) on the work` (oxjob #2537)
+                errors.extend(_validate_split_by_authorship(g, oqo, f"group_by[{i}]"))
+                continue
             if not g.is_plain:
                 # the pipeline language's splits (oxjob #1530)
                 errors.extend(self._validate_split(g, i, oqo, columns, capabilities))
@@ -850,6 +973,8 @@ class OQOValidator:
             return self._validate_leaf_filter(f, columns, location)
         if isinstance(f, BranchFilter):
             return self._validate_branch_filter(f, columns, location)
+        if isinstance(f, AuthorshipFilter):
+            return _validate_authorship_filter(f, columns, location)
         return []
 
     def _validate_leaf_filter(

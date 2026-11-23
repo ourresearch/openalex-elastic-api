@@ -73,6 +73,11 @@ get [University of British Columbia](I141945490)'s open access articles since 20
 | `get works about malaria from [Africa](Q15)` | any author in an African country |
 | `get works co-authored by [Jason R Priem](A5023888391) and [Heather Piwowar](A5048491430)` | both people are authors |
 | `get works with [Jason R Priem](A5023888391) as corresponding author` | the corresponding author |
+| `get works with [Jason R Priem](A5023888391) in the role [Software](software)` | he did the software himself, not a co-author |
+| `get works with [Jason R Priem](A5023888391) listing [University of North Carolina at Chapel Hill](I114027177) on the work` | he put UNC on that work |
+| `get works about kelp with an author listing [University of British Columbia](I141945490) on the work in the role [Data curation](data-curation)` | someone who listed UBC on the work did its data curation |
+
+**One person's place on a work.** `by [A]` and a role elsewhere on the work pair nothing: someone did the software, maybe a co-author. `with [A] in the role [R]` and `listing [X] on the work` say facts about that one person's own place on each work: the roles they're credited with, the institutions they put on it (sub-units count, as in `from`). OQL checks each work's author list, so it reads up to 5,000 works that could match and up to 250,000 authors on them; past that it refuses and says how to narrow. A role alone (`with an author in the role [Software](software)`) needs no check and has no such limit.
 
 `co-authored with [X]` says the same as `from [X]`, and reads better beside a split by institution: `get the count of works since 2015 co-authored with [Christian-Albrechts-Universität zu Kiel](I32021983) by company` lists the companies Kiel writes with.
 
@@ -270,17 +275,20 @@ To narrow a split by things, describe the groups right after the split word:
 | `get the count of works about kelp by author in [Norway](NO)` | authors whose own record is in Norway |
 | `get the count of works about kelp by institution in [Canada](CA)` | Canadian institutions |
 | `get the count of works about kelp by author with an h-index above 40` | authors with an h-index above 40 |
+| `get the count of works about kelp by author listing [University of British Columbia](I141945490) on the work` | people who put UBC on a kelp work; each counts only those works |
+| `get the count of works about kelp by author in the role [Data curation](data-curation)` | people credited with data curation on a kelp work; each counts only those works |
 | `get the count and share of top 1% cited articles by year and country in ([United States](US), [China](CN))` | just these countries (up to 100 values) |
 | `get the count and mean FWCI of works since 2015 by institution in ([Indian Institute of Technology Bombay](I162827531), [Indian Institute of Technology Delhi](I68891433))` | named institutions side by side |
 | `get the count of works about kelp by author in ([Jason R Priem](A5023888391), [Heather Piwowar](A5048491430))` | named people |
 | `get the count and mean FWCI of works since 2020 by country in the collection [European Union (EU27)](col_LV29j8URoX)` | the members of a [collection](#collections) |
 | `get the count of works from [Kenya](KE) by country except [Kenya](KE)` | everyone but Kenya: Kenya's partner countries |
 
-**Which groups is not which works.** `by author at [UBC](I141945490) since 2022` keeps the people whose record has UBC, and counts all their kelp works, wherever they wrote them. `from [UBC](I141945490) by author` keeps the works with a UBC author, and counts everyone on them, UBC or not:
+**Which groups is not which works.** `by author at [UBC](I141945490) since 2022` keeps the people whose record has UBC, and counts all their kelp works, wherever they wrote them. `from [UBC](I141945490) by author` keeps the works with a UBC author, and counts everyone on them, UBC or not. `by author listing [UBC](I141945490) on the work` keeps the people who put UBC on a kelp work themselves, and counts only those works:
 
 ```
 get the count of works about kelp by author at [University of British Columbia](I141945490) since 2022
 get the count of works about kelp from [University of British Columbia](I141945490) by author
+get the count of works about kelp by author listing [University of British Columbia](I141945490) on the work
 ```
 
 A condition about the people or places goes on the groups. A condition on the works drops papers, not people. Groups chosen by other own fields (`last known institution`, `co-author is not`, `institution type`) are said in the general form; the echo writes it for you:

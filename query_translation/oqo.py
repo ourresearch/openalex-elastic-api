@@ -167,6 +167,73 @@ class AffiliationFilter:
                    is_negated=data.get("is_negated", False), min_years=data.get("min_years"))
 
 
+@dataclass
+class AuthorshipFilter:
+    """Conditions that hold on ONE authorship of the work (oxjob #2537): `get works
+    with [Jane Smith](A5023888391) in the role [Software](software)`. The works index
+    keeps authorships as flat arrays, so two leaves on authorship columns pair nothing
+    (Jane is on it, someone did the software); this node keeps only works where a single
+    authorship meets every one. `filters` are plain leaves on SAME_AUTHORSHIP_FACTS,
+    ANDed. Runs as a check over the candidate works (query_translation.same_authorship);
+    valid in a works query's filter rows."""
+    filters: List["LeafFilter"]
+    is_negated: bool = False
+
+    @property
+    def pairs(self) -> bool:
+        """Two or more facts pair on one authorship, so each work's authorships are
+        checked; a single fact is exact as a flat filter, with no check and no cap."""
+        return len(self.filters) > 1
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"same_authorship": [f.to_dict() for f in self.filters]}
+        if self.is_negated:
+            result["is_negated"] = True
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "AuthorshipFilter":
+        return cls(filters=[filter_from_dict(f) for f in data["same_authorship"]],
+                   is_negated=data.get("is_negated", False))
+
+
+def authorship_nodes(tree) -> List[AuthorshipFilter]:
+    """Every AuthorshipFilter in a filter tree."""
+    if isinstance(tree, AuthorshipFilter):
+        return [tree]
+    if isinstance(tree, BranchFilter):
+        return [n for f in tree.filters for n in authorship_nodes(f)]
+    return []
+
+
+# The facts a same_authorship condition can name (oxjob #2537), in their canonical order:
+# column -> (the values' entity, the works index field, the value's path in one authorship's
+# _source). Institutions by lineage: a sub-unit counts as its university, as `from` does.
+SAME_AUTHORSHIP_FACTS = {
+    "authorships.author.id": ("authors", "authorships_full.author.id", ("author", "id")),
+    "authorships.institutions.lineage": ("institutions", "authorships_full.institutions.lineage",
+                                         ("institutions", "lineage")),
+    "authorships.contributor_roles.id": ("contributor-roles", "authorships_full.contributor_roles.id",
+                                         ("contributor_roles", "id")),
+}
+SAME_AUTHORSHIP_COLUMNS = tuple(SAME_AUTHORSHIP_FACTS)
+PERSON_COLUMN, PLACE_COLUMN, ROLE_COLUMN = SAME_AUTHORSHIP_COLUMNS
+
+
+def authorship_value(column_id: str, value) -> str:
+    """A fact's value in its short form (`A5023888391`, `I141945490`, `software`), from any
+    accepted spelling (a full URL, `contributor-roles/software`)."""
+    from query_translation.oql_lang import _short_id
+    return _short_id(SAME_AUTHORSHIP_FACTS[column_id][0], str(value))
+
+
+def authorship_full_value(column_id: str, value) -> str:
+    """A fact's value as the works index stores it."""
+    kind = SAME_AUTHORSHIP_FACTS[column_id][0]
+    path = "" if kind in ("authors", "institutions") else kind + "/"
+    return f"https://openalex.org/{path}{authorship_value(column_id, value)}"
+
+
 FilterType = Union[LeafFilter, BranchFilter]
 
 
@@ -179,6 +246,8 @@ def filter_from_dict(data: Dict[str, Any]) -> FilterType:
         return MeasureFilter.from_dict(data)
     if "affiliation" in data:
         return AffiliationFilter.from_dict(data)
+    if "same_authorship" in data:
+        return AuthorshipFilter.from_dict(data)
     return LeafFilter.from_dict(data)
 
 
@@ -291,12 +360,12 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
     def _canon_filter(f, ent=start):
         if isinstance(f, BranchFilter):
             return replace(f, filters=[_canon_filter(x, ent) for x in f.filters])
+        if isinstance(f, (AffiliationFilter, AuthorshipFilter)):  # their own fixed columns
+            return f
         if f.column_id is None:
             return f
         if isinstance(f, MeasureFilter):  # measured column is a column of the main entity
             return replace(f, column_id=_canon(f.column_id))
-        if isinstance(f, AffiliationFilter):  # an author's record: its own fixed columns
-            return f
         if isinstance(f.value, OQO):  # a nested query (oxjob #1535)
             return replace(f, column_id=canonicalize_column_id(f.column_id, ent),
                            value=canonicalize_oqo_column_ids(f.value))
@@ -449,12 +518,17 @@ class GroupBy:
     bins: Optional[Dict[str, Any]] = None
     conditions: Optional[List[Any]] = None
     where: Optional[Any] = None
+    # `by author listing [UBC](I141945490) on the work` (oxjob #2537): on each work, only
+    # the authorships meeting these leaves give the split its keys (the person's own
+    # place on that work, never the person's profile: that's `where`)
+    same_authorship: Optional[List[Any]] = None
 
     @property
     def is_plain(self) -> bool:
         """True for today's split (a column, nothing else)."""
         return (self.values is None and self.bins is None
-                and self.conditions is None and self.where is None)
+                and self.conditions is None and self.where is None
+                and self.same_authorship is None)
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {}
@@ -468,6 +542,8 @@ class GroupBy:
             d["conditions"] = [c.to_dict() for c in self.conditions]
         if self.where is not None:
             d["where"] = self.where.to_dict()
+        if self.same_authorship is not None:
+            d["same_authorship"] = [f.to_dict() for f in self.same_authorship]
         return d
 
     @classmethod
@@ -485,6 +561,8 @@ class GroupBy:
             bins=dict(data["bins"]) if data.get("bins") is not None else None,
             conditions=conditions,
             where=filter_from_dict(where) if where is not None else None,
+            same_authorship=([filter_from_dict(f) for f in data["same_authorship"]]
+                             if data.get("same_authorship") is not None else None),
         )
 
 
@@ -639,8 +717,9 @@ class OQO:
     def uses_pipeline(self) -> bool:
         """True when the OQO uses anything only the pipeline language (oxjob
         #1530) can say: a calculation, a split beyond a plain column, a walk, a
-        nested query (oxjob #1535), or an author's record by place and years (#1555)."""
-        return self.runs_as_analytics or any(isinstance(f, AffiliationFilter)
+        nested query (oxjob #1535), an author's record by place and years (#1555), or
+        conditions on one authorship (#2537: no URL form, and the check counts them)."""
+        return self.runs_as_analytics or any(isinstance(f, AffiliationFilter) or authorship_nodes(f)
                                              for f in self.filter_rows)
 
     @property

@@ -510,9 +510,10 @@ CAP_COLUMN = "column"
 # property added = MINOR per classify_properties_diff.py. Jason named the field (decision 2) and kept the design on 16 Nov.
 # 24.3.0 (oxjob #2075, shape approved 2026-11-18): new `contributor-roles` registry entity (the 14 CRediT roles,
 # conceptualization ... writing-review-editing; ES contributor-roles-v1, built by walden) and, on works, each authorship
-# gains `contributor_roles` [{id, display_name}] ([] when none). No works filter, group_by or OQL phrase for roles on
-# their own: the filter that will ship pairs an author with a role on the same authorship (oxjob #2075, D11). Purely
-# additive: classify_properties_diff.py says MINOR (entity added).
+# gains `contributor_roles` [{id, display_name}] ([] when none). No works filter or group_by for roles: a role is a fact
+# about one person's place on a work, so OQL asks it that way (`get works with [A](A1) in the role [Software](software)`,
+# query_translation/same_authorship.py, oxjob #2537), with no URL filter. Purely additive: classify_properties_diff.py
+# says MINOR (entity added).
 # 24.4.0 (oxjob #2238, 2026-11-21): client_registry.json refreshed after the website gained filter facets for
 # institutions and sources `is_global_south` and awards `keywords.id` and `sustainable_development_goals.id`
 # (openalex-gui dec21120), so their supported_by goes [] -> ["gui"]. supported_by only = MINOR per

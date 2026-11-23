@@ -125,9 +125,12 @@ def _split_trees(g: GroupBy) -> List:
 
 
 def needs_walk(oqo: OQO) -> bool:
+    from query_translation.same_authorship import needs_check
     return (bool(oqo.walks) or oqo.each
-            or any(has_query_value(f) or has_relation_leaf(f) for f in oqo.filter_rows)
-            or any(has_query_value(t) for g in oqo.group_by for t in _split_trees(g)))
+            or any(has_query_value(f) or has_relation_leaf(f) or needs_check(f)
+                   for f in oqo.filter_rows)
+            or any(has_query_value(t) for g in oqo.group_by for t in _split_trees(g))
+            or any(g.same_authorship for g in oqo.group_by))
 
 
 def _too_big(what: str, n: int, limit: int, fix: str) -> A.AnalyticsError:
@@ -384,8 +387,12 @@ def resolve_sets(oqo: OQO, ctx: Ctx, walk_wheres: bool = True) -> OQO:
         values = ([walk(v) if isinstance(v, (LeafFilter, BranchFilter)) else v
                    for v in g.values] if g.values is not None else None)
         return replace(g, conditions=conditions, values=values)
-    return replace(oqo, filter_rows=[walk(f, True) for f in oqo.filter_rows], walks=walks,
-                   group_by=[split(g) for g in oqo.group_by])
+    rows = [walk(f, True) for f in oqo.filter_rows]
+    # conditions on one authorship (oxjob #2537): the works they keep, checked within the
+    # query's other conditions, once those are resolved
+    from query_translation.same_authorship import resolve_rows
+    rows = resolve_rows(oqo, rows, ctx)
+    return replace(oqo, filter_rows=rows, walks=walks, group_by=[split(g) for g in oqo.group_by])
 
 
 def _resolve_relation(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
@@ -1266,6 +1273,11 @@ def prepare(oqo: OQO, connection, deadline: A.Deadline, export: bool = False,
     why = _why_not_sliced(oqo) if ctx.slice is not None else None
     if why:
         raise _invalid_slice(why)
+    if any(g.same_authorship for g in oqo.group_by):
+        # `by author listing [UBC](I141945490) on the work` (oxjob #2537): counted from
+        # each work's own authorships
+        from query_translation.same_authorship import split_by_authorship
+        return "body", split_by_authorship(resolve_sets(oqo, ctx), ctx)
     back = next((w for w in oqo.walks if w.to is not None), None)
     out = next((w for w in oqo.walks if w.to is None), None)
     if back is None and not oqo.calculate and out is not None:
@@ -1391,6 +1403,18 @@ def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
             if m.measure != "count":
                 row[m.key] = A._measure_value(m, b or {}, count, None)
         rows.append(row)
+    total_count = total_res["hits"]["total"]["value"]
+    total_row = {"key": "all", "key_display_name": f"all their works", "count": total_count}
+    for m in measures:
+        if m.measure != "count":
+            total_row[m.key] = A._measure_value(m, total_res.get("aggregations", {}),
+                                                total_count, None)
+    return table_body(oqo, ctx, rows, total_row, measures)
+
+
+def table_body(oqo: OQO, ctx: Ctx, rows: List[dict], total_row: dict, measures: List[Measure]) -> dict:
+    """A table counted here rather than by ES (each walked thing, #2537's split by one
+    authorship): its rows in the query's order, the page named, the summary row."""
     sort = None
     if oqo.sort_by:
         s0 = oqo.sort_by[0]
@@ -1405,13 +1429,7 @@ def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
     start = (page - 1) * per_page
     page_rows = rows[start:start + per_page]
     _name(page_rows, ctx)
-    total_count = total_res["hits"]["total"]["value"]
-    total_row = {"key": "all", "key_display_name": f"all their works", "count": total_count}
-    for m in measures:
-        if m.measure != "count":
-            total_row[m.key] = A._measure_value(m, total_res.get("aggregations", {}),
-                                                total_count, None)
-    meta = _meta(oqo, ctx, count=total_count, groups=len(rows))
+    meta = _meta(oqo, ctx, count=total_row["count"], groups=len(rows))
     meta.update(page=page, per_page=per_page, more_groups=start + per_page < len(rows),
                 measures=[A._measure_meta(m, "works") for m in measures])
     return {"meta": meta, "summary": {"all": total_row}, "group_by": page_rows, "results": []}
@@ -1519,6 +1537,12 @@ def check(oqo: OQO, connection) -> dict:
     for w in oqo.walks:
         if w.where is not None:
             visit(w.where)
+    # conditions on one authorship (oxjob #2537): the works to check, counted
+    from query_translation import same_authorship as SA
+    sa_limits, sa_est, sa_calls = SA.check(oqo, ctx)
+    limits += sa_limits
+    est += sa_est
+    calls += sa_calls
     out = next((w for w in oqo.walks if w.to is None), None)
     back = next((w for w in oqo.walks if w.to is not None), None)
     if out is not None and (back is not None or oqo.calculate or out.where is not None):

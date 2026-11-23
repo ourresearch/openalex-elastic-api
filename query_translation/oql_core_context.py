@@ -142,6 +142,19 @@ _kw("with … as corresponding author", "this person is the corresponding author
     insert="with  as corresponding author", cursor=5)
 _kw("as corresponding author", "this person is the corresponding author",
     "`get works with [Jennifer A. Doudna](A5067184382) as corresponding author`.")
+# one person's own place on each work (oxjob #2537)
+_ROLE_DOC = ("`get works with [Jane Smith](A5023888391) in the role [Software](software)`: works where "
+             "that person's own authorship carries the role, not a co-author's.")
+_kw("in the role", "this person's contributor role on the work", _ROLE_DOC)
+_kw("in the roles", "every one of these roles, on this person's place", _ROLE_DOC)
+_kw("listing", "an institution this person put on the work",
+    "`get works with [Jane Smith](A5023888391) listing [University of British Columbia](I141945490) on the "
+    "work`: the work's own byline, not the person's profile (that's `at`).")
+_kw("on the work", "on the work's own byline",
+    "`listing [University of British Columbia](I141945490) on the work`: what the person put on that work.")
+_kw("author", "someone on the work, then their place on it",
+    "`get works about kelp with an author listing [University of British Columbia](I141945490) on the work "
+    "in the role [Software](software)`.")
 _kw("license", "ends under the … license", "`get works under the [CC BY](cc-by) license`.")
 _kw("both", "works with every one of these places",
     "`get works from both [University of Oxford](I40120149) and [University of Cambridge]"
@@ -483,7 +496,13 @@ S_ABOUT = _Slot("search-text", group="search")
 S_NUMBER = _Slot("number")
 S_YEAR = {w: _Slot("year", years=w) for w in C.YEAR_OPS}
 S_LICENSE_WORD = _Slot("works-slot", [K["license"]])
-S_CORRESPONDING_WORD = _Slot("works-slot", [K["as corresponding author"]])
+_SEAT_WORDS = ("listing", "in the role", "in the roles")   # one person's place on the work (#2537)
+_SEAT_KW = [K[w] for w in _SEAT_WORDS]
+S_CORRESPONDING_WORD = _Slot("works-slot", [K["as corresponding author"]] + _SEAT_KW)
+S_SEAT_WORD = _Slot("works-slot", _SEAT_KW)
+S_ON_THE_WORK = _Slot("works-slot", [K["on the work"]])
+S_ROLE = _Slot("entity", entities=["contributor-roles"])
+S_LISTED = _Slot("entity", entities=["institutions"])
 
 _WS_HEAD = [K["about"], K["since"], K["from"], K["by"], K["in"], K["funded by"], K["published by"]]
 _WS_TAIL = (WITH_SEARCH + [K["co-authored with"], K["co-authored by"], K["citing"]]
@@ -901,7 +920,13 @@ class _Walk:
             if t is not None and t.kind == "L":
                 self.tag(k, K["with … as corresponding author"])
                 self.i += 1
-                self.expect(S_CORRESPONDING_WORD)
+                w = self.expect(S_CORRESPONDING_WORD)
+                if w in _SEAT_WORDS:
+                    self.seat_words(w, after)       # one person's own place on the work (#2537)
+            elif self.low() == "an" and self.low(1) == "author":
+                self.mark(self.i, self.i + 2, "author", entry=K["author"])
+                self.i += 2
+                self.seat_words(self.expect(S_SEAT_WORD), after)
             else:
                 self.search = True
                 self.search_term(S_SEARCH)
@@ -1147,6 +1172,8 @@ class _Walk:
                 opts += [_VALUES_IN, K["in the collection"]]
             if word in C.SINGULAR_THING:
                 opts += _thing_words(_base(C.SINGULAR_THING[word]))
+            if word == "author":
+                opts += _SEAT_KW                    # on that work (#2537)
         opts += _after_comma(self.table_orders())
         opts += self.sentence_options(insert=". ")
         return _Slot("split", opts, table=_THING_TABLE)
@@ -1246,7 +1273,9 @@ class _Walk:
             self.thing_word(v, base, "list", slot)
 
     def thing_word(self, v: str, base: str, ctx: str, after):
-        if v in ("at", "ever at"):
+        if v in _SEAT_WORDS:
+            self.seat_words(v, after)
+        elif v in ("at", "ever at"):
             self.link(_link_slot(["institutions"]))
             self.record_years(after)
         elif v in ("in", "ever in"):
@@ -1265,6 +1294,19 @@ class _Walk:
             self.i += 1
         elif v == "where":
             self.where_tail(base, ctx)
+
+    def seat_words(self, w, after):
+        """`listing [UBC] on the work`, then `in the role [Software]` (oql_core._seat_conditions)."""
+        if w == "listing":
+            self.links(S_LISTED, lambda: S_ON_THE_WORK, sep=("and", ","))
+            self.expect(S_ON_THE_WORK)
+            t = self.tok()
+            if t is None:
+                self.stop(after, extra=_SEAT_KW[1:])
+            if t.kind == "W" and t.low == "in" and self.low(1) == "the" and self.low(2) in ("role", "roles"):
+                w = self.match(_ptable(_SEAT_KW[1:]), after)
+        if w in ("in the role", "in the roles"):
+            self.links(S_ROLE, after, sep=("and", ","))
 
     def record_years(self, after):
         """An author's record years: `since 2022`, `in 2+ years`, in either order."""
@@ -1359,7 +1401,7 @@ class _Walk:
 # `with an h-index above N`, `where ...` (oql_core._parse_things), and a dimension's
 # `in (...)` / `in the collection [X]` (oql_core._parse_dim)
 _THING_TABLE = _ptable(["in", "in the collection", "at", "ever at", "ever in", "except", "other than",
-                        "where"] + [x["value"] for x in THRESHOLDS])
+                        "where", *_SEAT_WORDS] + [x["value"] for x in THRESHOLDS])
 _THRESHOLD_VALUES = {x["value"] for x in THRESHOLDS}
 _IN_KEY_THINGS = {_base(n) for n in ("topics", "subfields", "fields")}
 S_COMPARATOR = _Slot("things-slot", COMPARATORS)

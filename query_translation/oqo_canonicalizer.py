@@ -26,7 +26,9 @@ import json
 from dataclasses import replace
 from typing import List, Union, Any
 from query_translation.oqo import (OQO, LeafFilter, BranchFilter, FilterType, SortBy, GroupBy,
-                                   MeasureFilter, AffiliationFilter, canonicalize_oqo_column_ids,
+                                   MeasureFilter, AffiliationFilter, AuthorshipFilter,
+                                   PERSON_COLUMN, PLACE_COLUMN, SAME_AUTHORSHIP_COLUMNS,
+                                   authorship_value, canonicalize_oqo_column_ids,
                                    is_collection_id)
 from query_translation.oql_lang import (
     canon_value_for_column,
@@ -190,8 +192,24 @@ def _canonicalize_split(g: GroupBy, sort_operands: bool = True) -> GroupBy:
     if conditions is not None:
         conditions = [_canonicalize_tree(c, sort_operands) for c in conditions]
     where = _canonicalize_tree(g.where, sort_operands) if g.where is not None else None
+    same = (canonicalize_same_authorship(g.same_authorship)
+            if g.same_authorship is not None else None)
     return GroupBy(column_id=g.column_id, values=values, bins=g.bins,
-                   conditions=conditions, where=where)
+                   conditions=conditions, where=where, same_authorship=same)
+
+
+def canonicalize_same_authorship(leaves: List) -> List:
+    """One authorship's conditions (oxjob #2537): short-form values, in a fixed order
+    (the person, the institution listed on the work, the roles), duplicates dropped."""
+    out = []
+    for f in leaves:
+        if isinstance(f, LeafFilter) and f.column_id in SAME_AUTHORSHIP_COLUMNS \
+                and isinstance(f.value, str):
+            f = replace(f, value=authorship_value(f.column_id, f.value))
+        if f not in out:
+            out.append(f)
+    order = {c: i for i, c in enumerate(SAME_AUTHORSHIP_COLUMNS)}
+    return sorted(out, key=lambda f: (order.get(getattr(f, "column_id", None), 9), _sort_key(f)))
 
 
 # NOT of a comparison is the opposite comparison (group filters on measures).
@@ -221,7 +239,7 @@ def push_negation(f: FilterType, negate: bool) -> FilterType:
             filters=[push_negation(c, eff) for c in f.filters],
             is_negated=False,
         )
-    if isinstance(f, AffiliationFilter):
+    if isinstance(f, (AffiliationFilter, AuthorshipFilter)):
         return replace(f, is_negated=bool(f.is_negated) ^ bool(negate))
     if isinstance(f, MeasureFilter):
         eff = bool(f.is_negated) ^ bool(negate)
@@ -272,6 +290,13 @@ def canonicalize_filter(f: FilterType, sort_operands: bool = True) -> Union[Filt
         return canonicalize_branch_filter(f, sort_operands)
     elif isinstance(f, (MeasureFilter, AffiliationFilter)):
         return f
+    elif isinstance(f, AuthorshipFilter):
+        leaves = canonicalize_same_authorship(f.filters)
+        if len(leaves) == 1 and isinstance(leaves[0], LeafFilter) and leaves[0].column_id in (
+                PERSON_COLUMN, PLACE_COLUMN):
+            # one fact pairs nothing: `with an author listing [UBC] on the work` is `from [UBC]`
+            return replace(leaves[0], is_negated=bool(f.is_negated) != bool(leaves[0].is_negated))
+        return replace(f, filters=leaves)
     return None
 
 

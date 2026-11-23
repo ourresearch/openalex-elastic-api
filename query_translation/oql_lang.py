@@ -32,7 +32,8 @@ from typing import Dict, List, Optional, Tuple
 from query_translation.oqo import (  # noqa: E402
     OQO, LeafFilter, BranchFilter, FilterType, GroupBy, CURLY_DQUOTE_MAP,
     canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE,
-    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES, Walk, AffiliationFilter)
+    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES, Walk, AffiliationFilter,
+    AuthorshipFilter)
 
 
 # ---------------------------------------------------------------------------
@@ -1600,6 +1601,9 @@ _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     # oxjob #2065: a work's parent works and lineage are work ids, typed like the edges.
     "parent_works.id": "works",
     "pull_notice_works.id": "works",  # oxjob #2264: the notice is a work
+    # one authorship's role (oxjob #2537): no works filter of its own, only inside a
+    # same_authorship condition, where its values are links with names
+    "authorships.contributor_roles.id": "contributor-roles",
 }
 
 # A row's OWN id never name-annotates: a resolver miss there means "no name
@@ -5866,7 +5870,7 @@ def _flatten_and(branch: BranchFilter) -> List[FilterType]:
 def _negate(f: FilterType) -> FilterType:
     if isinstance(f, LeafFilter):
         return LeafFilter(f.column_id, f.value, f.operator, is_negated=not f.is_negated)
-    if isinstance(f, (MeasureFilter, AffiliationFilter)):
+    if isinstance(f, (MeasureFilter, AffiliationFilter, AuthorshipFilter)):
         return replace(f, is_negated=not f.is_negated)
     return BranchFilter(f.join, f.filters, is_negated=not f.is_negated)
 
@@ -7028,6 +7032,10 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
 def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
     if isinstance(f, LeafFilter):
         return _leaf_node(f, resolver)
+    if isinstance(f, AuthorshipFilter):
+        # one authorship's conditions (oxjob #2537) read only in the core phrase
+        # (`with [X](A1) in the role [Software](software)`)
+        raise oql_error("OQL_NO_KEY_VALUE_FORM")
     # BranchFilter. A negated branch is non-canonical (NNF pushes negation to
     # the leaves) and should not survive canonicalization; if one reaches here
     # we render it as a bare `not ` prefix on the group so it still re-parses
