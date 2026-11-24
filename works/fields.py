@@ -704,7 +704,7 @@ fields = [
         # filter, its negations, an ascending sort, group metric sorts and OQL calculations)
         param="reviewed_by_count",
         docstring="The number of works that review this work: peer reviews, preprint reviews and book reviews "
-                  "linked to it; list them at /links?filter=target:<id>,relationship:review",
+                  "linked to it; list them at /links?filter=target:<id>,link_type:review",
         documentation_link="https://help.openalex.org/data/works/attributes/#reviewed_by_count",
         alternate_names=ALTERNATE_NAMES.get("reviewed_by_count"),
     ),

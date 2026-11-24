@@ -72,7 +72,7 @@ def test_reviewed_by_count_keeps_the_rules_of_a_count_stored_only_where_it_isnt_
     field = fields_dict["reviewed_by_count"]
     assert type(field) is ZeroWhenMissingRangeField and is_field_class(field, "RangeField")
     assert field.documentation_link == "https://help.openalex.org/data/works/attributes/#reviewed_by_count"
-    assert "relationship:review" in field.docstring
+    assert "link_type:review" in field.docstring
     assert sort_refusal("reviewed_by_count", field) is None
     # like child_works_count: a plain group_by would leave out every work with no stored value
     assert group_by_rejection(field) == "Cannot group by date, number, or search fields."

@@ -1,4 +1,4 @@
-"""/links (oxjob #1490): work-to-work links read from the `links` index, each {origin, target, relationship} as ids.
+"""/links (oxjob #1490): work-to-work links read from the `links` index, each {origin, target, link_type} as ids.
 ES is faked; merged ids are off.
 
     PYTHONPATH=. venv/bin/python -m pytest tests/functional/test_links.py -q -p no:cacheprovider
@@ -94,7 +94,7 @@ def get(client, url):
 
 # --- requests that name no work, or ask for something /links doesn't do --------------------------
 
-@pytest.mark.parametrize("url", ["/links", "/links?filter=relationship:citation", "/links?filter=origin:"])
+@pytest.mark.parametrize("url", ["/links", "/links?filter=link_type:citation", "/links?filter=origin:"])
 def test_a_request_must_name_a_work(client, url):
     status, body = get(client, url)
     assert status == 400
@@ -110,7 +110,7 @@ def test_the_old_from_and_to_names_answer_400_naming_the_new_ones(client, url):
 @pytest.mark.parametrize("url", [
     "/links?filter=cites:W1001", "/links?filter=origin:A123", "/links?filter=origin:W1001|W1002",
     "/links?filter=origin:!W1001", "/links?filter=origin:W1001,origin:W1002",
-    "/links?filter=origin:W1001,relationship:cites", "/links?filter=origin:W1001&sort=id",
+    "/links?filter=origin:W1001,link_type:cites", "/links?filter=origin:W1001&sort=id",
     "/links?filter=target:W1001&group_by=relationship", "/links?filter=origin:W1001&per_page=500",
     "/links?filter=origin:W1001&page=2&cursor=*", "/links?filter=target:W1001&page=401&per_page=25",
 ])
@@ -137,7 +137,7 @@ def test_query_reads_the_links_index_in_stored_order(client):
 
 
 def test_a_named_relationship_is_a_must_not_a_filter(client):
-    get(client, "/links?filter=target:W1002,relationship:component|part")
+    get(client, "/links?filter=target:W1002,link_type:component|part")
     q = FakeSearch.last["query"]["bool"]
     assert q["must"] == [{"terms": {"relationship": [R + "component", R + "part"]}}]
     assert q["filter"] == [{"terms": {"target": [U + "W1002"]}}]
@@ -162,22 +162,21 @@ def test_a_cursor_that_is_not_ours_answers_400(client):
 def test_origin_lists_its_links(client):
     status, body = get(client, "/links?filter=origin:w1001")
     assert status == 200 and body["meta"]["count"] == 4
-    assert body["results"][0] == {"origin": CITING, "target": BOOK, "relationship": R + "volume",
-                                  "link_type": LT + "volume"}
+    assert body["results"][0] == {"origin": CITING, "target": BOOK, "link_type": LT + "volume"}
     assert [r["target"] for r in body["results"][1:]] == [U + "W1002", U + "W1003", U + "W1004"]  # stored order
-    assert list(body["results"][0]) == ["origin", "target", "relationship", "link_type"]
+    assert list(body["results"][0]) == ["origin", "target", "link_type"]  # no relationship (Casey, 24 Nov 2026)
 
 
-def test_relationship_and_paging(client):
-    _, body = get(client, "/links?filter=origin:https://openalex.org/W1001,relationship:citation&per_page=2&page=2")
+def test_link_type_and_paging(client):
+    _, body = get(client, "/links?filter=origin:https://openalex.org/W1001,link_type:citation&per_page=2&page=2")
     assert body["meta"]["count"] == 3
     assert [r["target"] for r in body["results"]] == [U + "W1004"]
 
 
 def test_origin_and_target_give_the_links_between_two_works(client):
     _, body = get(client, "/links?filter=origin:W1001,target:W1009")
-    assert [r["relationship"] for r in body["results"]] == [R + "volume"]
-    _, body = get(client, "/links?filter=origin:W1001,target:W1009,relationship:citation")
+    assert [r["link_type"] for r in body["results"]] == [LT + "volume"]
+    _, body = get(client, "/links?filter=origin:W1001,target:W1009,link_type:citation")
     assert body["meta"]["count"] == 0 and body["results"] == []
 
 
@@ -208,21 +207,19 @@ def test_cursor_round_trip():
     assert decode_cursor(encode_cursor(["pit-1", [241307]])) == ["pit-1", [241307]]
 
 
-# --- link_type, the new name of relationship (oxjob #2481) ------------------------------------------
+# --- link_type, the new name of relationship (oxjob #2481); /links dropped relationship 24 Nov 2026 -------
 
-def test_every_link_carries_its_link_type_after_its_relationship(client):
+def test_every_link_carries_its_link_type_and_no_relationship(client):
     _, body = get(client, "/links?filter=origin:W1001")
-    for r in body["results"]:
-        assert r["link_type"] == r["relationship"].replace("/relationships/", "/link-types/")
+    assert all("relationship" not in r for r in body["results"])
     assert [r["link_type"] for r in body["results"]] == [LT + "volume"] + [LT + "citation"] * 3
 
 
 @pytest.mark.parametrize("value", ["citation", "Citation", "link-types/citation", "relationships/citation",
                                    "https://openalex.org/link-types/citation",
                                    "https://openalex.org/relationships/citation"])
-@pytest.mark.parametrize("key", ["link_type", "relationship"])
-def test_link_type_and_relationship_filter_alike_and_take_every_id_form(client, key, value):
-    _, body = get(client, f"/links?filter=origin:W1001,{key}:{value}")
+def test_link_type_takes_every_id_form(client, value):
+    _, body = get(client, f"/links?filter=origin:W1001,link_type:{value}")
     assert body["meta"]["count"] == 3
     assert FakeSearch.last["query"]["bool"]["must"] == [{"terms": {"relationship": [R + "citation"]}}]
 
@@ -230,22 +227,20 @@ def test_link_type_and_relationship_filter_alike_and_take_every_id_form(client, 
 def test_review_is_a_link_type(client):
     FakeSearch.links = [doc("W2001", "W1002", "review"), doc("W2002", "W1002", "citation")]
     _, body = get(client, "/links?filter=target:W1002,link_type:review")
-    assert body["results"] == [{"origin": U + "W2001", "target": U + "W1002", "relationship": R + "review",
-                                "link_type": LT + "review"}]
+    assert body["results"] == [{"origin": U + "W2001", "target": U + "W1002", "link_type": LT + "review"}]
     assert "review" in lv.RELATIONSHIPS and lv.relationships("review|volume") == ["volume", "review"]
 
 
-def test_link_type_and_relationship_together_answer_400_naming_link_type(client):
-    status, body = get(client, "/links?filter=origin:W1001,link_type:citation,relationship:citation")
-    assert status == 400
-    assert "not both" in body["message"] and "Use link_type" in body["message"]
+@pytest.mark.parametrize("url", ["/links?filter=origin:W1001,relationship:citation",
+                                 "/links?filter=origin:W1001,link_type:citation,relationship:citation"])
+def test_the_old_relationship_filter_answers_400_naming_link_type(client, url):
+    status, body = get(client, url)
+    assert status == 400 and "use link_type:citation" in body["message"]
 
 
 def test_a_bad_link_type_answers_400_under_its_own_name(client):
     status, body = get(client, "/links?filter=origin:W1001,link_type:cites")
     assert status == 400 and body["message"].startswith("link_type takes citation, ")
-    status, body = get(client, "/links?filter=origin:W1001,relationship:cites")
-    assert status == 400 and body["message"].startswith("relationship takes citation, ")
 
 
 def test_the_examples_name_link_type():

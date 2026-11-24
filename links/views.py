@@ -1,8 +1,8 @@
 """/links (oxjob #1490): work-to-work links. A link is three ids: `origin` (the work that holds the link: the citing
-paper, the chapter, the review, the retraction notice), `target` (the work it points to) and `relationship` (a
-/relationships id), with no display names, so a link stays small (field names and shape: oxjob #1490). `link_type`
-(oxjob #2481) is the new name of `relationship`: the same kind as a /link-types id; both are served, and filter on
-either, until the cutover.
+paper, the chapter, the review, the retraction notice), `target` (the work it points to) and `link_type` (a
+/link-types id), with no display names, so a link stays small (field names and shape: oxjob #1490). The index still
+stores the kind as `relationship` (a /relationships id, its old name, oxjob #2481); /links serves and filters only on
+`link_type` (Casey, 24 Nov 2026: links weren't announced yet), and the field leaves the index at its next rebuild.
 
 Links are read from the `links` index: one doc per link, built nightly from openalex.works.work_links by walden's
 Work Links job (20 Nov 2026). Every request names a work:
@@ -11,7 +11,6 @@ Work Links job (20 Nov 2026). Every request names a work:
     /links?filter=target:W2            the works that link to it
     /links?filter=origin:W1,target:W2  the links between the two
     link_type:citation                 (any of the three) keeps one kind; values join with |
-                                       (relationship:citation, its old name, still works)
 
 No order is promised yet (oxjob #1490): results come in the index's own order, which is the cheap
 way to page (a sort on the ids took 5-7 s for a work with 334K links). Cursor walks use a point-in-time view.
@@ -38,9 +37,7 @@ RELATIONSHIPS = [v["id"].split("/")[-1] for v in all_entities_config["relationsh
 PART_OF = ["volume", "component", "data-series", "part"]
 # oxjob #2264: pull notices. The notice is the origin, the work it pulled the target.
 PULL_NOTICES = ["retraction", "withdrawal", "removal"]
-# The kind of link: `link_type` (oxjob #2481) or its old name `relationship`, never both.
-KIND_KEYS = ("link_type", "relationship")
-FILTER_KEYS = ("origin", "target") + KIND_KEYS
+FILTER_KEYS = ("origin", "target", "link_type")
 UNSUPPORTED_PARAMS = ("group_by", "group-by", "sort", "search", "select", "sample")
 EXAMPLES = (
     "Name a work: /links?filter=origin:W2741809807 lists the works it is part of, cites, reviews or pulls (as a "
@@ -56,21 +53,17 @@ def parse_filter(filter_string):
     for clause in filter(None, (c.strip() for c in (filter_string or "").split(","))):
         key, sep, value = clause.partition(":")
         key = key.strip().lower()
+        if key == "relationship":  # its old name, dropped from /links 24 Nov 2026 (Casey)
+            raise APIQueryParamsError(f"/links filters on link_type now, not relationship: use link_type{sep}{value}.")
         if not sep or key not in FILTER_KEYS:
-            raise APIQueryParamsError(
-                f"/links filters are origin, target and link_type (relationship is its old name), not '{clause}'. "
-                f"{EXAMPLES}")
+            raise APIQueryParamsError(f"/links filters are origin, target and link_type, not '{clause}'. {EXAMPLES}")
         if key in named:
             raise APIQueryParamsError(f"{key} is given twice. {EXAMPLES}")
         named[key] = value.strip()
-    if all(key in named for key in KIND_KEYS):
-        raise APIQueryParamsError(
-            "Give link_type or relationship, not both: relationship is the old name of link_type. Use link_type.")
     if not named.get("origin") and not named.get("target"):
         raise APIQueryParamsError(EXAMPLES)
     parsed = {key: work_id(named[key], key) for key in ("origin", "target") if named.get(key)}
-    kind_key = "relationship" if "relationship" in named else "link_type"
-    parsed["relationship"] = relationships(named.get(kind_key), kind_key)
+    parsed["relationship"] = relationships(named.get("link_type"), "link_type")
     return parsed
 
 
@@ -191,8 +184,7 @@ def link_type_id(relationship_id):
 
 
 def as_link(hit):
-    return {"origin": hit.origin, "target": hit.target, "relationship": hit.relationship,
-            "link_type": link_type_id(hit.relationship)}
+    return {"origin": hit.origin, "target": hit.target, "link_type": link_type_id(hit.relationship)}
 
 
 @blueprint.route("/links")
