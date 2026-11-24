@@ -148,3 +148,5 @@ values:
   display_name: TCI (Thailand), Tier 1
 - id: source-lists/tci-2
   display_name: TCI (Thailand), Tier 2
+- id: source-lists/canadian-journals
+  display_name: Canadian scholarly journals (Coalition Publica)
