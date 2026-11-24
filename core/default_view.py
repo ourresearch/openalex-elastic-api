@@ -29,6 +29,8 @@ well: `corpus=core` (the /works default) leaves hidden pieces out; `corpus=all` 
 `corpus=expansion` don't apply it. A filter on a parent-child column brings the pieces back and
 leaves the corpus as it is. /works/W... is never filtered.
 """
+import re
+
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
@@ -204,6 +206,48 @@ def names_pulled(keys):
     return _names_any(keys, PULLED_FIELD_KEYS)
 
 
+# A lookup by ID or DOI always answers (rule 2 above), and a filter on an identifier is a lookup: `doi:X`,
+# `ids.openalex:W1|W2`, `pmid:N`. Such a filter brings the pulled works it names back, with no redirect, as /works/W...
+# does. It fails closed: every |-separated value must look like that identifier (a whitelist of shapes, not a
+# blacklist of sentinels), so `doi:!X`, `doi:null`, a quoted or padded value, a range or a wildcard keeps the hiding.
+# Filter clauses are ANDed, so one such clause bounds the result to works it names. A prefix (`doi_starts_with`) is a
+# search, not a lookup.
+_ID_SHAPES = {
+    "doi": r"(https?://(dx\.)?doi\.org/|doi:)?10\.\d{4,9}/\S+",
+    "openalex": r"(https?://openalex\.org/(works/)?)?w\d+",
+    "pmid": r"(https?://pubmed\.ncbi\.nlm\.nih\.gov/)?\d+/?",
+    "pmcid": r"(https?://(www\.)?ncbi\.nlm\.nih\.gov/pmc/articles/)?(pmc)?\d+/?",
+    "arxiv": r"(https?://arxiv\.org/abs/|arxiv:)?(\d{4}\.\d{4,5}|[a-z][a-z.\-]*/\d{7})(v\d+)?",
+    "mag": r"\d+",
+}
+_ID_KEY_SHAPES = {"doi": "doi", "openalex": "openalex", "openalex_id": "openalex", "ids.openalex": "openalex",
+                  "pmid": "pmid", "ids.pmid": "pmid", "pmcid": "pmcid", "ids.pmcid": "pmcid", "arxiv": "arxiv",
+                  "ids.arxiv": "arxiv", "mag": "mag", "ids.mag": "mag"}
+ID_FILTER_KEYS = frozenset(_ID_KEY_SHAPES)
+_ID_PATTERNS = {key: re.compile(_ID_SHAPES[shape], re.IGNORECASE) for key, shape in _ID_KEY_SHAPES.items()}
+
+
+def id_filter_key(key):
+    """The identifier filter a key names (hyphens and case read loosely), or None."""
+    k = str(key or "").strip().lower().replace("-", "_")
+    return k if k in ID_FILTER_KEYS else None
+
+
+def names_ids(key, value):
+    """True when `value` is one or more ids (OR'd with |) of the identifier `key` names, each in that identifier's
+    shape. Anything else, an int or str that isn't one, a bool, None or a nested query, is False."""
+    k = id_filter_key(key)
+    if k is None or isinstance(value, bool) or not isinstance(value, (str, int)):
+        return False
+    return all(_ID_PATTERNS[k].fullmatch(v.strip()) for v in str(value).split("|"))
+
+
+def names_works_by_id(filter_params):
+    """True when a parsed filter list ([{key: value}, ...], clauses ANDed) has a clause that names works by
+    identifier, so the result can only be works it names."""
+    return any(names_ids(key, value) for clause in (filter_params or []) for key, value in clause.items())
+
+
 def request_group_by_keys(args):
     """The field a request's group_by names (a `:include_unknown` suffix dropped). Not group_bys: the website's
     batched facet counts describe the result set as it stands."""
@@ -220,7 +264,10 @@ def pulled_hidden(args, keys):
 
 
 def hides_pulled(args, filter_params):
-    """pulled_hidden for a request's parsed filter list and its group_by."""
+    """pulled_hidden for a request's parsed filter list and its group_by. A filter that looks works up by identifier
+    brings their pulled works back too (names_works_by_id), unless include_pulled says otherwise."""
+    if include_pulled_param(args) is None and names_works_by_id(filter_params):
+        return False
     return pulled_hidden(args, filter_keys(filter_params) + request_group_by_keys(args))
 
 

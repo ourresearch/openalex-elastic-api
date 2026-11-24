@@ -202,3 +202,65 @@ def test_vector_path_checks_it_on_the_works_index():
     params = {"filters": [{"is_xpac": "false"}, HIDE_PULLED_FILTER, {"type": "article"}]}
     assert _pop_corpus_clause(params) == {"bool": {"filter": [CORE, NOT_PULLED]}}
     assert params["filters"] == [{"type": "article"}]
+
+
+# --- a lookup by identifier answers (oxjob #2264 rule 2; #1857 wave 26) ------------------------------
+
+@pytest.mark.parametrize("url_filter", [
+    "doi:10.4049/jimmunol.169.8.4594", "doi:https://doi.org/10.1234/a|10.5555/b", "pmid:12370398", "ids.pmid:12370398",
+    "openalex:W1880712911", "ids.openalex:W1|W2", "openalex_id:W1", "pmcid:PMC1", "ids.pmcid:PMC1",
+    "arxiv:2101.00001", "ids.arxiv:2101.00001v2", "arxiv:hep-th/9901001", "mag:2117847125", "ids.mag:2117847125",
+    "openalex:https://openalex.org/W1", "pmcid:pmc123", "doi:doi:10.1234/a",
+    "doi:10.1234/a,publication_year:2020",         # still bounded to the named works
+    "doi:10.1234/a,doi:!10.2/b",
+])
+def test_an_identifier_filter_brings_its_pulled_works_back(url_filter):
+    assert not hides_pulled(_args(), map_filter_params(url_filter))
+    assert _oqo_qs(url_filter) == [CORE, VISIBLE]
+
+
+@pytest.mark.parametrize("url_filter", [
+    "doi:!10.1/a",                                 # everything but one work
+    "doi:null", "doi:!null", "pmid:unknown",       # has or lacks one: a set, not a lookup
+    "doi:10.1234/a|!10.2/b",
+    'doi:" null "', 'doi:" !10.1234/a "', "doi:*", "doi:true", "doi:https://doi.org/", "doi:null+10.1234/a",
+    "pmid:>0", "pmid:1-99", "mag:>5", "openalex:W1x",  # not an id's shape: fail closed
+    "doi_starts_with:10.1016",                     # a prefix is a search
+    "publication_year:2020", "has_doi:true",
+])
+def test_other_identifier_filters_keep_the_hiding(url_filter):
+    assert hides_pulled(_args(), map_filter_params(url_filter))
+    assert _oqo_qs(url_filter) == [CORE, VISIBLE, NOT_PULLED]
+
+
+def test_include_pulled_false_beats_an_identifier_filter():
+    assert hides_pulled(_args("?include_pulled=false"), map_filter_params("doi:10.1234/a"))
+    assert _oqo_qs("doi:10.1234/a", args="?include_pulled=false") == [CORE, VISIBLE, NOT_PULLED]
+
+
+def test_an_identifier_filter_does_not_redirect():
+    assert pulled_redirect_location("/works", "filter=doi:10.1234/a", _args("?filter=doi:10.1234/a")) is None
+
+
+def test_oqo_an_or_with_another_column_keeps_the_hiding():
+    either = OQO.from_dict({"get_rows": "works", "filter_rows": [{"join": "or", "filters": [
+        {"column_id": "doi", "value": "10.1234/a"}, {"column_id": "publication_year", "value": 2020}]}]})
+    only_ids = OQO.from_dict({"get_rows": "works", "filter_rows": [{"join": "or", "filters": [
+        {"column_id": "doi", "value": "10.1234/a"}, {"column_id": "ids.pmid", "value": 123}]}]})
+    and_with_id = OQO.from_dict({"get_rows": "works", "filter_rows": [{"join": "and", "filters": [
+        {"column_id": "publication_year", "value": 2020}, {"column_id": "ids.openalex", "value": "W1"}]}]})
+    negated = OQO.from_dict({"get_rows": "works", "filter_rows": [
+        {"column_id": "doi", "value": "10.1234/a", "is_negated": True}]})
+    not_an_id = OQO.from_dict({"get_rows": "works", "filter_rows": [{"column_id": "doi", "value": "null"}]})
+    nested = OQO.from_dict({"get_rows": "works", "filter_rows": [
+        {"column_id": "ids.openalex", "value": {"get_rows": "works", "filter_rows": [
+            {"column_id": "publication_year", "value": 2020}]}}]})
+    with Flask(__name__).test_request_context("/"):
+        assert _hides_pulled(either, "walden")
+        assert not _hides_pulled(only_ids, "walden")
+        assert not _hides_pulled(and_with_id, "walden")
+        assert _hides_pulled(negated, "walden")
+        assert _hides_pulled(not_an_id, "walden")
+        assert _hides_pulled(nested, "walden")
+        # a walk back from another entity: its filters are not works ids
+        assert _hides_pulled(only_ids, "walden", works_filters=False)

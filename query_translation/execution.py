@@ -38,12 +38,13 @@ from core.shared_view import (
     set_source,
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
-from core.default_view import (HIDE_PIECES_FILTER, HIDE_PULLED_FILTER, include_parts_requested, lifts_hiding,
-                               not_pulled_query, pulled_hidden, visible_works_query)
+from core.default_view import (HIDE_PIECES_FILTER, HIDE_PULLED_FILTER, include_parts_requested,
+                               include_pulled_param, lifts_hiding, names_ids, not_pulled_query, pulled_hidden,
+                               visible_works_query)
 from core.validate import validate_sample_view, xpac_controls
 from core.vector_index import vector_semantic_search
 from query_translation import analytics as analytics_mod
-from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
+from query_translation.oqo import OQO, BranchFilter, LeafFilter, SortBy, canonicalize_oqo_column_ids
 from query_translation.url_parser import split_metric_sort_column
 from query_translation.oqo_to_es import (
     OQOTranslationError,
@@ -1450,7 +1451,30 @@ def _hides_pulled(oqo, connection, works_filters=True):
     request, like include_parts."""
     if oqo.get_rows != "works" or connection != "walden":
         return False
+    if works_filters and include_pulled_param(request.args) is None and _names_works_by_id(oqo.filter_rows):
+        return False
     return pulled_hidden(request.args, _oqo_works_columns(oqo) if works_filters else [])
+
+
+def _names_works_by_id(filter_rows):
+    """A lookup by identifier brings its pulled works back (core/default_view.py names_works_by_id, oxjob #2264): true
+    when one of an OQO's top-level filters (they are ANDed) can only match works it names by an identifier."""
+    return any(_bounded_by_ids(f) for f in filter_rows or [])
+
+
+def _bounded_by_ids(f):
+    """A positive leaf on an identifier column with plain ids (`doi is X`), an AND holding one, or an OR of only such
+    filters. A negated filter, a nested query as the value, or any other column is not."""
+    if isinstance(f, LeafFilter):
+        return f.operator == "is" and not f.is_negated and names_ids(f.column_id, f.value)
+    if isinstance(f, BranchFilter) and not f.is_negated and f.filters:
+        bounded = [_bounded_by_ids(child) for child in f.filters]
+        join = str(f.join or "").lower()
+        if join == "and":
+            return any(bounded)
+        if join == "or":
+            return all(bounded)
+    return False
 
 
 def _corpus_qs(oqo, connection, works_filters=True):
