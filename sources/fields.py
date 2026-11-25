@@ -158,6 +158,17 @@ fields = [
         docstring="Free text search among sources' names",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
+    # oxjob #2398: select sources by who runs them ("every source hosted by a university").
+    # The host is a publisher or, for a repository, an institution; host_organization_name
+    # holds either, so one field covers both. Its `.autocomplete` subfield is the analyzed
+    # (search_as_you_type) copy; the bare field is a whole-string keyword.
+    SearchField(
+        param="host_organization_name.search",
+        custom_es_field="host_organization_name.autocomplete",
+        docstring="Free text search among the names of sources' host organizations: "
+        "the publisher, or the institution behind a repository",
+        documentation_link="https://developers.openalex.org/guides/searching",
+    ),
     TermField(
         param="apc_prices.currency",
     ),

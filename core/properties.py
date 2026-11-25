@@ -543,7 +543,11 @@ CAP_COLUMN = "column"
 # (group_by, sort; entity author-types); works gain `authorships.author.type` (filter, group_by; entity author-types;
 # OQL "author type"), and each authorship's `author` object gains `type` (null when not stated). Nothing removed or
 # renamed: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "24.9.0"
+# 24.10.0 (oxjob #2398, name approved 23 Nov 2026, policy-decisions RULINGS.md D29): sources gain the search filter
+# `host_organization_name.search` (OQL "host organization name"; a GUI filter): words in the name of the source's
+# host, a publisher or the institution behind a repository, on the analyzed host_organization_name.autocomplete
+# subfield (no index change). One property added = MINOR per classify_properties_diff.py.
+PROPERTIES_VERSION = "24.10.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

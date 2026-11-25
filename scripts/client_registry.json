@@ -3362,6 +3362,20 @@
       "isId": false,
       "hasExport": false
     },
+    "host_organization_name.search": {
+      "key": "host_organization_name.search",
+      "entityToFilter": "sources",
+      "entityToSelect": null,
+      "displayName": "host organization name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "summary_stats.i10_index": {
       "key": "summary_stats.i10_index",
       "entityToFilter": "sources",

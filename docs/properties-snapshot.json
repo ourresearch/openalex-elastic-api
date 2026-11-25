@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 30,
-    "fingerprint": "82957d8c59759bce8a8adad57914903af868a06c0cd649a69f22173af900c900",
-    "property_count": 1054,
-    "version": "24.9.0"
+    "fingerprint": "bcd5dad07dc3793652f61fd43bd604e28fb9fb843d6ccd1cc986b46db278da0a",
+    "property_count": 1055,
+    "version": "24.10.0"
   },
   "properties": {
     "author-types": {
@@ -14167,6 +14167,26 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "host_organization_name.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "host organization name",
+        "entity_type": null,
+        "name": "host_organization_name.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "search"
       },
       "id": {
         "actions": [

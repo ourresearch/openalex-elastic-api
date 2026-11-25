@@ -1156,6 +1156,8 @@ class SearchField(Field):
             or self.param == "description.search"
             or self.param == "title.search"
             or self.param == "title.search.exact"
+            # sources: the host organization's name (oxjob #2398), on its analyzed subfield
+            or self.param == "host_organization_name.search"
         ):
             search_oa = make_search(
                 search_terms=self.value, primary_field=self.es_field()
