@@ -1865,6 +1865,8 @@
 "has_content.grobid_xml": "boolean",
 "has_content.pdf": "boolean",
 "has_fulltext": "boolean",
+"has_oa_accepted_or_published_version": "boolean",
+"has_oa_submitted_version": "boolean",
 "id": "keyword",
 "ids": "object",
 "ids.arxiv": "keyword",

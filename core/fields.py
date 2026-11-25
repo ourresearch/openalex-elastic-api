@@ -447,6 +447,29 @@ class Field(ABC):
         )
 
 
+# "Has an OA submitted version" means ONE copy that is both open and submitted (likewise accepted / published), as
+# the website's column reads it. locations_full is a plain object array in Elasticsearch, not nested, so a test of
+# locations_full.is_oa next to one of locations_full.version can be met by two different copies: a closed
+# submitted copy beside an open published one answered "true" for about 15.7M works, and 6.4M for accepted /
+# published (oxjob #2642). sync_works writes each answer as an internal boolean of the same name (never served).
+# The two-term test never misses a true work, so the filter is that test minus the works whose stored answer is
+# false; a doc indexed before sync_works wrote the booleans and not stamped by #2642 keeps the two-term answer,
+# right for every such doc (#2642 stamped the ones it got wrong).
+# shortcut: once every doc carries the booleans (the next index rebuild), a term on the boolean alone is enough.
+OA_VERSION_FILTERS = {
+    "has_oa_submitted_version": ["submittedVersion"],
+    "has_oa_accepted_or_published_version": ["acceptedVersion", "publishedVersion"],
+}
+
+
+def oa_version_query(param):
+    """`<param>:true`: some copy is open and some copy has the version, and the stored answer is not false."""
+    return Q("bool",
+             filter=[Q("term", locations_full__is_oa="true"),
+                     Q("terms", locations_full__version=OA_VERSION_FILTERS[param])],
+             must_not=[Q("term", **{param: False})])
+
+
 class BooleanField(Field):
     field_type = "boolean"
     operators = ["eq", "null"]
@@ -487,20 +510,9 @@ class BooleanField(Field):
             self.validate_true_false()
             self.handle_external_id_fields()
 
-        if self.param == "has_oa_accepted_or_published_version":
+        if self.param in OA_VERSION_FILTERS:
             self.validate_true_false()
-            query = Q("term", locations_full__is_oa="true") & Q(
-                "terms", locations_full__version=["acceptedVersion", "publishedVersion"]
-            )
-            if self.value.lower().strip() == "true":
-                q = query
-            elif self.value.lower().strip() == "false":
-                q = ~query
-        elif self.param == "has_oa_submitted_version":
-            self.validate_true_false()
-            query = Q("term", locations_full__is_oa="true") & Q(
-                "term", locations_full__version="submittedVersion"
-            )
+            query = oa_version_query(self.param)
             if self.value.lower().strip() == "true":
                 q = query
             elif self.value.lower().strip() == "false":
