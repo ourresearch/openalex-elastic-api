@@ -112,7 +112,28 @@ NO_STEM_TEXT_FIELDS = ("display_name", "abstract", "alternate_titles")
 ALTERNATE_TITLE_FIELDS = {
     "display_name": "alternate_titles",
     "display_name.no_stem": "alternate_titles.no_stem",
+    "display_name.thai": "alternate_titles.thai",
+    "display_name.thai_exact": "alternate_titles.thai_exact",
 }
+# oxjob #2645: Thai writes no spaces between words, and the standard tokenizer keeps each
+# space-delimited run as one token, so a word inside a Thai title found nothing. The works
+# index (works-v42 on) gives display_name, alternate_titles, abstract and fulltext `.thai`
+# (stemmed, like the field) and `.thai_exact` (like `.no_stem`) sub-fields cut by
+# Elasticsearch's dictionary `thai` tokenizer; they hold only texts with a Thai letter, whole
+# (Latin words too). A search holding Thai script also runs on those
+# (SearchOpenAlex.thai_words_search). Before the index has them, the variant matches nothing
+# (an unmapped field is no match, not an error), so this code runs on either index.
+THAI_SCRIPT_RE = re.compile(r"[\u0E00-\u0E7F]")
+THAI_WORD_FIELDS = {
+    f"{field}{suffix}": f"{field}.thai{'_exact' if suffix else ''}"
+    for field in ("display_name", "alternate_titles", "abstract", "fulltext")
+    for suffix in ("", ".no_stem")
+}
+THAI_STEMMED_FIELDS = {v for v in THAI_WORD_FIELDS.values() if v.endswith(".thai")}
+# oxjob #2645: sub- and superscript digits (CO₂, Fe₃O₄, Ca²⁺) as digits, for the formula
+# variant only, so a typed `CO₂` also finds the split "CO 2" spellings. The works analyzers
+# read the glyphs as digits themselves (works-v42 on), so the typed search needs nothing.
+SUBSUP_DIGITS = str.maketrans("₀₁₂₃₄₅₆₇₈₉⁰¹²³⁴⁵⁶⁷⁸⁹", "01234567890123456789")
 # shortcut: longer phrases (pasted titles) are pinned down by their other words: 51 of 52
 # real ones found the same works either way, at 5x the ES time.
 MAX_CONTENT_WORDS_FOR_EXACT = 4
@@ -706,8 +727,11 @@ class SearchOpenAlex:
         citation_scaling="sqrt",
         works_text=False,
         alternate_titles=False,
+        thai_words=True,
     ):
         self.search_terms = normalize_search_input(search_terms)
+        # False on the copy thai_words_search ORs beside, so it isn't built twice (oxjob #2645).
+        self.thai_words = thai_words
         # A works search whose title field also covers the work's alternate_titles
         # (oxjob #1610); see _alternate_titles_search. Set only by the works builders.
         self.alternate_titles = alternate_titles
@@ -750,6 +774,7 @@ class SearchOpenAlex:
             citation_scaling=self.citation_scaling,
             works_text=self.works_text,
             alternate_titles=self.alternate_titles,
+            thai_words=self.thai_words,
         )
         return SearchOpenAlex(**{**settings_now, **changes})
 
@@ -770,6 +795,10 @@ class SearchOpenAlex:
         quote_field_suffix is per query, not per phrase (oxjob #1883)."""
         if self._on_stemmed_works_text() and needs_exact_phrase(self.search_terms):
             return {"quote_field_suffix": ".no_stem"}
+        # The Thai variant's stemmed sub-fields have `_exact` twins (oxjob #2645).
+        fields = [f for f in (self.primary_field, self.secondary_field, self.tertiary_field) if f]
+        if fields and all(f in THAI_STEMMED_FIELDS for f in fields) and needs_exact_phrase(self.search_terms):
+            return {"quote_field_suffix": "_exact"}
         return {}
 
     def _query_string(self, **kwargs):
@@ -868,7 +897,7 @@ class SearchOpenAlex:
         semantic, author-name or raw-affiliation searches; never over full text (see
         FULLTEXT_FIELDS), and not at all on a full-text-only search.
         """
-        t = self.search_terms
+        t = self.search_terms.translate(SUBSUP_DIGITS)
         if (
             not t or self.is_semantic_query or self.is_author_name_query
             or self.primary_field == "authorships.raw_affiliation_strings"
@@ -940,6 +969,42 @@ class SearchOpenAlex:
             secondary_field=None, tertiary_field=None, combine_fields=False,
         )
 
+    def thai_words_search(self):
+        """The same search over the `.thai` sub-fields (dictionary-cut Thai words), when this
+        works search holds Thai script and reads a title, abstract or full text; else None (oxjob #2645).
+
+        build_query ORs it with the search as typed in one dis_max, so the typed search finds
+        what it did and a Thai word inside a longer run is found too. Every word of the search
+        still has to match: a Thai text's sub-field keeps all its tokens (Latin words too), cut
+        by the thai tokenizer and filtered like the parent field; an exact door (`.no_stem`)
+        reads the `.thai_exact` twin, unstemmed. A whole-query `NOT x` gets no variant here:
+        _build_as_typed negates the positive search, which carries the variant itself, so a work
+        holding x in either form is dropped.
+        shortcut: a NOT inside a longer query (`a NOT b`) is ORed per branch, like alternate
+        titles: a work whose Thai run holds b uncut can still match as typed, as it did before
+        the variant; the variant adds no work that holds b.
+        """
+        fields = (self.primary_field, self.secondary_field, self.tertiary_field)
+        # Only the works builders set works_text or alternate_titles (search= sets just the
+        # latter); other indexes have no `.thai` sub-fields.
+        is_works = self.works_text or self.alternate_titles
+        if (
+            not self.thai_words or not is_works
+            or self.is_semantic_query or self.is_author_name_query
+            or not THAI_SCRIPT_RE.search(self.search_terms)
+            or whole_query_negation_operand(self.search_terms) is not None
+            or not any(f in THAI_WORD_FIELDS for f in fields if f)
+        ):
+            return None
+        # The variant reads only the fields that have a `.thai` sub-field, in their order.
+        mapped = [THAI_WORD_FIELDS[f] for f in fields if f in THAI_WORD_FIELDS]
+        mapped += [None] * (3 - len(mapped))
+        return self._copy(
+            thai_words=False,
+            primary_field=mapped[0], secondary_field=mapped[1], tertiary_field=mapped[2],
+            combine_fields=self.combine_fields and mapped[1] is not None,
+        )
+
     def _title_weight(self):
         """The boost the title field carries in this search's builder: 1.5 on the plain
         (match) path of a three-field search, else 1 (see the match builders)."""
@@ -952,6 +1017,15 @@ class SearchOpenAlex:
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
+
+        thai = self.thai_words_search()
+        if thai is not None:
+            typed = self._copy(thai_words=False).build_query(skip_citation_boost=True)
+            # dis_max: a work matching as typed and by its Thai words scores once.
+            raw_query = Q("dis_max", queries=[typed, thai.build_query(skip_citation_boost=True)])
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         alt = self._alternate_titles_search()
         if alt is not None:
