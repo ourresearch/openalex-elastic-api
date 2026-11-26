@@ -130,6 +130,18 @@ THAI_WORD_FIELDS = {
     for suffix in ("", ".no_stem")
 }
 THAI_STEMMED_FIELDS = {v for v in THAI_WORD_FIELDS.values() if v.endswith(".thai")}
+# A bare word holding Thai script, outside quotes: no wildcard, proximity or quote in it.
+THAI_BARE_WORD_RE = re.compile(r"(?<![^\s(])(?=[^\s()\"]*[\u0E00-\u0E7F])[^\s()\"*?~]+(?![^\s)])")
+
+
+def quote_thai_runs(text):
+    """`text` with each bare word that holds Thai script quoted, so the Thai words the
+    thai tokenizer cuts it into are matched as a phrase (oxjob #2645). Quoted phrases,
+    words with a wildcard or `~`, and Boolean operators keep their form."""
+    parts = text.split('"')
+    for i in range(0, len(parts), 2):  # even parts are outside quotes
+        parts[i] = THAI_BARE_WORD_RE.sub(lambda m: f'"{m.group(0)}"', parts[i])
+    return '"'.join(parts)
 # oxjob #2645: sub- and superscript digits (CO₂, Fe₃O₄, Ca²⁺) as digits, for the formula
 # variant only, so a typed `CO₂` also finds the split "CO 2" spellings. The works analyzers
 # read the glyphs as digits themselves (works-v42 on), so the typed search needs nothing.
@@ -999,11 +1011,17 @@ class SearchOpenAlex:
         # The variant reads only the fields that have a `.thai` sub-field, in their order.
         mapped = [THAI_WORD_FIELDS[f] for f in fields if f in THAI_WORD_FIELDS]
         mapped += [None] * (3 - len(mapped))
-        return self._copy(
+        variant = self._copy(
             thai_words=False,
             primary_field=mapped[0], secondary_field=mapped[1], tertiary_field=mapped[2],
             combine_fields=self.combine_fields and mapped[1] is not None,
         )
+        # Set after construction, like curly_apostrophe_spelling: a typed Thai run is one
+        # spelling, so its words must stay together. Unquoted, `การศึกษา` (การ + ศึกษา) matched
+        # any title holding both words anywhere: 81,591 on works-v42 vs ~50K titles that
+        # contain the run.
+        variant.search_terms = quote_thai_runs(self.search_terms)
+        return variant
 
     def _title_weight(self):
         """The boost the title field carries in this search's builder: 1.5 on the plain

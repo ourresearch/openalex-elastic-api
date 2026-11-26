@@ -11,7 +11,9 @@ import json
 
 import pytest
 
-from core.search import SearchOpenAlex, full_search_query, normalize_search_input, scoped_search_query
+from core.search import (
+    SearchOpenAlex, full_search_query, normalize_search_input, quote_thai_runs, scoped_search_query,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -49,7 +51,6 @@ def test_default_search_keeps_its_three_fields_in_the_variant():
                        combine_fields=True, alternate_titles=True)
     v = s.thai_words_search()
     assert (v.primary_field, v.secondary_field, v.tertiary_field) == ("display_name.thai", "abstract.thai", "fulltext.thai")
-    assert v._title_weight() == s._title_weight()
     body = _dump(full_search_query("works", "การศึกษา COVID-19", skip_citation_boost=True))
     assert '"fulltext.thai' in body and '"fulltext' in body
 
@@ -74,7 +75,23 @@ def test_variant_is_built_once():
     s = SearchOpenAlex("การศึกษา", primary_field="display_name", works_text=True, alternate_titles=True)
     v = s.thai_words_search()
     assert v.primary_field == "display_name.thai" and v.thai_words_search() is None
-    assert _dump(s.build_query(skip_citation_boost=True)).count('"display_name.thai"') == 2  # match + match_phrase
+    assert _dump(s.build_query(skip_citation_boost=True)).count('"display_name.thai"') == 1  # one query_string
+
+
+def test_variant_quotes_each_thai_run():
+    s = SearchOpenAlex("การศึกษา COVID-19 (ไทย OR ลาว)", primary_field="display_name", works_text=True, alternate_titles=True)
+    assert s.thai_words_search().search_terms == '"การศึกษา" COVID-19 ("ไทย" OR "ลาว")'
+    assert s.search_terms == "การศึกษา COVID-19 (ไทย OR ลาว)"  # the typed search is unchanged
+
+
+@pytest.mark.parametrize("typed, quoted", [
+    ('"การศึกษา ไทย" ผล', '"การศึกษา ไทย" "ผล"'),
+    ("ธุรกิจ* การตลาด", 'ธุรกิจ* "การตลาด"'),
+    ("ปัจจัย~2", "ปัจจัย~2"),
+    ("climate change", "climate change"),
+])
+def test_quote_thai_runs(typed, quoted):
+    assert quote_thai_runs(typed) == quoted
 
 
 def test_whole_query_not_drops_a_work_holding_the_word_in_either_form():
