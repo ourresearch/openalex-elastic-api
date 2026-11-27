@@ -45,7 +45,7 @@ DOCSTRINGS = {
     "has_references": "The work has references, also known as outgoing citations",
     "is_paratext": 'We have marked the work as "paratext". Paratext means things like front/back cover, table of contents, and issue information.',
     "is_retracted": "The work has been retracted",
-    "is_pulled": "The work's publisher, host or authors retracted, withdrew or removed it. Includes every retracted work",
+    "is_pulled": "The work's publisher, host or authors retracted, withdrew or removed it. Includes every retracted work except a retract-and-replace and a Cochrane review withdrawn as out of date",
     "is_traditional": "The work's type is a traditional scholarly work (article, book, book chapter, dissertation, conference paper, preprint, review, editorial, letter, erratum, retraction, book review, data paper, software paper). false = any other type (dataset, software, report, paratext...). Not the same as peer-reviewed.",
     "source.issn": "The work's journal, by ISSN",
     "source.type": "The type of source for the work. For example, you can filter for only works in journals, or in repositories.",
@@ -284,7 +284,8 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("is_retracted", None),
     ),
     # oxjob #2264 (Jason, 15 Nov 2026, oxjobs plans/retractions.md § 5): pulled = retracted, withdrawn or removed
-    # by the publisher, host or authors; true on every is_retracted work. Walden writes the index field only when a
+    # by the publisher, host or authors; true on every is_retracted work except a retract-and-replace and a Cochrane
+    # review withdrawn as out of date (~750 works, walden retraction_pull_exemptions). Walden writes the index field only when a
     # work re-stamps, so `false` is NOT true: a doc without the field is not pulled.
     BooleanField(
         param="is_pulled",
