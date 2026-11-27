@@ -85,6 +85,10 @@ def _query_one(sql, params):
 # kept to the night's values by walden notebooks/lakebase/BuildLakebaseWorkMetrics) overrides them. On since 7 Nov 2026
 # (table synced and granted to this role). On any error the plain doc query answers and the overlay stays off a while.
 # Off switch without a deploy: config var LAKEBASE_METRICS_OVERLAY=0.
+# oxjob #2659: a metrics row applies only when it was written at or after the doc (both tables carry updated_at, the
+# time walden wrote the row). A doc rewritten after its metrics row carries the values of its own, later night, and the
+# row's nightly cap can leave the row behind for days; overlaying it then served an older fwci than the doc held.
+_METRICS_JOIN = "m.work_id = d.work_id AND m.updated_at >= d.updated_at"
 METRICS_OVERLAY = True
 METRICS_RETRY_S = 300
 _metrics_off_until = 0.0
@@ -99,7 +103,8 @@ def metrics_overlay_on():
 
 
 def apply_metrics(doc, m):
-    """Overwrite the doc's three metric fields with the metrics row (work_id, fwci, has_cnp, ...); no row -> unchanged."""
+    """Overwrite the doc's three metric fields with the metrics row (work_id, fwci, has_cnp, ...); no row (or one older
+    than the doc, which the join drops) -> unchanged."""
     if m is None or m[0] is None:
         return doc
     _, fwci, has_cnp, cnp_value, top_1, top_10, has_pct, pct_min, pct_max = m
@@ -119,7 +124,7 @@ def get_work_doc(work_id):
         try:
             row = _query_one(
                 f"SELECT d.doc, {_METRICS_COLS} FROM lakebase.lakebase_works_docs_{shard} d "
-                "LEFT JOIN lakebase.lakebase_work_metrics m ON m.work_id = d.work_id WHERE d.work_id = %s",
+                f"LEFT JOIN lakebase.lakebase_work_metrics m ON {_METRICS_JOIN} WHERE d.work_id = %s",
                 (work_id,),
             )
             return apply_metrics(json.loads(row[0]), row[1:]) if row else None

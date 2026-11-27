@@ -40,6 +40,17 @@ def test_overlay_query_joins_metrics_when_on():
     assert doc["fwci"] == 3.0 and doc["cited_by_percentile_year"] == {"min": 80, "max": 85}
 
 
+def test_overlay_join_takes_only_rows_written_at_or_after_the_doc():
+    # oxjob #2659: a row older than the doc is dropped by the join, so the doc's own (later) values answer.
+    with mock.patch.object(lakebase, "METRICS_OVERLAY", True), \
+            mock.patch.object(lakebase, "_metrics_off_until", 0.0), \
+            mock.patch.object(lakebase, "_query_one",
+                              return_value=(json.dumps(DOC),) + (None,) * len(lakebase._METRICS_COLS.split(","))) as q:
+        doc = lakebase.get_work_doc(9)
+    assert "m.updated_at >= d.updated_at" in q.call_args[0][0]
+    assert doc == DOC
+
+
 def test_overlay_error_falls_back_to_plain_doc_and_pauses():
     calls = []
 
