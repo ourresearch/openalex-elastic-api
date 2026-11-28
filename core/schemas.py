@@ -47,6 +47,11 @@ class MetaSchema(Schema):
     apc_list_sum_usd = fields.Int()
     apc_paid_sum_usd = fields.Int()
     cited_by_count_sum = fields.Int()
+    # True when Elasticsearch stopped the search at the 5 s soft timeout (core/shared_view.py, oxjob #521): count,
+    # results and groups are partial, and the same request can count differently on the next run. format_meta set
+    # it since #521, but marshmallow drops undeclared keys on dump, so it never reached a response (oxjob #2500,
+    # ZD 28095: one OQL query counted 931, 958, 955). Present only then; no dump_default.
+    timed_out = fields.Bool()
     # rerank=true (oxjob #1521): whether this page's order came from Jev. Present
     # only when rerank was asked for.
     reranked = fields.Bool()
